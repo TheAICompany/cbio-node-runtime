@@ -19,7 +19,7 @@ These methods are available under `identity.admin` and its sub-facets, and are i
 - **`identity.admin.vault.seal(kdk: string): string`**: Exports the entire vault as an encrypted blob.
 - **`identity.admin.vault.loadFromSealedBlob(kdk: string, blob: string)`**: Restores a vault from a sealed backup.
 - **`identity.admin.vault.saveVault()`**: Persists the current vault back to its bound storage.
-- **`identity.admin.vault.saveVaultAs(storageKey)`**: Persists the current vault to an explicit storage key or filesystem path.
+- **`identity.admin.vault.saveVaultAs(storageKey)`**: One-time save of the vault to an explicit key/path. Does NOT change the bound storage for subsequent `saveVault()` or autosave.
 
 Lower-level sealed blob primitives are also exported from the package subpath:
 
@@ -37,11 +37,14 @@ import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
 - **`getAgent({ permissions })`**: Returns a handle with explicitly provided runtime permissions.
 - **`getAgent({ deriveFromIssuedIdentity: true })`**: Derives runtime permissions from the issued identity's protocol capabilities.
 
-### 1.5 Recursive Child Identity Management
-When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. That record naming scheme is an internal runtime detail, but internal tooling and tests can still recover it from the lower-level protocol module:
-```ts
-import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/dist/protocol/identity.js';
+`permissions` and `deriveFromIssuedIdentity` are mutually exclusive; do not pass both.
 
+### 1.5 Recursive Child Identity Management
+When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. The method returns the child's `publicKey` (domain-level identifier). The record naming scheme is an internal runtime detail; use the protocol subpath for low-level vault access:
+```ts
+import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
+
+const childPublicKey = await identity.registerChildIdentity(keys);
 const secretName = getChildIdentitySecretName(childPublicKey);
 const stored = identity.admin.vault.getSecret(secretName);
 if (stored) {

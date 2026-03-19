@@ -30,6 +30,8 @@ interface ManagedAgentRecord {
   publicKey: string;
   privateKey: string;
   issuedIdentity: IssuedAgentIdentity;
+  /** Vault storage key used when the managed agent was issued. Enables loadManagedAgent to restore the same binding. */
+  storageKey?: string;
 }
 
 function getIssuedCapabilitiesFromRecord(record: Partial<ManagedAgentRecord> | null): readonly IssuedCapabilityName[] | null {
@@ -39,6 +41,9 @@ function getIssuedCapabilitiesFromRecord(record: Partial<ManagedAgentRecord> | n
   const capabilities = (issuedIdentity as { capabilities?: unknown }).capabilities;
   if (capabilities === undefined) return [];
   if (!Array.isArray(capabilities)) return null;
+  for (const cap of capabilities) {
+    if (typeof cap !== "string" || !VALID_ISSUED_CAPABILITY_NAMES.has(cap)) return null;
+  }
   return capabilities as IssuedCapabilityName[];
 }
 
@@ -70,6 +75,15 @@ export type IssuedCapabilityName =
   | "admin:issue"
   | "identity:sign";
 
+const VALID_ISSUED_CAPABILITY_NAMES: ReadonlySet<string> = new Set<IssuedCapabilityName>([
+  "vault:list",
+  "vault:fetch",
+  "vault:acquire",
+  "admin:secrets",
+  "admin:issue",
+  "identity:sign",
+]);
+
 /**
  * Valid runtime permission strings for a CbioAgent handle.
  */
@@ -91,12 +105,12 @@ function capabilityToRuntimePermission(capability: IssuedCapabilityName): Runtim
   return capability;
 }
 
-export interface GetAgentOptions {
-  /** Explicit runtime permissions for the returned handle. */
-  permissions?: RuntimePermissions;
-  /** Derive runtime permissions from the issued identity's protocol capabilities. */
-  deriveFromIssuedIdentity?: boolean;
-}
+/**
+ * Options for getAgent(). Mutually exclusive: either pass `permissions` OR `deriveFromIssuedIdentity`, not both.
+ */
+export type GetAgentOptions =
+  | { permissions: RuntimePermissions; deriveFromIssuedIdentity?: never }
+  | { permissions?: never; deriveFromIssuedIdentity?: boolean };
 
 /**
  * CbioIdentity
@@ -216,6 +230,7 @@ export class CbioIdentity {
 
   /**
    * Register a newly created child identity to the parent vault.
+   * @returns The child's publicKey (domain-level identifier). Use getChildIdentitySecretName(publicKey) from the protocol subpath for low-level vault access.
    */
   async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<string> {
     return this.admin.children.registerChildIdentity(keys, options);
@@ -523,6 +538,11 @@ export class CbioVaultAdmin {
     await this._vault.save(this._identity.signer);
   }
 
+  /**
+   * One-time save of the vault to the given storage key.
+   * Does NOT change the bound storage for subsequent saveVault() or autosave.
+   * Binding is set during identity load (initFromStorage/initFromBlob).
+   */
   async saveVaultAs(storageKey: string): Promise<void> {
     await this._vault.save(this._identity.signer, storageKey);
   }
@@ -619,11 +639,13 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
 
     const issuedIdentity = signIssuedAgentIdentity(this._identity.signer.exportPrivateKey(), unsignedIdentity);
 
+    const storageKey = storage.storageKey ?? getVaultPath(publicKey);
     const record: ManagedAgentRecord = {
       agentId,
       publicKey,
       privateKey: keys.privateKey,
       issuedIdentity,
+      storageKey,
     };
     const stored = JSON.stringify(record);
     if (this._vault.hasSecret(secretName)) {
@@ -636,7 +658,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
       { privateKey: keys.privateKey, publicKey },
       {
         storage: storage.storage,
-        storageKey: storage.storageKey ?? getVaultPath(publicKey),
+        storageKey,
         activityLog: storage.activityLog,
         issuedIdentity,
       },
@@ -743,11 +765,12 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
       );
     }
 
+    const storageKey = parsed.storageKey ?? opts.storage?.storageKey ?? getVaultPath(parsed.publicKey);
     const childIdentity = await CbioIdentity.load(
       { privateKey: parsed.privateKey, publicKey: parsed.publicKey },
       {
         storage: opts.storage?.storage,
-        storageKey: opts.storage?.storageKey ?? getVaultPath(parsed.publicKey),
+        storageKey,
         activityLog: opts.storage?.activityLog,
         issuedIdentity: parsed.issuedIdentity,
       },
@@ -766,6 +789,11 @@ export class CbioChildIdentityAdmin {
     private readonly _vault: CbioVault,
   ) {}
 
+  /**
+   * Registers a child identity in the parent vault.
+   * @returns The child's public key (domain-level identifier). Use getChildIdentitySecretName from @the-ai-company/cbio-node-runtime/protocol for vault lookups.
+   */
+  /** Registers a child identity. Returns the child's publicKey. */
   async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<string> {
     if (!keys.privateKey)
       throw new IdentityError(
@@ -811,7 +839,7 @@ export class CbioChildIdentityAdmin {
     } else {
       await this._vault.addSecret(secretName, stored);
     }
-    return secretName;
+    return pub;
   }
 }
 

@@ -67,6 +67,9 @@ Common configurations belong in docs, not in the core naming system.
 
 If one options type starts describing multiple operations, split it.
 
+A single options object may still group inputs that are consumed by one concrete operation path.
+For example, an identity load API may accept both storage binding and issued-identity binding if both are applied during the same load step.
+
 Good:
 
 - `ManagedAgentIssueOptions`

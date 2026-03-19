@@ -1,6 +1,6 @@
 import { CbioIdentity, IdentityError, IdentityErrorCode, generateIdentityKeys } from '../../dist/runtime/index.js';
 import { createIdentityRef, signRevocationRecord } from '@the-ai-company/cbio-protocol';
-import { getChildIdentitySecretName } from '../../dist/protocol/identity.js';
+import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 

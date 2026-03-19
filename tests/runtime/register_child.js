@@ -1,5 +1,5 @@
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
-import { getChildIdentitySecretName } from '../../dist/protocol/identity.js';
+import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -12,11 +12,10 @@ async function test() {
     const agent = await CbioIdentity.load(rootKeys);
 
     const childKeys = generateIdentityKeys();
-    const secretName = await agent.registerChildIdentity(childKeys);
+    const childPublicKey = await agent.registerChildIdentity(childKeys);
+    if (childPublicKey !== childKeys.publicKey) throw new Error(`PublicKey mismatch: ${childPublicKey} vs ${childKeys.publicKey}`);
 
-    const expectedSecretName = getChildIdentitySecretName(childKeys.publicKey);
-    if (secretName !== expectedSecretName) throw new Error(`Secret name mismatch: ${secretName} vs ${expectedSecretName}`);
-
+    const secretName = getChildIdentitySecretName(childPublicKey);
     const stored = agent.admin.vault.getSecret(secretName);
     if (!stored) throw new Error('Child key not in vault');
     const parsed = JSON.parse(stored);
@@ -29,15 +28,15 @@ async function test() {
     if (!reloaded) throw new Error('Child key not persisted');
 
     const childKeys2 = generateIdentityKeys();
-    const secretName2 = await agent.registerChildIdentity(childKeys2);
-    if (secretName === secretName2) throw new Error('Different identities must have different secret names');
+    const childPublicKey2 = await agent.registerChildIdentity(childKeys2);
+    if (childPublicKey === childPublicKey2) throw new Error('Different identities must have different publicKeys');
 
     await agent.registerChildIdentity(childKeys);
     const afterOverwrite = agent.admin.vault.getSecret(secretName);
     if (JSON.parse(afterOverwrite).privateKey !== childKeys.privateKey) throw new Error('Re-register same identity should overwrite');
 
     await fs.rm(DIR, { recursive: true, force: true });
-    console.log('✅ registerChildIdentity: auto secretName, no collision, overwrite ok');
+    console.log('✅ registerChildIdentity: returns publicKey, no collision, overwrite ok');
 }
 
 test().catch(e => {

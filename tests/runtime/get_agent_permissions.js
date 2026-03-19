@@ -1,5 +1,5 @@
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
-import { getChildIdentitySecretName } from '../../dist/protocol/identity.js';
+import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
