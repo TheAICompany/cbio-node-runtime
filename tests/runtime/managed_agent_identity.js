@@ -28,7 +28,7 @@ async function testManagedAgentIdentity() {
         const rootAgentId = await rootIdentity.getAgentId();
 
         const managed = await rootIdentity.admin.issueManagedAgent({
-            agentPermissions: { 'vault:acquire': true, 'vault:fetch': true, 'vault:list': true },
+            runtimePermissions: { 'vault:acquire': true, 'vault:fetch': true, 'vault:list': true },
         });
         const managedAgentId = await managed.agent.getAgentId();
 
@@ -70,9 +70,14 @@ async function testManagedAgentIdentity() {
             throw new Error('Issued identity agent_id mismatch.');
         }
 
-        const reloaded = await rootIdentity.admin.loadManagedAgent(managed.publicKey);
+        const reloaded = await rootIdentity.admin.loadManagedAgent(managed.publicKey, {
+            runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
+        });
         if (!reloaded.agent.hasSecret('service-token')) {
             throw new Error('Reloaded managed agent did not recover its own vault.');
+        }
+        if (reloaded.agent.can('vault:acquire')) {
+            throw new Error('Reloaded managed agent should reflect requested runtimePermissions.');
         }
 
         console.log('✅ managed agent identity: independent identity, independent vault, root-governed recovery');
@@ -86,4 +91,3 @@ testManagedAgentIdentity().catch((error) => {
     console.error('❌ Managed agent identity test failed:', error);
     process.exit(1);
 });
-

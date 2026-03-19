@@ -28,11 +28,11 @@ async function verifyIsolationLocal() {
     }
 
     console.log("--- 1. Agent A registers a secret ---");
-    const agentA = await CbioIdentity.load(keysA, { vaultPath: pathA });
+    const agentA = await CbioIdentity.load(keysA, { storageKey: pathA });
     await agentA.admin.addSecret('secret-a', 'value-a');
 
     console.log("--- 2. Agent B registers a secret ---");
-    const agentB = await CbioIdentity.load(keysB, { vaultPath: pathB });
+    const agentB = await CbioIdentity.load(keysB, { storageKey: pathB });
     await agentB.admin.addSecret('secret-b', 'value-b');
 
     console.log("--- 3. Verifying files exist separately ---");
@@ -41,7 +41,7 @@ async function verifyIsolationLocal() {
     console.log(`✅ Verified: Both vault files created independently.`);
 
     console.log("--- 4. Verifying content isolation ---");
-    const agentAReload = await CbioIdentity.load(keysA, { vaultPath: pathA });
+    const agentAReload = await CbioIdentity.load(keysA, { storageKey: pathA });
     if (agentAReload.hasSecret('secret-a') && !agentAReload.hasSecret('secret-b')) {
         console.log("✅ SUCCESS: Dynamic naming ensures no cross-contamination!");
     } else {

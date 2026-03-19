@@ -11,7 +11,7 @@ import type { IStorageProvider } from '../storage/provider.js';
 export interface ActivityLogMetadata {
     v: number;
     agentId: string;
-    vaultPath: string;
+    storageKey: string;
 }
 
 export interface ActivityLogEntry {
@@ -70,5 +70,5 @@ export async function readActivityLogMetadata(
     if (!firstLine) return null;
     const raw = JSON.parse(firstLine) as Record<string, unknown>;
     const meta = raw._meta as ActivityLogMetadata | undefined;
-    return meta && typeof meta.agentId === 'string' && typeof meta.vaultPath === 'string' ? meta : null;
+    return meta && typeof meta.agentId === 'string' && typeof meta.storageKey === 'string' ? meta : null;
 }

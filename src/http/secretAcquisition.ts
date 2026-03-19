@@ -6,49 +6,58 @@
  */
 
 import { IdentityError } from '../errors.js';
-import type { CbioVault } from './vault.js';
-import type { ActivityLogEntry } from '../activity/ActivityLog.js';
-import { isAllowedSecretUrl } from './secretPolicy.js';
+import type { CbioVault } from '../vault/vault.js';
+import type { ActivityLogEntry } from '../audit/ActivityLog.js';
+import { isAllowedSecretUrl } from '../vault/secretPolicy.js';
 
-export interface FetchResult {
-    success: boolean;
-    data?: any;
-    secretName?: string;
-    error?: string;
-    code?: string;
+interface FetchResultBase {
     /** True when the operation succeeded/failed but activity log write failed. Caller gets FetchResult; audit trail may be incomplete. */
     activityLogWriteFailed?: boolean;
 }
 
-export interface FetchAndAddSecretOptions {
+export interface FetchSuccess<TData = unknown> extends FetchResultBase {
+    success: true;
+    data: TData;
+    secretName: string;
+}
+
+export interface FetchFailure extends FetchResultBase {
+    success: false;
+    error: string;
+    code?: string;
+}
+
+export type FetchResult<TData = unknown> = FetchSuccess<TData> | FetchFailure;
+
+export interface FetchAndAddSecretOptions<TResponse = unknown, TBody = unknown> {
     secretName: string;
     url: string;
     method?: string;
     headers?: Record<string, string>;
-    body?: any;
-    extractKey: (response: any) => string;
+    body?: TBody;
+    extractKey: (response: TResponse) => string;
     allowedOrigins?: string[];
 }
 
-export interface FetchAndUpdateSecretOptions {
+export interface FetchAndUpdateSecretOptions<TResponse = unknown, TBody = unknown> {
     secretName: string;
     url: string;
     method?: string;
     headers?: Record<string, string>;
-    body?: any;
-    extractKey: (response: any) => string;
+    body?: TBody;
+    extractKey: (response: TResponse) => string;
 }
 
-function sanitize(obj: any, secret: string): any {
+function sanitize(obj: unknown, secret: string): unknown {
     if (typeof obj !== 'object' || obj === null) return obj;
-    const newObj = Array.isArray(obj) ? [] : {};
+    const newObj: Record<string, unknown> | unknown[] = Array.isArray(obj) ? [] : {};
     for (const [key, value] of Object.entries(obj)) {
         if (typeof value === 'string' && value === secret) {
-            (newObj as any)[key] = '***';
+            (newObj as Record<string, unknown>)[key] = '***';
         } else if (typeof value === 'object') {
-            (newObj as any)[key] = sanitize(value, secret);
+            (newObj as Record<string, unknown>)[key] = sanitize(value, secret);
         } else {
-            (newObj as any)[key] = value;
+            (newObj as Record<string, unknown>)[key] = value;
         }
     }
     return newObj;
@@ -68,9 +77,9 @@ export class SecretAcquisition {
         return this._vault.listSecretNames();
     }
 
-    async fetchAndAddSecret(options: FetchAndAddSecretOptions): Promise<FetchResult> {
+    async fetchAndAddSecret<TResponse = unknown, TBody = unknown>(options: FetchAndAddSecretOptions<TResponse, TBody>): Promise<FetchResult<TResponse>> {
         const { url, method = 'POST', secretName } = options;
-        const fail = async (error: string, code?: string): Promise<FetchResult> => {
+        const fail = async (error: string, code?: string): Promise<FetchFailure> => {
             try {
                 await this._appendActivityLog({
                     ts: Date.now(),
@@ -106,7 +115,7 @@ export class SecretAcquisition {
                 return fail(`HTTP Error: ${response.status}`);
             }
 
-            const data = await response.json();
+            const data = await response.json() as TResponse;
             const key = extractKey(data);
 
             if (!key) {
@@ -132,20 +141,20 @@ export class SecretAcquisition {
                 });
             } catch {
                 const sanitizedData = sanitize(data, key);
-                return { success: true, data: sanitizedData, secretName: resolvedSecretName, activityLogWriteFailed: true };
+                return { success: true, data: sanitizedData as TResponse, secretName: resolvedSecretName, activityLogWriteFailed: true };
             }
 
             const sanitizedData = sanitize(data, key);
-            return { success: true, data: sanitizedData, secretName: resolvedSecretName };
+            return { success: true, data: sanitizedData as TResponse, secretName: resolvedSecretName };
         } catch (e: any) {
             const code = IdentityError.isIdentityError(e) ? e.code : undefined;
             return fail(e.message ?? String(e), code);
         }
     }
 
-    async fetchAndUpdateSecret(options: FetchAndUpdateSecretOptions): Promise<FetchResult> {
+    async fetchAndUpdateSecret<TResponse = unknown, TBody = unknown>(options: FetchAndUpdateSecretOptions<TResponse, TBody>): Promise<FetchResult<TResponse>> {
         const { url, method = 'POST', secretName } = options;
-        const fail = async (error: string, code?: string): Promise<FetchResult> => {
+        const fail = async (error: string, code?: string): Promise<FetchFailure> => {
             try {
                 await this._appendActivityLog({
                     ts: Date.now(),
@@ -181,7 +190,7 @@ export class SecretAcquisition {
                 return fail(`HTTP Error: ${response.status}`);
             }
 
-            const data = await response.json();
+            const data = await response.json() as TResponse;
             const key = extractKey(data);
 
             if (!key) {
@@ -201,11 +210,11 @@ export class SecretAcquisition {
                 });
             } catch {
                 const sanitizedData = sanitize(data, key);
-                return { success: true, data: sanitizedData, secretName, activityLogWriteFailed: true };
+                return { success: true, data: sanitizedData as TResponse, secretName, activityLogWriteFailed: true };
             }
 
             const sanitizedData = sanitize(data, key);
-            return { success: true, data: sanitizedData, secretName };
+            return { success: true, data: sanitizedData as TResponse, secretName };
         } catch (e: any) {
             const code = IdentityError.isIdentityError(e) ? e.code : undefined;
             return fail(e.message ?? String(e), code);

@@ -73,8 +73,8 @@ async function run() {
 
         proxy = await startLocalAuthProxy({
             identity,
-            provider: 'openai',
             secretName: 'openai',
+            upstreamBaseUrl: 'https://api.openai.com',
         });
 
         const response = await fetch(`${proxy.baseUrl}/v1/chat/completions`, {
@@ -98,8 +98,10 @@ async function run() {
         await identity.admin.addSecret('anthropic', 'anthropic-test-key');
         const anthropicProxy = await startLocalAuthProxy({
             identity,
-            provider: 'anthropic',
             secretName: 'anthropic',
+            upstreamBaseUrl: 'https://api.anthropic.com',
+            authHeaderName: 'x-api-key',
+            authPrefix: '',
         });
         try {
             capturedAuth = null;

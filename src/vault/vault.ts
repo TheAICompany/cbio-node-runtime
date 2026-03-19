@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import * as crypto from 'node:crypto';
-import { Signer } from './crypto.js';
-import { deriveRootAgentId } from './identity.js';
+import { Signer } from '../protocol/crypto.js';
+import { deriveRootAgentId } from '../protocol/identity.js';
 import { IdentityError, IdentityErrorCode } from '../errors.js';
 import type { IStorageProvider } from '../storage/provider.js';
 import { FsStorageProvider } from '../storage/fs.js';
@@ -11,8 +11,8 @@ import {
     readActivityLogMetadata,
     type ActivityLogEntry,
     type ActivityLogMetadata,
-} from '../activity/ActivityLog.js';
-import { sealBlob, unsealBlob } from '../migration/seal.js';
+} from '../audit/ActivityLog.js';
+import { sealBlob, unsealBlob } from '../sealed/seal.js';
 import { normalizeSecretPolicyOrigin } from './secretPolicy.js';
 
 const VAULT_FORMAT_VERSION = "v1.0";
@@ -290,7 +290,7 @@ export class CbioVault {
         const metadata = {
             v: 1,
             agentId: deriveRootAgentId(await this.#autoSigner.getPublicKey()),
-            vaultPath: this.#storageKey,
+            storageKey: this.#storageKey,
         };
         await appendActivityLog(this.#storage, this.#activityLogKey, entry, metadata);
     }
@@ -305,10 +305,9 @@ export class CbioVault {
     /**
      * Persistence: Atomic save with write-read-verify.
      */
-    async save(signer: Signer, storageKeyOrPath: string, storage?: IStorageProvider): Promise<void> {
+    async save(signer: Signer, storageKey: string, storage?: IStorageProvider): Promise<void> {
         const provider = storage ?? this.#storage ?? new FsStorageProvider();
-        const key = storageKeyOrPath;
-        const tmpKey = `${key}.tmp`;
+        const tmpKey = `${storageKey}.tmp`;
 
         const bundle = await this.#serializeToBundle(signer);
         const checksum = crypto.createHash('sha256').update(bundle).digest('hex');
@@ -330,9 +329,9 @@ export class CbioVault {
         }
 
         if (provider.rename) {
-            await provider.rename(tmpKey, key);
+            await provider.rename(tmpKey, storageKey);
         } else {
-            await provider.write(key, bundle);
+            await provider.write(storageKey, bundle);
             await provider.delete(tmpKey);
         }
     }
@@ -398,10 +397,9 @@ export class CbioVault {
         }
     }
 
-    async #load(signer: Signer, storageKeyOrPath: string, storage?: IStorageProvider, mode: 'optional' | 'required' = 'optional'): Promise<void> {
+    async #load(signer: Signer, storageKey: string, storage?: IStorageProvider, mode: 'optional' | 'required' = 'optional'): Promise<void> {
         const provider = storage ?? this.#storage ?? new FsStorageProvider();
-        const key = storageKeyOrPath;
-        const tmpKey = `${key}.tmp`;
+        const tmpKey = `${storageKey}.tmp`;
 
         const tryLoad = async (k: string): Promise<boolean> => {
             try {
@@ -414,49 +412,49 @@ export class CbioVault {
             }
         };
 
-        if (await tryLoad(key)) {
+        if (await tryLoad(storageKey)) {
             await provider.delete(tmpKey).catch(() => {});
             return;
         }
 
-        const mainMissing = !(await provider.has(key));
+        const mainMissing = !(await provider.has(storageKey));
         if (mainMissing) {
             if (await tryLoad(tmpKey)) {
                 if (provider.rename) {
-                    await provider.rename(tmpKey, key);
+                    await provider.rename(tmpKey, storageKey);
                 } else {
                     const bundle = await provider.read(tmpKey);
-                    if (bundle) await provider.write(key, bundle);
+                    if (bundle) await provider.write(storageKey, bundle);
                     await provider.delete(tmpKey);
                 }
                 return;
             }
             if (mode === 'required') {
-                throw new IdentityError(IdentityErrorCode.VAULT_FILE_NOT_FOUND, `Vault file not found: ${key}`);
+                throw new IdentityError(IdentityErrorCode.VAULT_FILE_NOT_FOUND, `Vault file not found: ${storageKey}`);
             }
             return;
         }
 
         if (await tryLoad(tmpKey)) {
             if (provider.rename) {
-                await provider.rename(tmpKey, key);
+                await provider.rename(tmpKey, storageKey);
             } else {
                 const bundle = await provider.read(tmpKey);
-                if (bundle) await provider.write(key, bundle);
+                if (bundle) await provider.write(storageKey, bundle);
                 await provider.delete(tmpKey);
             }
             return;
         }
 
         // Path collision: main exists but decrypt failed. Try suffixed paths only if file looks valid (not obviously corrupt).
-        const bundle = await provider.read(key);
+        const bundle = await provider.read(storageKey);
         if (!bundle || bundle.length < 32) {
             throw new IdentityError(
                 IdentityErrorCode.VAULT_CORRUPTED,
-                `Vault corrupted: both ${key} and ${tmpKey} are unreadable. Do not overwrite. Seek recovery support.`
+                `Vault corrupted: both ${storageKey} and ${tmpKey} are unreadable. Do not overwrite. Seek recovery support.`
             );
         }
-        const base = key.replace(/\.enc$/, '');
+        const base = storageKey.replace(/\.enc$/, '');
         for (let n = 1; n <= 100; n++) {
             const altKey = `${base}_${n}.enc`;
             if (await tryLoad(altKey)) {
@@ -470,7 +468,7 @@ export class CbioVault {
 
         throw new IdentityError(
             IdentityErrorCode.VAULT_DECRYPT_FAILED,
-            `Vault decrypt failed: ${key} exists but could not be decrypted with this key. Wrong key, tampered file, or incompatible format. Do not overwrite. Seek recovery support.`
+            `Vault decrypt failed: ${storageKey} exists but could not be decrypted with this key. Wrong key, tampered file, or incompatible format. Do not overwrite. Seek recovery support.`
         );
     }
 
@@ -521,7 +519,7 @@ export class CbioVault {
     }
 
     /**
-     * Read activity log metadata (agentId, vaultPath). Returns null if not present.
+     * Read activity log metadata (agentId, storageKey). Returns null if not present.
      */
     async getActivityLogMetadata(): Promise<ActivityLogMetadata | null> {
         if (!this.#storage || !this.#activityLogKey) return null;

@@ -6,10 +6,10 @@
  */
 
 import { createHash } from 'node:crypto';
-import { Signer } from './crypto.js';
+import { Signer } from '../protocol/crypto.js';
 import { IdentityError, IdentityErrorCode } from '../errors.js';
-import type { CbioVault } from './vault.js';
-import type { ActivityLogEntry } from '../activity/ActivityLog.js';
+import type { CbioVault } from '../vault/vault.js';
+import type { ActivityLogEntry } from '../audit/ActivityLog.js';
 
 export interface FetchWithAuthOptions extends RequestInit {
     authPrefix?: string;

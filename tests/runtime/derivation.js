@@ -9,16 +9,16 @@ async function verifyDerivation() {
     const TEST_DIR = path.join(process.cwd(), '.cbio_derivation_test');
     await fs.mkdir(TEST_DIR, { recursive: true });
 
-    const vaultPath = path.join(TEST_DIR, 'test_vault.enc');
+    const storageKey = path.join(TEST_DIR, 'test_vault.enc');
 
-    const agentSave = await CbioIdentity.load(fullKeys, { vaultPath });
+    const agentSave = await CbioIdentity.load(fullKeys, { storageKey });
     await agentSave.admin.addSecret('test-key', 'secret-content');
     console.log("✅ Step 1: Secret saved using full KeyPair (via agent.admin).");
 
     const partialKeys = { privateKey: fullKeys.privateKey };
 
     console.log("--- Attempting to load using ONLY PrivateKey ---");
-    const agentLoad = await CbioIdentity.load(partialKeys, { vaultPath });
+    const agentLoad = await CbioIdentity.load(partialKeys, { storageKey });
 
     const derivedPub = await agentLoad.getPublicKey();
     if (derivedPub === fullKeys.publicKey) {

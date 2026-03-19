@@ -9,16 +9,16 @@ async function verifyMergeSecurityLocal() {
     await fs.mkdir(LOCAL_TEST_DIR, { recursive: true });
     process.env.C_BIO_VAULT_DIR = LOCAL_TEST_DIR;
 
-    const vaultPathA = path.join(LOCAL_TEST_DIR, 'vault_a.enc');
-    const vaultPathA2 = path.join(LOCAL_TEST_DIR, 'vault_a2.enc');
+    const storageKeyA = path.join(LOCAL_TEST_DIR, 'vault_a.enc');
+    const storageKeyA2 = path.join(LOCAL_TEST_DIR, 'vault_a2.enc');
 
     try {
         const keysA = generateIdentityKeys();
-        const agentA = await CbioIdentity.load(keysA, { vaultPath: vaultPathA });
+        const agentA = await CbioIdentity.load(keysA, { storageKey: storageKeyA });
         await agentA.admin.addSecret('secret-a', 'value-a');
 
         const keysB = generateIdentityKeys();
-        const agentB = await CbioIdentity.load(keysB, { vaultPath: path.join(LOCAL_TEST_DIR, 'vault_b.enc') });
+        const agentB = await CbioIdentity.load(keysB, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_b.enc') });
         await agentB.admin.addSecret('secret-b', 'value-b');
 
         console.log("--- 1. Attempting cross-identity merge (A <- B) ---");
@@ -34,7 +34,7 @@ async function verifyMergeSecurityLocal() {
         }
 
         console.log("--- 2. Attempting legitimate merge (A <- A') ---");
-        const agentA2 = await CbioIdentity.load(keysA, { vaultPath: vaultPathA2 });
+        const agentA2 = await CbioIdentity.load(keysA, { storageKey: storageKeyA2 });
         await agentA2.admin.addSecret('secret-a2', 'value-a2');
 
         const result = await agentA.admin.mergeFrom(agentA2);
@@ -46,7 +46,7 @@ async function verifyMergeSecurityLocal() {
         }
 
         console.log("--- 3. Conflict handling: merge without force returns conflicts ---");
-        const agentA3 = await CbioIdentity.load(keysA, { vaultPath: path.join(LOCAL_TEST_DIR, 'vault_a3.enc') });
+        const agentA3 = await CbioIdentity.load(keysA, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_a3.enc') });
         await agentA3.admin.addSecret('secret-a', 'value-a-DIFFERENT');
         const conflictResult = await agentA.admin.mergeFrom(agentA3);
         if (!conflictResult.merged && conflictResult.conflicts?.includes('secret-a')) {

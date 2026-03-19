@@ -1,5 +1,5 @@
 /**
- * Migration export. Seal/unseal primitives and sealed blob format helpers.
+ * Sealed blob export. Seal/unseal primitives and sealed blob format helpers.
  * Do not depend on CbioAgent.
  */
 

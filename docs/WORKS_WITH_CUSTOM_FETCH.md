@@ -137,7 +137,33 @@ agent/runtime -> local trusted broker -> provider API
 
 The agent talks to a local process over HTTP or IPC. The local process holds `identity` privileges or another trusted handle and injects authentication on the outbound request.
 
-See [REQ-local-auth-proxy.md](./REQ-local-auth-proxy.md) for the proposed productized version of this flow.
+With the runtime helper, configure the upstream explicitly:
+
+```ts
+const proxy = await startLocalAuthProxy({
+  identity: agent,
+  secretName: 'openai',
+  upstreamBaseUrl: 'https://api.openai.com',
+});
+```
+
+For providers that do not use `Authorization: Bearer ...`, override the auth settings:
+
+```ts
+const proxy = await startLocalAuthProxy({
+  identity: agent,
+  secretName: 'anthropic',
+  upstreamBaseUrl: 'https://api.anthropic.com',
+  authHeaderName: 'x-api-key',
+  authPrefix: '',
+});
+```
+
+Common examples:
+
+- OpenAI: `upstreamBaseUrl: 'https://api.openai.com'`
+- Anthropic: `upstreamBaseUrl: 'https://api.anthropic.com'`, `authHeaderName: 'x-api-key'`, `authPrefix: ''`
+- Resend: `upstreamBaseUrl: 'https://api.resend.com'`
 
 ## Option 3: Run key-holding code in a separate trusted process
 

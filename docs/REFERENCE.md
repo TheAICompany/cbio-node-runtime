@@ -2,7 +2,7 @@
 
 This document provides a comprehensive technical reference for the CBIO SDK, covering advanced API usage, custom storage implementation, and structured error handling.
 
-For high-level concepts and quick start, see [README.md](../README.md). For module structure, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For high-level concepts and quick start, see [README.md](../README.md). For module structure and naming rules, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
@@ -18,6 +18,12 @@ These methods are available under `identity.admin` and are intended for administ
 ### 1.2 Backups & Sealing
 - **`seal(kdk: string): string`**: Exports the entire vault as an encrypted blob.
 - **`loadFromSealedBlob(kdk: string, blob: string)`**: Restores a vault from a sealed backup.
+
+Lower-level sealed blob primitives are also exported from the package subpath:
+
+```ts
+import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
+```
 
 ### 1.3 Audit & Lifecycle
 - **`getActivityLog()`**: Returns a read-only list of all vault-authenticated actions.
@@ -56,6 +62,8 @@ export interface IStorageProvider {
 - **`MemoryStorageProvider`**: Ephemeral storage for testing or in-memory caches.
 - **Filesystem (Default)**: Persists to `~/.c-bio/`. Use `C_BIO_VAULT_DIR` environment variable to override.
 
+When loading an identity, use `storageKey` to choose the persisted vault location or provider key.
+
 ---
 
 ## 3. Advanced Request Patterns
@@ -77,6 +85,49 @@ const response = await agent.fetchWithAuth('my-secret', 'https://api.example.com
   body: JSON.stringify({ key: 'value' }),
   authPrefix: 'Token ', // Optional: default is 'Bearer '
   withSignature: true,  // Optional: adds X-CBIO-Signature
+});
+```
+
+### 3.3 Local Auth Proxy
+Use `startLocalAuthProxy(...)` when a local process should forward requests to an upstream API while vault-backed auth is injected automatically.
+
+Required fields:
+- `identity`: any object with `fetchWithAuth(...)`
+- `secretName`: vault secret to inject
+- `upstreamBaseUrl`: upstream API base URL
+
+Optional fields:
+- `authHeaderName`: defaults to `Authorization`
+- `authPrefix`: defaults to `Bearer `
+- `host`: defaults to `127.0.0.1`
+- `port`: defaults to an ephemeral port
+
+OpenAI example:
+```ts
+const proxy = await startLocalAuthProxy({
+  identity: agent,
+  secretName: 'openai',
+  upstreamBaseUrl: 'https://api.openai.com',
+});
+```
+
+Anthropic example:
+```ts
+const proxy = await startLocalAuthProxy({
+  identity: agent,
+  secretName: 'anthropic',
+  upstreamBaseUrl: 'https://api.anthropic.com',
+  authHeaderName: 'x-api-key',
+  authPrefix: '',
+});
+```
+
+Resend example:
+```ts
+const proxy = await startLocalAuthProxy({
+  identity: agent,
+  secretName: 'resend',
+  upstreamBaseUrl: 'https://api.resend.com',
 });
 ```
 

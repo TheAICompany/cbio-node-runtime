@@ -1,35 +1,33 @@
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
-import type { FetchWithAuthOptions } from "../impl/authClient.js";
-
-export type SupportedProxyProvider = "openai" | "anthropic" | "resend";
+import type { FetchWithAuthOptions } from "./authClient.js";
 
 export interface FetchWithAuthLike {
   fetchWithAuth(secretName: string, url: string, options?: FetchWithAuthOptions): Promise<Response>;
 }
 
-const PROVIDER_BASE_URLS: Record<SupportedProxyProvider, string> = {
-  openai: "https://api.openai.com",
-  anthropic: "https://api.anthropic.com",
-  resend: "https://api.resend.com",
-};
-
-const PROVIDER_AUTH_CONFIG: Record<SupportedProxyProvider, { authHeaderName: string; authPrefix: string }> = {
-  openai: { authHeaderName: "Authorization", authPrefix: "Bearer " },
-  anthropic: { authHeaderName: "x-api-key", authPrefix: "" },
-  resend: { authHeaderName: "Authorization", authPrefix: "Bearer " },
-};
-
+/**
+ * Configuration for a local proxy that forwards requests to one upstream API
+ * while injecting a vault-backed secret into each outbound request.
+ */
 export interface LocalAuthProxyOptions {
+  /** Trusted handle used to send authenticated requests upstream. */
   identity: FetchWithAuthLike;
+  /** Vault secret name to inject into the outbound auth header. */
   secretName: string;
-  provider: SupportedProxyProvider;
+  /** Upstream API base URL, such as `https://api.openai.com`. */
+  upstreamBaseUrl: string;
+  /** HTTP header name for auth. Defaults to `Authorization`. */
+  authHeaderName?: string;
+  /** Prefix prepended before the secret value. Defaults to `Bearer `. */
+  authPrefix?: string;
+  /** Local bind host for the proxy server. Defaults to `127.0.0.1`. */
   host?: string;
+  /** Local bind port. Defaults to `0` for an ephemeral port. */
   port?: number;
 }
 
 export interface LocalAuthProxyHandle {
-  readonly provider: SupportedProxyProvider;
   readonly secretName: string;
   readonly upstreamBaseUrl: string;
   readonly host: string;
@@ -66,14 +64,15 @@ async function readRequestBody(req: http.IncomingMessage): Promise<Buffer | unde
 }
 
 export async function startLocalAuthProxy(options: LocalAuthProxyOptions): Promise<LocalAuthProxyHandle> {
-  const { identity, secretName, provider, host = "127.0.0.1", port = 0 } = options;
-
-  const upstreamBaseUrl = PROVIDER_BASE_URLS[provider];
-  if (!upstreamBaseUrl) {
-    throw new Error(`Unsupported proxy provider: ${provider}`);
-  }
-  const authConfig = PROVIDER_AUTH_CONFIG[provider];
-
+  const {
+    identity,
+    secretName,
+    upstreamBaseUrl,
+    authHeaderName = "Authorization",
+    authPrefix = "Bearer ",
+    host = "127.0.0.1",
+    port = 0,
+  } = options;
   const upstream = new URL(upstreamBaseUrl);
 
   const server = http.createServer(async (req, res) => {
@@ -87,8 +86,8 @@ export async function startLocalAuthProxy(options: LocalAuthProxyOptions): Promi
         method,
         headers,
         body: body ? new Uint8Array(body) : undefined,
-        authHeaderName: authConfig.authHeaderName,
-        authPrefix: authConfig.authPrefix,
+        authHeaderName,
+        authPrefix,
       });
 
       res.statusCode = upstreamResponse.status;
@@ -132,7 +131,6 @@ export async function startLocalAuthProxy(options: LocalAuthProxyOptions): Promi
   const baseUrl = `http://${host}:${resolvedAddress.port}`;
 
   return {
-    provider,
     secretName,
     upstreamBaseUrl,
     host,

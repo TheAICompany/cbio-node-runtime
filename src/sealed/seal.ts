@@ -1,5 +1,5 @@
 /**
- * Migration seal/unseal primitives. Single source of truth for sealed blob format.
+ * Sealed blob primitives. Single source of truth for sealed blob format.
  * Used by vault and by Cloud for custody transfer. Do not depend on runtime.
  */
 
