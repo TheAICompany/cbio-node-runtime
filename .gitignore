@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript incremental
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Env (if any local overrides)
+.env
+.env.local
+
+# Test artifacts (vault files, temp dirs)
+*.enc
+.c-bio/
+.cbio_*
