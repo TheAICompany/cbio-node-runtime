@@ -12,7 +12,7 @@ export const SEALED_BLOB_VERSION = 'v1.0' as const;
 export interface SealedBlobPayload {
     version: string;
     secrets: Record<string, string>;
-    secretMetadata?: Record<string, unknown>;
+    secretMetadata: Record<string, unknown>;
 }
 
 /**
@@ -48,9 +48,18 @@ export function unsealBlob(sealedBlob: string, kdk: string): SealedBlobPayload {
     decipher.setAuthTag(tag);
     const plainText = decipher.update(encrypted as any, undefined, 'utf8') + decipher.final('utf8');
     const data = JSON.parse(plainText);
+    if (data.version === undefined || data.version === null) {
+        throw new IdentityError(IdentityErrorCode.INVALID_KDK, 'Sealed blob missing version. Legacy format is no longer supported.');
+    }
+    if (typeof data.secrets !== 'object' || data.secrets === null) {
+        throw new IdentityError(IdentityErrorCode.INVALID_KDK, 'Sealed blob must have a secrets object. Legacy format is no longer supported.');
+    }
+    if (typeof data.secretMetadata !== 'object' || data.secretMetadata === null) {
+        throw new IdentityError(IdentityErrorCode.INVALID_KDK, 'Sealed blob must have a secretMetadata object. Legacy format is no longer supported.');
+    }
     return {
-        version: data.version ?? 'v1.0',
-        secrets: data.secrets || {},
+        version: data.version,
+        secrets: data.secrets,
         secretMetadata: data.secretMetadata,
     };
 }

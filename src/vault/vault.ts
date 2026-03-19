@@ -110,18 +110,27 @@ export class CbioVault {
         if (existing) return existing;
 
         const legacyValue = this.#secrets.get(secretName);
-        if (legacyValue === undefined) {
-            throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found. Use addSecret to add.`);
+        if (legacyValue !== undefined) {
+            throw new IdentityError(
+                IdentityErrorCode.VAULT_CORRUPTED,
+                `Secret '${secretName}' exists in legacy format. Legacy vault format is no longer supported.`
+            );
         }
 
-        this.#secrets.delete(secretName);
-        this.#createVersionedSecret(secretName, legacyValue);
-        return this.#secretMetadata.get(secretName)!;
+        throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found. Use addSecret to add.`);
     }
 
     #getActiveVersionValue(secretName: string): string | undefined {
         const metadata = this.#secretMetadata.get(secretName);
-        if (!metadata) return this.#secrets.get(secretName);
+        if (!metadata) {
+            if (this.#secrets.has(secretName)) {
+                throw new IdentityError(
+                    IdentityErrorCode.VAULT_CORRUPTED,
+                    `Secret '${secretName}' exists in legacy format. Legacy vault format is no longer supported.`
+                );
+            }
+            return undefined;
+        }
         const active = metadata.versions[metadata.activeVersion];
         return active ? this.#secrets.get(active.storageKey) : undefined;
     }
@@ -165,13 +174,17 @@ export class CbioVault {
             return;
         }
 
-        const secretValue = otherVault.getSecret(secretName);
-        if (secretValue === undefined) return;
-        if (this.hasSecret(secretName)) {
-            await this.updateSecret(secretName, secretValue);
-        } else {
-            await this.addSecret(secretName, secretValue);
+        if (otherVault.#secrets.has(secretName)) {
+            throw new IdentityError(
+                IdentityErrorCode.VAULT_CORRUPTED,
+                `Secret '${secretName}' exists in legacy format in source vault. Legacy vault format is no longer supported.`
+            );
         }
+
+        throw new IdentityError(
+            IdentityErrorCode.SECRET_NOT_FOUND,
+            `Secret '${secretName}' metadata is missing from source vault.`
+        );
     }
 
     /**
@@ -250,17 +263,14 @@ export class CbioVault {
     async updateSecret(secretName: string, secretValue: string): Promise<void> {
         this.#assertPublicSecretName(secretName);
         const metadata = this.#secretMetadata.get(secretName);
-        if (metadata) {
-            const active = metadata.versions[metadata.activeVersion];
-            if (!active) {
-                throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' has no active version.`);
-            }
-            this.#secrets.set(active.storageKey, secretValue);
-        } else if (this.#secrets.has(secretName)) {
-            this.#secrets.set(secretName, secretValue);
-        } else {
+        if (!metadata) {
             throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found. Use addSecret to add.`);
         }
+        const active = metadata.versions[metadata.activeVersion];
+        if (!active) {
+            throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' has no active version.`);
+        }
+        this.#secrets.set(active.storageKey, secretValue);
         await this.#persistIfPossible();
     }
 
@@ -325,16 +335,13 @@ export class CbioVault {
     async deleteSecret(secretName: string): Promise<void> {
         this.#assertPublicSecretName(secretName);
         const metadata = this.#secretMetadata.get(secretName);
-        if (metadata) {
-            for (const version of Object.values(metadata.versions)) {
-                this.#secrets.delete(version.storageKey);
-            }
-            this.#secretMetadata.delete(secretName);
-        } else if (this.#secrets.has(secretName)) {
-            this.#secrets.delete(secretName);
-        } else {
+        if (!metadata) {
             throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found. Nothing to delete.`);
         }
+        for (const version of Object.values(metadata.versions)) {
+            this.#secrets.delete(version.storageKey);
+        }
+        this.#secretMetadata.delete(secretName);
         await this.#persistIfPossible();
     }
 
@@ -448,8 +455,22 @@ export class CbioVault {
     }
 
     #loadFromPayload(data: any): void {
-        this.#secrets = new Map(Object.entries(data.secrets || data));
-        this.#secretMetadata = new Map(Object.entries(data.secretMetadata || {}));
+        if (typeof data.secrets !== 'object' || data.secrets === null) {
+            throw new IdentityError(
+                IdentityErrorCode.VAULT_CORRUPTED,
+                'Vault payload must have a secrets object. Legacy format is no longer supported.'
+            );
+        }
+        if (typeof data.secretMetadata !== 'object' || data.secretMetadata === null) {
+            throw new IdentityError(
+                IdentityErrorCode.VAULT_CORRUPTED,
+                'Vault payload must have a secretMetadata object. Legacy format is no longer supported.'
+            );
+        }
+        this.#secrets = new Map(Object.entries(data.secrets));
+        this.#secretMetadata = new Map(
+            Object.entries(data.secretMetadata as Record<string, SecretRecordMetadata>)
+        ) as Map<string, SecretRecordMetadata>;
     }
 
     async #persistIfPossible(): Promise<void> {
@@ -548,27 +569,36 @@ export class CbioVault {
         decipher.setAuthTag(tag);
         const plainText = decipher.update(encrypted as any, undefined, 'utf8') + decipher.final('utf8');
         const data = JSON.parse(plainText);
-        if (SUPPORTED_VERSIONS.includes(data.version)) {
-            this.#loadFromPayload(data);
-        } else {
-            this.#secrets = new Map(Object.entries(data.secrets || data));
-            this.#secretMetadata = new Map();
+        if (!SUPPORTED_VERSIONS.includes(data.version)) {
+            throw new IdentityError(
+                IdentityErrorCode.VAULT_CORRUPTED,
+                `Vault format version '${data.version ?? '(missing)'}' not supported. Expected v1.0. Legacy formats are no longer supported.`
+            );
         }
+        this.#loadFromPayload(data);
     }
 
     hasSecret(secretName: string): boolean {
         if (CbioVault.#isVersionStorageKey(secretName)) return false;
-        return this.#secretMetadata.has(secretName) || this.#secrets.has(secretName);
+        if (this.#secrets.has(secretName)) {
+            throw new IdentityError(
+                IdentityErrorCode.VAULT_CORRUPTED,
+                `Secret '${secretName}' exists in legacy format. Legacy vault format is no longer supported.`
+            );
+        }
+        return this.#secretMetadata.has(secretName);
     }
 
     listSecretNames(): string[] {
-        const names = new Set(this.#secretMetadata.keys());
         for (const secretName of this.#secrets.keys()) {
             if (!CbioVault.#isVersionStorageKey(secretName)) {
-                names.add(secretName);
+                throw new IdentityError(
+                    IdentityErrorCode.VAULT_CORRUPTED,
+                    `Secret '${secretName}' exists in legacy format. Legacy vault format is no longer supported.`
+                );
             }
         }
-        return Array.from(names);
+        return Array.from(this.#secretMetadata.keys());
     }
 
     /**
