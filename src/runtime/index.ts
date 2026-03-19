@@ -15,6 +15,7 @@ export { MemoryStorageProvider } from "../storage/memory.js";
 export { getChildIdentitySecretName, CHILD_KEY_PREFIX } from "../impl/identity.js";
 export {
   startLocalAuthProxy,
+  type FetchWithAuthLike,
   type LocalAuthProxyOptions,
   type LocalAuthProxyHandle,
   type SupportedProxyProvider,

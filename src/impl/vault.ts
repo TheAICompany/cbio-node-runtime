@@ -13,21 +13,10 @@ import {
     type ActivityLogMetadata,
 } from '../activity/ActivityLog.js';
 import { sealBlob, unsealBlob } from '../migration/seal.js';
+import { normalizeSecretPolicyOrigin } from './secretPolicy.js';
 
 const VAULT_FORMAT_VERSION = "v1.0";
 const SUPPORTED_VERSIONS = ["v1.0"];
-
-function normalizeOriginForSecretPolicy(origin: string): string {
-    const url = new URL(origin);
-    const isLoopbackHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
-    if (url.protocol === 'https:') {
-        return url.origin;
-    }
-    if (url.protocol === 'http:' && isLoopbackHost) {
-        return url.origin;
-    }
-    throw new IdentityError(IdentityErrorCode.SECRET_POLICY_REQUIRED, `Secret policy requires HTTPS origin or loopback HTTP for local development. Received: ${origin}`);
-}
 
 export interface SecretPolicy {
     allowedOrigins?: string[];
@@ -73,7 +62,16 @@ export class CbioVault {
 
     static #normalizeAllowedOrigins(allowedOrigins?: readonly string[]): string[] | undefined {
         if (!allowedOrigins || allowedOrigins.length === 0) return undefined;
-        const normalized = Array.from(new Set(allowedOrigins.map((origin) => normalizeOriginForSecretPolicy(origin))));
+        const normalized = Array.from(new Set(allowedOrigins.map((origin) => {
+            try {
+                return normalizeSecretPolicyOrigin(origin);
+            } catch (error) {
+                throw new IdentityError(
+                    IdentityErrorCode.SECRET_POLICY_REQUIRED,
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+        })));
         return normalized.length > 0 ? normalized : undefined;
     }
 

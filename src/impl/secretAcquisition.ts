@@ -8,6 +8,7 @@
 import { IdentityError } from '../errors.js';
 import type { CbioVault } from './vault.js';
 import type { ActivityLogEntry } from '../activity/ActivityLog.js';
+import { isAllowedSecretUrl } from './secretPolicy.js';
 
 export interface FetchResult {
     success: boolean;
@@ -38,11 +39,6 @@ export interface FetchAndUpdateSecretOptions {
     extractKey: (response: any) => string;
 }
 
-function isAllowedSecretUrl(url: URL): boolean {
-    const isLoopbackHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
-    return url.protocol === 'https:' || (url.protocol === 'http:' && isLoopbackHost);
-}
-
 function sanitize(obj: any, secret: string): any {
     if (typeof obj !== 'object' || obj === null) return obj;
     const newObj = Array.isArray(obj) ? [] : {};
@@ -63,6 +59,14 @@ export class SecretAcquisition {
         private readonly _vault: CbioVault,
         private readonly _appendActivityLog: (entry: ActivityLogEntry) => Promise<void>
     ) {}
+
+    hasSecret(secretName: string): boolean {
+        return this._vault.hasSecret(secretName);
+    }
+
+    listSecretNames(): string[] {
+        return this._vault.listSecretNames();
+    }
 
     async fetchAndAddSecret(options: FetchAndAddSecretOptions): Promise<FetchResult> {
         const { url, method = 'POST', secretName } = options;

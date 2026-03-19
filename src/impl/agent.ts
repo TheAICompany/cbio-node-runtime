@@ -172,6 +172,13 @@ export class CbioIdentity {
     setIssuedIdentity(identity: IssuedAgentIdentity): void {
         this.#issuedIdentity = identity;
     }
+
+    /**
+     * @internal Exposes the vault for controlled same-identity merge operations.
+     */
+    getVaultForMerge(): CbioVault {
+        return this._vault;
+    }
 }
 
 /**
@@ -246,12 +253,12 @@ export class CbioAgent {
 
     hasSecret(secretName: string): boolean {
         this._checkPermission('vault:list');
-        return (this.#secretAcquisition as any)._vault.hasSecret(secretName);
+        return this.#secretAcquisition.hasSecret(secretName);
     }
 
     listSecretNames(): string[] {
         this._checkPermission('vault:list');
-        return (this.#secretAcquisition as any)._vault.listSecretNames();
+        return this.#secretAcquisition.listSecretNames();
     }
 
     /**
@@ -384,7 +391,7 @@ export class CbioManagementFacet {
     }
 
     async mergeFrom(otherIdentity: CbioIdentity, options?: { onConflict?: 'abort' | 'skip' | 'overwrite' }): Promise<MergeResult> {
-        return this._vault.mergeFrom((otherIdentity as any)._vault, options);
+        return this._vault.mergeFrom(otherIdentity.getVaultForMerge(), options);
     }
 
     seal(kdk: string): string {

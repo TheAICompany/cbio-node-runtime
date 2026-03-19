@@ -1,8 +1,12 @@
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
-import { CbioIdentity } from "../impl/agent.js";
+import type { FetchWithAuthOptions } from "../impl/authClient.js";
 
 export type SupportedProxyProvider = "openai" | "anthropic" | "resend";
+
+export interface FetchWithAuthLike {
+  fetchWithAuth(secretName: string, url: string, options?: FetchWithAuthOptions): Promise<Response>;
+}
 
 const PROVIDER_BASE_URLS: Record<SupportedProxyProvider, string> = {
   openai: "https://api.openai.com",
@@ -17,7 +21,7 @@ const PROVIDER_AUTH_CONFIG: Record<SupportedProxyProvider, { authHeaderName: str
 };
 
 export interface LocalAuthProxyOptions {
-  identity: CbioIdentity;
+  identity: FetchWithAuthLike;
   secretName: string;
   provider: SupportedProxyProvider;
   host?: string;
