@@ -3,6 +3,7 @@ import { createIdentityRef, signRevocationRecord } from '@the-ai-company/cbio-pr
 import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from './helpers/ingest_secret.js';
 import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 async function testManagedAgentIdentity() {
@@ -14,7 +15,7 @@ async function testManagedAgentIdentity() {
 
     const mockBase = 'https://managed-agent-mock.local';
     const originalFetch = global.fetch;
-    global.fetch = async (url) => {
+    global.fetch = async (url, init) => {
         const u = typeof url === 'string' ? url : url.toString();
         if (u.startsWith(mockBase)) {
             return new Response(JSON.stringify({ token: 'agent-only-secret' }), {
@@ -22,7 +23,7 @@ async function testManagedAgentIdentity() {
                 headers: { 'Content-Type': 'application/json' },
             });
         }
-        return originalFetch(url);
+        return originalFetch(url, init);
     };
 
     try {
@@ -98,7 +99,7 @@ async function testManagedAgentIdentity() {
             ...parsed,
             privateKey: rootKeys.privateKey,
         };
-        await rootIdentity.admin.vault.addSecret(managedRecordKey, JSON.stringify(tamperedRecord));
+        await ingestSecret(rootIdentity, managedRecordKey, JSON.stringify(tamperedRecord));
 
         let tamperedLoadBlocked = false;
         try {
@@ -114,17 +115,17 @@ async function testManagedAgentIdentity() {
         }
 
         await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await rootIdentity.admin.vault.addSecret(managedRecordKey, stored);
+        await ingestSecret(rootIdentity, managedRecordKey, stored);
 
         await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await rootIdentity.admin.vault.addSecret(managedRecordKey, JSON.stringify({ publicKey: managed.publicKey }));
+        await ingestSecret(rootIdentity, managedRecordKey, JSON.stringify({ publicKey: managed.publicKey }));
         const invalidCaps = rootIdentity.admin.managedAgents.getManagedAgentCapabilities(managed.publicKey);
         if (invalidCaps.status !== 'invalid' || invalidCaps.capabilities.length !== 0) {
             throw new Error(`Malformed managed agent record should produce invalid status, got ${JSON.stringify(invalidCaps)}`);
         }
 
         await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await rootIdentity.admin.vault.addSecret(managedRecordKey, stored);
+        await ingestSecret(rootIdentity, managedRecordKey, stored);
 
         const foreignAuthority = await CbioIdentity.load(generateIdentityKeys());
         const foreignManaged = await foreignAuthority.admin.managedAgents.issueManagedAgent({
@@ -138,7 +139,7 @@ async function testManagedAgentIdentity() {
         }
 
         await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await rootIdentity.admin.vault.addSecret(managedRecordKey, foreignStored);
+        await ingestSecret(rootIdentity, managedRecordKey, foreignStored);
 
         let foreignAuthorityRecordBlocked = false;
         try {
@@ -154,7 +155,7 @@ async function testManagedAgentIdentity() {
         }
 
         await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await rootIdentity.admin.vault.addSecret(managedRecordKey, stored);
+        await ingestSecret(rootIdentity, managedRecordKey, stored);
 
         const bogusRevocation = signRevocationRecord(rootKeys.privateKey, {
             cbio_protocol: 'v1.0',
@@ -170,7 +171,7 @@ async function testManagedAgentIdentity() {
                 reason: 'bogus sequence',
             },
         });
-        await rootIdentity.admin.vault.addSecret(`cbio:revocation:${managed.publicKey}`, JSON.stringify(bogusRevocation));
+        await ingestSecret(rootIdentity, `cbio:revocation:${managed.publicKey}`, JSON.stringify(bogusRevocation));
 
         const bogusRevocationReload = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey, {
             handle: {

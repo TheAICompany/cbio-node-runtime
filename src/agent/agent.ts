@@ -7,6 +7,11 @@ import {
   type FetchJsonAndUpdateSecretOptions,
   type FetchResult,
 } from "../http/secretAcquisition.js";
+import {
+  startLocalSecretIngress,
+  type LocalSecretIngressHandle,
+  type LocalSecretIngressOptions,
+} from "../http/localSecretIngress.js";
 import type { ActivityLogEntry, ActivityLogMetadata } from "../audit/ActivityLog.js";
 import { getChildIdentitySecretName, deriveRootAgentId, getVaultPath } from "../protocol/identity.js";
 import {
@@ -63,6 +68,8 @@ export interface ActivityLogConfig {
   enabled?: boolean;
   key?: string;
 }
+
+export type StartLocalSecretIngressOptions = Omit<LocalSecretIngressOptions, "vault">;
 
 /**
  * Protocol-level capability strings embedded into signed identities.
@@ -221,6 +228,13 @@ export class CbioIdentity {
     return this._secretAcquisition.fetchJsonAndUpdateSecret(options);
   }
 
+  async startLocalSecretIngress(options: StartLocalSecretIngressOptions): Promise<LocalSecretIngressHandle> {
+    return startLocalSecretIngress({
+      ...options,
+      vault: this._vault,
+    });
+  }
+
   hasSecret(secretName: string): boolean {
     return this._vault.hasSecret(secretName);
   }
@@ -263,7 +277,7 @@ export class CbioIdentity {
       finalPerms["vault:list"] = true;
     }
 
-    return new CbioAgent(this._authClient, this._secretAcquisition, this.agentId, this.publicKey, finalPerms);
+    return new CbioAgent(this._authClient, this._secretAcquisition, this._vault, this.agentId, this.publicKey, finalPerms);
   }
 
 }
@@ -279,16 +293,19 @@ export class CbioAgent {
   #authClient: AuthClient;
   #secretAcquisition: SecretAcquisition;
   #permissions: RuntimePermissions;
+  #vault: CbioVault;
 
   constructor(
     authClient: AuthClient,
     secretAcquisition: SecretAcquisition,
+    vault: CbioVault,
     public readonly agentId: string,
     public readonly publicKey: string,
     permissions?: RuntimePermissions,
   ) {
     this.#authClient = authClient;
     this.#secretAcquisition = secretAcquisition;
+    this.#vault = vault;
     // Default to a restricted worker (vault:fetch, vault:list) if no permissions specified
     this.#permissions = permissions || { "vault:fetch": true, "vault:list": true };
   }
@@ -340,6 +357,14 @@ export class CbioAgent {
   ): Promise<FetchResult<TResponse>> {
     this._checkPermission("vault:acquire");
     return this.#secretAcquisition.fetchJsonAndUpdateSecret(options);
+  }
+
+  async startLocalSecretIngress(options: StartLocalSecretIngressOptions): Promise<LocalSecretIngressHandle> {
+    this._checkPermission("vault:acquire");
+    return startLocalSecretIngress({
+      ...options,
+      vault: this.#vault,
+    });
   }
 
   hasSecret(secretName: string): boolean {
@@ -484,10 +509,6 @@ export class CbioVaultAdmin {
     private readonly _identity: CbioIdentity,
     private readonly _vault: CbioVault,
   ) {}
-
-  async addSecret(secretName: string, secretValue: string, options?: SecretPolicy): Promise<void> {
-    await this._vault.addSecret(secretName, secretValue, options);
-  }
 
   hasSecret(secretName: string): boolean {
     return this._vault.hasSecret(secretName);

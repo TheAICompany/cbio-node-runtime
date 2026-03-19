@@ -16,6 +16,7 @@ import {
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from './helpers/ingest_secret.js';
 
 const TEST_DIR = path.join(process.cwd(), '.cbio_errors_test');
 
@@ -49,7 +50,7 @@ async function test2_InvalidKdk() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.vault.addSecret('x', 'y');
+    await ingestSecret(agent, 'x', 'y');
 
     const sealed = agent.admin.vault.seal(crypto.randomBytes(32).toString('base64url'));
     const agent2 = await CbioIdentity.load(keys);

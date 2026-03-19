@@ -4,7 +4,6 @@ import * as path from "node:path";
 import {
     CbioIdentity,
     generateIdentityKeys,
-    startLocalSecretIngress,
 } from "../../dist/runtime/index.js";
 import { readSealedSecret } from "./helpers/read_sealed_secret.js";
 
@@ -20,8 +19,7 @@ async function run() {
         const identity = await CbioIdentity.load(keys);
 
         try {
-            ingress = await startLocalSecretIngress({
-                vault: identity.admin.vault,
+            ingress = await identity.startLocalSecretIngress({
                 secretName: "issued-token",
                 once: false,
             });

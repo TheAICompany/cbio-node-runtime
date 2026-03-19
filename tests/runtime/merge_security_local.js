@@ -3,6 +3,7 @@ import { unsealBlob } from '../../dist/sealed/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import { ingestSecret } from './helpers/ingest_secret.js';
 import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 async function verifyMergeSecurityLocal() {
@@ -18,7 +19,7 @@ async function verifyMergeSecurityLocal() {
     const rotateBase = 'https://issuer-a.example.com';
 
     try {
-        global.fetch = async (url) => {
+        global.fetch = async (url, init) => {
             const requestUrl = typeof url === 'string' ? url : url.toString();
             if (requestUrl === `${rotateBase}/rotate`) {
                 return new Response(JSON.stringify({ token: 'rotated-value-a2' }), {
@@ -26,16 +27,16 @@ async function verifyMergeSecurityLocal() {
                     headers: { 'Content-Type': 'application/json' },
                 });
             }
-            return originalFetch(url);
+            return originalFetch(url, init);
         };
 
         const keysA = generateIdentityKeys();
         const agentA = await CbioIdentity.load(keysA, { storageKey: storageKeyA });
-        await agentA.admin.vault.addSecret('secret-a', 'value-a');
+        await ingestSecret(agentA, 'secret-a', 'value-a');
 
         const keysB = generateIdentityKeys();
         const agentB = await CbioIdentity.load(keysB, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_b.enc') });
-        await agentB.admin.vault.addSecret('secret-b', 'value-b');
+        await ingestSecret(agentB, 'secret-b', 'value-b');
 
         console.log("--- 1. Attempting cross-identity merge (A <- B) ---");
         try {
@@ -51,8 +52,8 @@ async function verifyMergeSecurityLocal() {
 
         console.log("--- 2. Attempting legitimate merge (A <- A') ---");
         const agentA2 = await CbioIdentity.load(keysA, { storageKey: storageKeyA2 });
-        await agentA2.admin.vault.addSecret('secret-a2', 'value-a2');
-        await agentA2.admin.vault.addSecret('secret-meta', 'value-meta-v1', { allowedOrigins: [rotateBase] });
+        await ingestSecret(agentA2, 'secret-a2', 'value-a2');
+        await ingestSecret(agentA2, 'secret-meta', 'value-meta-v1', { allowedOrigins: [rotateBase] });
         const rotated = await agentA2.fetchJsonAndUpdateSecret({
             secretName: 'secret-meta',
             url: `${rotateBase}/rotate`,
@@ -92,7 +93,7 @@ async function verifyMergeSecurityLocal() {
 
         console.log("--- 3. Conflict handling: merge without force returns conflicts ---");
         const agentA3 = await CbioIdentity.load(keysA, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_a3.enc') });
-        await agentA3.admin.vault.addSecret('secret-a', 'value-a-DIFFERENT');
+        await ingestSecret(agentA3, 'secret-a', 'value-a-DIFFERENT');
         const conflictResult = await agentA.admin.vault.mergeFrom(agentA3);
         if (
             !conflictResult.merged &&

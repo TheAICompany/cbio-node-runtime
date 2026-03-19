@@ -11,6 +11,7 @@
 import { generateIdentityKeys, CbioIdentity } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from './helpers/ingest_secret.js';
 import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 const TEST_DIR = path.join(process.cwd(), '.cbio_resilience_test');
@@ -28,7 +29,7 @@ async function test1_NormalFlow() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.vault.addSecret('test-key', 'secret-value-123');
+    await ingestSecret(agent, 'test-key', 'secret-value-123');
 
     const agent2 = await CbioIdentity.load(keys);
     const loaded = await readSealedSecret(agent2, 'test-key');
@@ -45,7 +46,7 @@ async function test2_RecoveryFromTmp() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.vault.addSecret('recovery-key', 'recovery-value');
+    await ingestSecret(agent, 'recovery-key', 'recovery-value');
 
     const files = await fs.readdir(TEST_DIR);
     const encFile = files.find((f) => f.endsWith('.enc'));
@@ -78,7 +79,7 @@ async function test3_BothCorrupt() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.vault.addSecret('x', 'y');
+    await ingestSecret(agent, 'x', 'y');
 
     const dir = await fs.readdir(TEST_DIR);
     const encFile = dir.find((f) => f.endsWith('.enc'));
@@ -110,7 +111,7 @@ async function test4_Performance() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.vault.addSecret('perf-key', 'x'.repeat(100));
+    await ingestSecret(agent, 'perf-key', 'x'.repeat(100));
 
     const iterations = 5;
     const times = [];

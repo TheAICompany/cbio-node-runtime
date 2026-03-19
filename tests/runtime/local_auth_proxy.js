@@ -3,6 +3,7 @@ import * as http from 'node:http';
 import { CbioIdentity, generateIdentityKeys, startLocalAuthProxy } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from './helpers/ingest_secret.js';
 
 async function listen(server, host = '127.0.0.1') {
     try {
@@ -69,7 +70,7 @@ async function run() {
     try {
         const keys = generateIdentityKeys();
         const identity = await CbioIdentity.load(keys);
-        await identity.admin.vault.addSecret('openai', 'sk-test-local-proxy');
+        await ingestSecret(identity, 'openai', 'sk-test-local-proxy');
 
         proxy = await startLocalAuthProxy({
             authHandle: identity,
@@ -95,7 +96,7 @@ async function run() {
 
         console.log('✅ Local auth proxy forwards requests and injects Authorization');
 
-        await identity.admin.vault.addSecret('anthropic', 'anthropic-test-key');
+        await ingestSecret(identity, 'anthropic', 'anthropic-test-key');
         const anthropicProxy = await startLocalAuthProxy({
             authHandle: identity,
             secretName: 'anthropic',

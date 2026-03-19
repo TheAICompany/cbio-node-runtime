@@ -1,6 +1,7 @@
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from './helpers/ingest_secret.js';
 
 async function verifyDerivation() {
     console.log("--- PublicKey Derivation & Vault Access Test ---");
@@ -12,7 +13,7 @@ async function verifyDerivation() {
     const storageKey = path.join(TEST_DIR, 'test_vault.enc');
 
     const agentSave = await CbioIdentity.load(fullKeys, { storageKey });
-    await agentSave.admin.vault.addSecret('test-key', 'secret-content');
+    await ingestSecret(agentSave, 'test-key', 'secret-content');
     console.log("✅ Step 1: Secret saved using full KeyPair (via agent.admin).");
 
     const partialKeys = { privateKey: fullKeys.privateKey };

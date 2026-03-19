@@ -1,4 +1,5 @@
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
+import { ingestSecret } from './helpers/ingest_secret.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -15,14 +16,14 @@ async function verifyRecursiveCbio() {
         console.log("-> Root Identity A initialized.");
 
         const keysB = generateIdentityKeys();
-        await agentA.admin.vault.addSecret('cbioAgent-b-priv', keysB.privateKey);
+        await ingestSecret(agentA, 'cbioAgent-b-priv', keysB.privateKey);
         console.log("-> Identity B keys stored in A's vault.");
 
         const agentB = await CbioIdentity.load(keysB);
         console.log("-> Identity B started.");
 
         const keysC = generateIdentityKeys();
-        await agentB.admin.vault.addSecret('cbioAgent-c-priv', keysC.privateKey);
+        await ingestSecret(agentB, 'cbioAgent-c-priv', keysC.privateKey);
         console.log("-> Identity B initialized Identity C.");
 
         if (agentB.hasSecret('cbioAgent-c-priv')) {
@@ -41,4 +42,3 @@ verifyRecursiveCbio().catch((error) => {
     console.error("❌ Recursive hierarchy test failed:", error);
     process.exit(1);
 });
-

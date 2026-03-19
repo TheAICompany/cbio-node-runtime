@@ -6,6 +6,7 @@ import {
 } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from '../runtime/helpers/ingest_secret.js';
 import { readSealedSecret } from '../runtime/helpers/read_sealed_secret.js';
 
 async function testStorageAdaptability() {
@@ -20,7 +21,7 @@ async function testStorageAdaptability() {
         console.log('\n--- 1. Default FsStorageProvider ---');
         process.env.C_BIO_VAULT_DIR = TEST_DIR;
         const agent = await CbioIdentity.load(keys);
-        await agent.admin.vault.addSecret('fs-key', 'fs-val');
+        await ingestSecret(agent, 'fs-key', 'fs-val');
 
         const agent2 = await CbioIdentity.load(keys);
         if (await readSealedSecret(agent2, 'fs-key') === 'fs-val') {
@@ -35,7 +36,7 @@ async function testStorageAdaptability() {
             storage,
             storageKey: 'mem-vault.enc',
         });
-        await agent3.admin.vault.addSecret('mem-key', 'mem-val');
+        await ingestSecret(agent3, 'mem-key', 'mem-val');
 
         const agent4 = await CbioIdentity.load(keys, {
             storage,
@@ -50,7 +51,7 @@ async function testStorageAdaptability() {
         console.log('\n--- 3. Vault save/load with explicit storage ---');
         const storageKey = 'explicit.enc';
         const agent5 = await CbioIdentity.load(keys, { storage, storageKey });
-        await agent5.admin.vault.addSecret('exp-key', 'exp-val');
+        await ingestSecret(agent5, 'exp-key', 'exp-val');
 
         const agent6 = await CbioIdentity.load(keys, { storage, storageKey });
         if (await readSealedSecret(agent6, 'exp-key') === 'exp-val') {

@@ -100,12 +100,9 @@ export async function startLocalSecretIngress(options: LocalSecretIngressOptions
   const ingressPath = normalizeIngressPath(path);
 
   let settled = false;
-  let resolveWait: ((result: LocalSecretIngressResult) => void) | null = null;
-  let rejectWait: ((error: unknown) => void) | null = null;
-  const waitForSecret = new Promise<LocalSecretIngressResult>((resolve, reject) => {
-    resolveWait = resolve;
-    rejectWait = reject;
-  });
+  let completionResult: LocalSecretIngressResult | null = null;
+  let completionError: unknown = null;
+  const waiters: Array<{ resolve: (result: LocalSecretIngressResult) => void; reject: (error: unknown) => void }> = [];
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -148,7 +145,10 @@ export async function startLocalSecretIngress(options: LocalSecretIngressOptions
       }
 
       settled = true;
-      resolveWait?.({ secretName });
+      completionResult = { secretName };
+      for (const waiter of waiters.splice(0)) {
+        waiter.resolve(completionResult);
+      }
 
       res.statusCode = 201;
       res.setHeader("Content-Type", "application/json");
@@ -160,8 +160,11 @@ export async function startLocalSecretIngress(options: LocalSecretIngressOptions
         });
       }
     } catch (error) {
-      if (!settled) {
-        rejectWait?.(error);
+      if (!settled && completionError == null) {
+        completionError = error;
+        for (const waiter of waiters.splice(0)) {
+          waiter.reject(error);
+        }
       }
       const code = error instanceof Error ? error.message : "CBIO_LOCAL_SECRET_INGEST_FAILED";
       res.statusCode = code === "CBIO_LOCAL_SECRET_TOO_LARGE" ? 413 : 400;
@@ -171,8 +174,11 @@ export async function startLocalSecretIngress(options: LocalSecretIngressOptions
   });
 
   server.on("close", () => {
-    if (!settled) {
-      rejectWait?.(new Error("CBIO_LOCAL_SECRET_INGRESS_CLOSED"));
+    if (!settled && completionError == null) {
+      completionError = new Error("CBIO_LOCAL_SECRET_INGRESS_CLOSED");
+      for (const waiter of waiters.splice(0)) {
+        waiter.reject(completionError);
+      }
     }
   });
 
@@ -207,7 +213,15 @@ export async function startLocalSecretIngress(options: LocalSecretIngressOptions
       });
     },
     waitForSecret() {
-      return waitForSecret;
+      if (completionResult) {
+        return Promise.resolve(completionResult);
+      }
+      if (completionError != null) {
+        return Promise.reject(completionError);
+      }
+      return new Promise<LocalSecretIngressResult>((resolve, reject) => {
+        waiters.push({ resolve, reject });
+      });
     },
   };
 }

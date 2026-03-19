@@ -1,6 +1,7 @@
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from './helpers/ingest_secret.js';
 import * as crypto from 'node:crypto';
 
 async function verifyIsolationLocal() {
@@ -29,11 +30,11 @@ async function verifyIsolationLocal() {
 
     console.log("--- 1. Agent A registers a secret ---");
     const agentA = await CbioIdentity.load(keysA, { storageKey: pathA });
-    await agentA.admin.vault.addSecret('secret-a', 'value-a');
+    await ingestSecret(agentA, 'secret-a', 'value-a');
 
     console.log("--- 2. Agent B registers a secret ---");
     const agentB = await CbioIdentity.load(keysB, { storageKey: pathB });
-    await agentB.admin.vault.addSecret('secret-b', 'value-b');
+    await ingestSecret(agentB, 'secret-b', 'value-b');
 
     console.log("--- 3. Verifying files exist separately ---");
     await fs.stat(pathA);

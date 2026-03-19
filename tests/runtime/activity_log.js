@@ -5,6 +5,7 @@
 import { CbioIdentity, generateIdentityKeys, IdentityError, IdentityErrorCode } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { ingestSecret } from './helpers/ingest_secret.js';
 
 async function testActivityLog() {
     console.log("=== ActivityLog Acceptance ===\n");
@@ -39,7 +40,7 @@ async function testActivityLog() {
         throw new Error(`Expected empty activity log, got ${JSON.stringify(initial)}`);
     }
 
-    await agent.admin.vault.addSecret('audit-test', 'secret-val');
+    await ingestSecret(agent, 'audit-test', 'secret-val');
     const afterSet = await agent.admin.vault.getActivityLog();
     if (afterSet.length === 0) {
         console.log("✅ addSecret does not add to activityLog");
@@ -64,7 +65,7 @@ async function testActivityLog() {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
-        return new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return originalFetch(url, options);
     };
     try {
         console.log("--- 4. fetchWithAuth adds to activityLog ---");
@@ -149,8 +150,8 @@ async function testActivityLog() {
             storageKey: 'activity-fail-test.enc',
             activityLog: { key: 'activity-fail-test.activity.jsonl' },
         });
-        await agentFailing.admin.vault.addSecret('pre-seeded', 'val');
-        await agentFailing.admin.vault.addSecret('rotatable', 'initial', { allowedOrigins: [base] });
+        await ingestSecret(agentFailing, 'pre-seeded', 'val');
+        await ingestSecret(agentFailing, 'rotatable', 'initial', { allowedOrigins: [base] });
         try {
             await agentFailing.fetchWithAuth('nonexistent', `${base}/`);
         } catch (e) {

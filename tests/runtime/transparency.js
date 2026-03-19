@@ -5,6 +5,7 @@ import {
     IdentityErrorCode,
     MemoryStorageProvider,
 } from '../../dist/runtime/index.js';
+import { ingestSecret } from './helpers/ingest_secret.js';
 
 async function verifyTransparency() {
     console.log("--- Persistence Transparency & Error Clarity Test ---");
@@ -67,7 +68,7 @@ async function verifyTransparency() {
             storageKey: 'collision_1.enc',
             activityLog: { key: explicitActivityKey },
         });
-        await original.admin.vault.addSecret('auth', 'token-123');
+        await ingestSecret(original, 'auth', 'token-123');
 
         await storage.write('collision.enc', Buffer.alloc(40, 7));
 

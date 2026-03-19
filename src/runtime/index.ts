@@ -22,6 +22,7 @@ export type {
   IdentityLoadOptions,
   RuntimePermissionName,
   RuntimePermissions,
+  StartLocalSecretIngressOptions,
 } from "../agent/agent.js";
 export type { MergeResult } from "../vault/vault.js";
 export type {

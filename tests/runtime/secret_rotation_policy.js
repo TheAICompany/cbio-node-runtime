@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
+import { ingestSecret } from './helpers/ingest_secret.js';
 import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 async function run() {
@@ -15,8 +16,11 @@ async function run() {
         const agent = await CbioIdentity.load(keys);
 
         let issuedValue = 'rotated-secret-v2';
-        global.fetch = async (url) => {
+        global.fetch = async (url, init) => {
             const origin = new URL(url).origin;
+            if (origin.startsWith('http://127.0.0.1')) {
+                return originalFetch(url, init);
+            }
             return {
                 ok: true,
                 async json() {
@@ -29,7 +33,7 @@ async function run() {
             };
         };
 
-        await agent.admin.vault.addSecret('service-a', 'initial-secret', {
+        await ingestSecret(agent, 'service-a', 'initial-secret', {
             allowedOrigins: ['https://issuer-a.example.com'],
         });
 
