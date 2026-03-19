@@ -1,6 +1,6 @@
 /**
  * ActivityLog: local-only audit log, separate from vault.
- * Verifies: fetchWithAuth/fetchAndAddSecret append; getActivityLog on Owner only; Agent has no access.
+ * Verifies: fetchWithAuth/fetchJsonAndAddSecret append; getActivityLog on Owner only; Agent has no access.
  */
 import { CbioIdentity, generateIdentityKeys, IdentityError, IdentityErrorCode } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
@@ -80,8 +80,8 @@ async function testActivityLog() {
             throw new Error(`Expected one fetchWithAuth entry, got ${JSON.stringify(afterFetch)}`);
         }
 
-        console.log("--- 5. fetchAndAddSecret adds to activityLog ---");
-        const acq = await agent.fetchAndAddSecret({
+        console.log("--- 5. fetchJsonAndAddSecret adds to activityLog ---");
+        const acq = await agent.fetchJsonAndAddSecret({
             secretName: 'acquired-alias',
             url: `${base}/post`,
             method: 'POST',
@@ -89,14 +89,14 @@ async function testActivityLog() {
             extractKey: (res) => res.api_key || ''
         });
         if (!acq.success) {
-            throw new Error(`fetchAndAddSecret failed: ${acq.error}`);
+            throw new Error(`fetchJsonAndAddSecret failed: ${acq.error}`);
         }
         const afterAcq = await agent.admin.getActivityLog();
-        const acqEntry = afterAcq.find(e => e.action === 'fetchAndAddSecret' && e.secretName === 'acquired-alias');
+        const acqEntry = afterAcq.find(e => e.action === 'fetchJsonAndAddSecret' && e.secretName === 'acquired-alias');
         if (acqEntry && acqEntry.url) {
-            console.log("✅ fetchAndAddSecret added entry");
+            console.log("✅ fetchJsonAndAddSecret added entry");
         } else {
-            throw new Error(`Expected fetchAndAddSecret entry, got ${JSON.stringify(afterAcq)}`);
+            throw new Error(`Expected fetchJsonAndAddSecret entry, got ${JSON.stringify(afterAcq)}`);
         }
 
         console.log("--- 6. Persistence ---");
@@ -108,7 +108,7 @@ async function testActivityLog() {
             throw new Error(`Expected at least two entries after reload, got ${log2.length}`);
         }
 
-        console.log("--- 7. fetchAndAddSecret/fetchAndUpdateSecret return FetchResult when activity log write fails (no throw) ---");
+        console.log("--- 7. fetchJsonAndAddSecret/fetchJsonAndUpdateSecret return FetchResult when activity log write fails (no throw) ---");
         const { MemoryStorageProvider } = await import('../../dist/runtime/index.js');
         const realStorage = new MemoryStorageProvider();
         const failingActivityLogStorage = {
@@ -136,45 +136,45 @@ async function testActivityLog() {
             }
         }
         console.log("✅ fetchWithAuth SECRET_NOT_FOUND: throws IdentityError even when activity log write fails");
-        const addFailResult = await agentFailing.fetchAndAddSecret({
+        const addFailResult = await agentFailing.fetchJsonAndAddSecret({
             secretName: 'will-fail',
             url: `${base}/nonexistent`,
             extractKey: () => '',
         });
         if (!addFailResult.success && addFailResult.activityLogWriteFailed === true) {
-            console.log("✅ fetchAndAddSecret fail path: returns FetchResult with activityLogWriteFailed, no throw");
+            console.log("✅ fetchJsonAndAddSecret fail path: returns FetchResult with activityLogWriteFailed, no throw");
         } else {
             throw new Error(`Expected { success: false, activityLogWriteFailed: true }, got ${JSON.stringify(addFailResult)}`);
         }
-        const addSuccessResult = await agentFailing.fetchAndAddSecret({
+        const addSuccessResult = await agentFailing.fetchJsonAndAddSecret({
             secretName: 'will-succeed',
             url: `${base}/post`,
             body: { token: 'x' },
             extractKey: (r) => r.token || '',
         });
         if (addSuccessResult.success && addSuccessResult.activityLogWriteFailed === true) {
-            console.log("✅ fetchAndAddSecret success path: returns FetchResult with activityLogWriteFailed, no throw");
+            console.log("✅ fetchJsonAndAddSecret success path: returns FetchResult with activityLogWriteFailed, no throw");
         } else {
             throw new Error(`Expected { success: true, activityLogWriteFailed: true }, got ${JSON.stringify(addSuccessResult)}`);
         }
-        const updateFailResult = await agentFailing.fetchAndUpdateSecret({
+        const updateFailResult = await agentFailing.fetchJsonAndUpdateSecret({
             secretName: 'rotatable',
             url: `${base}/nonexistent`,
             extractKey: () => '',
         });
         if (!updateFailResult.success && updateFailResult.activityLogWriteFailed === true) {
-            console.log("✅ fetchAndUpdateSecret fail path: returns FetchResult with activityLogWriteFailed, no throw");
+            console.log("✅ fetchJsonAndUpdateSecret fail path: returns FetchResult with activityLogWriteFailed, no throw");
         } else {
             throw new Error(`Expected { success: false, activityLogWriteFailed: true }, got ${JSON.stringify(updateFailResult)}`);
         }
-        const updateSuccessResult = await agentFailing.fetchAndUpdateSecret({
+        const updateSuccessResult = await agentFailing.fetchJsonAndUpdateSecret({
             secretName: 'rotatable',
             url: `${base}/post`,
             body: { token: 'rotated' },
             extractKey: (r) => r.token || '',
         });
         if (updateSuccessResult.success && updateSuccessResult.activityLogWriteFailed === true) {
-            console.log("✅ fetchAndUpdateSecret success path: returns FetchResult with activityLogWriteFailed, no throw");
+            console.log("✅ fetchJsonAndUpdateSecret success path: returns FetchResult with activityLogWriteFailed, no throw");
         } else {
             throw new Error(`Expected { success: true, activityLogWriteFailed: true }, got ${JSON.stringify(updateSuccessResult)}`);
         }

@@ -72,7 +72,7 @@ async function run() {
         await identity.admin.addSecret('openai', 'sk-test-local-proxy');
 
         proxy = await startLocalAuthProxy({
-            identity,
+            authHandle: identity,
             secretName: 'openai',
             upstreamBaseUrl: 'https://api.openai.com',
         });
@@ -97,7 +97,7 @@ async function run() {
 
         await identity.admin.addSecret('anthropic', 'anthropic-test-key');
         const anthropicProxy = await startLocalAuthProxy({
-            identity,
+            authHandle: identity,
             secretName: 'anthropic',
             upstreamBaseUrl: 'https://api.anthropic.com',
             authHeaderName: 'x-api-key',

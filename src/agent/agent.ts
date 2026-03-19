@@ -3,8 +3,8 @@ import { CbioVault, type MergeResult, type SecretPolicy } from "../vault/vault.j
 import { AuthClient, type FetchWithAuthOptions } from "../http/authClient.js";
 import {
   SecretAcquisition,
-  type FetchAndAddSecretOptions,
-  type FetchAndUpdateSecretOptions,
+  type FetchJsonAndAddSecretOptions,
+  type FetchJsonAndUpdateSecretOptions,
   type FetchResult,
 } from "../http/secretAcquisition.js";
 import type { ActivityLogEntry, ActivityLogMetadata } from "../audit/ActivityLog.js";
@@ -58,6 +58,13 @@ export type AgentPermissionName =
  * These are runtime switches that control access to specific facets.
  */
 export type AgentPermissions = Partial<Record<AgentPermissionName, boolean>>;
+
+export interface GetAgentOptions {
+  /** Explicit runtime permissions for the returned handle. */
+  permissions?: AgentPermissions;
+  /** Derive runtime permissions from the issued identity's protocol capabilities. */
+  deriveFromIssuedIdentity?: boolean;
+}
 
 /**
  * CbioIdentity
@@ -128,16 +135,16 @@ export class CbioIdentity {
     return this.agentId || deriveRootAgentId(await this.getPublicKey());
   }
 
-  async fetchAndAddSecret<TResponse = unknown, TBody = unknown>(
-    options: FetchAndAddSecretOptions<TResponse, TBody>,
+  async fetchJsonAndAddSecret<TResponse = unknown, TBody = unknown>(
+    options: FetchJsonAndAddSecretOptions<TResponse, TBody>,
   ): Promise<FetchResult<TResponse>> {
-    return this._secretAcquisition.fetchAndAddSecret(options);
+    return this._secretAcquisition.fetchJsonAndAddSecret(options);
   }
 
-  async fetchAndUpdateSecret<TResponse = unknown, TBody = unknown>(
-    options: FetchAndUpdateSecretOptions<TResponse, TBody>,
+  async fetchJsonAndUpdateSecret<TResponse = unknown, TBody = unknown>(
+    options: FetchJsonAndUpdateSecretOptions<TResponse, TBody>,
   ): Promise<FetchResult<TResponse>> {
-    return this._secretAcquisition.fetchAndUpdateSecret(options);
+    return this._secretAcquisition.fetchJsonAndUpdateSecret(options);
   }
 
   hasSecret(secretName: string): boolean {
@@ -164,21 +171,19 @@ export class CbioIdentity {
    * The Agent handle DOES NOT have an .admin property and does not expose the signer/private key.
    * This is the recommended handle to pass to an autonomous LLM.
    *
-   * @param permissions Optional granular permissions to grant to this handle.
-   *                    If not provided, it attempts to auto-derive permissions from the
-   *                    identity's protocol-level capabilities (if available),
-   *                    otherwise defaults to restricted access (vault:fetch, vault:list).
+   * By default this returns a minimally privileged handle (`vault:fetch`, `vault:list`).
+   * Runtime permissions are only widened when passed explicitly or when
+   * `deriveFromIssuedIdentity` is set to `true`.
    */
-  getAgent(permissions?: AgentPermissions): CbioAgent {
-    let finalPerms = permissions;
+  getAgent(options?: GetAgentOptions): CbioAgent {
+    const opts = options ?? {};
+    let finalPerms = opts.permissions;
 
-    if (!finalPerms && this.#issuedIdentity?.capabilities) {
-      // Auto-derive from protocol capabilities
+    if (!finalPerms && opts.deriveFromIssuedIdentity) {
       finalPerms = {};
-      for (const cap of this.#issuedIdentity.capabilities) {
+      for (const cap of this.#issuedIdentity?.capabilities ?? []) {
         finalPerms[cap as AgentPermissionName] = true;
       }
-      // Always ensure basics if any capabilities exist
       finalPerms["vault:fetch"] = true;
       finalPerms["vault:list"] = true;
     }
@@ -255,18 +260,18 @@ export class CbioAgent {
     return this.agentId;
   }
 
-  async fetchAndAddSecret<TResponse = unknown, TBody = unknown>(
-    options: FetchAndAddSecretOptions<TResponse, TBody>,
+  async fetchJsonAndAddSecret<TResponse = unknown, TBody = unknown>(
+    options: FetchJsonAndAddSecretOptions<TResponse, TBody>,
   ): Promise<FetchResult<TResponse>> {
     this._checkPermission("vault:acquire");
-    return this.#secretAcquisition.fetchAndAddSecret(options);
+    return this.#secretAcquisition.fetchJsonAndAddSecret(options);
   }
 
-  async fetchAndUpdateSecret<TResponse = unknown, TBody = unknown>(
-    options: FetchAndUpdateSecretOptions<TResponse, TBody>,
+  async fetchJsonAndUpdateSecret<TResponse = unknown, TBody = unknown>(
+    options: FetchJsonAndUpdateSecretOptions<TResponse, TBody>,
   ): Promise<FetchResult<TResponse>> {
     this._checkPermission("vault:acquire");
-    return this.#secretAcquisition.fetchAndUpdateSecret(options);
+    return this.#secretAcquisition.fetchJsonAndUpdateSecret(options);
   }
 
   hasSecret(secretName: string): boolean {
@@ -290,7 +295,7 @@ export class CbioAgent {
 export interface ManagedAgentContext {
   agentId: string;
   publicKey: string;
-  secretName: string;
+  identityRecordKey: string;
   agent: CbioAgent;
 }
 
@@ -338,6 +343,20 @@ export class CbioManagementFacet {
     return this._vault.getSecret(secretName);
   }
 
+  private _isManagedAgentRevoked(publicKey: string): boolean {
+    const revocationKey = `cbio:revocation:${publicKey}`;
+    return this._vault.hasSecret(revocationKey);
+  }
+
+  private _assertManagedAgentNotRevoked(publicKey: string): void {
+    if (this._isManagedAgentRevoked(publicKey)) {
+      throw new IdentityError(
+        IdentityErrorCode.PERMISSION_DENIED,
+        `Managed agent '${publicKey}' has been revoked and cannot be loaded.`
+      );
+    }
+  }
+
   /**
    * Get the protocol-level capabilities granted to a managed agent.
    * Includes a check for revocation.
@@ -347,9 +366,7 @@ export class CbioManagementFacet {
     const stored = this.getSecret(secretName);
     if (!stored) return [];
 
-    // Check for revocation
-    const revocationKey = `cbio:revocation:${publicKey}`;
-    if (this._vault.hasSecret(revocationKey)) {
+    if (this._isManagedAgentRevoked(publicKey)) {
       return []; // Agent is revoked, return no capabilities
     }
 
@@ -449,8 +466,12 @@ export class CbioManagementFacet {
     return this._vault.serializeToBlob(this._identity.signer);
   }
 
-  async saveVault(storageKey?: string): Promise<void> {
-    await this._vault.save(this._identity.signer, storageKey || "./vault.enc");
+  async saveVault(): Promise<void> {
+    await this._vault.save(this._identity.signer);
+  }
+
+  async saveVaultAs(storageKey: string): Promise<void> {
+    await this._vault.save(this._identity.signer, storageKey);
   }
 
   async issueManagedAgent(options?: ManagedAgentIssueOptions): Promise<ManagedAgentContext> {
@@ -508,12 +529,13 @@ export class CbioManagementFacet {
     return {
       agentId,
       publicKey,
-      secretName,
-      agent: childIdentity.getAgent(opts.runtimePermissions),
+      identityRecordKey: secretName,
+      agent: childIdentity.getAgent({ permissions: opts.runtimePermissions }),
     };
   }
 
   async loadManagedAgent(publicKey: string, options?: ManagedAgentLoadOptions): Promise<ManagedAgentContext> {
+    this._assertManagedAgentNotRevoked(publicKey);
     const secretName = getChildIdentitySecretName(publicKey);
     const stored = this.getSecret(secretName);
     if (!stored) {
@@ -551,8 +573,8 @@ export class CbioManagementFacet {
     return {
       agentId: parsed.agentId ?? deriveRootAgentId(parsed.publicKey),
       publicKey: parsed.publicKey,
-      secretName,
-      agent: childIdentity.getAgent(options?.runtimePermissions),
+      identityRecordKey: secretName,
+      agent: childIdentity.getAgent({ permissions: options?.runtimePermissions }),
     };
   }
 

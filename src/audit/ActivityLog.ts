@@ -1,7 +1,7 @@
 /**
  * ActivityLog
  *
- * Audit log for fetchWithAuth/fetchAndAddSecret/fetchAndUpdateSecret. Separate from vault.
+ * Audit log for fetchWithAuth/fetchJsonAndAddSecret/fetchJsonAndUpdateSecret. Separate from vault.
  * No sensitive data. For dashboard/UI display. Optional, can be disabled.
  * First line is metadata (_meta) for consumer identification.
  */
@@ -16,7 +16,7 @@ export interface ActivityLogMetadata {
 
 export interface ActivityLogEntry {
     ts: number;
-    action: 'fetchWithAuth' | 'fetchAndAddSecret' | 'fetchAndUpdateSecret' | 'fetchAndStoreSecret';
+    action: 'fetchWithAuth' | 'fetchJsonAndAddSecret' | 'fetchJsonAndUpdateSecret' | 'fetchAndStoreSecret';
     secretName: string;
     url?: string;
     method?: string;

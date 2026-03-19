@@ -12,7 +12,7 @@ export interface FetchWithAuthLike {
  */
 export interface LocalAuthProxyOptions {
   /** Trusted handle used to send authenticated requests upstream. */
-  identity: FetchWithAuthLike;
+  authHandle: FetchWithAuthLike;
   /** Vault secret name to inject into the outbound auth header. */
   secretName: string;
   /** Upstream API base URL, such as `https://api.openai.com`. */
@@ -65,7 +65,7 @@ async function readRequestBody(req: http.IncomingMessage): Promise<Buffer | unde
 
 export async function startLocalAuthProxy(options: LocalAuthProxyOptions): Promise<LocalAuthProxyHandle> {
   const {
-    identity,
+    authHandle,
     secretName,
     upstreamBaseUrl,
     authHeaderName = "Authorization",
@@ -82,7 +82,7 @@ export async function startLocalAuthProxy(options: LocalAuthProxyOptions): Promi
       const headers = normalizeProxyRequestHeaders(req.headers);
       const body = await readRequestBody(req);
 
-      const upstreamResponse = await identity.fetchWithAuth(secretName, targetUrl.toString(), {
+      const upstreamResponse = await authHandle.fetchWithAuth(secretName, targetUrl.toString(), {
         method,
         headers,
         body: body ? new Uint8Array(body) : undefined,

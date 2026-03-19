@@ -18,6 +18,8 @@ These methods are available under `identity.admin` and are intended for administ
 ### 1.2 Backups & Sealing
 - **`seal(kdk: string): string`**: Exports the entire vault as an encrypted blob.
 - **`loadFromSealedBlob(kdk: string, blob: string)`**: Restores a vault from a sealed backup.
+- **`saveVault()`**: Persists the current vault back to its bound storage.
+- **`saveVaultAs(storageKey)`**: Persists the current vault to an explicit storage key or filesystem path.
 
 Lower-level sealed blob primitives are also exported from the package subpath:
 
@@ -30,7 +32,12 @@ import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
 - **`revokeManagedAgent(publicKey, reason?)`**: Permanently revokes a child identity.
 - **`getManagedAgentCapabilities(publicKey)`**: Inspects the signed privileges of a sub-identity.
 
-### 1.4 Recursive Child Identity Management
+### 1.4 Agent Handles
+- **`getAgent()`**: Returns a minimally privileged handle with `vault:fetch` and `vault:list`.
+- **`getAgent({ permissions })`**: Returns a handle with explicitly provided runtime permissions.
+- **`getAgent({ deriveFromIssuedIdentity: true })`**: Derives runtime permissions from the issued identity's protocol capabilities.
+
+### 1.5 Recursive Child Identity Management
 When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. To load it later:
 ```ts
 const secretName = getChildIdentitySecretName(childPublicKey);
@@ -88,11 +95,28 @@ const response = await agent.fetchWithAuth('my-secret', 'https://api.example.com
 });
 ```
 
-### 3.3 Local Auth Proxy
+### 3.3 JSON Secret Acquisition
+Use `fetchJsonAndAddSecret(...)` and `fetchJsonAndUpdateSecret(...)` when the upstream returns a JSON payload that contains a secret value to store or rotate.
+
+```ts
+const acquired = await agent.fetchJsonAndAddSecret({
+  secretName: 'service-token',
+  url: 'https://issuer.example.com/token',
+  body: { scope: 'read' },
+  extractKey: (response: { api_key?: string }) => response.api_key ?? '',
+});
+```
+
+These methods are intentionally JSON-specific:
+- request bodies are JSON-stringified
+- responses are parsed with `response.json()`
+- `extractKey(...)` receives the parsed JSON body
+
+### 3.4 Local Auth Proxy
 Use `startLocalAuthProxy(...)` when a local process should forward requests to an upstream API while vault-backed auth is injected automatically.
 
 Required fields:
-- `identity`: any object with `fetchWithAuth(...)`
+- `authHandle`: any object with `fetchWithAuth(...)`
 - `secretName`: vault secret to inject
 - `upstreamBaseUrl`: upstream API base URL
 
@@ -105,7 +129,7 @@ Optional fields:
 OpenAI example:
 ```ts
 const proxy = await startLocalAuthProxy({
-  identity: agent,
+  authHandle: agent,
   secretName: 'openai',
   upstreamBaseUrl: 'https://api.openai.com',
 });
@@ -114,7 +138,7 @@ const proxy = await startLocalAuthProxy({
 Anthropic example:
 ```ts
 const proxy = await startLocalAuthProxy({
-  identity: agent,
+  authHandle: agent,
   secretName: 'anthropic',
   upstreamBaseUrl: 'https://api.anthropic.com',
   authHeaderName: 'x-api-key',
@@ -125,7 +149,7 @@ const proxy = await startLocalAuthProxy({
 Resend example:
 ```ts
 const proxy = await startLocalAuthProxy({
-  identity: agent,
+  authHandle: agent,
   secretName: 'resend',
   upstreamBaseUrl: 'https://api.resend.com',
 });

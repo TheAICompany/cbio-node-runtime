@@ -24,10 +24,10 @@ async function verifyHardenedSecurity() {
     };
 
     try {
-        console.log("\n[Test 1] fetchAndAddSecret & Auto-Sanitization");
+        console.log("\n[Test 1] fetchJsonAndAddSecret & Auto-Sanitization");
         const secretValue = "super_secret_token_12345";
 
-        const result = await agent.fetchAndAddSecret({
+        const result = await agent.fetchJsonAndAddSecret({
             secretName: 'test-service',
             url: 'https://mocked-httpbin.local/post',
             method: 'POST',
@@ -40,7 +40,7 @@ async function verifyHardenedSecurity() {
         });
 
         if (!result.success) {
-            throw new Error(`fetchAndAddSecret failed: ${result.error}`);
+            throw new Error(`fetchJsonAndAddSecret failed: ${result.error}`);
         }
 
         console.log("✅ Secret acquired and locked.");

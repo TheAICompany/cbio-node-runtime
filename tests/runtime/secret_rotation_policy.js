@@ -32,7 +32,7 @@ async function run() {
             allowedOrigins: ['https://issuer-a.example.com'],
         });
 
-        const rotated = await agent.fetchAndUpdateSecret({
+        const rotated = await agent.fetchJsonAndUpdateSecret({
             secretName: 'service-a',
             url: 'https://issuer-a.example.com/rotate',
             extractKey: (response) => response.token,
@@ -42,7 +42,7 @@ async function run() {
         assert.equal(agent.admin.getSecret('service-a'), 'rotated-secret-v2');
 
         issuedValue = 'attacker-secret';
-        const rejected = await agent.fetchAndUpdateSecret({
+        const rejected = await agent.fetchJsonAndUpdateSecret({
             secretName: 'service-a',
             url: 'https://issuer-b.example.com/rotate',
             extractKey: (response) => response.token,

@@ -115,7 +115,7 @@ async function test4_Performance() {
     const times = [];
     for (let i = 0; i < iterations; i++) {
         const start = performance.now();
-        await agent.admin.saveVault(path.join(TEST_DIR, 'perf_vault.enc'));
+        await agent.admin.saveVaultAs(path.join(TEST_DIR, 'perf_vault.enc'));
         times.push(performance.now() - start);
     }
     const avg = times.reduce((a, b) => a + b, 0) / iterations;

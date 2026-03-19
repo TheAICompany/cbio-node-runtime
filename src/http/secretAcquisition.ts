@@ -1,7 +1,7 @@
 /**
  * SecretAcquisition
  *
- * Fetches secrets from remote URLs and stores them in vault.
+ * Fetches secrets from remote JSON endpoints and stores them in vault.
  * Secret never leaves this module; fetch + extract + store is atomic.
  */
 
@@ -29,22 +29,26 @@ export interface FetchFailure extends FetchResultBase {
 
 export type FetchResult<TData = unknown> = FetchSuccess<TData> | FetchFailure;
 
-export interface FetchAndAddSecretOptions<TResponse = unknown, TBody = unknown> {
+export interface FetchJsonAndAddSecretOptions<TResponse = unknown, TBody = unknown> {
     secretName: string;
     url: string;
     method?: string;
     headers?: Record<string, string>;
+    /** JSON-serializable request body. */
     body?: TBody;
+    /** Extract the secret from a parsed JSON response body. */
     extractKey: (response: TResponse) => string;
     allowedOrigins?: string[];
 }
 
-export interface FetchAndUpdateSecretOptions<TResponse = unknown, TBody = unknown> {
+export interface FetchJsonAndUpdateSecretOptions<TResponse = unknown, TBody = unknown> {
     secretName: string;
     url: string;
     method?: string;
     headers?: Record<string, string>;
+    /** JSON-serializable request body. */
     body?: TBody;
+    /** Extract the rotated secret from a parsed JSON response body. */
     extractKey: (response: TResponse) => string;
 }
 
@@ -77,13 +81,13 @@ export class SecretAcquisition {
         return this._vault.listSecretNames();
     }
 
-    async fetchAndAddSecret<TResponse = unknown, TBody = unknown>(options: FetchAndAddSecretOptions<TResponse, TBody>): Promise<FetchResult<TResponse>> {
+    async fetchJsonAndAddSecret<TResponse = unknown, TBody = unknown>(options: FetchJsonAndAddSecretOptions<TResponse, TBody>): Promise<FetchResult<TResponse>> {
         const { url, method = 'POST', secretName } = options;
         const fail = async (error: string, code?: string): Promise<FetchFailure> => {
             try {
                 await this._appendActivityLog({
                     ts: Date.now(),
-                    action: 'fetchAndAddSecret',
+                    action: 'fetchJsonAndAddSecret',
                     secretName,
                     url,
                     method,
@@ -133,7 +137,7 @@ export class SecretAcquisition {
             try {
                 await this._appendActivityLog({
                     ts: Date.now(),
-                    action: 'fetchAndAddSecret',
+                    action: 'fetchJsonAndAddSecret',
                     secretName: resolvedSecretName,
                     url,
                     method,
@@ -152,13 +156,13 @@ export class SecretAcquisition {
         }
     }
 
-    async fetchAndUpdateSecret<TResponse = unknown, TBody = unknown>(options: FetchAndUpdateSecretOptions<TResponse, TBody>): Promise<FetchResult<TResponse>> {
+    async fetchJsonAndUpdateSecret<TResponse = unknown, TBody = unknown>(options: FetchJsonAndUpdateSecretOptions<TResponse, TBody>): Promise<FetchResult<TResponse>> {
         const { url, method = 'POST', secretName } = options;
         const fail = async (error: string, code?: string): Promise<FetchFailure> => {
             try {
                 await this._appendActivityLog({
                     ts: Date.now(),
-                    action: 'fetchAndUpdateSecret',
+                    action: 'fetchJsonAndUpdateSecret',
                     secretName,
                     url,
                     method,
@@ -202,7 +206,7 @@ export class SecretAcquisition {
             try {
                 await this._appendActivityLog({
                     ts: Date.now(),
-                    action: 'fetchAndUpdateSecret',
+                    action: 'fetchJsonAndUpdateSecret',
                     secretName,
                     url,
                     method,

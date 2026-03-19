@@ -5,6 +5,7 @@
 
 export { CbioIdentity, CbioAgent } from "../agent/agent.js";
 export type {
+  GetAgentOptions,
   ManagedAgentContext,
   ManagedAgentIssueOptions,
   ManagedAgentLoadOptions,
@@ -13,7 +14,13 @@ export type {
   IdentityLoadOptions,
 } from "../agent/agent.js";
 export type { MergeResult } from "../vault/vault.js";
-export type { FetchFailure, FetchResult, FetchSuccess } from "../http/secretAcquisition.js";
+export type {
+  FetchFailure,
+  FetchJsonAndAddSecretOptions,
+  FetchJsonAndUpdateSecretOptions,
+  FetchResult,
+  FetchSuccess,
+} from "../http/secretAcquisition.js";
 export { generateIdentityKeys } from "../protocol/crypto.js";
 export { IdentityError, IdentityErrorCode } from "../errors.js";
 export type { IStorageProvider } from "../storage/provider.js";

@@ -1,4 +1,4 @@
-import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
+import { CbioIdentity, IdentityError, IdentityErrorCode, generateIdentityKeys } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -39,13 +39,13 @@ async function testManagedAgentIdentity() {
             throw new Error('Managed agent must have its own identity, not reuse root identity.');
         }
 
-        const acq = await managed.agent.fetchAndAddSecret({
+        const acq = await managed.agent.fetchJsonAndAddSecret({
             secretName: 'service-token',
             url: `${mockBase}/acquire`,
             extractKey: (r) => r.token || '',
             allowedOrigins: [mockBase],
         });
-        if (!acq.success) throw new Error(`fetchAndAddSecret failed: ${acq.error}`);
+        if (!acq.success) throw new Error(`fetchJsonAndAddSecret failed: ${acq.error}`);
         if (!managed.agent.hasSecret('service-token')) {
             throw new Error('Managed agent could not access its own vault.');
         }
@@ -53,7 +53,7 @@ async function testManagedAgentIdentity() {
             throw new Error('Root authority should not see managed agent vault contents in its own vault.');
         }
 
-        const stored = rootIdentity.admin.getSecret(managed.secretName);
+        const stored = rootIdentity.admin.getSecret(managed.identityRecordKey);
         if (!stored) {
             throw new Error('Root authority did not persist managed agent identity record.');
         }
@@ -78,6 +78,18 @@ async function testManagedAgentIdentity() {
         }
         if (reloaded.agent.can('vault:acquire')) {
             throw new Error('Reloaded managed agent should reflect requested runtimePermissions.');
+        }
+
+        await rootIdentity.admin.revokeManagedAgent(managed.publicKey, 'test revocation');
+        let revokedLoadBlocked = false;
+        try {
+            await rootIdentity.admin.loadManagedAgent(managed.publicKey);
+        } catch (error) {
+            revokedLoadBlocked =
+                IdentityError.isIdentityError(error) && error.code === IdentityErrorCode.PERMISSION_DENIED;
+        }
+        if (!revokedLoadBlocked) {
+            throw new Error('Revoked managed agent should not be loadable.');
         }
 
         console.log('✅ managed agent identity: independent identity, independent vault, root-governed recovery');

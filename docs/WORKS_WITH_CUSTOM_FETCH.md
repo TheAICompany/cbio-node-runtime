@@ -141,7 +141,7 @@ With the runtime helper, configure the upstream explicitly:
 
 ```ts
 const proxy = await startLocalAuthProxy({
-  identity: agent,
+  authHandle: agent,
   secretName: 'openai',
   upstreamBaseUrl: 'https://api.openai.com',
 });
@@ -151,7 +151,7 @@ For providers that do not use `Authorization: Bearer ...`, override the auth set
 
 ```ts
 const proxy = await startLocalAuthProxy({
-  identity: agent,
+  authHandle: agent,
   secretName: 'anthropic',
   upstreamBaseUrl: 'https://api.anthropic.com',
   authHeaderName: 'x-api-key',

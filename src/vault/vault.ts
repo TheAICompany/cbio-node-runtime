@@ -305,9 +305,17 @@ export class CbioVault {
     /**
      * Persistence: Atomic save with write-read-verify.
      */
-    async save(signer: Signer, storageKey: string, storage?: IStorageProvider): Promise<void> {
+    async save(signer: Signer, storageKey?: string, storage?: IStorageProvider): Promise<void> {
+        const resolvedStorageKey = storageKey ?? this.#storageKey;
+        if (!resolvedStorageKey) {
+            throw new IdentityError(
+                IdentityErrorCode.VAULT_PERSISTENCE_FAILED,
+                'Vault save requires a bound storageKey or an explicit storageKey argument.'
+            );
+        }
+
         const provider = storage ?? this.#storage ?? new FsStorageProvider();
-        const tmpKey = `${storageKey}.tmp`;
+        const tmpKey = `${resolvedStorageKey}.tmp`;
 
         const bundle = await this.#serializeToBundle(signer);
         const checksum = crypto.createHash('sha256').update(bundle).digest('hex');
@@ -329,9 +337,9 @@ export class CbioVault {
         }
 
         if (provider.rename) {
-            await provider.rename(tmpKey, storageKey);
+            await provider.rename(tmpKey, resolvedStorageKey);
         } else {
-            await provider.write(storageKey, bundle);
+            await provider.write(resolvedStorageKey, bundle);
             await provider.delete(tmpKey);
         }
     }

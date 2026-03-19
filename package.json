@@ -1,6 +1,6 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "description": "Node.js runtime for cbio identity and credential vault. Library only, no CLI or TUI.",
   "type": "module",
   "main": "./dist/runtime/index.js",

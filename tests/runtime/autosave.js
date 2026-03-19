@@ -21,7 +21,7 @@ async function testAutoSave() {
 
     try {
         console.log("--- 2. Agent A acquiring credentials (NO MANUAL SAVE) ---");
-        const result = await agentA.fetchAndAddSecret({
+        const result = await agentA.fetchJsonAndAddSecret({
             secretName: 'auto-key',
             url: 'https://mocked-httpbin.local/post',
             method: 'POST',
