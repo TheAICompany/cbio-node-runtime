@@ -28,7 +28,7 @@ async function run() {
             };
         };
 
-        await agent.admin.addSecret('service-a', 'initial-secret', {
+        await agent.admin.vault.addSecret('service-a', 'initial-secret', {
             allowedOrigins: ['https://issuer-a.example.com'],
         });
 
@@ -39,7 +39,7 @@ async function run() {
         });
 
         assert.equal(rotated.success, true, rotated.error);
-        assert.equal(agent.admin.getSecret('service-a'), 'rotated-secret-v2');
+        assert.equal(agent.admin.vault.getSecret('service-a'), 'rotated-secret-v2');
 
         issuedValue = 'attacker-secret';
         const rejected = await agent.fetchJsonAndUpdateSecret({
@@ -50,7 +50,7 @@ async function run() {
 
         assert.equal(rejected.success, false, 'Rotation from a different origin should be rejected');
         assert.match(rejected.error ?? '', /only allows rotation from/i);
-        assert.equal(agent.admin.getSecret('service-a'), 'rotated-secret-v2', 'Rejected rotation must not replace the active key');
+        assert.equal(agent.admin.vault.getSecret('service-a'), 'rotated-secret-v2', 'Rejected rotation must not replace the active key');
 
         console.log('✅ Secret rotation origin policy test passed');
     } finally {

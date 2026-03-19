@@ -49,13 +49,13 @@ async function test2_InvalidKdk() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.addSecret('x', 'y');
+    await agent.admin.vault.addSecret('x', 'y');
 
-    const sealed = agent.admin.seal(crypto.randomBytes(32).toString('base64url'));
+    const sealed = agent.admin.vault.seal(crypto.randomBytes(32).toString('base64url'));
     const agent2 = await CbioIdentity.load(keys);
 
     try {
-        agent2.admin.loadFromSealedBlob('short', sealed);
+        agent2.admin.vault.loadFromSealedBlob('short', sealed);
     } catch (e) {
         if (!IdentityError.isIdentityError(e)) throw new Error('Expected IdentityError');
         if (e.code !== IdentityErrorCode.INVALID_KDK) throw new Error(`Expected INVALID_KDK, got ${e.code}`);

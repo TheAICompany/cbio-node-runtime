@@ -8,18 +8,18 @@ For high-level concepts and quick start, see [README.md](../README.md). For modu
 
 ## 1. Advanced Identity APIs
 
-These methods are available under `identity.admin` and are intended for administrative or high-privilege bootstrap logic.
+These methods are available under `identity.admin` and its sub-facets, and are intended for administrative or high-privilege bootstrap logic.
 
 ### 1.1 Vault Synchronization & Merging
-- **`mergeFrom(otherIdentity, options?)`**: Atomically merges secrets from another vault.
+- **`identity.admin.vault.mergeFrom(otherIdentity, options?)`**: Atomically merges secrets from another vault.
   - `onConflict`: `'abort'` (default), `'skip'`, or `'overwrite'`.
   - Throws `MERGE_IDENTITY_MISMATCH` if root identities differ.
 
 ### 1.2 Backups & Sealing
-- **`seal(kdk: string): string`**: Exports the entire vault as an encrypted blob.
-- **`loadFromSealedBlob(kdk: string, blob: string)`**: Restores a vault from a sealed backup.
-- **`saveVault()`**: Persists the current vault back to its bound storage.
-- **`saveVaultAs(storageKey)`**: Persists the current vault to an explicit storage key or filesystem path.
+- **`identity.admin.vault.seal(kdk: string): string`**: Exports the entire vault as an encrypted blob.
+- **`identity.admin.vault.loadFromSealedBlob(kdk: string, blob: string)`**: Restores a vault from a sealed backup.
+- **`identity.admin.vault.saveVault()`**: Persists the current vault back to its bound storage.
+- **`identity.admin.vault.saveVaultAs(storageKey)`**: Persists the current vault to an explicit storage key or filesystem path.
 
 Lower-level sealed blob primitives are also exported from the package subpath:
 
@@ -28,9 +28,9 @@ import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
 ```
 
 ### 1.3 Audit & Lifecycle
-- **`getActivityLog()`**: Returns a read-only list of all vault-authenticated actions.
-- **`revokeManagedAgent(publicKey, reason?)`**: Permanently revokes a child identity.
-- **`getManagedAgentCapabilities(publicKey)`**: Inspects the signed privileges of a sub-identity.
+- **`identity.admin.vault.getActivityLog()`**: Returns a read-only list of all vault-authenticated actions.
+- **`identity.admin.managedAgents.revokeManagedAgent(publicKey, reason?)`**: Permanently revokes a child identity.
+- **`identity.admin.managedAgents.getManagedAgentCapabilities(publicKey)`**: Inspects the signed privileges of a sub-identity.
 
 ### 1.4 Agent Handles
 - **`getAgent()`**: Returns a minimally privileged handle with `vault:fetch` and `vault:list`.
@@ -38,10 +38,12 @@ import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
 - **`getAgent({ deriveFromIssuedIdentity: true })`**: Derives runtime permissions from the issued identity's protocol capabilities.
 
 ### 1.5 Recursive Child Identity Management
-When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. To load it later:
+When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. That record naming scheme is an internal runtime detail, but internal tooling and tests can still recover it from the lower-level protocol module:
 ```ts
+import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/dist/protocol/identity.js';
+
 const secretName = getChildIdentitySecretName(childPublicKey);
-const stored = identity.admin.getSecret(secretName);
+const stored = identity.admin.vault.getSecret(secretName);
 if (stored) {
   const { privateKey, publicKey } = JSON.parse(stored);
   const childIdentity = await CbioIdentity.load({ privateKey, publicKey });

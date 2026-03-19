@@ -27,10 +27,10 @@ async function test1_NormalFlow() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.addSecret('test-key', 'secret-value-123');
+    await agent.admin.vault.addSecret('test-key', 'secret-value-123');
 
     const agent2 = await CbioIdentity.load(keys);
-    const loaded = agent2.admin.getSecret('test-key');
+    const loaded = agent2.admin.vault.getSecret('test-key');
     if (loaded !== 'secret-value-123') {
         throw new Error(`Data mismatch: expected secret-value-123, got ${loaded}`);
     }
@@ -44,7 +44,7 @@ async function test2_RecoveryFromTmp() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.addSecret('recovery-key', 'recovery-value');
+    await agent.admin.vault.addSecret('recovery-key', 'recovery-value');
 
     const files = await fs.readdir(TEST_DIR);
     const encFile = files.find((f) => f.endsWith('.enc'));
@@ -53,11 +53,11 @@ async function test2_RecoveryFromTmp() {
     const tmpPath = `${mainPath}.tmp`;
 
     await fs.writeFile(mainPath, Buffer.from('corrupt'));
-    const blob = await agent.admin.serializeToBlob();
+    const blob = await agent.admin.vault.serializeToBlob();
     await fs.writeFile(tmpPath, Buffer.from(blob, 'base64url'));
 
     const agent2 = await CbioIdentity.load(keys);
-    const recovered = agent2.admin.getSecret('recovery-key');
+    const recovered = agent2.admin.vault.getSecret('recovery-key');
     if (recovered !== 'recovery-value') {
         throw new Error(`Recovery failed: expected recovery-value, got ${recovered}`);
     }
@@ -77,7 +77,7 @@ async function test3_BothCorrupt() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.addSecret('x', 'y');
+    await agent.admin.vault.addSecret('x', 'y');
 
     const dir = await fs.readdir(TEST_DIR);
     const encFile = dir.find((f) => f.endsWith('.enc'));
@@ -109,13 +109,13 @@ async function test4_Performance() {
 
     const keys = generateIdentityKeys();
     const agent = await CbioIdentity.load(keys);
-    await agent.admin.addSecret('perf-key', 'x'.repeat(100));
+    await agent.admin.vault.addSecret('perf-key', 'x'.repeat(100));
 
     const iterations = 5;
     const times = [];
     for (let i = 0; i < iterations; i++) {
         const start = performance.now();
-        await agent.admin.saveVaultAs(path.join(TEST_DIR, 'perf_vault.enc'));
+        await agent.admin.vault.saveVaultAs(path.join(TEST_DIR, 'perf_vault.enc'));
         times.push(performance.now() - start);
     }
     const avg = times.reduce((a, b) => a + b, 0) / iterations;

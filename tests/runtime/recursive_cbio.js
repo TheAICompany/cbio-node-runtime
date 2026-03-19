@@ -15,14 +15,14 @@ async function verifyRecursiveCbio() {
         console.log("-> Root Identity A initialized.");
 
         const keysB = generateIdentityKeys();
-        await agentA.admin.addSecret('cbioAgent-b-priv', keysB.privateKey);
+        await agentA.admin.vault.addSecret('cbioAgent-b-priv', keysB.privateKey);
         console.log("-> Identity B keys stored in A's vault.");
 
         const agentB = await CbioIdentity.load(keysB);
         console.log("-> Identity B started.");
 
         const keysC = generateIdentityKeys();
-        await agentB.admin.addSecret('cbioAgent-c-priv', keysC.privateKey);
+        await agentB.admin.vault.addSecret('cbioAgent-c-priv', keysC.privateKey);
         console.log("-> Identity B initialized Identity C.");
 
         if (agentB.hasSecret('cbioAgent-c-priv')) {

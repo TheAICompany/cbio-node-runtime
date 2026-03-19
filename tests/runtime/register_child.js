@@ -1,4 +1,5 @@
-import { CbioIdentity, generateIdentityKeys, getChildIdentitySecretName } from '../../dist/runtime/index.js';
+import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
+import { getChildIdentitySecretName } from '../../dist/protocol/identity.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -16,7 +17,7 @@ async function test() {
     const expectedSecretName = getChildIdentitySecretName(childKeys.publicKey);
     if (secretName !== expectedSecretName) throw new Error(`Secret name mismatch: ${secretName} vs ${expectedSecretName}`);
 
-    const stored = agent.admin.getSecret(secretName);
+    const stored = agent.admin.vault.getSecret(secretName);
     if (!stored) throw new Error('Child key not in vault');
     const parsed = JSON.parse(stored);
     if (parsed.privateKey !== childKeys.privateKey) throw new Error('Private key mismatch');
@@ -24,7 +25,7 @@ async function test() {
     if (parsed.issuedIdentity.cbio_protocol !== 'v1.0') throw new Error('Invalid protocol version in registration');
 
     const agentReload = await CbioIdentity.load(rootKeys);
-    const reloaded = agentReload.admin.getSecret(secretName);
+    const reloaded = agentReload.admin.vault.getSecret(secretName);
     if (!reloaded) throw new Error('Child key not persisted');
 
     const childKeys2 = generateIdentityKeys();
@@ -32,7 +33,7 @@ async function test() {
     if (secretName === secretName2) throw new Error('Different identities must have different secret names');
 
     await agent.registerChildIdentity(childKeys);
-    const afterOverwrite = agent.admin.getSecret(secretName);
+    const afterOverwrite = agent.admin.vault.getSecret(secretName);
     if (JSON.parse(afterOverwrite).privateKey !== childKeys.privateKey) throw new Error('Re-register same identity should overwrite');
 
     await fs.rm(DIR, { recursive: true, force: true });

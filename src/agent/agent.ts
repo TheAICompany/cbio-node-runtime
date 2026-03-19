@@ -14,6 +14,7 @@ import {
   signIssuedAgentIdentity,
   signRevocationRecord,
   verifyIssuedAgentIdentity,
+  verifyRevocationRecord,
   type IssuedAgentIdentity,
   type UnsignedIssuedAgentIdentity,
   type UnsignedRevocationRecord,
@@ -43,9 +44,20 @@ export interface IdentityLoadOptions {
 }
 
 /**
- * Valid permission strings for a CbioAgent handle.
+ * Protocol-level capability strings embedded into signed identities.
  */
-export type AgentPermissionName =
+export type IssuedCapabilityName =
+  | "vault:list"
+  | "vault:fetch"
+  | "vault:acquire"
+  | "admin:secrets"
+  | "admin:issue"
+  | "identity:sign";
+
+/**
+ * Valid runtime permission strings for a CbioAgent handle.
+ */
+export type RuntimePermissionName =
   | "vault:list"
   | "vault:fetch"
   | "vault:acquire"
@@ -57,11 +69,15 @@ export type AgentPermissionName =
  * Granular permissions for a CbioAgent handle.
  * These are runtime switches that control access to specific facets.
  */
-export type AgentPermissions = Partial<Record<AgentPermissionName, boolean>>;
+export type RuntimePermissions = Partial<Record<RuntimePermissionName, boolean>>;
+
+function capabilityToRuntimePermission(capability: IssuedCapabilityName): RuntimePermissionName {
+  return capability;
+}
 
 export interface GetAgentOptions {
   /** Explicit runtime permissions for the returned handle. */
-  permissions?: AgentPermissions;
+  permissions?: RuntimePermissions;
   /** Derive runtime permissions from the issued identity's protocol capabilities. */
   deriveFromIssuedIdentity?: boolean;
 }
@@ -74,7 +90,7 @@ export interface GetAgentOptions {
  * and private keys.
  */
 export class CbioIdentity {
-  public readonly admin: CbioManagementFacet;
+  public readonly admin: CbioAdmin;
   public readonly agentId: string;
   public readonly publicKey: string;
   #issuedIdentity?: IssuedAgentIdentity;
@@ -94,7 +110,7 @@ export class CbioIdentity {
     const appendLog = (entry: ActivityLogEntry) => this._vault.appendActivityLogEntry(entry);
     this._authClient = new AuthClient(this._vault, this.signer, appendLog);
     this._secretAcquisition = new SecretAcquisition(this._vault, appendLog);
-    this.admin = new CbioManagementFacet(this, this._vault);
+    this.admin = new CbioAdmin(this, this._vault);
     identityVaults.set(this, this._vault);
   }
 
@@ -159,7 +175,7 @@ export class CbioIdentity {
    * Register a newly created child identity to the parent vault.
    */
   async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<string> {
-    return this.admin.registerChildIdentity(keys, options);
+    return this.admin.children.registerChildIdentity(keys, options);
   }
 
   async authenticate(nonce: string): Promise<string> {
@@ -182,7 +198,7 @@ export class CbioIdentity {
     if (!finalPerms && opts.deriveFromIssuedIdentity) {
       finalPerms = {};
       for (const cap of this.#issuedIdentity?.capabilities ?? []) {
-        finalPerms[cap as AgentPermissionName] = true;
+        finalPerms[capabilityToRuntimePermission(cap as IssuedCapabilityName)] = true;
       }
       finalPerms["vault:fetch"] = true;
       finalPerms["vault:list"] = true;
@@ -210,14 +226,14 @@ export class CbioIdentity {
 export class CbioAgent {
   #authClient: AuthClient;
   #secretAcquisition: SecretAcquisition;
-  #permissions: AgentPermissions;
+  #permissions: RuntimePermissions;
 
   constructor(
     authClient: AuthClient,
     secretAcquisition: SecretAcquisition,
     public readonly agentId: string,
     public readonly publicKey: string,
-    permissions?: AgentPermissions,
+    permissions?: RuntimePermissions,
   ) {
     this.#authClient = authClient;
     this.#secretAcquisition = secretAcquisition;
@@ -228,11 +244,11 @@ export class CbioAgent {
   /**
    * View the runtime permissions granted to this handle.
    */
-  get permissions(): Readonly<AgentPermissions> {
+  get permissions(): Readonly<RuntimePermissions> {
     return Object.freeze({ ...this.#permissions });
   }
 
-  private _checkPermission(permission: AgentPermissionName): void {
+  private _checkPermission(permission: RuntimePermissionName): void {
     if (!this.#permissions[permission]) {
       throw new IdentityError(
         IdentityErrorCode.PERMISSION_DENIED,
@@ -287,7 +303,7 @@ export class CbioAgent {
   /**
    * Check if this agent handle has the specified runtime permission.
    */
-  can(permission: AgentPermissionName): boolean {
+  can(permission: RuntimePermissionName): boolean {
     return !!this.#permissions[permission];
   }
 }
@@ -295,30 +311,41 @@ export class CbioAgent {
 export interface ManagedAgentContext {
   agentId: string;
   publicKey: string;
-  identityRecordKey: string;
   agent: CbioAgent;
 }
 
 export interface RegisterChildIdentityOptions {
   /** Protocol-level capabilities embedded into the signed child identity. */
-  issuedCapabilities?: AgentPermissionName[];
+  issuedCapabilities?: IssuedCapabilityName[];
 }
 
-export interface ManagedAgentIssueOptions {
+export interface ManagedAgentIssueConfig {
   keys?: KeyPair;
   secretName?: string;
   /** Protocol-level capabilities embedded into the signed managed identity. */
-  issuedCapabilities?: AgentPermissionName[];
+  issuedCapabilities?: IssuedCapabilityName[];
+}
+
+export interface ManagedAgentHandleConfig {
   /** Runtime permissions granted to the returned `CbioAgent` handle. */
-  runtimePermissions?: AgentPermissions;
+  runtimePermissions?: RuntimePermissions;
+}
+
+export interface ManagedAgentStorageConfig {
   storage?: IStorageProvider;
   storageKey?: string;
   activityLogKey?: string | null;
 }
 
+export interface ManagedAgentIssueOptions {
+  issue?: ManagedAgentIssueConfig;
+  handle?: ManagedAgentHandleConfig;
+  storage?: ManagedAgentStorageConfig;
+}
+
 export interface ManagedAgentLoadOptions {
   /** Runtime permissions granted to the loaded `CbioAgent` handle. */
-  runtimePermissions?: AgentPermissions;
+  runtimePermissions?: RuntimePermissions;
   storage?: IStorageProvider;
   storageKey?: string;
   activityLogKey?: string | null;
@@ -329,7 +356,70 @@ export interface ManagedAgentLoadOptions {
  *
  * Provides administrative (high-risk) capabilities for a CbioIdentity.
  */
-export class CbioManagementFacet {
+class ManagedAgentSupport {
+  constructor(
+    protected readonly _identity: CbioIdentity,
+    protected readonly _vault: CbioVault,
+  ) {}
+
+  protected getSecret(secretName: string): string | undefined {
+    return this._vault.getSecret(secretName);
+  }
+
+  async addSecret(secretName: string, secretValue: string, options?: SecretPolicy): Promise<void> {
+    await this._vault.addSecret(secretName, secretValue, options);
+  }
+
+  protected _getManagedAgentRecord(publicKey: string): ManagedAgentRecord | null {
+    const secretName = getChildIdentitySecretName(publicKey);
+    const stored = this.getSecret(secretName);
+    if (!stored) return null;
+    try {
+      const parsed = JSON.parse(stored) as ManagedAgentRecord;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  protected _getManagedAgentRevocation(publicKey: string): RevocationRecord | null {
+    const revocationKey = `cbio:revocation:${publicKey}`;
+    const stored = this.getSecret(revocationKey);
+    if (!stored) return null;
+
+    try {
+      const parsed = JSON.parse(stored) as RevocationRecord;
+      if (!verifyRevocationRecord(parsed)) return null;
+      if (parsed.issuer.public_key !== this._identity.publicKey) return null;
+      if (parsed.issuer.agent_id !== this._identity.agentId) return null;
+      if (parsed.target.kind !== "issued_agent_identity") return null;
+      if (parsed.target.subject_agent_id !== deriveRootAgentId(publicKey)) return null;
+
+      const record = this._getManagedAgentRecord(publicKey);
+      const expectedSequence = record?.issuedIdentity?.issuance?.sequence;
+      if (expectedSequence !== undefined && parsed.target.sequence !== expectedSequence) return null;
+
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  protected _isManagedAgentRevoked(publicKey: string): boolean {
+    return this._getManagedAgentRevocation(publicKey) !== null;
+  }
+
+  protected _assertManagedAgentNotRevoked(publicKey: string): void {
+    if (this._isManagedAgentRevoked(publicKey)) {
+      throw new IdentityError(
+        IdentityErrorCode.PERMISSION_DENIED,
+        `Managed agent '${publicKey}' has been revoked and cannot be loaded.`
+      );
+    }
+  }
+}
+
+export class CbioVaultAdmin {
   constructor(
     private readonly _identity: CbioIdentity,
     private readonly _vault: CbioVault,
@@ -341,83 +431,6 @@ export class CbioManagementFacet {
 
   getSecret(secretName: string): string | undefined {
     return this._vault.getSecret(secretName);
-  }
-
-  private _isManagedAgentRevoked(publicKey: string): boolean {
-    const revocationKey = `cbio:revocation:${publicKey}`;
-    return this._vault.hasSecret(revocationKey);
-  }
-
-  private _assertManagedAgentNotRevoked(publicKey: string): void {
-    if (this._isManagedAgentRevoked(publicKey)) {
-      throw new IdentityError(
-        IdentityErrorCode.PERMISSION_DENIED,
-        `Managed agent '${publicKey}' has been revoked and cannot be loaded.`
-      );
-    }
-  }
-
-  /**
-   * Get the protocol-level capabilities granted to a managed agent.
-   * Includes a check for revocation.
-   */
-  getManagedAgentCapabilities(publicKey: string): string[] {
-    const secretName = getChildIdentitySecretName(publicKey);
-    const stored = this.getSecret(secretName);
-    if (!stored) return [];
-
-    if (this._isManagedAgentRevoked(publicKey)) {
-      return []; // Agent is revoked, return no capabilities
-    }
-
-    try {
-      const parsed = JSON.parse(stored) as ManagedAgentRecord;
-      return parsed.issuedIdentity.capabilities || [];
-    } catch {
-      return [];
-    }
-  }
-
-  /**
-   * Revoke a managed agent by issuing a protocol-level revocation record.
-   */
-  async revokeManagedAgent(publicKey: string, reason?: string): Promise<void> {
-    const secretName = getChildIdentitySecretName(publicKey);
-    if (!this._vault.hasSecret(secretName)) {
-      throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
-        `Managed agent with public key '${publicKey}' not found in this vault.`,
-      );
-    }
-
-    if (!(this._identity.signer instanceof LocalSigner)) {
-      throw new IdentityError(
-        IdentityErrorCode.SIGNER_REQUIRES_PRIVATE_KEY,
-        "Authority must have a LocalSigner to sign revocation records.",
-      );
-    }
-
-    const issuerPublicKey = await this._identity.getPublicKey();
-    const unsignedRevocation: UnsignedRevocationRecord = {
-      cbio_protocol: "v1.0",
-      kind: "revocation_record",
-      issuer: createIdentityRef(issuerPublicKey),
-      target: {
-        kind: "issued_agent_identity",
-        subject_agent_id: deriveRootAgentId(publicKey),
-        sequence: 1, // Currently assuming sequence 1 for simple use cases
-      },
-      revocation: {
-        revoked_at: new Date().toISOString(),
-        reason,
-      },
-    };
-
-    const signedRevocation = signRevocationRecord(this._identity.signer.exportPrivateKey(), unsignedRevocation);
-
-    // Store the revocation record
-    const revocationKey = `cbio:revocation:${publicKey}`;
-    await this.addSecret(revocationKey, JSON.stringify(signedRevocation));
   }
 
   hasSecret(secretName: string): boolean {
@@ -473,13 +486,70 @@ export class CbioManagementFacet {
   async saveVaultAs(storageKey: string): Promise<void> {
     await this._vault.save(this._identity.signer, storageKey);
   }
+}
+
+export class CbioManagedAgentAdmin extends ManagedAgentSupport {
+  getManagedAgentCapabilities(publicKey: string): string[] {
+    const record = this._getManagedAgentRecord(publicKey);
+    if (!record) return [];
+
+    if (this._isManagedAgentRevoked(publicKey)) {
+      return []; // Agent is revoked, return no capabilities
+    }
+
+    return record.issuedIdentity.capabilities || [];
+  }
+
+  async revokeManagedAgent(publicKey: string, reason?: string): Promise<void> {
+    const secretName = getChildIdentitySecretName(publicKey);
+    if (!this._vault.hasSecret(secretName)) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent with public key '${publicKey}' not found in this vault.`,
+      );
+    }
+
+    if (!(this._identity.signer instanceof LocalSigner)) {
+      throw new IdentityError(
+        IdentityErrorCode.SIGNER_REQUIRES_PRIVATE_KEY,
+        "Authority must have a LocalSigner to sign revocation records.",
+      );
+    }
+
+    const issuerPublicKey = await this._identity.getPublicKey();
+    const managedRecord = this._getManagedAgentRecord(publicKey);
+    const targetSequence = managedRecord?.issuedIdentity?.issuance?.sequence ?? 1;
+    const unsignedRevocation: UnsignedRevocationRecord = {
+      cbio_protocol: "v1.0",
+      kind: "revocation_record",
+      issuer: createIdentityRef(issuerPublicKey),
+      target: {
+        kind: "issued_agent_identity",
+        subject_agent_id: deriveRootAgentId(publicKey),
+        sequence: targetSequence,
+      },
+      revocation: {
+        revoked_at: new Date().toISOString(),
+        reason,
+      },
+    };
+
+    const signedRevocation = signRevocationRecord(this._identity.signer.exportPrivateKey(), unsignedRevocation);
+
+    // Store the revocation record
+    const revocationKey = `cbio:revocation:${publicKey}`;
+    await this._vault.addSecret(revocationKey, JSON.stringify(signedRevocation));
+  }
 
   async issueManagedAgent(options?: ManagedAgentIssueOptions): Promise<ManagedAgentContext> {
     const opts = options ?? {};
-    const keys = opts.keys ?? generateIdentityKeys();
+    const issue = opts.issue ?? {};
+    const handle = opts.handle ?? {};
+    const storage = opts.storage ?? {};
+    const keys = issue.keys ?? generateIdentityKeys();
     const publicKey = keys.publicKey || derivePublicKey(keys.privateKey);
     const agentId = deriveRootAgentId(publicKey);
-    const secretName = opts.secretName ?? getChildIdentitySecretName(publicKey);
+    const secretName = issue.secretName ?? getChildIdentitySecretName(publicKey);
 
     if (!(this._identity.signer instanceof LocalSigner)) {
       throw new IdentityError(
@@ -499,7 +569,7 @@ export class CbioManagementFacet {
         issued_at: new Date().toISOString(),
         sequence: 1,
       },
-      capabilities: opts.issuedCapabilities,
+      capabilities: issue.issuedCapabilities,
     };
 
     const issuedIdentity = signIssuedAgentIdentity(this._identity.signer.exportPrivateKey(), unsignedIdentity);
@@ -520,17 +590,16 @@ export class CbioManagementFacet {
     const childIdentity = await CbioIdentity.load(
       { privateKey: keys.privateKey, publicKey },
       {
-        storage: opts.storage,
-        storageKey: opts.storageKey ?? getVaultPath(publicKey),
-        activityLogKey: opts.activityLogKey,
+        storage: storage.storage,
+        storageKey: storage.storageKey ?? getVaultPath(publicKey),
+        activityLogKey: storage.activityLogKey,
       },
     );
     childIdentity.setIssuedIdentity(issuedIdentity);
     return {
       agentId,
       publicKey,
-      identityRecordKey: secretName,
-      agent: childIdentity.getAgent({ permissions: opts.runtimePermissions }),
+      agent: childIdentity.getAgent({ permissions: handle.runtimePermissions }),
     };
   }
 
@@ -563,8 +632,12 @@ export class CbioManagementFacet {
 
     const derivedPublicKey = derivePublicKey(parsed.privateKey);
     const derivedAgentId = deriveRootAgentId(parsed.publicKey);
+    const authorityPublicKey = await this._identity.getPublicKey();
+    const authorityAgentId = await this._identity.getAgentId();
     const issuedPublicKey = parsed.issuedIdentity.agent?.public_key;
     const issuedAgentId = parsed.issuedIdentity.agent?.agent_id;
+    const issuedAuthorityPublicKey = parsed.issuedIdentity.authority?.public_key;
+    const issuedAuthorityAgentId = parsed.issuedIdentity.authority?.agent_id;
 
     if (parsed.publicKey !== publicKey) {
       throw new IdentityError(
@@ -601,6 +674,20 @@ export class CbioManagementFacet {
       );
     }
 
+    if (issuedAuthorityPublicKey !== authorityPublicKey) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent identity '${publicKey}' issuedIdentity authority public_key does not match this authority.`,
+      );
+    }
+
+    if (issuedAuthorityAgentId !== authorityAgentId) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent identity '${publicKey}' issuedIdentity authority agent_id does not match this authority.`,
+      );
+    }
+
     const childIdentity = await CbioIdentity.load(
       { privateKey: parsed.privateKey, publicKey: parsed.publicKey },
       {
@@ -613,10 +700,16 @@ export class CbioManagementFacet {
     return {
       agentId: parsed.agentId ?? deriveRootAgentId(parsed.publicKey),
       publicKey: parsed.publicKey,
-      identityRecordKey: secretName,
       agent: childIdentity.getAgent({ permissions: options?.runtimePermissions }),
     };
   }
+}
+
+export class CbioChildIdentityAdmin {
+  constructor(
+    private readonly _identity: CbioIdentity,
+    private readonly _vault: CbioVault,
+  ) {}
 
   async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<string> {
     if (!keys.privateKey)
@@ -664,5 +757,17 @@ export class CbioManagementFacet {
       await this._vault.addSecret(secretName, stored);
     }
     return secretName;
+  }
+}
+
+export class CbioAdmin {
+  public readonly vault: CbioVaultAdmin;
+  public readonly managedAgents: CbioManagedAgentAdmin;
+  public readonly children: CbioChildIdentityAdmin;
+
+  constructor(identity: CbioIdentity, vault: CbioVault) {
+    this.vault = new CbioVaultAdmin(identity, vault);
+    this.managedAgents = new CbioManagedAgentAdmin(identity, vault);
+    this.children = new CbioChildIdentityAdmin(identity, vault);
   }
 }

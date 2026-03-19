@@ -1,4 +1,5 @@
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
+import { getChildIdentitySecretName } from '../../dist/protocol/identity.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -19,16 +20,18 @@ async function run() {
             throw new Error('Default agent should not implicitly gain acquire permission.');
         }
 
-        const managed = await rootIdentity.admin.issueManagedAgent({
-            issuedCapabilities: ['vault:acquire'],
+        const managed = await rootIdentity.admin.managedAgents.issueManagedAgent({
+            issue: {
+                issuedCapabilities: ['vault:acquire'],
+            },
         });
 
-        const minimalManagedAgent = await rootIdentity.admin.loadManagedAgent(managed.publicKey);
+        const minimalManagedAgent = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey);
         if (minimalManagedAgent.agent.can('vault:acquire')) {
             throw new Error('getAgent() should not auto-derive runtime permissions by default.');
         }
 
-        const stored = rootIdentity.admin.getSecret(managed.identityRecordKey);
+        const stored = rootIdentity.admin.vault.getSecret(getChildIdentitySecretName(managed.publicKey));
         if (!stored) {
             throw new Error('Managed identity record not found.');
         }

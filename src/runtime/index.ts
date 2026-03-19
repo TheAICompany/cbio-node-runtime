@@ -6,12 +6,18 @@
 export { CbioIdentity, CbioAgent } from "../agent/agent.js";
 export type {
   GetAgentOptions,
+  IssuedCapabilityName,
+  ManagedAgentHandleConfig,
   ManagedAgentContext,
+  ManagedAgentIssueConfig,
   ManagedAgentIssueOptions,
   ManagedAgentLoadOptions,
+  ManagedAgentStorageConfig,
   RegisterChildIdentityOptions,
   IdentityLoadKeys,
   IdentityLoadOptions,
+  RuntimePermissionName,
+  RuntimePermissions,
 } from "../agent/agent.js";
 export type { MergeResult } from "../vault/vault.js";
 export type {
@@ -26,7 +32,6 @@ export { IdentityError, IdentityErrorCode } from "../errors.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
-export { getChildIdentitySecretName, CHILD_KEY_PREFIX } from "../protocol/identity.js";
 export {
   startLocalAuthProxy,
   type FetchWithAuthLike,

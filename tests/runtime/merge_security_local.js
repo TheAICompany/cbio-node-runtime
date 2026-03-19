@@ -15,15 +15,15 @@ async function verifyMergeSecurityLocal() {
     try {
         const keysA = generateIdentityKeys();
         const agentA = await CbioIdentity.load(keysA, { storageKey: storageKeyA });
-        await agentA.admin.addSecret('secret-a', 'value-a');
+        await agentA.admin.vault.addSecret('secret-a', 'value-a');
 
         const keysB = generateIdentityKeys();
         const agentB = await CbioIdentity.load(keysB, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_b.enc') });
-        await agentB.admin.addSecret('secret-b', 'value-b');
+        await agentB.admin.vault.addSecret('secret-b', 'value-b');
 
         console.log("--- 1. Attempting cross-identity merge (A <- B) ---");
         try {
-            await agentA.admin.mergeFrom(agentB);
+            await agentA.admin.vault.mergeFrom(agentB);
             throw new Error("❌ FAILURE: Merged vaults from different identities! Security breach.");
         } catch (e) {
             if (IdentityError.isIdentityError(e) && e.code === IdentityErrorCode.MERGE_IDENTITY_MISMATCH) {
@@ -35,9 +35,9 @@ async function verifyMergeSecurityLocal() {
 
         console.log("--- 2. Attempting legitimate merge (A <- A') ---");
         const agentA2 = await CbioIdentity.load(keysA, { storageKey: storageKeyA2 });
-        await agentA2.admin.addSecret('secret-a2', 'value-a2');
+        await agentA2.admin.vault.addSecret('secret-a2', 'value-a2');
 
-        const result = await agentA.admin.mergeFrom(agentA2);
+        const result = await agentA.admin.vault.mergeFrom(agentA2);
         if (!result.merged) throw new Error(`Merge failed with conflicts: ${result.conflicts}`);
         if (!result.added.includes('secret-a2') || result.skipped.length !== 0 || result.overwritten.length !== 0) {
             throw new Error(`Expected merge result to report added=['secret-a2'], got ${JSON.stringify(result)}`);
@@ -50,8 +50,8 @@ async function verifyMergeSecurityLocal() {
 
         console.log("--- 3. Conflict handling: merge without force returns conflicts ---");
         const agentA3 = await CbioIdentity.load(keysA, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_a3.enc') });
-        await agentA3.admin.addSecret('secret-a', 'value-a-DIFFERENT');
-        const conflictResult = await agentA.admin.mergeFrom(agentA3);
+        await agentA3.admin.vault.addSecret('secret-a', 'value-a-DIFFERENT');
+        const conflictResult = await agentA.admin.vault.mergeFrom(agentA3);
         if (
             !conflictResult.merged &&
             conflictResult.conflicts?.includes('secret-a') &&
@@ -65,12 +65,12 @@ async function verifyMergeSecurityLocal() {
         }
 
         console.log("--- 4. Force merge: receiver wins ---");
-        const forceResult = await agentA.admin.mergeFrom(agentA3, { onConflict: 'skip' });
+        const forceResult = await agentA.admin.vault.mergeFrom(agentA3, { onConflict: 'skip' });
         if (!forceResult.merged) throw new Error(`Force merge failed: ${JSON.stringify(forceResult)}`);
         if (!forceResult.skipped.includes('secret-a') || forceResult.added.length !== 0 || forceResult.overwritten.length !== 0) {
             throw new Error(`❌ FAILURE: Expected skip result for 'secret-a', got ${JSON.stringify(forceResult)}`);
         }
-        const kept = agentA.admin.getSecret('secret-a');
+        const kept = agentA.admin.vault.getSecret('secret-a');
         if (kept === 'value-a') {
             console.log("✅ SUCCESS: Receiver value kept on force merge.");
         } else {
@@ -78,12 +78,12 @@ async function verifyMergeSecurityLocal() {
         }
 
         console.log("--- 5. Overwrite merge: sender wins and result reports overwrite ---");
-        const overwriteResult = await agentA.admin.mergeFrom(agentA3, { onConflict: 'overwrite' });
+        const overwriteResult = await agentA.admin.vault.mergeFrom(agentA3, { onConflict: 'overwrite' });
         if (!overwriteResult.merged) throw new Error(`Overwrite merge failed: ${JSON.stringify(overwriteResult)}`);
         if (!overwriteResult.overwritten.includes('secret-a') || overwriteResult.added.length !== 0) {
             throw new Error(`❌ FAILURE: Expected overwrite result for 'secret-a', got ${JSON.stringify(overwriteResult)}`);
         }
-        const replaced = agentA.admin.getSecret('secret-a');
+        const replaced = agentA.admin.vault.getSecret('secret-a');
         if (replaced === 'value-a-DIFFERENT') {
             console.log("✅ SUCCESS: Sender value applied on overwrite merge.");
         } else {

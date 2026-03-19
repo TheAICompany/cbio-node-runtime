@@ -32,15 +32,15 @@ async function testActivityLog() {
     }
 
     console.log("--- 3. Admin getActivityLog initially empty ---");
-    const initial = await agent.admin.getActivityLog();
+    const initial = await agent.admin.vault.getActivityLog();
     if (Array.isArray(initial) && initial.length === 0) {
         console.log("✅ Initial activityLog is empty array");
     } else {
         throw new Error(`Expected empty activity log, got ${JSON.stringify(initial)}`);
     }
 
-    await agent.admin.addSecret('audit-test', 'secret-val');
-    const afterSet = await agent.admin.getActivityLog();
+    await agent.admin.vault.addSecret('audit-test', 'secret-val');
+    const afterSet = await agent.admin.vault.getActivityLog();
     if (afterSet.length === 0) {
         console.log("✅ addSecret does not add to activityLog");
     } else {
@@ -72,7 +72,7 @@ async function testActivityLog() {
         if (!res.ok) {
             throw new Error(`fetchWithAuth failed with status ${res.status}`);
         }
-        const afterFetch = await agent.admin.getActivityLog();
+        const afterFetch = await agent.admin.vault.getActivityLog();
         const fetchUrl = `${base}/`;
         if (afterFetch.length === 1 && afterFetch[0].action === 'fetchWithAuth' && afterFetch[0].secretName === 'audit-test' && afterFetch[0].url === fetchUrl) {
             console.log("✅ fetchWithAuth added entry with action, secretName, url");
@@ -91,7 +91,7 @@ async function testActivityLog() {
         if (!acq.success) {
             throw new Error(`fetchJsonAndAddSecret failed: ${acq.error}`);
         }
-        const afterAcq = await agent.admin.getActivityLog();
+        const afterAcq = await agent.admin.vault.getActivityLog();
         const acqEntry = afterAcq.find(e => e.action === 'fetchJsonAndAddSecret' && e.secretName === 'acquired-alias');
         if (acqEntry && acqEntry.url) {
             console.log("✅ fetchJsonAndAddSecret added entry");
@@ -101,7 +101,7 @@ async function testActivityLog() {
 
         console.log("--- 6. Persistence ---");
         const agent2 = await CbioIdentity.load(keys);
-        const log2 = await agent2.admin.getActivityLog();
+        const log2 = await agent2.admin.vault.getActivityLog();
         if (log2.length >= 2) {
             console.log("✅ ActivityLog persisted across reload");
         } else {
@@ -126,8 +126,8 @@ async function testActivityLog() {
             storageKey: 'activity-fail-test.enc',
             activityLogKey: 'activity-fail-test.activity.jsonl',
         });
-        await agentFailing.admin.addSecret('pre-seeded', 'val');
-        await agentFailing.admin.addSecret('rotatable', 'initial', { allowedOrigins: [base] });
+        await agentFailing.admin.vault.addSecret('pre-seeded', 'val');
+        await agentFailing.admin.vault.addSecret('rotatable', 'initial', { allowedOrigins: [base] });
         try {
             await agentFailing.fetchWithAuth('nonexistent', `${base}/`);
         } catch (e) {

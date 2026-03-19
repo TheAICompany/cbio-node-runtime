@@ -60,7 +60,7 @@ async function verifyHardenedSecurity() {
         }
 
         console.log("\n[Test 3] getSecret via Admin Facet");
-        const recovered = agent.admin.getSecret('test-service');
+        const recovered = agent.admin.vault.getSecret('test-service');
         if (recovered === secretValue) {
             console.log("✅ SUCCESS: Owner can recover secrets via Admin Facet.");
         } else {
@@ -68,7 +68,7 @@ async function verifyHardenedSecurity() {
         }
 
         console.log("\n[Test 4] deleteSecret via Admin Facet");
-        await agent.admin.deleteSecret('test-service');
+        await agent.admin.vault.deleteSecret('test-service');
 
         const agentRestart = await CbioIdentity.load(keys);
         if (agentRestart.hasSecret('test-service')) {

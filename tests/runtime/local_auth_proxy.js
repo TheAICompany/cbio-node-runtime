@@ -69,7 +69,7 @@ async function run() {
     try {
         const keys = generateIdentityKeys();
         const identity = await CbioIdentity.load(keys);
-        await identity.admin.addSecret('openai', 'sk-test-local-proxy');
+        await identity.admin.vault.addSecret('openai', 'sk-test-local-proxy');
 
         proxy = await startLocalAuthProxy({
             authHandle: identity,
@@ -95,7 +95,7 @@ async function run() {
 
         console.log('✅ Local auth proxy forwards requests and injects Authorization');
 
-        await identity.admin.addSecret('anthropic', 'anthropic-test-key');
+        await identity.admin.vault.addSecret('anthropic', 'anthropic-test-key');
         const anthropicProxy = await startLocalAuthProxy({
             authHandle: identity,
             secretName: 'anthropic',

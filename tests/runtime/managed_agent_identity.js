@@ -1,4 +1,6 @@
 import { CbioIdentity, IdentityError, IdentityErrorCode, generateIdentityKeys } from '../../dist/runtime/index.js';
+import { createIdentityRef, signRevocationRecord } from '@the-ai-company/cbio-protocol';
+import { getChildIdentitySecretName } from '../../dist/protocol/identity.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -27,8 +29,10 @@ async function testManagedAgentIdentity() {
         const rootIdentity = await CbioIdentity.load(rootKeys);
         const rootAgentId = await rootIdentity.getAgentId();
 
-        const managed = await rootIdentity.admin.issueManagedAgent({
-            runtimePermissions: { 'vault:acquire': true, 'vault:fetch': true, 'vault:list': true },
+        const managed = await rootIdentity.admin.managedAgents.issueManagedAgent({
+            handle: {
+                runtimePermissions: { 'vault:acquire': true, 'vault:fetch': true, 'vault:list': true },
+            },
         });
         const managedAgentId = await managed.agent.getAgentId();
 
@@ -53,7 +57,8 @@ async function testManagedAgentIdentity() {
             throw new Error('Root authority should not see managed agent vault contents in its own vault.');
         }
 
-        const stored = rootIdentity.admin.getSecret(managed.identityRecordKey);
+        const managedRecordKey = getChildIdentitySecretName(managed.publicKey);
+        const stored = rootIdentity.admin.vault.getSecret(managedRecordKey);
         if (!stored) {
             throw new Error('Root authority did not persist managed agent identity record.');
         }
@@ -70,7 +75,7 @@ async function testManagedAgentIdentity() {
             throw new Error('Issued identity agent_id mismatch.');
         }
 
-        const reloaded = await rootIdentity.admin.loadManagedAgent(managed.publicKey, {
+        const reloaded = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey, {
             runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
         });
         if (!reloaded.agent.hasSecret('service-token')) {
@@ -80,16 +85,16 @@ async function testManagedAgentIdentity() {
             throw new Error('Reloaded managed agent should reflect requested runtimePermissions.');
         }
 
-        await rootIdentity.admin.deleteSecret(managed.identityRecordKey);
+        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
         const tamperedRecord = {
             ...parsed,
             privateKey: rootKeys.privateKey,
         };
-        await rootIdentity.admin.addSecret(managed.identityRecordKey, JSON.stringify(tamperedRecord));
+        await rootIdentity.admin.vault.addSecret(managedRecordKey, JSON.stringify(tamperedRecord));
 
         let tamperedLoadBlocked = false;
         try {
-            await rootIdentity.admin.loadManagedAgent(managed.publicKey);
+            await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey);
         } catch (error) {
             tamperedLoadBlocked =
                 IdentityError.isIdentityError(error) &&
@@ -100,13 +105,68 @@ async function testManagedAgentIdentity() {
             throw new Error('Tampered managed agent record should be rejected during load.');
         }
 
-        await rootIdentity.admin.deleteSecret(managed.identityRecordKey);
-        await rootIdentity.admin.addSecret(managed.identityRecordKey, stored);
+        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
+        await rootIdentity.admin.vault.addSecret(managedRecordKey, stored);
 
-        await rootIdentity.admin.revokeManagedAgent(managed.publicKey, 'test revocation');
+        const foreignAuthority = await CbioIdentity.load(generateIdentityKeys());
+        const foreignManaged = await foreignAuthority.admin.managedAgents.issueManagedAgent({
+            issue: {
+                keys: { privateKey: parsed.privateKey, publicKey: parsed.publicKey },
+            },
+        });
+        const foreignStored = foreignAuthority.admin.vault.getSecret(getChildIdentitySecretName(foreignManaged.publicKey));
+        if (!foreignStored) {
+            throw new Error('Foreign authority did not persist managed agent identity record.');
+        }
+
+        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
+        await rootIdentity.admin.vault.addSecret(managedRecordKey, foreignStored);
+
+        let foreignAuthorityRecordBlocked = false;
+        try {
+            await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey);
+        } catch (error) {
+            foreignAuthorityRecordBlocked =
+                IdentityError.isIdentityError(error) &&
+                error.code === IdentityErrorCode.SECRET_NOT_FOUND &&
+                /authority public_key does not match this authority/i.test(error.message);
+        }
+        if (!foreignAuthorityRecordBlocked) {
+            throw new Error('Managed agent record issued by a different authority should be rejected during load.');
+        }
+
+        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
+        await rootIdentity.admin.vault.addSecret(managedRecordKey, stored);
+
+        const bogusRevocation = signRevocationRecord(rootKeys.privateKey, {
+            cbio_protocol: 'v1.0',
+            kind: 'revocation_record',
+            issuer: createIdentityRef(rootKeys.publicKey),
+            target: {
+                kind: 'issued_agent_identity',
+                subject_agent_id: managed.agentId,
+                sequence: 999,
+            },
+            revocation: {
+                revoked_at: new Date().toISOString(),
+                reason: 'bogus sequence',
+            },
+        });
+        await rootIdentity.admin.vault.addSecret(`cbio:revocation:${managed.publicKey}`, JSON.stringify(bogusRevocation));
+
+        const bogusRevocationReload = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey, {
+            runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
+        });
+        if (!bogusRevocationReload.agent.hasSecret('service-token')) {
+            throw new Error('Invalid revocation record should not block managed agent recovery.');
+        }
+
+        await rootIdentity.admin.vault.deleteSecret(`cbio:revocation:${managed.publicKey}`);
+
+        await rootIdentity.admin.managedAgents.revokeManagedAgent(managed.publicKey, 'test revocation');
         let revokedLoadBlocked = false;
         try {
-            await rootIdentity.admin.loadManagedAgent(managed.publicKey);
+            await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey);
         } catch (error) {
             revokedLoadBlocked =
                 IdentityError.isIdentityError(error) && error.code === IdentityErrorCode.PERMISSION_DENIED;

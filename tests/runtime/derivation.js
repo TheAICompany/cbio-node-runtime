@@ -12,7 +12,7 @@ async function verifyDerivation() {
     const storageKey = path.join(TEST_DIR, 'test_vault.enc');
 
     const agentSave = await CbioIdentity.load(fullKeys, { storageKey });
-    await agentSave.admin.addSecret('test-key', 'secret-content');
+    await agentSave.admin.vault.addSecret('test-key', 'secret-content');
     console.log("✅ Step 1: Secret saved using full KeyPair (via agent.admin).");
 
     const partialKeys = { privateKey: fullKeys.privateKey };
