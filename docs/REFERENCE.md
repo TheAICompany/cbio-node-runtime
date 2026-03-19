@@ -2,7 +2,7 @@
 
 This document provides a comprehensive technical reference for the CBIO SDK, covering advanced API usage, custom storage implementation, and structured error handling.
 
-For high-level concepts and quick start, see [README.md](../README.md). For governance and introspection, see [CAPABILITIES.md](../CAPABILITIES.md).
+For high-level concepts and quick start, see [README.md](../README.md). For module structure, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
@@ -44,11 +44,11 @@ The SDK can run on any backend by implementing the `IStorageProvider` interface.
 ### 2.1 Interface Definition
 ```ts
 export interface IStorageProvider {
-  read(key: string): Promise<Uint8Array | null>;
-  write(key: string, data: Uint8Array): Promise<void>;
+  read(key: string): Promise<Buffer | null>;
+  write(key: string, data: Buffer): Promise<void>;
   delete(key: string): Promise<void>;
   has(key: string): Promise<boolean>;
-  rename?(from: string, to: string): Promise<void>; // Improves atomic writes
+  rename?(fromKey: string, toKey: string): Promise<void>; // Improves atomic writes
 }
 ```
 
@@ -82,7 +82,7 @@ const response = await agent.fetchWithAuth('my-secret', 'https://api.example.com
 
 ---
 
-## 3. Error Code Dictionary
+## 4. Error Code Dictionary
 
 The SDK uses structured `IdentityError` objects with the following codes:
 
@@ -101,12 +101,3 @@ The SDK uses structured `IdentityError` objects with the following codes:
 | `MERGE_IDENTITY_MISMATCH` | Tried to merge vaults of different identities. | Only merge vaults of the same identity. |
 | `CHILD_IDENTITY_REQUIRES_PRIVATE_KEY` | Child keys were incomplete on registration. | Ensure child keys include Private Key. |
 | `SIGNER_REQUIRES_PRIVATE_KEY` | Administrative action requires a full signer. | Load identity from a full private key. |
-
----
-
-## 5. CLI & Broker Mode
-The `cbio-identity` binary provides administrative tools and a local auth broker.
-
-- `cbio-identity init`: Provision a new root identity.
-- `cbio-identity get/delete <name>`: Plaintext management (requires `AGENT_PRIV_KEY`).
-- `cbio-identity proxy <provider>`: Starts a loopback-only proxy for providers like `openai`, `anthropic`, or `resend`. This is useful for SDKs that do not support custom fetch.

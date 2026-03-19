@@ -7,7 +7,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { deriveRootAgentId } from '@the-ai-company/cbio-protocol';
-import { getChildIdentitySecretName, CHILD_KEY_PREFIX } from './storageConventions.js';
+import { getChildIdentitySecretName, CHILD_KEY_PREFIX } from './childSecretNaming.js';
 
 export { deriveRootAgentId, getChildIdentitySecretName, CHILD_KEY_PREFIX };
 

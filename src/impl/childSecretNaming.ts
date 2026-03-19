@@ -1,5 +1,5 @@
 /**
- * Runtime storage conventions. Claw-biometric vault secret naming for child identities.
+ * Vault secret naming for child identities. CHILD_KEY_PREFIX, getChildIdentitySecretName.
  * Not protocol objects. Protocol talks about public identities and signatures,
  * not local secret names or internal storage prefixes.
  */
