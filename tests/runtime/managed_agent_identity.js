@@ -5,6 +5,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { ingestSecret } from './helpers/ingest_secret.js';
 import { readSealedSecret } from './helpers/read_sealed_secret.js';
+import { deleteSealedSecret, writeSealedSecret } from './helpers/write_sealed_secret.js';
 
 async function testManagedAgentIdentity() {
     console.log('--- Managed Agent Identity Test ---');
@@ -64,6 +65,9 @@ async function testManagedAgentIdentity() {
         if (!stored) {
             throw new Error('Root authority did not persist managed agent identity record.');
         }
+        if (rootIdentity.hasSecret(managedRecordKey) || rootIdentity.listSecretNames().includes(managedRecordKey)) {
+            throw new Error('Managed agent record should be hidden from the public secret namespace.');
+        }
         const parsed = JSON.parse(stored);
         if (parsed.agentId !== managed.agentId || parsed.publicKey !== managed.publicKey || !parsed.issuedIdentity) {
             throw new Error('Managed agent identity record is incomplete (missing protocol fields).');
@@ -94,12 +98,12 @@ async function testManagedAgentIdentity() {
             throw new Error('Reloaded managed agent should reflect requested runtimePermissions.');
         }
 
-        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
+        await deleteSealedSecret(rootIdentity, managedRecordKey);
         const tamperedRecord = {
             ...parsed,
             privateKey: rootKeys.privateKey,
         };
-        await ingestSecret(rootIdentity, managedRecordKey, JSON.stringify(tamperedRecord));
+        await writeSealedSecret(rootIdentity, managedRecordKey, JSON.stringify(tamperedRecord));
 
         let tamperedLoadBlocked = false;
         try {
@@ -114,18 +118,15 @@ async function testManagedAgentIdentity() {
             throw new Error('Tampered managed agent record should be rejected during load.');
         }
 
-        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await ingestSecret(rootIdentity, managedRecordKey, stored);
+        await writeSealedSecret(rootIdentity, managedRecordKey, stored);
 
-        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await ingestSecret(rootIdentity, managedRecordKey, JSON.stringify({ publicKey: managed.publicKey }));
+        await writeSealedSecret(rootIdentity, managedRecordKey, JSON.stringify({ publicKey: managed.publicKey }));
         const invalidCaps = rootIdentity.admin.managedAgents.getManagedAgentCapabilities(managed.publicKey);
         if (invalidCaps.status !== 'invalid' || invalidCaps.capabilities.length !== 0) {
             throw new Error(`Malformed managed agent record should produce invalid status, got ${JSON.stringify(invalidCaps)}`);
         }
 
-        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await ingestSecret(rootIdentity, managedRecordKey, stored);
+        await writeSealedSecret(rootIdentity, managedRecordKey, stored);
 
         const foreignAuthority = await CbioIdentity.load(generateIdentityKeys());
         const foreignManaged = await foreignAuthority.admin.managedAgents.issueManagedAgent({
@@ -138,8 +139,7 @@ async function testManagedAgentIdentity() {
             throw new Error('Foreign authority did not persist managed agent identity record.');
         }
 
-        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await ingestSecret(rootIdentity, managedRecordKey, foreignStored);
+        await writeSealedSecret(rootIdentity, managedRecordKey, foreignStored);
 
         let foreignAuthorityRecordBlocked = false;
         try {
@@ -154,8 +154,7 @@ async function testManagedAgentIdentity() {
             throw new Error('Managed agent record issued by a different authority should be rejected during load.');
         }
 
-        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
-        await ingestSecret(rootIdentity, managedRecordKey, stored);
+        await writeSealedSecret(rootIdentity, managedRecordKey, stored);
 
         const bogusRevocation = signRevocationRecord(rootKeys.privateKey, {
             cbio_protocol: 'v1.0',
@@ -171,7 +170,7 @@ async function testManagedAgentIdentity() {
                 reason: 'bogus sequence',
             },
         });
-        await ingestSecret(rootIdentity, `cbio:revocation:${managed.publicKey}`, JSON.stringify(bogusRevocation));
+        await writeSealedSecret(rootIdentity, `cbio:revocation:${managed.publicKey}`, JSON.stringify(bogusRevocation));
 
         const bogusRevocationReload = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey, {
             handle: {
@@ -182,7 +181,7 @@ async function testManagedAgentIdentity() {
             throw new Error('Invalid revocation record should not block managed agent recovery.');
         }
 
-        await rootIdentity.admin.vault.deleteSecret(`cbio:revocation:${managed.publicKey}`);
+        await deleteSealedSecret(rootIdentity, `cbio:revocation:${managed.publicKey}`);
 
         await rootIdentity.admin.managedAgents.revokeManagedAgent(managed.publicKey, 'test revocation');
         let revokedLoadBlocked = false;

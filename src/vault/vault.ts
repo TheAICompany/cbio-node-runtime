@@ -14,6 +14,7 @@ import {
 } from '../audit/ActivityLog.js';
 import { sealBlob, unsealBlob } from '../sealed/seal.js';
 import { normalizeSecretPolicyOrigin } from './secretPolicy.js';
+import { CHILD_KEY_PREFIX } from '../protocol/childSecretNaming.js';
 
 const VAULT_FORMAT_VERSION = "v1.0";
 const SUPPORTED_VERSIONS = ["v1.0"];
@@ -54,11 +55,19 @@ export class CbioVault {
     #activityLogKey: string | null = null;
     #activityLogKeyIsDerived = false;
     #identityFingerprint: string | null = null;
+    #secretOperationHistory: Map<string, number[]> = new Map();
     private static readonly PERSIST_SALT = "CBIO_VAULT_PERSIST_V1";
     private static readonly VERSIONED_SECRET_PREFIX = "__cbio_secret_version__:";
+    private static readonly REVOCATION_PREFIX = "cbio:revocation:";
+    private static readonly SECRET_OPERATION_WINDOW_MS = 60_000;
+    private static readonly SECRET_OPERATION_LIMIT = 60;
 
     static #isVersionStorageKey(secretName: string): boolean {
         return secretName.startsWith(CbioVault.VERSIONED_SECRET_PREFIX);
+    }
+
+    static #isInternalSecretName(secretName: string): boolean {
+        return secretName.startsWith(CHILD_KEY_PREFIX) || secretName.startsWith(CbioVault.REVOCATION_PREFIX);
     }
 
     static #normalizeAllowedOrigins(allowedOrigins?: readonly string[]): string[] | undefined {
@@ -83,6 +92,9 @@ export class CbioVault {
     #assertPublicSecretName(secretName: string): void {
         if (CbioVault.#isVersionStorageKey(secretName)) {
             throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' is reserved for internal version storage.`);
+        }
+        if (CbioVault.#isInternalSecretName(secretName)) {
+            throw new IdentityError(IdentityErrorCode.PERMISSION_DENIED, `Secret name '${secretName}' is reserved for internal runtime records.`);
         }
     }
 
@@ -156,8 +168,8 @@ export class CbioVault {
     async #replaceSecretFromVault(secretName: string, otherVault: CbioVault): Promise<void> {
         const otherMetadata = otherVault.#secretMetadata.get(secretName);
         if (otherMetadata) {
-            if (this.hasSecret(secretName)) {
-                await this.deleteSecret(secretName);
+            if (this.internalHasSecret(secretName)) {
+                await this.internalDeleteSecret(secretName);
             }
             const clonedMetadata = this.#cloneSecretMetadata(secretName, otherMetadata);
             for (const version of Object.values(clonedMetadata.versions)) {
@@ -250,7 +262,7 @@ export class CbioVault {
      */
     async addSecret(secretName: string, secretValue: string, options?: SecretPolicy): Promise<void> {
         this.#assertPublicSecretName(secretName);
-        if (this.hasSecret(secretName)) {
+        if (this.#secretMetadata.has(secretName)) {
             throw new IdentityError(IdentityErrorCode.SECRET_ALREADY_EXISTS, `Secret name '${secretName}' already exists. Use updateSecret to overwrite.`);
         }
         this.#createVersionedSecret(secretName, secretValue, { allowedOrigins: options?.allowedOrigins });
@@ -324,6 +336,61 @@ export class CbioVault {
     getSecret(secretName: string): string | undefined {
         if (CbioVault.#isVersionStorageKey(secretName)) return undefined;
         return this.#getActiveVersionValue(secretName);
+    }
+
+    internalHasSecret(secretName: string): boolean {
+        return this.#secretMetadata.has(secretName);
+    }
+
+    internalGetSecret(secretName: string): string | undefined {
+        return this.#getActiveVersionValue(secretName);
+    }
+
+    async internalSetSecret(secretName: string, secretValue: string, options?: SecretPolicy): Promise<void> {
+        if (this.#secretMetadata.has(secretName)) {
+            const metadata = this.#secretMetadata.get(secretName);
+            if (!metadata) {
+                throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found.`);
+            }
+            const active = metadata.versions[metadata.activeVersion];
+            if (!active) {
+                throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' has no active version.`);
+            }
+            this.#secrets.set(active.storageKey, secretValue);
+            if (options?.allowedOrigins) {
+                metadata.allowedOrigins = CbioVault.#normalizeAllowedOrigins(options.allowedOrigins);
+            }
+        } else {
+            this.#createVersionedSecret(secretName, secretValue, { allowedOrigins: options?.allowedOrigins });
+        }
+        await this.#persistIfPossible();
+    }
+
+    async internalDeleteSecret(secretName: string): Promise<void> {
+        const metadata = this.#secretMetadata.get(secretName);
+        if (!metadata) {
+            throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found. Nothing to delete.`);
+        }
+        for (const version of Object.values(metadata.versions)) {
+            this.#secrets.delete(version.storageKey);
+        }
+        this.#secretMetadata.delete(secretName);
+        await this.#persistIfPossible();
+    }
+
+    assertSecretOperationAllowed(secretName: string, operation: string): void {
+        const key = `${operation}:${secretName}`;
+        const now = Date.now();
+        const existing = this.#secretOperationHistory.get(key) ?? [];
+        const recent = existing.filter((ts) => now - ts < CbioVault.SECRET_OPERATION_WINDOW_MS);
+        if (recent.length >= CbioVault.SECRET_OPERATION_LIMIT) {
+            throw new IdentityError(
+                IdentityErrorCode.SECRET_OPERATION_RATE_LIMITED,
+                `Secret operation '${operation}' is rate-limited for '${secretName}'.`
+            );
+        }
+        recent.push(now);
+        this.#secretOperationHistory.set(key, recent);
     }
 
     /**
@@ -580,6 +647,7 @@ export class CbioVault {
 
     hasSecret(secretName: string): boolean {
         if (CbioVault.#isVersionStorageKey(secretName)) return false;
+        if (CbioVault.#isInternalSecretName(secretName)) return false;
         if (this.#secrets.has(secretName)) {
             throw new IdentityError(
                 IdentityErrorCode.VAULT_CORRUPTED,
@@ -590,6 +658,18 @@ export class CbioVault {
     }
 
     listSecretNames(): string[] {
+        for (const secretName of this.#secrets.keys()) {
+            if (!CbioVault.#isVersionStorageKey(secretName)) {
+                throw new IdentityError(
+                    IdentityErrorCode.VAULT_CORRUPTED,
+                    `Secret '${secretName}' exists in legacy format. Legacy vault format is no longer supported.`
+                );
+            }
+        }
+        return Array.from(this.#secretMetadata.keys()).filter((secretName) => !CbioVault.#isInternalSecretName(secretName));
+    }
+
+    listAllSecretNames(): string[] {
         for (const secretName of this.#secrets.keys()) {
             if (!CbioVault.#isVersionStorageKey(secretName)) {
                 throw new IdentityError(
@@ -630,8 +710,8 @@ export class CbioVault {
         }
 
         const conflicts: string[] = [];
-        for (const secretName of otherVault.listSecretNames()) {
-            if (this.hasSecret(secretName)) conflicts.push(secretName);
+        for (const secretName of otherVault.listAllSecretNames()) {
+            if (this.internalHasSecret(secretName)) conflicts.push(secretName);
         }
 
         if (conflicts.length > 0 && onConflict === 'abort') {
@@ -647,8 +727,8 @@ export class CbioVault {
         const added: string[] = [];
         const skipped: string[] = [];
         const overwritten: string[] = [];
-        for (const secretName of otherVault.listSecretNames()) {
-            if (!this.hasSecret(secretName)) {
+        for (const secretName of otherVault.listAllSecretNames()) {
+            if (!this.internalHasSecret(secretName)) {
                 await this.#replaceSecretFromVault(secretName, otherVault);
                 added.push(secretName);
             } else if (onConflict === 'skip') {

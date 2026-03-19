@@ -22,6 +22,7 @@ Do not use this directory for:
 - [secret-origin-policy.md](./secret-origin-policy.md): allowed origin policy for acquired and rotated secrets
 - [activity-log.md](./activity-log.md): local audit event schema and failure semantics
 - [secret-validation.md](./secret-validation.md): local compare/proof semantics and versioning contract for future validator adapters
+- [exposure-surfaces.md](./exposure-surfaces.md): current runtime exposure surfaces, mitigations, and future hardening areas
 
 ## Spec Versioning
 

@@ -131,6 +131,28 @@ function createSecretValidatorHandle(
   };
 }
 
+async function appendSecretOperationLog(
+  vault: CbioVault,
+  action: ActivityLogEntry["action"],
+  secretName: string,
+  success: boolean,
+  error?: string,
+): Promise<void> {
+  try {
+    await vault.appendActivityLogEntry({
+      ts: Date.now(),
+      action,
+      secretName,
+      url: `local://vault/${action}`,
+      method: "POST",
+      success,
+      ...(error ? { error } : {}),
+    });
+  } catch {
+    // Do not alter the primary operation outcome because local audit persistence failed.
+  }
+}
+
 /**
  * Protocol-level capability strings embedded into signed identities.
  */
@@ -296,20 +318,40 @@ export class CbioIdentity {
   }
 
   async compareSecret(secretName: string, candidate: string): Promise<boolean> {
-    const secretValue = this._vault.getSecret(secretName);
-    if (!secretValue) {
-      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
+    try {
+      this._vault.assertSecretOperationAllowed(secretName, "compareSecret");
+      const result = compareSecretValue(assertSecretValue(this._vault, secretName), candidate);
+      await appendSecretOperationLog(this._vault, "compareSecret", secretName, true);
+      return result;
+    } catch (error) {
+      await appendSecretOperationLog(this._vault, "compareSecret", secretName, false, error instanceof Error ? error.message : String(error));
+      throw error;
     }
-    return compareSecretValue(secretValue, candidate);
   }
 
   async proveSecret(secretName: string, challenge: string, options?: { algorithm?: SecretProofAlgorithm }): Promise<string> {
-    return createSecretProof(assertSecretValue(this._vault, secretName), challenge, options?.algorithm ?? "sha256");
+    try {
+      this._vault.assertSecretOperationAllowed(secretName, "proveSecret");
+      const result = createSecretProof(assertSecretValue(this._vault, secretName), challenge, options?.algorithm ?? "sha256");
+      await appendSecretOperationLog(this._vault, "proveSecret", secretName, true);
+      return result;
+    } catch (error) {
+      await appendSecretOperationLog(this._vault, "proveSecret", secretName, false, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   async validateSecret(secretName: string, validator: SecretValidator): Promise<SecretValidationResult> {
-    assertSecretValue(this._vault, secretName);
-    return validator.validate(createSecretValidatorHandle(this._vault, this._authClient, secretName));
+    try {
+      this._vault.assertSecretOperationAllowed(secretName, "validateSecret");
+      assertSecretValue(this._vault, secretName);
+      const result = await validator.validate(createSecretValidatorHandle(this._vault, this._authClient, secretName));
+      await appendSecretOperationLog(this._vault, "validateSecret", secretName, true);
+      return result;
+    } catch (error) {
+      await appendSecretOperationLog(this._vault, "validateSecret", secretName, false, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   hasSecret(secretName: string): boolean {
@@ -446,18 +488,42 @@ export class CbioAgent {
 
   async compareSecret(secretName: string, candidate: string): Promise<boolean> {
     this._checkPermission("vault:acquire");
-    return compareSecretValue(assertSecretValue(this.#vault, secretName), candidate);
+    try {
+      this.#vault.assertSecretOperationAllowed(secretName, "compareSecret");
+      const result = compareSecretValue(assertSecretValue(this.#vault, secretName), candidate);
+      await appendSecretOperationLog(this.#vault, "compareSecret", secretName, true);
+      return result;
+    } catch (error) {
+      await appendSecretOperationLog(this.#vault, "compareSecret", secretName, false, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   async proveSecret(secretName: string, challenge: string, options?: { algorithm?: SecretProofAlgorithm }): Promise<string> {
     this._checkPermission("vault:acquire");
-    return createSecretProof(assertSecretValue(this.#vault, secretName), challenge, options?.algorithm ?? "sha256");
+    try {
+      this.#vault.assertSecretOperationAllowed(secretName, "proveSecret");
+      const result = createSecretProof(assertSecretValue(this.#vault, secretName), challenge, options?.algorithm ?? "sha256");
+      await appendSecretOperationLog(this.#vault, "proveSecret", secretName, true);
+      return result;
+    } catch (error) {
+      await appendSecretOperationLog(this.#vault, "proveSecret", secretName, false, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   async validateSecret(secretName: string, validator: SecretValidator): Promise<SecretValidationResult> {
     this._checkPermission("vault:acquire");
-    assertSecretValue(this.#vault, secretName);
-    return validator.validate(createSecretValidatorHandle(this.#vault, this.#authClient, secretName));
+    try {
+      this.#vault.assertSecretOperationAllowed(secretName, "validateSecret");
+      assertSecretValue(this.#vault, secretName);
+      const result = await validator.validate(createSecretValidatorHandle(this.#vault, this.#authClient, secretName));
+      await appendSecretOperationLog(this.#vault, "validateSecret", secretName, true);
+      return result;
+    } catch (error) {
+      await appendSecretOperationLog(this.#vault, "validateSecret", secretName, false, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   hasSecret(secretName: string): boolean {
@@ -541,7 +607,7 @@ class ManagedAgentSupport {
   ) {}
 
   protected getSecret(secretName: string): string | undefined {
-    return this._vault.getSecret(secretName);
+    return this._vault.internalGetSecret(secretName);
   }
 
   async addSecret(secretName: string, secretValue: string, options?: SecretPolicy): Promise<void> {
@@ -682,7 +748,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
 
   async revokeManagedAgent(publicKey: string, reason?: string): Promise<void> {
     const secretName = getChildIdentitySecretName(publicKey);
-    if (!this._vault.hasSecret(secretName)) {
+    if (!this._vault.internalHasSecret(secretName)) {
       throw new IdentityError(
         IdentityErrorCode.SECRET_NOT_FOUND,
         `Managed agent with public key '${publicKey}' not found in this vault.`,
@@ -718,7 +784,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
 
     // Store the revocation record
     const revocationKey = `cbio:revocation:${publicKey}`;
-    await this._vault.addSecret(revocationKey, JSON.stringify(signedRevocation));
+    await this._vault.internalSetSecret(revocationKey, JSON.stringify(signedRevocation));
   }
 
   async issueManagedAgent(options?: ManagedAgentIssueOptions): Promise<ManagedAgentContext> {
@@ -763,11 +829,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
       storageKey,
     };
     const stored = JSON.stringify(record);
-    if (this._vault.hasSecret(secretName)) {
-      await this._vault.updateSecret(secretName, stored);
-    } else {
-      await this._vault.addSecret(secretName, stored);
-    }
+    await this._vault.internalSetSecret(secretName, stored);
 
     const childIdentity = await CbioIdentity.load(
       { privateKey: keys.privateKey, publicKey },
@@ -948,11 +1010,7 @@ export class CbioChildIdentityAdmin {
     };
 
     const stored = JSON.stringify(record);
-    if (this._vault.hasSecret(secretName)) {
-      await this._vault.updateSecret(secretName, stored);
-    } else {
-      await this._vault.addSecret(secretName, stored);
-    }
+    await this._vault.internalSetSecret(secretName, stored);
     return { publicKey: pub };
   }
 }

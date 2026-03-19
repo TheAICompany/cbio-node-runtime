@@ -280,6 +280,7 @@ The SDK uses structured `IdentityError` objects with the following codes:
 | `SECRET_ALREADY_EXISTS` | `addSecret` used on an existing name. | Use a new name or `update`. |
 | `SECRET_POLICY_REQUIRED` | Agent rotation attempted without allowed origins. | Set origins in identity code. |
 | `SECRET_SOURCE_ORIGIN_MISMATCH` | Rotation came from a disallowed origin. | Check secret policy and rotation URL. |
+| `SECRET_OPERATION_RATE_LIMITED` | Local compare/proof/validate operation exceeded the runtime limit window. | Back off, reduce probe frequency, or avoid low-entropy repeated guesses. |
 | `VAULT_PERSISTENCE_FAILED` | Storage is not writable. | Fix permissions or check storage path. |
 | `VAULT_FILE_NOT_FOUND` | Expected vault file does not exist. | Initialize identity or check storage key. |
 | `VAULT_WRITE_INTEGRITY_FAILED` | Save verification failed. | Check disk space/integrity. |

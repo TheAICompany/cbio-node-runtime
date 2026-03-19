@@ -16,7 +16,7 @@ export interface ActivityLogMetadata {
 
 export interface ActivityLogEntry {
     ts: number;
-    action: 'fetchWithAuth' | 'fetchJsonAndAddSecret' | 'fetchJsonAndUpdateSecret';
+    action: 'fetchWithAuth' | 'fetchJsonAndAddSecret' | 'fetchJsonAndUpdateSecret' | 'compareSecret' | 'proveSecret' | 'validateSecret';
     secretName: string;
     url: string;
     method: string;
@@ -67,7 +67,14 @@ export async function readActivityLog(
             if (raw._meta) return null;
             const secretName = raw.secretName ?? raw.alias;
             if (typeof raw.ts !== 'number') return null;
-            if (raw.action !== 'fetchWithAuth' && raw.action !== 'fetchJsonAndAddSecret' && raw.action !== 'fetchJsonAndUpdateSecret') return null;
+            if (
+                raw.action !== 'fetchWithAuth' &&
+                raw.action !== 'fetchJsonAndAddSecret' &&
+                raw.action !== 'fetchJsonAndUpdateSecret' &&
+                raw.action !== 'compareSecret' &&
+                raw.action !== 'proveSecret' &&
+                raw.action !== 'validateSecret'
+            ) return null;
             if (typeof secretName !== 'string') return null;
             if (typeof raw.url !== 'string') return null;
             if (typeof raw.method !== 'string') return null;

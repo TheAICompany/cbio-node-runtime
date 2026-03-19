@@ -38,12 +38,16 @@ Current action names:
 - `fetchWithAuth`
 - `fetchJsonAndAddSecret`
 - `fetchJsonAndUpdateSecret`
+- `compareSecret`
+- `proveSecret`
+- `validateSecret`
 
 ## Required Semantics
 
 1. `fetchWithAuth` success and failure attempts must append an activity entry.
 2. JSON secret acquisition and rotation success and failure attempts must append an activity entry.
 3. Direct admin secret mutation such as `addSecret` is not part of this audit stream.
+4. Local compare/proof/validate attempts should append activity entries without exporting plaintext secret values.
 
 ## Failure Semantics
 
