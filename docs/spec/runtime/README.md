@@ -21,6 +21,22 @@ Do not use this directory for:
 - [merge-rules.md](./merge-rules.md): vault merge preconditions and conflict behavior
 - [secret-origin-policy.md](./secret-origin-policy.md): allowed origin policy for acquired and rotated secrets
 - [activity-log.md](./activity-log.md): local audit event schema and failure semantics
+- [secret-validation.md](./secret-validation.md): local compare/proof semantics and versioning contract for future validator adapters
+
+## Spec Versioning
+
+Runtime specs in this directory use:
+
+- an integer version number
+- a lifecycle status suffix such as `draft` or `stable`
+
+Examples:
+
+- `v1-draft`
+- `v1-stable`
+- `v2-draft`
+
+This keeps compatibility decisions obvious while the runtime incubates behavior before anything graduates into a broader protocol contract.
 
 ## Design Goal
 

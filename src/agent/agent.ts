@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Signer, KeyPair, derivePublicKey, LocalSigner, generateIdentityKeys } from "../protocol/crypto.js";
 import { CbioVault, type MergeResult, type SecretPolicy } from "../vault/vault.js";
 import { AuthClient, type FetchWithAuthOptions } from "../http/authClient.js";
@@ -70,6 +71,18 @@ export interface ActivityLogConfig {
 }
 
 export type StartLocalSecretIngressOptions = Omit<LocalSecretIngressOptions, "vault">;
+export type SecretProofAlgorithm = "sha256" | "sha512";
+
+function compareSecretValue(secretValue: string, candidate: string): boolean {
+  const left = Buffer.from(secretValue, "utf8");
+  const right = Buffer.from(candidate, "utf8");
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
+
+function createSecretProof(secretValue: string, challenge: string, algorithm: SecretProofAlgorithm): string {
+  return createHmac(algorithm, secretValue).update(challenge, "utf8").digest("base64url");
+}
 
 /**
  * Protocol-level capability strings embedded into signed identities.
@@ -235,6 +248,22 @@ export class CbioIdentity {
     });
   }
 
+  async compareSecret(secretName: string, candidate: string): Promise<boolean> {
+    const secretValue = this._vault.getSecret(secretName);
+    if (!secretValue) {
+      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
+    }
+    return compareSecretValue(secretValue, candidate);
+  }
+
+  async proveSecret(secretName: string, challenge: string, options?: { algorithm?: SecretProofAlgorithm }): Promise<string> {
+    const secretValue = this._vault.getSecret(secretName);
+    if (!secretValue) {
+      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
+    }
+    return createSecretProof(secretValue, challenge, options?.algorithm ?? "sha256");
+  }
+
   hasSecret(secretName: string): boolean {
     return this._vault.hasSecret(secretName);
   }
@@ -365,6 +394,24 @@ export class CbioAgent {
       ...options,
       vault: this.#vault,
     });
+  }
+
+  async compareSecret(secretName: string, candidate: string): Promise<boolean> {
+    this._checkPermission("vault:acquire");
+    const secretValue = this.#vault.getSecret(secretName);
+    if (!secretValue) {
+      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
+    }
+    return compareSecretValue(secretValue, candidate);
+  }
+
+  async proveSecret(secretName: string, challenge: string, options?: { algorithm?: SecretProofAlgorithm }): Promise<string> {
+    this._checkPermission("vault:acquire");
+    const secretValue = this.#vault.getSecret(secretName);
+    if (!secretValue) {
+      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
+    }
+    return createSecretProof(secretValue, challenge, options?.algorithm ?? "sha256");
   }
 
   hasSecret(secretName: string): boolean {
