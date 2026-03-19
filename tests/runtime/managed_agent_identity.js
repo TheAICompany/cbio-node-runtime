@@ -76,7 +76,9 @@ async function testManagedAgentIdentity() {
         }
 
         const reloaded = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey, {
-            runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
+            handle: {
+                runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
+            },
         });
         if (!reloaded.agent.hasSecret('service-token')) {
             throw new Error('Reloaded managed agent did not recover its own vault.');
@@ -128,7 +130,7 @@ async function testManagedAgentIdentity() {
         } catch (error) {
             foreignAuthorityRecordBlocked =
                 IdentityError.isIdentityError(error) &&
-                error.code === IdentityErrorCode.SECRET_NOT_FOUND &&
+                error.code === IdentityErrorCode.ISSUED_IDENTITY_INVALID &&
                 /authority public_key does not match this authority/i.test(error.message);
         }
         if (!foreignAuthorityRecordBlocked) {
@@ -155,7 +157,9 @@ async function testManagedAgentIdentity() {
         await rootIdentity.admin.vault.addSecret(`cbio:revocation:${managed.publicKey}`, JSON.stringify(bogusRevocation));
 
         const bogusRevocationReload = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey, {
-            runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
+            handle: {
+                runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
+            },
         });
         if (!bogusRevocationReload.agent.hasSecret('service-token')) {
             throw new Error('Invalid revocation record should not block managed agent recovery.');

@@ -125,6 +125,54 @@ export class CbioVault {
         return active ? this.#secrets.get(active.storageKey) : undefined;
     }
 
+    #cloneSecretMetadata(secretName: string, metadata: SecretRecordMetadata): SecretRecordMetadata {
+        const versions: Record<string, SecretVersionRecord> = {};
+        for (const [versionId, version] of Object.entries(metadata.versions)) {
+            versions[versionId] = {
+                storageKey: version.storageKey,
+                state: version.state,
+                createdAt: version.createdAt,
+                ...(version.sourceOrigin ? { sourceOrigin: version.sourceOrigin } : {}),
+            };
+        }
+        return {
+            activeVersion: metadata.activeVersion,
+            nextVersionNumber: metadata.nextVersionNumber,
+            versions,
+            ...(metadata.allowedOrigins ? { allowedOrigins: [...metadata.allowedOrigins] } : {}),
+        };
+    }
+
+    async #replaceSecretFromVault(secretName: string, otherVault: CbioVault): Promise<void> {
+        const otherMetadata = otherVault.#secretMetadata.get(secretName);
+        if (otherMetadata) {
+            if (this.hasSecret(secretName)) {
+                await this.deleteSecret(secretName);
+            }
+            const clonedMetadata = this.#cloneSecretMetadata(secretName, otherMetadata);
+            for (const version of Object.values(clonedMetadata.versions)) {
+                const value = otherVault.#secrets.get(version.storageKey);
+                if (value === undefined) {
+                    throw new IdentityError(
+                        IdentityErrorCode.SECRET_NOT_FOUND,
+                        `Secret '${secretName}' is missing version data during merge.`
+                    );
+                }
+                this.#secrets.set(version.storageKey, value);
+            }
+            this.#secretMetadata.set(secretName, clonedMetadata);
+            return;
+        }
+
+        const secretValue = otherVault.getSecret(secretName);
+        if (secretValue === undefined) return;
+        if (this.hasSecret(secretName)) {
+            await this.updateSecret(secretName, secretValue);
+        } else {
+            await this.addSecret(secretName, secretValue);
+        }
+    }
+
     /**
      * @internal Used by Owner. Binds storage and loads vault from disk. Do not call directly.
      */
@@ -565,19 +613,13 @@ export class CbioVault {
         const skipped: string[] = [];
         const overwritten: string[] = [];
         for (const secretName of otherVault.listSecretNames()) {
-            const secretValue = otherVault.getSecret(secretName);
-            if (secretValue === undefined) continue;
-            const allowedOrigins = otherVault.#secretMetadata.get(secretName)?.allowedOrigins;
             if (!this.hasSecret(secretName)) {
-                await this.addSecret(secretName, secretValue, { allowedOrigins });
+                await this.#replaceSecretFromVault(secretName, otherVault);
                 added.push(secretName);
             } else if (onConflict === 'skip') {
                 skipped.push(secretName);
             } else if (onConflict === 'overwrite') {
-                await this.updateSecret(secretName, secretValue);
-                if (allowedOrigins) {
-                    await this.setSecretAllowedOrigins(secretName, allowedOrigins);
-                }
+                await this.#replaceSecretFromVault(secretName, otherVault);
                 overwritten.push(secretName);
             }
         }

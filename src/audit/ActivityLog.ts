@@ -18,10 +18,21 @@ export interface ActivityLogEntry {
     ts: number;
     action: 'fetchWithAuth' | 'fetchJsonAndAddSecret' | 'fetchJsonAndUpdateSecret';
     secretName: string;
-    url?: string;
-    method?: string;
-    success?: boolean;
+    url: string;
+    method: string;
+    success: boolean;
     error?: string;
+}
+
+interface RawActivityLogEntry {
+    ts?: unknown;
+    action?: unknown;
+    secretName?: unknown;
+    alias?: unknown;
+    url?: unknown;
+    method?: unknown;
+    success?: unknown;
+    error?: unknown;
 }
 
 const NEWLINE = '\n';
@@ -52,10 +63,24 @@ export async function readActivityLog(
     const lines = text.split(NEWLINE).filter(Boolean);
     return lines
         .map((l) => {
-            const raw = JSON.parse(l) as Record<string, unknown>;
+            const raw = JSON.parse(l) as RawActivityLogEntry & { _meta?: unknown };
             if (raw._meta) return null;
             const secretName = raw.secretName ?? raw.alias;
-            return { ...raw, secretName } as ActivityLogEntry;
+            if (typeof raw.ts !== 'number') return null;
+            if (raw.action !== 'fetchWithAuth' && raw.action !== 'fetchJsonAndAddSecret' && raw.action !== 'fetchJsonAndUpdateSecret') return null;
+            if (typeof secretName !== 'string') return null;
+            if (typeof raw.url !== 'string') return null;
+            if (typeof raw.method !== 'string') return null;
+            if (typeof raw.success !== 'boolean') return null;
+            return {
+                ts: raw.ts,
+                action: raw.action,
+                secretName,
+                url: raw.url,
+                method: raw.method,
+                success: raw.success,
+                ...(typeof raw.error === 'string' ? { error: raw.error } : {}),
+            } satisfies ActivityLogEntry;
         })
         .filter((e): e is ActivityLogEntry => e !== null);
 }

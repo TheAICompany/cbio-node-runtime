@@ -167,6 +167,7 @@ The SDK uses structured `IdentityError` objects with the following codes:
 | :--- | :--- | :--- |
 | `PERMISSION_DENIED` | Handle lacks the required runtime capability. | Check `agent.can()` before calling. |
 | `SECRET_NOT_FOUND` | Secret name does not exist in the vault. | Add it first or check the naming. |
+| `ISSUED_IDENTITY_INVALID` | Bound or persisted issued identity failed protocol or authority/subject validation. | Re-issue the managed identity or load with the correct authority context. |
 | `SECRET_ALREADY_EXISTS` | `addSecret` used on an existing name. | Use a new name or `update`. |
 | `SECRET_POLICY_REQUIRED` | Agent rotation attempted without allowed origins. | Set origins in identity code. |
 | `SECRET_SOURCE_ORIGIN_MISMATCH` | Rotation came from a disallowed origin. | Check secret policy and rotation URL. |

@@ -1,6 +1,8 @@
 import { CbioIdentity, generateIdentityKeys, IdentityError, IdentityErrorCode } from '../../dist/runtime/index.js';
+import { unsealBlob } from '../../dist/sealed/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 
 async function verifyMergeSecurityLocal() {
     console.log("--- Merge Security Test (Local Simulation) ---");
@@ -8,11 +10,24 @@ async function verifyMergeSecurityLocal() {
     const LOCAL_TEST_DIR = path.join(process.cwd(), '.cbio_merge_test_' + Date.now());
     await fs.mkdir(LOCAL_TEST_DIR, { recursive: true });
     process.env.C_BIO_VAULT_DIR = LOCAL_TEST_DIR;
+    const originalFetch = global.fetch;
 
     const storageKeyA = path.join(LOCAL_TEST_DIR, 'vault_a.enc');
     const storageKeyA2 = path.join(LOCAL_TEST_DIR, 'vault_a2.enc');
+    const rotateBase = 'https://issuer-a.example.com';
 
     try {
+        global.fetch = async (url) => {
+            const requestUrl = typeof url === 'string' ? url : url.toString();
+            if (requestUrl === `${rotateBase}/rotate`) {
+                return new Response(JSON.stringify({ token: 'rotated-value-a2' }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            }
+            return originalFetch(url);
+        };
+
         const keysA = generateIdentityKeys();
         const agentA = await CbioIdentity.load(keysA, { storageKey: storageKeyA });
         await agentA.admin.vault.addSecret('secret-a', 'value-a');
@@ -36,17 +51,43 @@ async function verifyMergeSecurityLocal() {
         console.log("--- 2. Attempting legitimate merge (A <- A') ---");
         const agentA2 = await CbioIdentity.load(keysA, { storageKey: storageKeyA2 });
         await agentA2.admin.vault.addSecret('secret-a2', 'value-a2');
+        await agentA2.admin.vault.addSecret('secret-meta', 'value-meta-v1', { allowedOrigins: [rotateBase] });
+        const rotated = await agentA2.fetchJsonAndUpdateSecret({
+            secretName: 'secret-meta',
+            url: `${rotateBase}/rotate`,
+            extractKey: (response) => response.token,
+        });
+        if (!rotated.success) {
+            throw new Error(`Rotation before merge failed: ${rotated.error}`);
+        }
 
         const result = await agentA.admin.vault.mergeFrom(agentA2);
         if (!result.merged) throw new Error(`Merge failed with conflicts: ${result.conflicts}`);
-        if (!result.added.includes('secret-a2') || result.skipped.length !== 0 || result.overwritten.length !== 0) {
+        if (!result.added.includes('secret-a2') || !result.added.includes('secret-meta') || result.skipped.length !== 0 || result.overwritten.length !== 0) {
             throw new Error(`Expected merge result to report added=['secret-a2'], got ${JSON.stringify(result)}`);
         }
-        if (agentA.hasSecret('secret-a2')) {
+        if (agentA.hasSecret('secret-a2') && agentA.hasSecret('secret-meta')) {
             console.log("✅ SUCCESS: Legitimate merge allowed for same identity.");
         } else {
             throw new Error("❌ FAILURE: Legitimate merge failed to sync data.");
         }
+
+        const kdk = crypto.randomBytes(32).toString('base64url');
+        const mergedPayload = unsealBlob(agentA.admin.vault.seal(kdk), kdk);
+        const mergedMeta = mergedPayload.secretMetadata?.['secret-meta'];
+        if (!mergedMeta || typeof mergedMeta !== 'object') {
+            throw new Error(`❌ FAILURE: Expected merged secret metadata for 'secret-meta', got ${JSON.stringify(mergedMeta)}`);
+        }
+        if (mergedMeta.activeVersion !== 'v2') {
+            throw new Error(`❌ FAILURE: Expected activeVersion v2 after merge, got ${JSON.stringify(mergedMeta)}`);
+        }
+        if (!mergedMeta.versions?.v1 || !mergedMeta.versions?.v2) {
+            throw new Error(`❌ FAILURE: Expected full version chain after merge, got ${JSON.stringify(mergedMeta)}`);
+        }
+        if (mergedMeta.versions.v2.sourceOrigin !== rotateBase) {
+            throw new Error(`❌ FAILURE: Expected merged sourceOrigin ${rotateBase}, got ${JSON.stringify(mergedMeta.versions.v2)}`);
+        }
+        console.log("✅ SUCCESS: Merge preserved version history and source provenance.");
 
         console.log("--- 3. Conflict handling: merge without force returns conflicts ---");
         const agentA3 = await CbioIdentity.load(keysA, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_a3.enc') });
@@ -94,6 +135,7 @@ async function verifyMergeSecurityLocal() {
         console.error("❌ Test logic error:", e);
         throw e;
     } finally {
+        global.fetch = originalFetch;
         try {
             await fs.rm(LOCAL_TEST_DIR, { recursive: true, force: true });
         } catch (cleanupError) {

@@ -41,6 +41,7 @@ export interface IdentityLoadOptions {
   storage?: IStorageProvider;
   storageKey?: string;
   activityLog?: ActivityLogConfig;
+  issuedIdentity?: IssuedAgentIdentity;
 }
 
 export interface ActivityLogConfig {
@@ -119,6 +120,31 @@ export class CbioIdentity {
     identityVaults.set(this, this._vault);
   }
 
+  #bindIssuedIdentity(issuedIdentity: IssuedAgentIdentity): void {
+    if (!verifyIssuedAgentIdentity(issuedIdentity)) {
+      throw new IdentityError(
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
+        `Issued identity for '${this.publicKey}' failed protocol verification.`,
+      );
+    }
+
+    if (issuedIdentity.agent.public_key !== this.publicKey) {
+      throw new IdentityError(
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
+        `Issued identity public_key does not match identity public key.`,
+      );
+    }
+
+    if (issuedIdentity.agent.agent_id !== this.agentId) {
+      throw new IdentityError(
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
+        `Issued identity agent_id does not match identity agent id.`,
+      );
+    }
+
+    this.#issuedIdentity = issuedIdentity;
+  }
+
   /**
    * Primary entry point: Load identity from keys and initialize vault.
    */
@@ -136,6 +162,7 @@ export class CbioIdentity {
         ? undefined
         : (opts.activityLog?.key ?? storageKey.replace(/\.enc$/, "") + ".activity.jsonl");
     await identity._vault.initFromStorage(signer, storageKey, opts.storage, activityLogKey);
+    if (opts.issuedIdentity) identity.#bindIssuedIdentity(opts.issuedIdentity);
 
     return identity;
   }
@@ -212,13 +239,6 @@ export class CbioIdentity {
     return new CbioAgent(this._authClient, this._secretAcquisition, this.agentId, this.publicKey, finalPerms);
   }
 
-  /**
-   * @internal
-   * Set the protocol-level identity certificate for this identity.
-   */
-  setIssuedIdentity(identity: IssuedAgentIdentity): void {
-    this.#issuedIdentity = identity;
-  }
 }
 
 /**
@@ -349,11 +369,8 @@ export interface ManagedAgentIssueOptions {
 }
 
 export interface ManagedAgentLoadOptions {
-  /** Runtime permissions granted to the loaded `CbioAgent` handle. */
-  runtimePermissions?: RuntimePermissions;
-  storage?: IStorageProvider;
-  storageKey?: string;
-  activityLog?: ActivityLogConfig;
+  handle?: ManagedAgentHandleConfig;
+  storage?: ManagedAgentStorageConfig;
 }
 
 export type ManagedAgentCapabilityStatus = "active" | "revoked" | "missing" | "invalid";
@@ -610,9 +627,9 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
         storage: storage.storage,
         storageKey: storage.storageKey ?? getVaultPath(publicKey),
         activityLog: storage.activityLog,
+        issuedIdentity,
       },
     );
-    childIdentity.setIssuedIdentity(issuedIdentity);
     return {
       agentId,
       publicKey,
@@ -621,6 +638,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
   }
 
   async loadManagedAgent(publicKey: string, options?: ManagedAgentLoadOptions): Promise<ManagedAgentContext> {
+    const opts = options ?? {};
     this._assertManagedAgentNotRevoked(publicKey);
     const secretName = getChildIdentitySecretName(publicKey);
     const stored = this.getSecret(secretName);
@@ -642,7 +660,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
     // Verify protocol alignment
     if (!verifyIssuedAgentIdentity(parsed.issuedIdentity)) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' failed protocol verification.`,
       );
     }
@@ -679,28 +697,28 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
 
     if (issuedPublicKey !== parsed.publicKey) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' issuedIdentity public_key does not match record publicKey.`,
       );
     }
 
     if (issuedAgentId !== derivedAgentId) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' issuedIdentity agent_id does not match record agentId.`,
       );
     }
 
     if (issuedAuthorityPublicKey !== authorityPublicKey) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' issuedIdentity authority public_key does not match this authority.`,
       );
     }
 
     if (issuedAuthorityAgentId !== authorityAgentId) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' issuedIdentity authority agent_id does not match this authority.`,
       );
     }
@@ -708,16 +726,16 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
     const childIdentity = await CbioIdentity.load(
       { privateKey: parsed.privateKey, publicKey: parsed.publicKey },
       {
-        storage: options?.storage,
-        storageKey: options?.storageKey ?? getVaultPath(parsed.publicKey),
-        activityLog: options?.activityLog,
+        storage: opts.storage?.storage,
+        storageKey: opts.storage?.storageKey ?? getVaultPath(parsed.publicKey),
+        activityLog: opts.storage?.activityLog,
+        issuedIdentity: parsed.issuedIdentity,
       },
     );
-    childIdentity.setIssuedIdentity(parsed.issuedIdentity);
     return {
       agentId: parsed.agentId ?? deriveRootAgentId(parsed.publicKey),
       publicKey: parsed.publicKey,
-      agent: childIdentity.getAgent({ permissions: options?.runtimePermissions }),
+      agent: childIdentity.getAgent({ permissions: opts.handle?.runtimePermissions }),
     };
   }
 }

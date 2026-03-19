@@ -39,8 +39,9 @@ async function run() {
         const managedIdentity = await CbioIdentity.load({
             privateKey: parsed.privateKey,
             publicKey: parsed.publicKey,
+        }, {
+            issuedIdentity: parsed.issuedIdentity,
         });
-        managedIdentity.setIssuedIdentity(parsed.issuedIdentity);
 
         const derivedAgent = managedIdentity.getAgent({ deriveFromIssuedIdentity: true });
         if (!derivedAgent.can('vault:acquire')) {
