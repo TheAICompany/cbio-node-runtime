@@ -124,7 +124,7 @@ async function testActivityLog() {
         const agentFailing = await CbioIdentity.load(keys2, {
             storage: failingActivityLogStorage,
             storageKey: 'activity-fail-test.enc',
-            activityLogKey: 'activity-fail-test.activity.jsonl',
+            activityLog: { key: 'activity-fail-test.activity.jsonl' },
         });
         await agentFailing.admin.vault.addSecret('pre-seeded', 'val');
         await agentFailing.admin.vault.addSecret('rotatable', 'initial', { allowedOrigins: [base] });

@@ -50,7 +50,7 @@ async function verifyTransparency() {
         const agent = await CbioIdentity.load(keys, {
             storage: new MemoryStorageProvider(),
             storageKey: 'memory-vault.enc',
-            activityLogKey: 'memory-vault.activity.jsonl',
+            activityLog: { key: 'memory-vault.activity.jsonl' },
         });
         console.log("✅ SUCCESS: Agent created successfully using a writable custom provider.");
     } catch (e) {

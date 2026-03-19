@@ -40,7 +40,12 @@ export interface IdentityLoadKeys {
 export interface IdentityLoadOptions {
   storage?: IStorageProvider;
   storageKey?: string;
-  activityLogKey?: string | null;
+  activityLog?: ActivityLogConfig;
+}
+
+export interface ActivityLogConfig {
+  enabled?: boolean;
+  key?: string;
 }
 
 /**
@@ -127,9 +132,9 @@ export class CbioIdentity {
 
     const storageKey = opts.storageKey ?? getVaultPath(pub);
     const activityLogKey =
-      opts.activityLogKey === null
+      opts.activityLog?.enabled === false
         ? undefined
-        : (opts.activityLogKey ?? storageKey.replace(/\.enc$/, "") + ".activity.jsonl");
+        : (opts.activityLog?.key ?? storageKey.replace(/\.enc$/, "") + ".activity.jsonl");
     await identity._vault.initFromStorage(signer, storageKey, opts.storage, activityLogKey);
 
     return identity;
@@ -334,7 +339,7 @@ export interface ManagedAgentHandleConfig {
 export interface ManagedAgentStorageConfig {
   storage?: IStorageProvider;
   storageKey?: string;
-  activityLogKey?: string | null;
+  activityLog?: ActivityLogConfig;
 }
 
 export interface ManagedAgentIssueOptions {
@@ -348,7 +353,14 @@ export interface ManagedAgentLoadOptions {
   runtimePermissions?: RuntimePermissions;
   storage?: IStorageProvider;
   storageKey?: string;
-  activityLogKey?: string | null;
+  activityLog?: ActivityLogConfig;
+}
+
+export type ManagedAgentCapabilityStatus = "active" | "revoked" | "missing" | "invalid";
+
+export interface ManagedAgentCapabilityInfo {
+  status: ManagedAgentCapabilityStatus;
+  capabilities: readonly IssuedCapabilityName[];
 }
 
 /**
@@ -489,15 +501,20 @@ export class CbioVaultAdmin {
 }
 
 export class CbioManagedAgentAdmin extends ManagedAgentSupport {
-  getManagedAgentCapabilities(publicKey: string): string[] {
+  getManagedAgentCapabilities(publicKey: string): ManagedAgentCapabilityInfo {
     const record = this._getManagedAgentRecord(publicKey);
-    if (!record) return [];
+    if (!record) return { status: "missing", capabilities: [] };
 
     if (this._isManagedAgentRevoked(publicKey)) {
-      return []; // Agent is revoked, return no capabilities
+      return { status: "revoked", capabilities: [] };
     }
 
-    return record.issuedIdentity.capabilities || [];
+    const capabilities = record.issuedIdentity.capabilities;
+    if (!Array.isArray(capabilities)) {
+      return { status: "invalid", capabilities: [] };
+    }
+
+    return { status: "active", capabilities: capabilities as IssuedCapabilityName[] };
   }
 
   async revokeManagedAgent(publicKey: string, reason?: string): Promise<void> {
@@ -592,7 +609,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
       {
         storage: storage.storage,
         storageKey: storage.storageKey ?? getVaultPath(publicKey),
-        activityLogKey: storage.activityLogKey,
+        activityLog: storage.activityLog,
       },
     );
     childIdentity.setIssuedIdentity(issuedIdentity);
@@ -693,7 +710,7 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
       {
         storage: options?.storage,
         storageKey: options?.storageKey ?? getVaultPath(parsed.publicKey),
-        activityLogKey: options?.activityLogKey,
+        activityLog: options?.activityLog,
       },
     );
     childIdentity.setIssuedIdentity(parsed.issuedIdentity);

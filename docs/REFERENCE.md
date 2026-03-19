@@ -30,7 +30,7 @@ import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
 ### 1.3 Audit & Lifecycle
 - **`identity.admin.vault.getActivityLog()`**: Returns a read-only list of all vault-authenticated actions.
 - **`identity.admin.managedAgents.revokeManagedAgent(publicKey, reason?)`**: Permanently revokes a child identity.
-- **`identity.admin.managedAgents.getManagedAgentCapabilities(publicKey)`**: Inspects the signed privileges of a sub-identity.
+- **`identity.admin.managedAgents.getManagedAgentCapabilities(publicKey)`**: Returns `{ status, capabilities }` for a managed agent, so callers can distinguish active, revoked, missing, and invalid records.
 
 ### 1.4 Agent Handles
 - **`getAgent()`**: Returns a minimally privileged handle with `vault:fetch` and `vault:list`.
@@ -71,7 +71,7 @@ export interface IStorageProvider {
 - **`MemoryStorageProvider`**: Ephemeral storage for testing or in-memory caches.
 - **Filesystem (Default)**: Persists to `~/.c-bio/`. Use `C_BIO_VAULT_DIR` environment variable to override.
 
-When loading an identity, use `storageKey` to choose the persisted vault location or provider key.
+When loading an identity, use `storageKey` to choose the persisted vault location or provider key. Activity log behavior is configured explicitly with `activityLog`, for example `activityLog: { key: 'my-vault.activity.jsonl' }` or `activityLog: { enabled: false }`.
 
 ---
 

@@ -5,9 +5,12 @@
 
 export { CbioIdentity, CbioAgent } from "../agent/agent.js";
 export type {
+  ActivityLogConfig,
   GetAgentOptions,
   IssuedCapabilityName,
   ManagedAgentHandleConfig,
+  ManagedAgentCapabilityInfo,
+  ManagedAgentCapabilityStatus,
   ManagedAgentContext,
   ManagedAgentIssueConfig,
   ManagedAgentIssueOptions,
