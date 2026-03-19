@@ -31,7 +31,7 @@ export type {
   FetchResult,
   FetchSuccess,
 } from "../http/secretAcquisition.js";
-export { generateIdentityKeys } from "../protocol/crypto.js";
+export { generateIdentityKeys, derivePublicKey } from "../protocol/crypto.js";
 export { IdentityError, IdentityErrorCode } from "../errors.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
