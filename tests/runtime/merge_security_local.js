@@ -39,6 +39,9 @@ async function verifyMergeSecurityLocal() {
 
         const result = await agentA.admin.mergeFrom(agentA2);
         if (!result.merged) throw new Error(`Merge failed with conflicts: ${result.conflicts}`);
+        if (!result.added.includes('secret-a2') || result.skipped.length !== 0 || result.overwritten.length !== 0) {
+            throw new Error(`Expected merge result to report added=['secret-a2'], got ${JSON.stringify(result)}`);
+        }
         if (agentA.hasSecret('secret-a2')) {
             console.log("✅ SUCCESS: Legitimate merge allowed for same identity.");
         } else {
@@ -49,7 +52,13 @@ async function verifyMergeSecurityLocal() {
         const agentA3 = await CbioIdentity.load(keysA, { storageKey: path.join(LOCAL_TEST_DIR, 'vault_a3.enc') });
         await agentA3.admin.addSecret('secret-a', 'value-a-DIFFERENT');
         const conflictResult = await agentA.admin.mergeFrom(agentA3);
-        if (!conflictResult.merged && conflictResult.conflicts?.includes('secret-a')) {
+        if (
+            !conflictResult.merged &&
+            conflictResult.conflicts?.includes('secret-a') &&
+            conflictResult.added.length === 0 &&
+            conflictResult.skipped.length === 0 &&
+            conflictResult.overwritten.length === 0
+        ) {
             console.log("✅ SUCCESS: Conflicts reported, merge aborted.");
         } else {
             throw new Error(`❌ FAILURE: Expected conflicts, got ${JSON.stringify(conflictResult)}`);
@@ -58,11 +67,27 @@ async function verifyMergeSecurityLocal() {
         console.log("--- 4. Force merge: receiver wins ---");
         const forceResult = await agentA.admin.mergeFrom(agentA3, { onConflict: 'skip' });
         if (!forceResult.merged) throw new Error(`Force merge failed: ${JSON.stringify(forceResult)}`);
+        if (!forceResult.skipped.includes('secret-a') || forceResult.added.length !== 0 || forceResult.overwritten.length !== 0) {
+            throw new Error(`❌ FAILURE: Expected skip result for 'secret-a', got ${JSON.stringify(forceResult)}`);
+        }
         const kept = agentA.admin.getSecret('secret-a');
         if (kept === 'value-a') {
             console.log("✅ SUCCESS: Receiver value kept on force merge.");
         } else {
             throw new Error(`❌ FAILURE: Expected 'value-a', got '${kept}'`);
+        }
+
+        console.log("--- 5. Overwrite merge: sender wins and result reports overwrite ---");
+        const overwriteResult = await agentA.admin.mergeFrom(agentA3, { onConflict: 'overwrite' });
+        if (!overwriteResult.merged) throw new Error(`Overwrite merge failed: ${JSON.stringify(overwriteResult)}`);
+        if (!overwriteResult.overwritten.includes('secret-a') || overwriteResult.added.length !== 0) {
+            throw new Error(`❌ FAILURE: Expected overwrite result for 'secret-a', got ${JSON.stringify(overwriteResult)}`);
+        }
+        const replaced = agentA.admin.getSecret('secret-a');
+        if (replaced === 'value-a-DIFFERENT') {
+            console.log("✅ SUCCESS: Sender value applied on overwrite merge.");
+        } else {
+            throw new Error(`❌ FAILURE: Expected 'value-a-DIFFERENT', got '${replaced}'`);
         }
 
     } catch (e) {

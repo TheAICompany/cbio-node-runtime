@@ -80,6 +80,29 @@ async function testManagedAgentIdentity() {
             throw new Error('Reloaded managed agent should reflect requested runtimePermissions.');
         }
 
+        await rootIdentity.admin.deleteSecret(managed.identityRecordKey);
+        const tamperedRecord = {
+            ...parsed,
+            privateKey: rootKeys.privateKey,
+        };
+        await rootIdentity.admin.addSecret(managed.identityRecordKey, JSON.stringify(tamperedRecord));
+
+        let tamperedLoadBlocked = false;
+        try {
+            await rootIdentity.admin.loadManagedAgent(managed.publicKey);
+        } catch (error) {
+            tamperedLoadBlocked =
+                IdentityError.isIdentityError(error) &&
+                error.code === IdentityErrorCode.SECRET_NOT_FOUND &&
+                /privateKey\/publicKey mismatch/i.test(error.message);
+        }
+        if (!tamperedLoadBlocked) {
+            throw new Error('Tampered managed agent record should be rejected during load.');
+        }
+
+        await rootIdentity.admin.deleteSecret(managed.identityRecordKey);
+        await rootIdentity.admin.addSecret(managed.identityRecordKey, stored);
+
         await rootIdentity.admin.revokeManagedAgent(managed.publicKey, 'test revocation');
         let revokedLoadBlocked = false;
         try {

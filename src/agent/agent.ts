@@ -561,6 +561,46 @@ export class CbioManagementFacet {
       );
     }
 
+    const derivedPublicKey = derivePublicKey(parsed.privateKey);
+    const derivedAgentId = deriveRootAgentId(parsed.publicKey);
+    const issuedPublicKey = parsed.issuedIdentity.agent?.public_key;
+    const issuedAgentId = parsed.issuedIdentity.agent?.agent_id;
+
+    if (parsed.publicKey !== publicKey) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent identity '${publicKey}' record publicKey does not match requested public key.`,
+      );
+    }
+
+    if (derivedPublicKey !== parsed.publicKey) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent identity '${publicKey}' contains a privateKey/publicKey mismatch.`,
+      );
+    }
+
+    if ((parsed.agentId ?? derivedAgentId) !== derivedAgentId) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent identity '${publicKey}' contains an invalid agentId.`,
+      );
+    }
+
+    if (issuedPublicKey !== parsed.publicKey) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent identity '${publicKey}' issuedIdentity public_key does not match record publicKey.`,
+      );
+    }
+
+    if (issuedAgentId !== derivedAgentId) {
+      throw new IdentityError(
+        IdentityErrorCode.SECRET_NOT_FOUND,
+        `Managed agent identity '${publicKey}' issuedIdentity agent_id does not match record agentId.`,
+      );
+    }
+
     const childIdentity = await CbioIdentity.load(
       { privateKey: parsed.privateKey, publicKey: parsed.publicKey },
       {

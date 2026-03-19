@@ -16,7 +16,7 @@ export interface ActivityLogMetadata {
 
 export interface ActivityLogEntry {
     ts: number;
-    action: 'fetchWithAuth' | 'fetchJsonAndAddSecret' | 'fetchJsonAndUpdateSecret' | 'fetchAndStoreSecret';
+    action: 'fetchWithAuth' | 'fetchJsonAndAddSecret' | 'fetchJsonAndUpdateSecret';
     secretName: string;
     url?: string;
     method?: string;

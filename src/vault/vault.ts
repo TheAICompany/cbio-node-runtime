@@ -552,28 +552,49 @@ export class CbioVault {
         }
 
         if (conflicts.length > 0 && onConflict === 'abort') {
-            return { merged: false, conflicts };
+            return {
+                merged: false,
+                added: [],
+                skipped: [],
+                overwritten: [],
+                conflicts,
+            };
         }
 
+        const added: string[] = [];
+        const skipped: string[] = [];
+        const overwritten: string[] = [];
         for (const secretName of otherVault.listSecretNames()) {
             const secretValue = otherVault.getSecret(secretName);
             if (secretValue === undefined) continue;
             const allowedOrigins = otherVault.#secretMetadata.get(secretName)?.allowedOrigins;
             if (!this.hasSecret(secretName)) {
                 await this.addSecret(secretName, secretValue, { allowedOrigins });
+                added.push(secretName);
+            } else if (onConflict === 'skip') {
+                skipped.push(secretName);
             } else if (onConflict === 'overwrite') {
                 await this.updateSecret(secretName, secretValue);
                 if (allowedOrigins) {
                     await this.setSecretAllowedOrigins(secretName, allowedOrigins);
                 }
+                overwritten.push(secretName);
             }
         }
         await this.#persistIfPossible();
-        return { merged: true };
+        return {
+            merged: true,
+            added,
+            skipped,
+            overwritten,
+        };
     }
 }
 
 export interface MergeResult {
     merged: boolean;
+    added: string[];
+    skipped: string[];
+    overwritten: string[];
     conflicts?: string[];
 }

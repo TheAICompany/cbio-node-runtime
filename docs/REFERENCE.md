@@ -2,7 +2,7 @@
 
 This document provides a comprehensive technical reference for the CBIO SDK, covering advanced API usage, custom storage implementation, and structured error handling.
 
-For high-level concepts and quick start, see [README.md](../README.md). For module structure and naming rules, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For high-level concepts and quick start, see [README.md](../README.md). For module structure and naming rules, see [ARCHITECTURE.md](./ARCHITECTURE.md). For cross-language runtime contracts, see [spec/runtime/README.md](./spec/runtime/README.md).
 
 ---
 

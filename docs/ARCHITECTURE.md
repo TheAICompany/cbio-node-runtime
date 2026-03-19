@@ -2,6 +2,8 @@
 
 This document defines the architectural boundaries and naming rules for the runtime.
 
+For cross-language runtime rules that Node and Rust must share, see [spec/runtime/README.md](./spec/runtime/README.md).
+
 ## Layer Boundaries
 
 - `runtime/`: public consumer surface only.
@@ -11,6 +13,7 @@ This document defines the architectural boundaries and naming rules for the runt
 - `http/`: HTTP-facing workflows and local proxy helpers.
 - `audit/`: activity log data structures and persistence helpers.
 - `docs/`: examples, guidance, and integration patterns. Not executable product logic.
+- `docs/spec/runtime/`: shared runtime contracts for multi-language implementations.
 
 ## Naming Rules
 
