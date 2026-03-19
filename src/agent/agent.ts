@@ -32,6 +32,16 @@ interface ManagedAgentRecord {
   issuedIdentity: IssuedAgentIdentity;
 }
 
+function getIssuedCapabilitiesFromRecord(record: Partial<ManagedAgentRecord> | null): readonly IssuedCapabilityName[] | null {
+  if (!record || typeof record !== "object") return null;
+  const issuedIdentity = record.issuedIdentity;
+  if (!issuedIdentity || typeof issuedIdentity !== "object") return null;
+  const capabilities = (issuedIdentity as { capabilities?: unknown }).capabilities;
+  if (capabilities === undefined) return [];
+  if (!Array.isArray(capabilities)) return null;
+  return capabilities as IssuedCapabilityName[];
+}
+
 export interface IdentityLoadKeys {
   privateKey: string;
   publicKey?: string;
@@ -157,11 +167,12 @@ export class CbioIdentity {
     const identity = new CbioIdentity(signer, new CbioVault(), agentId, pub);
 
     const storageKey = opts.storageKey ?? getVaultPath(pub);
+    const activityLogKeyIsDerived = opts.activityLog?.enabled !== false && opts.activityLog?.key === undefined;
     const activityLogKey =
       opts.activityLog?.enabled === false
         ? undefined
         : (opts.activityLog?.key ?? storageKey.replace(/\.enc$/, "") + ".activity.jsonl");
-    await identity._vault.initFromStorage(signer, storageKey, opts.storage, activityLogKey);
+    await identity._vault.initFromStorage(signer, storageKey, opts.storage, activityLogKey, activityLogKeyIsDerived);
     if (opts.issuedIdentity) identity.#bindIssuedIdentity(opts.issuedIdentity);
 
     return identity;
@@ -526,12 +537,12 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
       return { status: "revoked", capabilities: [] };
     }
 
-    const capabilities = record.issuedIdentity.capabilities;
-    if (!Array.isArray(capabilities)) {
+    const capabilities = getIssuedCapabilitiesFromRecord(record);
+    if (!capabilities) {
       return { status: "invalid", capabilities: [] };
     }
 
-    return { status: "active", capabilities: capabilities as IssuedCapabilityName[] };
+    return { status: "active", capabilities };
   }
 
   async revokeManagedAgent(publicKey: string, reason?: string): Promise<void> {
@@ -649,10 +660,19 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
       );
     }
 
-    const parsed = JSON.parse(stored) as Partial<ManagedAgentRecord>;
+    let parsed: Partial<ManagedAgentRecord>;
+    try {
+      parsed = JSON.parse(stored) as Partial<ManagedAgentRecord>;
+    } catch {
+      throw new IdentityError(
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
+        `Managed agent identity '${publicKey}' is malformed in authority vault.`,
+      );
+    }
+
     if (!parsed.privateKey || !parsed.publicKey || !parsed.issuedIdentity) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' is malformed in authority vault.`,
       );
     }
@@ -676,21 +696,21 @@ export class CbioManagedAgentAdmin extends ManagedAgentSupport {
 
     if (parsed.publicKey !== publicKey) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' record publicKey does not match requested public key.`,
       );
     }
 
     if (derivedPublicKey !== parsed.publicKey) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' contains a privateKey/publicKey mismatch.`,
       );
     }
 
     if ((parsed.agentId ?? derivedAgentId) !== derivedAgentId) {
       throw new IdentityError(
-        IdentityErrorCode.SECRET_NOT_FOUND,
+        IdentityErrorCode.ISSUED_IDENTITY_INVALID,
         `Managed agent identity '${publicKey}' contains an invalid agentId.`,
       );
     }

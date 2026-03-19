@@ -42,6 +42,7 @@
   ],
   "author": "The AI Company",
   "license": "MIT",
+  "repository": "https://github.com/TheAICompany/cbio-node-runtime",
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"

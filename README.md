@@ -4,6 +4,8 @@ Node.js runtime for cbio identity and credential vault. Library only.
 
 **⚠️ Actively under development — not a stable release.**
 
+**Source:** [https://github.com/TheAICompany/cbio-node-runtime](https://github.com/TheAICompany/cbio-node-runtime)
+
 ## Documentation / 文档 / ドキュメント / 문서 / Docs
 
 - [English](README.md)

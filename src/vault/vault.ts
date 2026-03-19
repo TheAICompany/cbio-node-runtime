@@ -52,6 +52,7 @@ export class CbioVault {
     #storage: IStorageProvider | null = null;
     #storageKey: string | null = null;
     #activityLogKey: string | null = null;
+    #activityLogKeyIsDerived = false;
     #identityFingerprint: string | null = null;
     private static readonly PERSIST_SALT = "CBIO_VAULT_PERSIST_V1";
     private static readonly VERSIONED_SECRET_PREFIX = "__cbio_secret_version__:";
@@ -180,9 +181,10 @@ export class CbioVault {
         signer: Signer,
         storageKey: string,
         storage?: IStorageProvider,
-        activityLogKey?: string
+        activityLogKey?: string,
+        activityLogKeyIsDerived = false,
     ): Promise<void> {
-        await this.#setupAutoSave(signer, storageKey, storage, activityLogKey);
+        await this.#setupAutoSave(signer, storageKey, storage, activityLogKey, activityLogKeyIsDerived);
         await this.#load(signer, storageKey, storage);
     }
 
@@ -194,9 +196,10 @@ export class CbioVault {
         blob: string,
         storageKey: string,
         storage?: IStorageProvider,
-        activityLogKey?: string
+        activityLogKey?: string,
+        activityLogKeyIsDerived = false,
     ): Promise<void> {
-        await this.#setupAutoSave(signer, storageKey, storage, activityLogKey);
+        await this.#setupAutoSave(signer, storageKey, storage, activityLogKey, activityLogKeyIsDerived);
         await this.#deserializeFromBlob(signer, blob);
     }
 
@@ -204,7 +207,8 @@ export class CbioVault {
         signer: Signer,
         storageKey: string,
         storage?: IStorageProvider,
-        activityLogKey?: string
+        activityLogKey?: string,
+        activityLogKeyIsDerived = false,
     ): Promise<void> {
         const provider = storage ?? new FsStorageProvider();
         const testKey = `${storageKey}.cbio_write_test_${crypto.randomBytes(4).toString('hex')}`;
@@ -222,6 +226,7 @@ export class CbioVault {
         this.#storage = provider;
         this.#storageKey = storageKey;
         this.#activityLogKey = activityLogKey ?? null;
+        this.#activityLogKeyIsDerived = activityLogKeyIsDerived;
 
         const publicKey = await signer.getPublicKey();
         this.#identityFingerprint = crypto.createHash('sha256').update(publicKey).digest('hex');
@@ -515,7 +520,7 @@ export class CbioVault {
             const altKey = `${base}_${n}.enc`;
             if (await tryLoad(altKey)) {
                 this.#storageKey = altKey;
-                if (this.#activityLogKey) {
+                if (this.#activityLogKey && this.#activityLogKeyIsDerived) {
                     this.#activityLogKey = `${base}_${n}.activity.jsonl`;
                 }
                 return;

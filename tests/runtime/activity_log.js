@@ -58,7 +58,7 @@ async function testActivityLog() {
             });
         }
         if (requestUrl === `${base}/post`) {
-            const body = options.body ? JSON.parse(options.body) : {};
+            const body = options.body === undefined ? {} : JSON.parse(options.body);
             return new Response(JSON.stringify(body), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
@@ -98,6 +98,29 @@ async function testActivityLog() {
         } else {
             throw new Error(`Expected fetchJsonAndAddSecret entry, got ${JSON.stringify(afterAcq)}`);
         }
+
+        console.log("--- 5b. JSON scalar bodies are preserved ---");
+        const zeroBody = await agent.fetchJsonAndAddSecret({
+            secretName: 'scalar-zero',
+            url: `${base}/post`,
+            method: 'POST',
+            body: 0,
+            extractKey: (res) => String(res),
+        });
+        if (!zeroBody.success || zeroBody.data !== 0) {
+            throw new Error(`Expected scalar zero body to round-trip, got ${JSON.stringify(zeroBody)}`);
+        }
+        const falseBody = await agent.fetchJsonAndUpdateSecret({
+            secretName: 'scalar-zero',
+            url: `${base}/post`,
+            method: 'POST',
+            body: false,
+            extractKey: (res) => String(res),
+        });
+        if (!falseBody.success || falseBody.data !== false) {
+            throw new Error(`Expected scalar false body to round-trip, got ${JSON.stringify(falseBody)}`);
+        }
+        console.log("✅ JSON scalar bodies are sent instead of being dropped");
 
         console.log("--- 6. Persistence ---");
         const agent2 = await CbioIdentity.load(keys);

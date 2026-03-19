@@ -56,6 +56,47 @@ async function verifyTransparency() {
     } catch (e) {
         throw new Error(`SDK failed even with a writable custom provider: ${e instanceof Error ? e.message : String(e)}`);
     }
+
+    console.log("\n[Test 3] Collision recovery must not rewrite explicit activity log key...");
+    try {
+        const storage = new MemoryStorageProvider();
+        const keys = generateIdentityKeys();
+        const explicitActivityKey = 'custom.activity.jsonl';
+        const original = await CbioIdentity.load(keys, {
+            storage,
+            storageKey: 'collision_1.enc',
+            activityLog: { key: explicitActivityKey },
+        });
+        await original.admin.vault.addSecret('auth', 'token-123');
+
+        await storage.write('collision.enc', Buffer.alloc(40, 7));
+
+        const recovered = await CbioIdentity.load(keys, {
+            storage,
+            storageKey: 'collision.enc',
+            activityLog: { key: explicitActivityKey },
+        });
+
+        const originalFetch = global.fetch;
+        global.fetch = async () => new Response('{}', {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+        try {
+            await recovered.fetchWithAuth('auth', 'http://127.0.0.1/mock');
+        } finally {
+            global.fetch = originalFetch;
+        }
+
+        const explicitLog = await storage.read(explicitActivityKey);
+        const rewrittenLog = await storage.read('collision_1.activity.jsonl');
+        if (!explicitLog || rewrittenLog) {
+            throw new Error('Explicit activity log key should be preserved during collision recovery.');
+        }
+        console.log("✅ SUCCESS: Explicit activity log key survives collision recovery unchanged.");
+    } catch (e) {
+        throw new Error(`Collision recovery rewrote explicit activity log key: ${e instanceof Error ? e.message : String(e)}`);
+    }
     console.log("\n--- Transparency Test Finished ---");
 }
 

@@ -67,6 +67,10 @@ function sanitize(obj: unknown, secret: string): unknown {
     return newObj;
 }
 
+function serializeJsonBody(body: unknown): string | undefined {
+    return body === undefined ? undefined : JSON.stringify(body);
+}
+
 export class SecretAcquisition {
     constructor(
         private readonly _vault: CbioVault,
@@ -112,7 +116,7 @@ export class SecretAcquisition {
                     'Content-Type': 'application/json',
                     ...headers
                 },
-                body: body ? JSON.stringify(body) : undefined
+                body: serializeJsonBody(body)
             });
 
             if (!response.ok) {
@@ -187,7 +191,7 @@ export class SecretAcquisition {
                     'Content-Type': 'application/json',
                     ...headers
                 },
-                body: body ? JSON.stringify(body) : undefined
+                body: serializeJsonBody(body)
             });
 
             if (!response.ok) {

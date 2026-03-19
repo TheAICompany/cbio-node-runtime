@@ -75,6 +75,11 @@ async function testManagedAgentIdentity() {
             throw new Error('Issued identity agent_id mismatch.');
         }
 
+        const activeCaps = rootIdentity.admin.managedAgents.getManagedAgentCapabilities(managed.publicKey);
+        if (activeCaps.status !== 'active') {
+            throw new Error(`Expected active capabilities before tampering, got ${JSON.stringify(activeCaps)}`);
+        }
+
         const reloaded = await rootIdentity.admin.managedAgents.loadManagedAgent(managed.publicKey, {
             handle: {
                 runtimePermissions: { 'vault:fetch': true, 'vault:list': true },
@@ -100,11 +105,21 @@ async function testManagedAgentIdentity() {
         } catch (error) {
             tamperedLoadBlocked =
                 IdentityError.isIdentityError(error) &&
-                error.code === IdentityErrorCode.SECRET_NOT_FOUND &&
+                error.code === IdentityErrorCode.ISSUED_IDENTITY_INVALID &&
                 /privateKey\/publicKey mismatch/i.test(error.message);
         }
         if (!tamperedLoadBlocked) {
             throw new Error('Tampered managed agent record should be rejected during load.');
+        }
+
+        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
+        await rootIdentity.admin.vault.addSecret(managedRecordKey, stored);
+
+        await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
+        await rootIdentity.admin.vault.addSecret(managedRecordKey, JSON.stringify({ publicKey: managed.publicKey }));
+        const invalidCaps = rootIdentity.admin.managedAgents.getManagedAgentCapabilities(managed.publicKey);
+        if (invalidCaps.status !== 'invalid' || invalidCaps.capabilities.length !== 0) {
+            throw new Error(`Malformed managed agent record should produce invalid status, got ${JSON.stringify(invalidCaps)}`);
         }
 
         await rootIdentity.admin.vault.deleteSecret(managedRecordKey);
