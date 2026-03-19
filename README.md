@@ -25,6 +25,8 @@ Import and use `CbioIdentity`, `CbioAgent` from the main export.
 
 ## Install
 
+Requires Node >= 18.
+
 ```bash
 npm install @the-ai-company/cbio-node-runtime
 ```
@@ -32,10 +34,11 @@ npm install @the-ai-company/cbio-node-runtime
 ## Usage
 
 ```ts
-import { CbioIdentity, generateIdentityKeys } from '@the-ai-company/cbio-node-runtime';
+import { CbioIdentity, CbioAgent, generateIdentityKeys } from '@the-ai-company/cbio-node-runtime';
 
 const keys = generateIdentityKeys();
 const identity = await CbioIdentity.load({ privateKey: keys.privateKey });
+const agent: CbioAgent = identity.getAgent(); // minimal permissions: vault:fetch, vault:list
 ```
 
 ## Build
