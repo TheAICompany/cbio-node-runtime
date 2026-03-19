@@ -2,6 +2,18 @@
 
 Node.js runtime for cbio identity and credential vault. Library only.
 
+## Documentation / 文档 / ドキュメント / 문서 / Docs
+
+- [English](README.md)
+- [中文](docs/zh/README.md)
+- [日本語](docs/ja/README.md)
+- [한국어](docs/ko/README.md)
+- [Español](docs/es/README.md)
+- [Português](docs/pt/README.md)
+- [Français](docs/fr/README.md)
+
+---
+
 - No CLI
 - No TUI
 

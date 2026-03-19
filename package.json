@@ -1,6 +1,6 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "0.21.3",
+  "version": "0.21.4",
   "description": "Node.js runtime for cbio identity and credential vault. Library only, no CLI or TUI.",
   "type": "module",
   "main": "./dist/runtime/index.js",
@@ -24,7 +24,7 @@
     }
   },
   "dependencies": {
-    "@the-ai-company/cbio-protocol": "^1.0.2"
+    "@the-ai-company/cbio-protocol": "^1.0.3"
   },
   "scripts": {
     "build": "node ./scripts/clean-dist.mjs && tsc",
@@ -43,8 +43,8 @@
   "author": "The AI Company",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
