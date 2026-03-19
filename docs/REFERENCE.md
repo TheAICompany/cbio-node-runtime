@@ -39,6 +39,10 @@ import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
 
 `permissions` and `deriveFromIssuedIdentity` are mutually exclusive; do not pass both.
 
+Secret-use operations on a `CbioAgent` require:
+- `vault:fetch` for remote authenticated use such as `fetchWithAuth(...)`
+- `vault:acquire` for acquisition, ingress, compare, proof, and validation operations
+
 ### 1.5 Recursive Child Identity Management
 When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. The method returns `{ publicKey }` (domain-level identifier). Treat the persisted child record as runtime-managed state rather than application-readable plaintext.
 ```ts
@@ -152,6 +156,115 @@ const proxy = await startLocalAuthProxy({
   upstreamBaseUrl: 'https://api.resend.com',
 });
 ```
+
+### 3.5 Local Secret Ingress
+Use `startLocalSecretIngress(...)` when a trusted local process already has a newly issued secret and should hand it directly into CBIO without printing it to terminal output first.
+
+```ts
+const ingress = await identity.startLocalSecretIngress({
+  secretName: 'service-token',
+});
+
+await fetch(ingress.url, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${ingress.authToken}`,
+    'Content-Type': 'text/plain',
+  },
+  body: 'new-secret-value',
+});
+```
+
+Optional fields:
+- `allowedOrigins`
+- `overwrite`
+- `host`
+- `port`
+- `path`
+- `authToken`
+- `once`
+- `maxBodyBytes`
+
+### 3.6 Local Compare / Proof
+Use `compareSecret(...)` and `proveSecret(...)` when the application needs a local KMS-like operation without exporting the stored secret.
+
+```ts
+const same = await identity.compareSecret('service-token', 'candidate-value');
+const proof = await identity.proveSecret('service-token', 'challenge-123');
+```
+
+Current proof algorithms:
+- `sha256`
+- `sha512`
+
+`proveSecret(...)` returns a base64url-encoded HMAC proof for the active secret value and the provided challenge.
+
+### 3.7 Secret Validation
+Use `validateSecret(...)` when the application wants a structured validity result rather than exporting a secret and probing manually.
+
+`validateSecret(...)` accepts a `SecretValidator`, whose `validate(handle)` method receives a restricted handle with:
+- `fetchWithAuth(url, options?)`
+- `compare(candidate)`
+- `prove(challenge, options?)`
+
+The validator never receives the plaintext secret value.
+
+Result shape:
+
+```ts
+type SecretValidationResult = {
+  valid: boolean;
+  status: 'valid' | 'invalid' | 'indeterminate';
+  reason?: string;
+  providerSubject?: string;
+  expiresAt?: string;
+  scopes?: readonly string[];
+  metadata?: Record<string, unknown>;
+};
+```
+
+Minimal example:
+
+```ts
+const result = await identity.validateSecret('service-token', {
+  async validate(handle) {
+    const response = await handle.fetchWithAuth('https://api.example.com/me');
+    return {
+      valid: response.ok,
+      status: response.ok ? 'valid' : 'invalid',
+    };
+  },
+});
+```
+
+### 3.8 Generic HTTP Validator
+Use `genericHttpValidator(...)` when a remote service can be probed by a normal authenticated HTTP request and you want a reusable validator without writing custom validator boilerplate.
+
+```ts
+const validator = genericHttpValidator({
+  url: 'https://api.example.com/me',
+  extractResult: (_response, data: { subject?: string; scopes?: string[] } | undefined) => ({
+    providerSubject: data?.subject,
+    scopes: data?.scopes,
+  }),
+});
+
+const result = await identity.validateSecret('service-token', validator);
+```
+
+Supported config fields:
+- `url`
+- `method`
+- `headers`
+- `body`
+- `isValid(response, data)`
+- `classifyStatus(response, data)`
+- `extractResult(response, data)`
+
+Default behavior:
+- `2xx` -> `{ valid: true, status: 'valid' }`
+- `401/403` -> `{ valid: false, status: 'invalid', reason: 'http_<status>' }`
+- other non-`2xx` -> `{ valid: false, status: 'indeterminate', reason: 'http_<status>' }`
 
 ---
 

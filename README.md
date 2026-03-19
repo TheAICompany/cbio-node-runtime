@@ -43,6 +43,71 @@ const identity = await CbioIdentity.load({ privateKey: keys.privateKey });
 const agent: CbioAgent = identity.getAgent(); // minimal permissions: vault:fetch, vault:list
 ```
 
+## Secret Boundary Model
+
+After root initialization, runtime-supported secret flows are designed around `no plaintext export`.
+
+- Acquire and store from a remote issuer: `fetchJsonAndAddSecret(...)`
+- Ingest a newly issued local secret without `stdout`: `startLocalSecretIngress(...)`
+- Use a stored secret remotely: `fetchWithAuth(...)`, `createFetchWithAuth(...)`, `startLocalAuthProxy(...)`
+- Prove or compare a stored secret locally without exporting it: `proveSecret(...)`, `compareSecret(...)`
+- Validate a stored secret through a controlled validator: `validateSecret(...)`
+
+The public runtime surface is intended to let applications use, prove, and validate secrets without retrieving them as cleartext.
+
+## Recommended Paths
+
+### Remote Issuer -> Vault
+
+```ts
+const acquired = await identity.fetchJsonAndAddSecret({
+  secretName: 'service-token',
+  url: 'https://issuer.example.com/token',
+  extractKey: (response: { token?: string }) => response.token ?? '',
+});
+```
+
+### Local Process -> Vault
+
+```ts
+const ingress = await identity.startLocalSecretIngress({
+  secretName: 'service-token',
+});
+
+await fetch(ingress.url, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${ingress.authToken}`,
+    'Content-Type': 'text/plain',
+  },
+  body: 'newly-issued-secret',
+});
+```
+
+### Vault -> Remote Service
+
+```ts
+const response = await identity.fetchWithAuth('service-token', 'https://api.example.com/me');
+```
+
+### Vault -> Local Proof / Validation
+
+```ts
+const same = await identity.compareSecret('service-token', 'candidate-value');
+const proof = await identity.proveSecret('service-token', 'challenge-123');
+```
+
+```ts
+import { genericHttpValidator } from '@the-ai-company/cbio-node-runtime';
+
+const result = await identity.validateSecret(
+  'service-token',
+  genericHttpValidator({
+    url: 'https://api.example.com/me',
+  }),
+);
+```
+
 ## Build
 
 ```bash

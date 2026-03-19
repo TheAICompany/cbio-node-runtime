@@ -49,6 +49,10 @@ export {
   type LocalAuthProxyHandle,
 } from "../http/localAuthProxy.js";
 export {
+  genericHttpValidator,
+  type GenericHttpSecretValidatorConfig,
+} from "../http/genericSecretValidator.js";
+export {
   startLocalSecretIngress,
   type LocalSecretIngressHandle,
   type LocalSecretIngressOptions,
