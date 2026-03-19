@@ -17,6 +17,7 @@ export type {
   ManagedAgentLoadOptions,
   ManagedAgentStorageConfig,
   RegisterChildIdentityOptions,
+  RegisterChildIdentityResult,
   IdentityLoadKeys,
   IdentityLoadOptions,
   RuntimePermissionName,

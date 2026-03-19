@@ -107,10 +107,11 @@ function capabilityToRuntimePermission(capability: IssuedCapabilityName): Runtim
 
 /**
  * Options for getAgent(). Mutually exclusive: either pass `permissions` OR `deriveFromIssuedIdentity`, not both.
+ * When deriving, pass `deriveFromIssuedIdentity: true` explicitly; only this literal has effect.
  */
 export type GetAgentOptions =
   | { permissions: RuntimePermissions; deriveFromIssuedIdentity?: never }
-  | { permissions?: never; deriveFromIssuedIdentity?: boolean };
+  | { permissions?: never; deriveFromIssuedIdentity?: true };
 
 /**
  * CbioIdentity
@@ -232,7 +233,7 @@ export class CbioIdentity {
    * Register a newly created child identity to the parent vault.
    * @returns The child's publicKey (domain-level identifier). Use getChildIdentitySecretName(publicKey) from the protocol subpath for low-level vault access.
    */
-  async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<string> {
+  async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<RegisterChildIdentityResult> {
     return this.admin.children.registerChildIdentity(keys, options);
   }
 
@@ -368,6 +369,10 @@ export interface ManagedAgentContext {
 export interface RegisterChildIdentityOptions {
   /** Protocol-level capabilities embedded into the signed child identity. */
   issuedCapabilities?: IssuedCapabilityName[];
+}
+
+export interface RegisterChildIdentityResult {
+  publicKey: string;
 }
 
 export interface ManagedAgentIssueConfig {
@@ -791,10 +796,9 @@ export class CbioChildIdentityAdmin {
 
   /**
    * Registers a child identity in the parent vault.
-   * @returns The child's public key (domain-level identifier). Use getChildIdentitySecretName from @the-ai-company/cbio-node-runtime/protocol for vault lookups.
+   * @returns The child's publicKey (domain-level identifier). Use getChildIdentitySecretName from @the-ai-company/cbio-node-runtime/protocol for vault lookups.
    */
-  /** Registers a child identity. Returns the child's publicKey. */
-  async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<string> {
+  async registerChildIdentity(keys: KeyPair, options?: RegisterChildIdentityOptions): Promise<RegisterChildIdentityResult> {
     if (!keys.privateKey)
       throw new IdentityError(
         IdentityErrorCode.CHILD_IDENTITY_REQUIRES_PRIVATE_KEY,
@@ -839,7 +843,7 @@ export class CbioChildIdentityAdmin {
     } else {
       await this._vault.addSecret(secretName, stored);
     }
-    return pub;
+    return { publicKey: pub };
   }
 }
 

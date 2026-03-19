@@ -12,7 +12,7 @@ async function test() {
     const agent = await CbioIdentity.load(rootKeys);
 
     const childKeys = generateIdentityKeys();
-    const childPublicKey = await agent.registerChildIdentity(childKeys);
+    const { publicKey: childPublicKey } = await agent.registerChildIdentity(childKeys);
     if (childPublicKey !== childKeys.publicKey) throw new Error(`PublicKey mismatch: ${childPublicKey} vs ${childKeys.publicKey}`);
 
     const secretName = getChildIdentitySecretName(childPublicKey);
@@ -28,7 +28,7 @@ async function test() {
     if (!reloaded) throw new Error('Child key not persisted');
 
     const childKeys2 = generateIdentityKeys();
-    const childPublicKey2 = await agent.registerChildIdentity(childKeys2);
+    const { publicKey: childPublicKey2 } = await agent.registerChildIdentity(childKeys2);
     if (childPublicKey === childPublicKey2) throw new Error('Different identities must have different publicKeys');
 
     await agent.registerChildIdentity(childKeys);
