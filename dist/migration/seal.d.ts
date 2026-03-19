@@ -2,7 +2,7 @@
  * Migration seal/unseal primitives. Single source of truth for sealed blob format.
  * Used by vault and by Cloud for custody transfer. Do not depend on runtime.
  */
-export declare const SEALED_BLOB_VERSION: "v2.0";
+export declare const SEALED_BLOB_VERSION: "v1.0";
 export interface SealedBlobPayload {
     version: string;
     secrets: Record<string, string>;

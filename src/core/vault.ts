@@ -14,8 +14,8 @@ import {
 } from '../activity/ActivityLog.js';
 import { sealBlob, unsealBlob } from '../migration/seal.js';
 
-const VAULT_FORMAT_VERSION = "v2.1";
-const SUPPORTED_VERSIONS = ["v1.2", "v1.3", "v2.0", "v2.1"];
+const VAULT_FORMAT_VERSION = "v1.0";
+const SUPPORTED_VERSIONS = ["v1.0"];
 
 function normalizeOriginForSecretPolicy(origin: string): string {
     const url = new URL(origin);

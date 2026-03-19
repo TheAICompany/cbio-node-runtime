@@ -6,8 +6,8 @@ import { IdentityError, IdentityErrorCode } from '../errors.js';
 import { FsStorageProvider } from '../storage/fs.js';
 import { appendActivityLog, readActivityLog, readActivityLogMetadata, } from '../activity/ActivityLog.js';
 import { sealBlob, unsealBlob } from '../migration/seal.js';
-const VAULT_FORMAT_VERSION = "v2.1";
-const SUPPORTED_VERSIONS = ["v1.2", "v1.3", "v2.0", "v2.1"];
+const VAULT_FORMAT_VERSION = "v1.0";
+const SUPPORTED_VERSIONS = ["v1.0"];
 function normalizeOriginForSecretPolicy(origin) {
     const url = new URL(origin);
     const isLoopbackHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';

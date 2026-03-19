@@ -5,7 +5,7 @@
 import { Buffer } from 'node:buffer';
 import * as crypto from 'node:crypto';
 import { IdentityError, IdentityErrorCode } from '../errors.js';
-export const SEALED_BLOB_VERSION = 'v2.0';
+export const SEALED_BLOB_VERSION = 'v1.0';
 /**
  * Seal secrets with external key (AES-256-GCM). For custody transfer.
  * kdk: 32 bytes, base64url-encoded.
@@ -39,7 +39,7 @@ export function unsealBlob(sealedBlob, kdk) {
     const plainText = decipher.update(encrypted, undefined, 'utf8') + decipher.final('utf8');
     const data = JSON.parse(plainText);
     return {
-        version: data.version ?? 'v2.0',
+        version: data.version ?? 'v1.0',
         secrets: data.secrets || {},
         secretMetadata: data.secretMetadata,
     };

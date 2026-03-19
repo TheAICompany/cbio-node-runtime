@@ -7,7 +7,7 @@ import { Buffer } from 'node:buffer';
 import * as crypto from 'node:crypto';
 import { IdentityError, IdentityErrorCode } from '../errors.js';
 
-export const SEALED_BLOB_VERSION = 'v2.0' as const;
+export const SEALED_BLOB_VERSION = 'v1.0' as const;
 
 export interface SealedBlobPayload {
     version: string;
@@ -49,7 +49,7 @@ export function unsealBlob(sealedBlob: string, kdk: string): SealedBlobPayload {
     const plainText = decipher.update(encrypted as any, undefined, 'utf8') + decipher.final('utf8');
     const data = JSON.parse(plainText);
     return {
-        version: data.version ?? 'v2.0',
+        version: data.version ?? 'v1.0',
         secrets: data.secrets || {},
         secretMetadata: data.secretMetadata,
     };
