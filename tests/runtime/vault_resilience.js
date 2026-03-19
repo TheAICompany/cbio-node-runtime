@@ -11,6 +11,7 @@
 import { generateIdentityKeys, CbioIdentity } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 const TEST_DIR = path.join(process.cwd(), '.cbio_resilience_test');
 
@@ -30,7 +31,7 @@ async function test1_NormalFlow() {
     await agent.admin.vault.addSecret('test-key', 'secret-value-123');
 
     const agent2 = await CbioIdentity.load(keys);
-    const loaded = agent2.admin.vault.getSecret('test-key');
+    const loaded = await readSealedSecret(agent2, 'test-key');
     if (loaded !== 'secret-value-123') {
         throw new Error(`Data mismatch: expected secret-value-123, got ${loaded}`);
     }
@@ -57,7 +58,7 @@ async function test2_RecoveryFromTmp() {
     await fs.writeFile(tmpPath, Buffer.from(blob, 'base64url'));
 
     const agent2 = await CbioIdentity.load(keys);
-    const recovered = agent2.admin.vault.getSecret('recovery-key');
+    const recovered = await readSealedSecret(agent2, 'recovery-key');
     if (recovered !== 'recovery-value') {
         throw new Error(`Recovery failed: expected recovery-value, got ${recovered}`);
     }

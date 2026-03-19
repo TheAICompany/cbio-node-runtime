@@ -6,6 +6,7 @@ import {
 } from '../../dist/runtime/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { readSealedSecret } from '../runtime/helpers/read_sealed_secret.js';
 
 async function testStorageAdaptability() {
     console.log('=== Storage Adaptability Acceptance ===');
@@ -22,7 +23,7 @@ async function testStorageAdaptability() {
         await agent.admin.vault.addSecret('fs-key', 'fs-val');
 
         const agent2 = await CbioIdentity.load(keys);
-        if (agent2.admin.vault.getSecret('fs-key') === 'fs-val') {
+        if (await readSealedSecret(agent2, 'fs-key') === 'fs-val') {
             console.log('✅ Default fs storage');
         } else {
             throw new Error('FsStorageProvider failed');
@@ -40,7 +41,7 @@ async function testStorageAdaptability() {
             storage,
             storageKey: 'mem-vault.enc',
         });
-        if (agent4.admin.vault.getSecret('mem-key') === 'mem-val') {
+        if (await readSealedSecret(agent4, 'mem-key') === 'mem-val') {
             console.log('✅ Custom memory storage');
         } else {
             throw new Error('MemoryStorageProvider failed');
@@ -52,7 +53,7 @@ async function testStorageAdaptability() {
         await agent5.admin.vault.addSecret('exp-key', 'exp-val');
 
         const agent6 = await CbioIdentity.load(keys, { storage, storageKey });
-        if (agent6.admin.vault.getSecret('exp-key') === 'exp-val') {
+        if (await readSealedSecret(agent6, 'exp-key') === 'exp-val') {
             console.log('✅ Explicit storage save/load');
         } else {
             throw new Error('Explicit storage failed');

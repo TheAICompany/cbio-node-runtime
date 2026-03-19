@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
+import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 async function run() {
     const testDir = path.join(process.cwd(), '.cbio_rotation_policy_test');
@@ -39,7 +40,7 @@ async function run() {
         });
 
         assert.equal(rotated.success, true, rotated.error);
-        assert.equal(agent.admin.vault.getSecret('service-a'), 'rotated-secret-v2');
+        assert.equal(await readSealedSecret(agent, 'service-a'), 'rotated-secret-v2');
 
         issuedValue = 'attacker-secret';
         const rejected = await agent.fetchJsonAndUpdateSecret({
@@ -50,7 +51,7 @@ async function run() {
 
         assert.equal(rejected.success, false, 'Rotation from a different origin should be rejected');
         assert.match(rejected.error ?? '', /only allows rotation from/i);
-        assert.equal(agent.admin.vault.getSecret('service-a'), 'rotated-secret-v2', 'Rejected rotation must not replace the active key');
+        assert.equal(await readSealedSecret(agent, 'service-a'), 'rotated-secret-v2', 'Rejected rotation must not replace the active key');
 
         console.log('✅ Secret rotation origin policy test passed');
     } finally {

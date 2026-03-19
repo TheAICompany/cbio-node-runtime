@@ -42,3 +42,10 @@ export {
   type LocalAuthProxyOptions,
   type LocalAuthProxyHandle,
 } from "../http/localAuthProxy.js";
+export {
+  startLocalSecretIngress,
+  type LocalSecretIngressHandle,
+  type LocalSecretIngressOptions,
+  type LocalSecretIngressResult,
+  type LocalSecretIngressWriter,
+} from "../http/localSecretIngress.js";

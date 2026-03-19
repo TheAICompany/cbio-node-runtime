@@ -23,6 +23,8 @@ Node.js runtime for cbio identity and credential vault. Library only.
 
 Import and use `CbioIdentity`, `CbioAgent` from the main export.
 
+For registration flows that mint a new secret locally, use `startLocalSecretIngress(...)` to let a trusted local process `POST` the newly issued value straight into the vault without printing it to terminal output first.
+
 ## Install
 
 Requires Node >= 18.

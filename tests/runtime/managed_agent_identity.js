@@ -3,6 +3,7 @@ import { createIdentityRef, signRevocationRecord } from '@the-ai-company/cbio-pr
 import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 async function testManagedAgentIdentity() {
     console.log('--- Managed Agent Identity Test ---');
@@ -58,7 +59,7 @@ async function testManagedAgentIdentity() {
         }
 
         const managedRecordKey = getChildIdentitySecretName(managed.publicKey);
-        const stored = rootIdentity.admin.vault.getSecret(managedRecordKey);
+        const stored = await readSealedSecret(rootIdentity, managedRecordKey);
         if (!stored) {
             throw new Error('Root authority did not persist managed agent identity record.');
         }
@@ -131,7 +132,7 @@ async function testManagedAgentIdentity() {
                 keys: { privateKey: parsed.privateKey, publicKey: parsed.publicKey },
             },
         });
-        const foreignStored = foreignAuthority.admin.vault.getSecret(getChildIdentitySecretName(foreignManaged.publicKey));
+        const foreignStored = await readSealedSecret(foreignAuthority, getChildIdentitySecretName(foreignManaged.publicKey));
         if (!foreignStored) {
             throw new Error('Foreign authority did not persist managed agent identity record.');
         }

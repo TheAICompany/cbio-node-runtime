@@ -3,6 +3,7 @@ import { unsealBlob } from '../../dist/sealed/index.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import { readSealedSecret } from './helpers/read_sealed_secret.js';
 
 async function verifyMergeSecurityLocal() {
     console.log("--- Merge Security Test (Local Simulation) ---");
@@ -111,7 +112,7 @@ async function verifyMergeSecurityLocal() {
         if (!forceResult.skipped.includes('secret-a') || forceResult.added.length !== 0 || forceResult.overwritten.length !== 0) {
             throw new Error(`❌ FAILURE: Expected skip result for 'secret-a', got ${JSON.stringify(forceResult)}`);
         }
-        const kept = agentA.admin.vault.getSecret('secret-a');
+        const kept = await readSealedSecret(agentA, 'secret-a');
         if (kept === 'value-a') {
             console.log("✅ SUCCESS: Receiver value kept on force merge.");
         } else {
@@ -124,7 +125,7 @@ async function verifyMergeSecurityLocal() {
         if (!overwriteResult.overwritten.includes('secret-a') || overwriteResult.added.length !== 0) {
             throw new Error(`❌ FAILURE: Expected overwrite result for 'secret-a', got ${JSON.stringify(overwriteResult)}`);
         }
-        const replaced = agentA.admin.vault.getSecret('secret-a');
+        const replaced = await readSealedSecret(agentA, 'secret-a');
         if (replaced === 'value-a-DIFFERENT') {
             console.log("✅ SUCCESS: Sender value applied on overwrite merge.");
         } else {

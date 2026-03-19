@@ -40,17 +40,10 @@ import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
 `permissions` and `deriveFromIssuedIdentity` are mutually exclusive; do not pass both.
 
 ### 1.5 Recursive Child Identity Management
-When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. The method returns `{ publicKey }` (domain-level identifier). The record naming scheme is an internal runtime detail; use the protocol subpath for low-level vault access:
+When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. The method returns `{ publicKey }` (domain-level identifier). Treat the persisted child record as runtime-managed state rather than application-readable plaintext.
 ```ts
-import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
-
 const { publicKey: childPublicKey } = await identity.registerChildIdentity(keys);
-const secretName = getChildIdentitySecretName(childPublicKey);
-const stored = identity.admin.vault.getSecret(secretName);
-if (stored) {
-  const { privateKey, publicKey } = JSON.parse(stored);
-  const childIdentity = await CbioIdentity.load({ privateKey, publicKey });
-}
+console.log(childPublicKey);
 ```
 
 ---

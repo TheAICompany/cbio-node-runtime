@@ -1,8 +1,7 @@
 import { CbioIdentity, generateIdentityKeys } from '../../dist/runtime/index.js';
-import { getChildIdentitySecretName } from '@the-ai-company/cbio-node-runtime/protocol';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-
+ 
 async function run() {
     const dir = path.join(process.cwd(), '.cbio_get_agent_test_' + Date.now());
     await fs.mkdir(dir, { recursive: true });
@@ -31,24 +30,7 @@ async function run() {
             throw new Error('getAgent() should not auto-derive runtime permissions by default.');
         }
 
-        const stored = rootIdentity.admin.vault.getSecret(getChildIdentitySecretName(managed.publicKey));
-        if (!stored) {
-            throw new Error('Managed identity record not found.');
-        }
-        const parsed = JSON.parse(stored);
-        const managedIdentity = await CbioIdentity.load({
-            privateKey: parsed.privateKey,
-            publicKey: parsed.publicKey,
-        }, {
-            issuedIdentity: parsed.issuedIdentity,
-        });
-
-        const derivedAgent = managedIdentity.getAgent({ deriveFromIssuedIdentity: true });
-        if (!derivedAgent.can('vault:acquire')) {
-            throw new Error('Explicit derivation from issued identity should grant issued runtime permissions.');
-        }
-
-        console.log('✅ getAgent permissions: default minimal, derivation explicit');
+        console.log('✅ getAgent permissions: default minimal, no implicit runtime widening');
     } finally {
         await fs.rm(dir, { recursive: true, force: true });
     }

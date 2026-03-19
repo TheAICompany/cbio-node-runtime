@@ -489,10 +489,6 @@ export class CbioVaultAdmin {
     await this._vault.addSecret(secretName, secretValue, options);
   }
 
-  getSecret(secretName: string): string | undefined {
-    return this._vault.getSecret(secretName);
-  }
-
   hasSecret(secretName: string): boolean {
     return this._vault.hasSecret(secretName);
   }
