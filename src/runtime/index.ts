@@ -22,6 +22,10 @@ export type {
   IdentityLoadOptions,
   RuntimePermissionName,
   RuntimePermissions,
+  SecretValidationResult,
+  SecretValidationStatus,
+  SecretValidator,
+  SecretValidatorHandle,
   SecretProofAlgorithm,
   StartLocalSecretIngressOptions,
 } from "../agent/agent.js";

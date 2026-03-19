@@ -72,6 +72,27 @@ export interface ActivityLogConfig {
 
 export type StartLocalSecretIngressOptions = Omit<LocalSecretIngressOptions, "vault">;
 export type SecretProofAlgorithm = "sha256" | "sha512";
+export type SecretValidationStatus = "valid" | "invalid" | "indeterminate";
+
+export interface SecretValidationResult {
+  valid: boolean;
+  status: SecretValidationStatus;
+  reason?: string;
+  providerSubject?: string;
+  expiresAt?: string;
+  scopes?: readonly string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface SecretValidatorHandle {
+  fetchWithAuth(url: string, options?: FetchWithAuthOptions): Promise<Response>;
+  compare(candidate: string): Promise<boolean>;
+  prove(challenge: string, options?: { algorithm?: SecretProofAlgorithm }): Promise<string>;
+}
+
+export interface SecretValidator {
+  validate(handle: SecretValidatorHandle): Promise<SecretValidationResult>;
+}
 
 function compareSecretValue(secretValue: string, candidate: string): boolean {
   const left = Buffer.from(secretValue, "utf8");
@@ -82,6 +103,32 @@ function compareSecretValue(secretValue: string, candidate: string): boolean {
 
 function createSecretProof(secretValue: string, challenge: string, algorithm: SecretProofAlgorithm): string {
   return createHmac(algorithm, secretValue).update(challenge, "utf8").digest("base64url");
+}
+
+function assertSecretValue(vault: CbioVault, secretName: string): string {
+  const secretValue = vault.getSecret(secretName);
+  if (!secretValue) {
+    throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
+  }
+  return secretValue;
+}
+
+function createSecretValidatorHandle(
+  vault: CbioVault,
+  authClient: AuthClient,
+  secretName: string,
+): SecretValidatorHandle {
+  return {
+    fetchWithAuth(url: string, options?: FetchWithAuthOptions) {
+      return authClient.fetchWithAuth(secretName, url, options ?? {});
+    },
+    async compare(candidate: string) {
+      return compareSecretValue(assertSecretValue(vault, secretName), candidate);
+    },
+    async prove(challenge: string, options?: { algorithm?: SecretProofAlgorithm }) {
+      return createSecretProof(assertSecretValue(vault, secretName), challenge, options?.algorithm ?? "sha256");
+    },
+  };
 }
 
 /**
@@ -257,11 +304,12 @@ export class CbioIdentity {
   }
 
   async proveSecret(secretName: string, challenge: string, options?: { algorithm?: SecretProofAlgorithm }): Promise<string> {
-    const secretValue = this._vault.getSecret(secretName);
-    if (!secretValue) {
-      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
-    }
-    return createSecretProof(secretValue, challenge, options?.algorithm ?? "sha256");
+    return createSecretProof(assertSecretValue(this._vault, secretName), challenge, options?.algorithm ?? "sha256");
+  }
+
+  async validateSecret(secretName: string, validator: SecretValidator): Promise<SecretValidationResult> {
+    assertSecretValue(this._vault, secretName);
+    return validator.validate(createSecretValidatorHandle(this._vault, this._authClient, secretName));
   }
 
   hasSecret(secretName: string): boolean {
@@ -398,20 +446,18 @@ export class CbioAgent {
 
   async compareSecret(secretName: string, candidate: string): Promise<boolean> {
     this._checkPermission("vault:acquire");
-    const secretValue = this.#vault.getSecret(secretName);
-    if (!secretValue) {
-      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
-    }
-    return compareSecretValue(secretValue, candidate);
+    return compareSecretValue(assertSecretValue(this.#vault, secretName), candidate);
   }
 
   async proveSecret(secretName: string, challenge: string, options?: { algorithm?: SecretProofAlgorithm }): Promise<string> {
     this._checkPermission("vault:acquire");
-    const secretValue = this.#vault.getSecret(secretName);
-    if (!secretValue) {
-      throw new IdentityError(IdentityErrorCode.SECRET_NOT_FOUND, `Secret name '${secretName}' not found in vault.`);
-    }
-    return createSecretProof(secretValue, challenge, options?.algorithm ?? "sha256");
+    return createSecretProof(assertSecretValue(this.#vault, secretName), challenge, options?.algorithm ?? "sha256");
+  }
+
+  async validateSecret(secretName: string, validator: SecretValidator): Promise<SecretValidationResult> {
+    this._checkPermission("vault:acquire");
+    assertSecretValue(this.#vault, secretName);
+    return validator.validate(createSecretValidatorHandle(this.#vault, this.#authClient, secretName));
   }
 
   hasSecret(secretName: string): boolean {
