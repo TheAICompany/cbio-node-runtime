@@ -10,7 +10,9 @@ export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
 export {
   createIdentity,
+  restoreIdentity,
   type CreateIdentityOptions,
+  type RestoreIdentityOptions,
   type CreatedIdentity,
 } from "./identity.js";
 export {

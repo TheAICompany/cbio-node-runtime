@@ -18,6 +18,7 @@ The main constructors are:
 - `createVaultCore(...)`
 - `createVaultService(...)`
 - `createIdentity(...)`
+- `restoreIdentity(...)`
 - `createVault(...)`
 - `recoverVault(...)`
 - `createOwnerClient(...)`
@@ -64,6 +65,8 @@ Role rules:
 - optional `nickname`
 
 `nickname` is human-readable only. It does not affect the derived `identityId`, cryptographic verification, or vault-local role binding.
+
+`restoreIdentity(privateKey)` returns the same shape for an existing private key.
 
 ## Secret-Flow Model
 

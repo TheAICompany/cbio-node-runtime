@@ -37,6 +37,7 @@ import {
   IdentityError,
   IdentityErrorCode,
   createIdentity,
+  restoreIdentity,
 } from "../../dist/runtime/index.js";
 
 assert.equal(typeof createVaultCore, "function");
@@ -52,10 +53,15 @@ assert.equal(typeof IdentityErrorCode, "object");
 
 const agentIdentity = createIdentity({ nickname: "agent-1" });
 const ownerIdentity = createIdentity({ nickname: "owner-1" });
+const restoredAgentIdentity = restoreIdentity(agentIdentity.privateKey, { nickname: "agent-1-restored" });
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
 assert.equal(typeof agentIdentity.identityId, "string");
 assert.equal(agentIdentity.nickname, "agent-1");
+assert.equal(restoredAgentIdentity.privateKey, agentIdentity.privateKey);
+assert.equal(restoredAgentIdentity.publicKey, agentIdentity.publicKey);
+assert.equal(restoredAgentIdentity.identityId, agentIdentity.identityId);
+assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
 
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {

@@ -76,6 +76,8 @@ These should be treated as labels, aliases, or local names rather than the deepe
 
 The runtime now exposes this concept directly as optional `nickname` on `createIdentity(...)`.
 
+For existing private keys, the runtime exposes `restoreIdentity(...)`, which reconstructs the same identity shape from the private key alone.
+
 In other words:
 
 - public key or a stable derived id answers "who is this cryptographically"

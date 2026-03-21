@@ -42,6 +42,7 @@ import {
   createVaultService,
   createDefaultVaultCoreDependencies,
   createIdentity,
+  restoreIdentity,
   createVault,
   recoverVault,
   createOwnerHttpFlowBoundary,
@@ -52,6 +53,12 @@ import {
   FsStorageProvider,
   LocalVaultTransport,
 } from '@the-ai-company/cbio-node-runtime';
+```
+
+Identity restore example:
+
+```ts
+const identity = restoreIdentity(existingPrivateKey);
 ```
 
 ## Architecture
