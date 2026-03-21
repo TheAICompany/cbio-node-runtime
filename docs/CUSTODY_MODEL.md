@@ -34,6 +34,9 @@ The runtime must satisfy all of the following:
 
 The owner's identity-signing key.
 
+In the current product model, this owner is the single vault admin.
+Other principals should be modeled as agents with capabilities rather than additional owners.
+
 Purpose:
 
 - prove "this request came from the owner"

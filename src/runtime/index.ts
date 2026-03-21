@@ -64,7 +64,6 @@ export {
   type OwnerRegisterCapabilityCommand,
   type OwnerRegisterAgentIdentityCommand,
   type OwnerRegisterCustomHttpFlowCommand,
-  type OwnerRegisterOwnerIdentityCommand,
   type OwnerSecretExport,
   type OwnerIdentityRecord,
   type CustomHttpFlowDefinition,
@@ -114,7 +113,6 @@ export {
   type OwnerRegisterCapabilityInput,
   type OwnerRegisterCustomHttpFlowInput,
   type OwnerRegisterAgentIdentityInput,
-  type OwnerRegisterOwnerIdentityInput,
   type OwnerSecretTargetBinding,
   type OwnerWriteSecretInput,
 } from "../clients/owner/index.js";

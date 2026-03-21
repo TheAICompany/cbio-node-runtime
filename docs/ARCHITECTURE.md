@@ -17,7 +17,7 @@ Recommended persistent-vault lifecycle:
   Stores secret plaintext, validates writes, validates dispatch, appends audit, invokes trusted executors.
 
 - `clients/owner`
-  Owner-facing client for secret writes, explicit plaintext export, and audit reads.
+  Owner-facing client for the single vault admin. It performs secret writes, agent/capability administration, explicit plaintext export, and audit reads.
 
 - `clients/agent`
   Agent-facing client for signed dispatch requests. It never receives secret plaintext.

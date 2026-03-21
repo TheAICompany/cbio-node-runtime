@@ -54,7 +54,6 @@ export type {
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
-  OwnerRegisterOwnerIdentityCommand,
   OwnerSecretExport,
   OwnerIdentityRecord,
   CustomHttpFlowDefinition,

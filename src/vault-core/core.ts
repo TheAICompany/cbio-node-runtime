@@ -9,7 +9,6 @@ import type {
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
-  OwnerRegisterOwnerIdentityCommand,
   OwnerSecretExport,
   SecretRecord,
   VaultPrincipal,
@@ -151,40 +150,6 @@ export class DefaultVaultCore implements VaultCore {
           this._deps,
           command.owner,
           "register_agent_identity",
-          "denied",
-          detail,
-        ),
-      );
-      throw error;
-    }
-  }
-
-  async registerOwnerIdentity(command: OwnerRegisterOwnerIdentityCommand): Promise<void> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("identity registration vault mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    if (command.ownerIdentity.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("owner identity vault mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    try {
-      await this._deps.ownerProofVerifier.verifyRegisterOwnerIdentity(command);
-      await this._deps.ownerIdentities.register(command.ownerIdentity);
-      await this.appendAudit(
-        toAuditEntry(
-          this._deps,
-          command.owner,
-          "register_owner_identity",
-          "succeeded",
-          `owner identity registered: ${command.ownerIdentity.ownerId}`,
-        ),
-      );
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      await this.appendAudit(
-        toAuditEntry(
-          this._deps,
-          command.owner,
-          "register_owner_identity",
           "denied",
           detail,
         ),

@@ -80,15 +80,6 @@ export interface OwnerRegisterAgentIdentityCommand {
   proof: OwnerProof;
 }
 
-export interface OwnerRegisterOwnerIdentityCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal & { kind: "owner" };
-  ownerIdentity: OwnerIdentityRecord;
-  requestedAt: string;
-  proof: OwnerProof;
-}
-
 export interface CustomHttpFlowDefinition {
   vaultId: VaultId;
   flowId: string;
@@ -227,7 +218,6 @@ export interface AuditEntry {
   action:
     | "bootstrap_owner_identity"
     | "register_agent_identity"
-    | "register_owner_identity"
     | "register_custom_flow"
     | "register_capability"
     | "write_secret"

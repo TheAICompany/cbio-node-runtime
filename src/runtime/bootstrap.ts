@@ -18,7 +18,7 @@ import type { IStorageProvider } from "../storage/provider.js";
 
 export interface InitializePersistentVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
   custody?: InitializeVaultCustodyOptions;
-  bootstrapOwner?: OwnerIdentityRecord;
+  bootstrapOwner: OwnerIdentityRecord;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
     fetchImpl?: typeof fetch;
@@ -56,9 +56,7 @@ export async function initializePersistentVault(
     vaultWorkingKey: initializedCustody.vaultWorkingKey,
   });
   const core = createVaultCore(deps);
-  if (options.bootstrapOwner) {
-    await core.bootstrapOwnerIdentity(options.bootstrapOwner);
-  }
+  await core.bootstrapOwnerIdentity(options.bootstrapOwner);
   return {
     initializedCustody,
     core,

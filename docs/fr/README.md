@@ -1,6 +1,6 @@
 # cbio Vault Runtime
 
-Premiere version publique du runtime centre sur l'autorite.
+Runtime local de vault pour le noyau d'autorisation cbio. Il ne fournit ni CLI ni TUI.
 
 Surface principale :
 - `vault-core`
@@ -8,4 +8,43 @@ Surface principale :
 - `clients/agent`
 - `vault-ingress`
 
-L'ancienne API centree sur `CbioIdentity` ne fait plus partie du produit.
+## Installation
+
+```bash
+npm install @the-ai-company/cbio-node-runtime
+```
+
+## Utilisation
+
+```ts
+import {
+  createVaultService,
+  initializePersistentVault,
+  recoverPersistentVault,
+  LocalVaultTransport,
+  createOwnerClient,
+  createAgentClient,
+  FsStorageProvider,
+} from '@the-ai-company/cbio-node-runtime';
+```
+
+## Architecture
+
+1. Le plaintext du secret n'existe qu'a l'interieur de `vault-core`
+2. `clients/owner` agit comme l'unique admin du vault : ecriture de secrets, export plaintext, administration des agents/capabilities et lecture de l'audit
+3. `clients/agent` cree les requetes de dispatch signees par l'agent
+4. `vault-ingress` resout les capabilities et traite l'ingress de dispatch a l'interieur de la frontiere de confiance du vault
+
+Chemin principal recommande pour un vault persistant :
+
+- initialiser le vault persistant avec `initializePersistentVault(...)`
+- restaurer le vault persistant avec `recoverPersistentVault(...)` via la recovery key
+
+L'ancienne API centree sur `CbioIdentity` n'est plus la surface principale du produit.
+
+## Build
+
+```bash
+npm run build
+npm run test
+```

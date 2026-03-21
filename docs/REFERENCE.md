@@ -70,7 +70,6 @@ Important methods:
 
 - `bootstrapOwnerIdentity(...)`
 - `registerAgentIdentity(...)`
-- `registerOwnerIdentity(...)`
 - `writeSecret(...)`
 - `exportSecret(...)`
 - `acquireSecret(...)`
@@ -90,7 +89,7 @@ await vault.bootstrapOwnerIdentity({
 });
 ```
 
-After that, additional owner and agent identities should be registered through owner-signed commands rather than direct raw records.
+The runtime treats this first owner as the single vault admin. Additional principals should be modeled as agents plus capabilities rather than extra owners.
 
 ## Owner Client
 
@@ -102,7 +101,7 @@ Current owner operations:
 - `exportSecret(...)`
 - `getAudit(...)`
 - `registerAgentIdentity(...)`
-- `registerOwnerIdentity(...)`
+- `registerCapability(...)`
 - `registerCustomFlow(...)`
 
 Example:

@@ -12,7 +12,6 @@ export type {
   OwnerRegisterCapabilityInput,
   OwnerRegisterCustomHttpFlowInput,
   OwnerRegisterAgentIdentityInput,
-  OwnerRegisterOwnerIdentityInput,
   OwnerSecretTargetBinding,
   OwnerWriteSecretInput,
 } from "./contracts.js";

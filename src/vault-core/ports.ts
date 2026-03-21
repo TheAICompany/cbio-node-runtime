@@ -9,7 +9,6 @@ import type {
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
-  OwnerRegisterOwnerIdentityCommand,
   OwnerSecretExport,
   CustomHttpFlowDefinition,
   DispatchInstruction,
@@ -94,7 +93,6 @@ export interface OwnerProofVerifier {
   verifyExport(request: OwnerExportSecretRequest): Promise<void>;
   verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
   verifyRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
-  verifyRegisterOwnerIdentity(command: OwnerRegisterOwnerIdentityCommand): Promise<void>;
   verifyRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
 }
 
@@ -133,7 +131,6 @@ export interface VaultCore {
   dispatchSecret(request: DispatchRequest): Promise<DispatchResult>;
   bootstrapOwnerIdentity(identity: OwnerIdentityRecord): Promise<void>;
   registerAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
-  registerOwnerIdentity(command: OwnerRegisterOwnerIdentityCommand): Promise<void>;
   registerCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
   registerCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
   getCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null>;

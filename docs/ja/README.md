@@ -1,6 +1,6 @@
 # cbio Vault Runtime
 
-Vault first の第一版ランタイムです。
+cbio 権限コアのローカル vault ランタイムです。CLI や TUI は含みません。
 
 主な公開モジュール:
 - `vault-core`
@@ -8,4 +8,43 @@ Vault first の第一版ランタイムです。
 - `clients/agent`
 - `vault-ingress`
 
-旧 `CbioIdentity` 中心 API は公開面から外れています。
+## インストール
+
+```bash
+npm install @the-ai-company/cbio-node-runtime
+```
+
+## 使い方
+
+```ts
+import {
+  createVaultService,
+  initializePersistentVault,
+  recoverPersistentVault,
+  LocalVaultTransport,
+  createOwnerClient,
+  createAgentClient,
+  FsStorageProvider,
+} from '@the-ai-company/cbio-node-runtime';
+```
+
+## アーキテクチャ
+
+1. secret の平文は `vault-core` の内部にのみ存在します
+2. `clients/owner` は単一の vault admin として secret 書き込み、平文 export、agent/capability 管理、audit 読み取りを行います
+3. `clients/agent` は agent の signed dispatch request を作ります
+4. `vault-ingress` は vault 境界の内側で capability 解決と dispatch ingress を扱います
+
+推奨される persistent-vault の主経路:
+
+- `initializePersistentVault(...)` で persistent vault を初期化する
+- `recoverPersistentVault(...)` で recovery key を使って persistent vault を復旧する
+
+旧 `CbioIdentity` 中心 API は、もはや主要な公開面ではありません。
+
+## ビルド
+
+```bash
+npm run build
+npm run test
+```

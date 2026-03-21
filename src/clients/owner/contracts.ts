@@ -33,12 +33,6 @@ export interface OwnerRegisterAgentIdentityInput {
   requestedAt?: string;
 }
 
-export interface OwnerRegisterOwnerIdentityInput {
-  ownerId: string;
-  publicKey: string;
-  requestedAt?: string;
-}
-
 export interface OwnerRegisterCustomHttpFlowInput extends OwnerHttpFlowBoundary {
   flowId: string;
   requestedAt?: string;

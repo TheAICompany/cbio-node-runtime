@@ -103,7 +103,7 @@ An owner-defined exception path also exists for non-standard but intentional int
   Vault boundary/facade. Accepts request-shaped calls, handles trusted acquisition paths, and keeps capability resolution plus dispatch ingress inside the vault trust boundary.
 
 - `clients/owner`
-  Owner-facing client. Writes secrets, exports plaintext secrets, and reads audit.
+  Owner-facing client. The owner is the single vault admin. It writes secrets, exports plaintext secrets, manages agents/capabilities, and reads audit.
 
 - `clients/agent`
   Agent-facing client. Creates signed dispatch requests. Never handles plaintext secret.
@@ -198,7 +198,7 @@ console.log(initializedVault.initializedCustody.vaultRecoveryKey);
 
 const recoveredVault = await recoverPersistentVault(storage, {
   vaultId: 'vault-persistent',
-  initializedVault.initializedCustody.vaultRecoveryKey,
+  vaultRecoveryKey: initializedVault.initializedCustody.vaultRecoveryKey,
 });
 ```
 

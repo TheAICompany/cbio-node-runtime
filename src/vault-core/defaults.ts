@@ -8,7 +8,6 @@ import type {
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
-  OwnerRegisterOwnerIdentityCommand,
   OwnerIdentityRecord,
   AuditEntry,
   AuditQuery,
@@ -154,15 +153,6 @@ function createOwnerRegisterAgentBinding(command: OwnerRegisterAgentIdentityComm
     requestedAt: command.requestedAt,
     ownerId: command.owner.id,
     agentIdentity: command.agentIdentity,
-  });
-}
-
-function createOwnerRegisterOwnerBinding(command: OwnerRegisterOwnerIdentityCommand): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    ownerIdentity: command.ownerIdentity,
   });
 }
 
@@ -668,29 +658,6 @@ export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
         command.requestedAt,
         command.proof.signature,
         createOwnerRegisterAgentBinding(command),
-      );
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_IDENTITY_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyRegisterOwnerIdentity(command: OwnerRegisterOwnerIdentityCommand): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    try {
-      await this.verifyBinding(
-        command.owner.id,
-        command.vaultId,
-        command.requestedAt,
-        command.proof.signature,
-        createOwnerRegisterOwnerBinding(command),
       );
     } catch (error) {
       if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
