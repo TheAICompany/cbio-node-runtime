@@ -18,6 +18,7 @@ The main constructors are:
 - `createVaultCore(...)`
 - `createVaultService(...)`
 - `createIdentity(...)`
+- `deriveIdentity(...)`
 - `restoreIdentity(...)`
 - `createVault(...)`
 - `recoverVault(...)`
@@ -52,7 +53,8 @@ Role rules:
 
 - outside the vault there are only identities
 - inside a vault, identities are bound to roles such as `owner` or `agent`
-- identities are independent; there is no built-in lineage or inheritance between identities
+- root identities are independent
+- child identities may be deterministically derived from a parent identity private key plus a path
 - the same identity may be `owner` in one vault and `agent` in another
 
 ## Identity Creation
@@ -67,6 +69,8 @@ Role rules:
 `nickname` is human-readable only. It does not affect the derived `identityId`, cryptographic verification, or vault-local role binding.
 
 `restoreIdentity(privateKey)` returns the same shape for an existing private key.
+
+`deriveIdentity(parentPrivateKey, path)` returns the same shape for a deterministic child identity.
 
 ## Secret-Flow Model
 

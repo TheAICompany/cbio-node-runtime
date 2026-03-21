@@ -26,8 +26,8 @@ An `identity` is an external principal represented by a public/private keypair.
 
 Properties:
 
-- independent by default
-- no built-in parent/child lineage
+- root identities are independent
+- child identities may be deterministically derived from a parent identity private key plus a path
 - no built-in inheritance
 - no built-in "owner creates agent identity" relationship
 
@@ -51,7 +51,7 @@ The vault should not treat a display label as the root identity truth.
 
 ## Stable Identity ID
 
-The runtime already has a stable public-key-derived identity primitive available through `deriveRootAgentId(...)`.
+The runtime already has a stable public-key-derived identity primitive available through `deriveIdentityId(...)`.
 
 That derived value is useful for:
 
@@ -77,6 +77,8 @@ These should be treated as labels, aliases, or local names rather than the deepe
 The runtime now exposes this concept directly as optional `nickname` on `createIdentity(...)`.
 
 For existing private keys, the runtime exposes `restoreIdentity(...)`, which reconstructs the same identity shape from the private key alone.
+
+For child identities, the runtime exposes `deriveIdentity(parentPrivateKey, path)`, which deterministically derives the same child identity every time for the same parent key and path.
 
 In other words:
 

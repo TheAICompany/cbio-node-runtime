@@ -5,13 +5,16 @@
 
 export { IdentityError, IdentityErrorCode } from "../errors.js";
 export { derivePublicKey, LocalSigner } from "../protocol/crypto.js";
+export { deriveIdentityId } from "../protocol/identity.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
 export {
   createIdentity,
+  deriveIdentity,
   restoreIdentity,
   type CreateIdentityOptions,
+  type DeriveIdentityOptions,
   type RestoreIdentityOptions,
   type CreatedIdentity,
 } from "./identity.js";

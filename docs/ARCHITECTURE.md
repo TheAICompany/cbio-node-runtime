@@ -27,7 +27,8 @@ This means:
 
 - outside the vault there are only identities
 - inside a specific vault, identities are bound to roles such as `owner` or `agent`
-- identities are independent; there is no built-in parent/child lineage between identities
+- root identities are independent
+- child identities may be deterministically derived from a parent identity private key plus a path
 - an identity may be the `owner` of one vault and an `agent` in another vault
 
 ## Public Modules

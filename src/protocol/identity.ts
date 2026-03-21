@@ -6,10 +6,14 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
-import { deriveRootAgentId } from '@the-ai-company/cbio-protocol';
+import { deriveRootAgentId as protocolDeriveIdentityId } from '@the-ai-company/cbio-protocol';
 import { getChildIdentitySecretName, CHILD_KEY_PREFIX } from './childSecretNaming.js';
 
-export { deriveRootAgentId, getChildIdentitySecretName, CHILD_KEY_PREFIX };
+export { getChildIdentitySecretName, CHILD_KEY_PREFIX };
+
+export function deriveIdentityId(publicKey: string): string {
+    return protocolDeriveIdentityId(publicKey);
+}
 
 export function getVaultPath(publicKey: string): string {
     const hash = crypto.createHash('sha256').update(publicKey).digest('hex').substring(0, 12);
