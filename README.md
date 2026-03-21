@@ -2,8 +2,6 @@
 
 Node.js vault runtime with a hard-cut architecture: vault core first, explicit clients second.
 
-**⚠️ Actively under development — not a stable release.**
-
 **Source:** [https://github.com/TheAICompany/cbio-node-runtime](https://github.com/TheAICompany/cbio-node-runtime)
 
 ## Documentation / 文档 / ドキュメント / 문서 / Docs
@@ -110,7 +108,7 @@ An owner-defined exception path also exists for non-standard but intentional int
 ## Status
 
 The old identity-centric runtime is no longer the intended public architecture.
-This package now exposes the new vault-first skeleton as the primary surface.
+This package now exposes the production local vault runtime surface as the primary API.
 
 ## Example Shape
 

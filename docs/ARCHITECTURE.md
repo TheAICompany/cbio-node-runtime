@@ -34,7 +34,7 @@ The current runtime surface supports two explicit flow classes:
   Vault sends a stored secret to an approved target and returns the remote response as normal agent-visible output.
   This is the standard secret-use path, not the acquisition path.
 
-The runtime does not attempt to enumerate or understand arbitrary remote protocols. Acquisition is limited to built-in standard flows rather than caller-defined extraction logic. Unsupported mixed or non-secret flows are outside the current first-version surface.
+The runtime does not attempt to enumerate or understand arbitrary remote protocols. Acquisition is limited to built-in standard flows rather than caller-defined extraction logic. Unsupported mixed or non-secret flows are outside the current production surface.
 
 This is deliberate rather than accidental:
 
