@@ -39,7 +39,7 @@ import {
 권장되는 persistent-vault 주 경로:
 
 - `createVault(...)` 로 persistent vault 를 생성합니다
-- `recoverVault(...)` 로 recovery key 를 사용해 persistent vault 를 복구합니다
+- `recoverVault(...)` 로 owner identity 를 사용해 persistent vault 를 복구합니다
 
 이전 `CbioIdentity` 중심 API 는 더 이상 주요 제품 표면이 아닙니다.
 

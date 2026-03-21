@@ -10,7 +10,7 @@ Related design note:
 Recommended persistent-vault lifecycle:
 
 - create through `createVault(...)`
-- recover through `recoverVault(...)`
+- recover through `recoverVault(...)` using the owner's identity
 
 ## Identity And Roles
 

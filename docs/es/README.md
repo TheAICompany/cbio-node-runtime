@@ -39,7 +39,7 @@ import {
 Ruta principal recomendada para vault persistente:
 
 - crear el vault persistente con `createVault(...)`
-- recuperar el vault persistente con `recoverVault(...)` usando la recovery key
+- recuperar el vault persistente con `recoverVault(...)` usando la identidad del owner
 
 La API antigua centrada en `CbioIdentity` ya no es la superficie principal del producto.
 

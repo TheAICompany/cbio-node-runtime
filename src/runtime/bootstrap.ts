@@ -1,11 +1,8 @@
+import crypto from "node:crypto";
 import { createVaultCore } from "../vault-core/core.js";
 import {
   createPersistentVaultCoreDependencies,
-  initializeVaultCustody,
-  recoverVaultWorkingKey,
   type CreatePersistentVaultCoreDependenciesOptions,
-  type InitializedVaultCustody,
-  type InitializeVaultCustodyOptions,
   type OwnerIdentityRecord,
   type VaultCore,
 } from "../vault-core/index.js";
@@ -17,8 +14,19 @@ import {
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
 
-export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
-  custody?: InitializeVaultCustodyOptions;
+function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
+  return crypto
+    .createHash("sha256")
+    .update("cbio:vault-working-key:v1")
+    .update("\n")
+    .update(vaultId)
+    .update("\n")
+    .update(privateKey)
+    .digest("base64url");
+}
+
+export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
+  vaultId?: string;
   ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
@@ -27,14 +35,13 @@ export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDepend
 }
 
 export interface CreatedVault {
-  initializedCustody: InitializedVaultCustody;
   core: VaultCore;
   vault: VaultService;
 }
 
-export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
-  vaultRecoveryKey: string;
-  custodyStorageKey?: string;
+export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
+  vaultId: string;
+  ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
     fetchImpl?: typeof fetch;
@@ -42,7 +49,6 @@ export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDepen
 }
 
 export interface RecoveredVault {
-  vaultWorkingKey: string;
   core: VaultCore;
   vault: VaultService;
 }
@@ -51,10 +57,12 @@ export async function createVault(
   storage: IStorageProvider,
   options: CreateVaultOptions,
 ): Promise<CreatedVault> {
-  const initializedCustody = await initializeVaultCustody(storage, options.custody);
+  const vaultId = options.vaultId ?? `vault_${crypto.randomUUID()}`;
+  const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
-    vaultWorkingKey: initializedCustody.vaultWorkingKey,
+    vaultId,
+    vaultWorkingKey,
   });
   const core = createVaultCore(deps);
   const bootstrapOwner: OwnerIdentityRecord = {
@@ -64,7 +72,6 @@ export async function createVault(
   };
   await core.bootstrapOwnerIdentity(bootstrapOwner);
   return {
-    initializedCustody,
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
   };
@@ -74,18 +81,14 @@ export async function recoverVault(
   storage: IStorageProvider,
   options: RecoverVaultOptions,
 ): Promise<RecoveredVault> {
-  const vaultWorkingKey = await recoverVaultWorkingKey(
-    storage,
-    options.vaultRecoveryKey,
-    options.custodyStorageKey,
-  );
+  const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, options.vaultId);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
+    vaultId: options.vaultId,
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
   return {
-    vaultWorkingKey,
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
   };

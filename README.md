@@ -217,12 +217,9 @@ const createdVault = await createVault(storage, {
   ownerIdentity,
 });
 
-// Show once to the owner and let them store it offline.
-console.log(createdVault.initializedCustody.vaultRecoveryKey);
-
 const recoveredVault = await recoverVault(storage, {
   vaultId: 'vault-persistent',
-  vaultRecoveryKey: createdVault.initializedCustody.vaultRecoveryKey,
+  ownerIdentity,
 });
 ```
 

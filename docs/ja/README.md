@@ -39,7 +39,7 @@ import {
 推奨される persistent-vault の主経路:
 
 - `createVault(...)` で persistent vault を作成する
-- `recoverVault(...)` で recovery key を使って persistent vault を復旧する
+- `recoverVault(...)` で owner identity を使って persistent vault を復旧する
 
 旧 `CbioIdentity` 中心 API は、もはや主要な公開面ではありません。
 

@@ -7,7 +7,7 @@ import {
   createPersistentVaultCoreDependencies,
   createVault,
   recoverVault,
-  recoverVaultWorkingKey,
+  initializeVaultCustody,
   wrapVaultCoreAsVaultService,
   createStandardAcquireBoundary,
   createStandardDispatchBoundary,
@@ -270,31 +270,7 @@ try {
       }), { status: 200 }),
     },
   });
-  const vaultWorkingKey = createdVault.initializedCustody.vaultWorkingKey;
-  const recoveredVaultWorkingKey = await recoverVaultWorkingKey(storage, createdVault.initializedCustody.vaultRecoveryKey);
-  assert.equal(recoveredVaultWorkingKey, vaultWorkingKey);
-  const persistentAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const persistentOwnerIdentities = new InMemoryOwnerIdentityRegistry();
-  const persistentAuthority = createVaultCore({
-    ...createPersistentVaultCoreDependencies(storage, {
-      vaultId: "vault-runtime-persistent",
-      vaultWorkingKey,
-      policy: {
-        trustedIssuerIds: ["issuer-1"],
-      },
-    }),
-    executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
-    agentIdentities: persistentAgentIdentities,
-    ownerIdentities: persistentOwnerIdentities,
-    proofVerifier: new SignatureAgentProofVerifier(persistentAgentIdentities),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(persistentOwnerIdentities),
-  });
-  await persistentAuthority.bootstrapOwnerIdentity({
-    vaultId: persistentAuthority.vaultId,
-    ownerId: "owner-1",
-    publicKey: ownerIdentity.publicKey,
-  });
-  const persistentVault = wrapVaultCoreAsVaultService(persistentAuthority, {
+  const persistentVault = wrapVaultCoreAsVaultService(createdVault.core, {
     fetchImpl: async () => new Response(JSON.stringify({
       access_token: "issuer-secret",
       token_type: "Bearer",
@@ -314,20 +290,19 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  const auditClient = createVaultClient({ identityId: "owner-1" }, persistentVault, new LocalSigner(ownerIdentity), new SystemClock());
+  const auditClient = createVaultClient({ identityId: ownerIdentity.identityId }, persistentVault, new LocalSigner(ownerIdentity), new SystemClock());
   const audit = await auditClient.readAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
   const persistentExport = await auditClient.exportSecret({ alias: "issuer-token" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
   const recoveredVaultInstance = await recoverVault(storage, {
     vaultId: "vault-runtime-persistent",
-    vaultRecoveryKey: createdVault.initializedCustody.vaultRecoveryKey,
+    ownerIdentity,
   });
-  assert.equal(recoveredVaultInstance.vaultWorkingKey, vaultWorkingKey);
   const acquiredAgentIdentity = createIdentity();
   await auditClient.registerAgent({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });
   const acquiredCapability = {
-    vaultId: persistentAuthority.vaultId,
+    vaultId: createdVault.core.vaultId,
     capabilityId: "cap-acquired",
     agentId: "agent-acquired",
     secretAliases: ["issuer-token"],
@@ -338,7 +313,7 @@ try {
     auditRequired: true,
   };
   await auditClient.grantCapability({ capability: acquiredCapability });
-  const acquiredVault = wrapVaultCoreAsVaultService(persistentAuthority);
+  const acquiredVault = wrapVaultCoreAsVaultService(recoveredVaultInstance.core);
   const acquiredAgent = createAgentClient(
     { agentId: "agent-acquired" },
     {
@@ -361,7 +336,10 @@ try {
   const custodyDirEntries = await readdir(join(tempDir, "vault/custody"));
   assert.ok(custodyDirEntries.length >= 1);
 
-  const failingAuditStorage = new FsStorageProvider(tempDir);
+  const rollbackDir = await mkdtemp(join(tmpdir(), "cbio-authority-rollback-"));
+  const failingAuditStorage = new FsStorageProvider(rollbackDir);
+  const rollbackCustody = await initializeVaultCustody(failingAuditStorage);
+  const vaultWorkingKey = rollbackCustody.vaultWorkingKey;
   const rollbackAgentIdentities = new InMemoryAgentIdentityRegistry();
   const rollbackOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const bootstrapRollbackAuthority = createVaultCore({
@@ -431,6 +409,7 @@ try {
   assert.ok(!rollbackSecretsFile.includes("should-rollback"));
   const custodyCountAfter = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
   assert.equal(custodyCountAfter, custodyCountBefore);
+  await rm(rollbackDir, { recursive: true, force: true });
 } finally {
   await rm(tempDir, { recursive: true, force: true });
 }

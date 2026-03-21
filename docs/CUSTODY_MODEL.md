@@ -65,45 +65,20 @@ Non-purpose:
 - not a user-facing day-to-day API credential
 - not the preferred recovery artifact presented to the owner
 
-### `vaultRecoveryKey`
-
-The owner-held recovery artifact.
-
-Purpose:
-
-- recover or re-establish access to vault secret custody
-- support migration and disaster recovery
-- preserve owner material sovereignty over stored secrets
-
-Expected lifecycle:
-
-- generated during vault initialization
-- shown to the owner once
-- then stored by the owner outside the normal runtime working path
-
-Non-purpose:
-
-- not the owner's signing identity
-- not the normal runtime key used for every operation
-
 ## Current Runtime Surface
 
 The persistent runtime surface uses `vaultWorkingKey` as the runtime material-control key.
-
-The older `custodyKey` term is intentionally not part of the current product model.
+The working key is now derived from the owner's private key plus `vaultId` in the high-level runtime path.
 
 ## Required Separation
 
-The runtime separates three concerns:
+The runtime separates two concerns in the high-level path:
 
 1. Identity authority
    `ownerPrivateKey`
 
 2. Runtime material control
    `vaultWorkingKey`
-
-3. Recovery authority
-   `vaultRecoveryKey`
 
 This separation is deliberate.
 
@@ -124,7 +99,7 @@ Instead:
 In practical terms:
 
 - owner must be able to export secret plaintext through a formal audited interface
-- owner must be able to recover the vault through a formal recovery mechanism
+- owner must be able to recover the vault through the owner identity path
 - owner does not need to directly hold the working key during normal runtime operation
 
 ## Export / Reveal Policy
@@ -145,7 +120,7 @@ Future hardening such as MFA/TOTP may be added on top of this model, but it does
 The runtime now includes:
 
 1. formal vault creation through `createVault(...)`
-2. formal recovery-key based re-entry through `recoverVault(...)`
+2. owner-identity based re-entry through `recoverVault(...)`
 3. explicit `vaultWorkingKey` terminology in the persistent dependency surface
 4. continued support for explicit owner export through `exportSecret(...)`
 

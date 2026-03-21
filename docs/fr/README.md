@@ -39,7 +39,7 @@ import {
 Chemin principal recommande pour un vault persistant :
 
 - creer le vault persistant avec `createVault(...)`
-- restaurer le vault persistant avec `recoverVault(...)` via la recovery key
+- restaurer le vault persistant avec `recoverVault(...)` via l'identite du owner
 
 L'ancienne API centree sur `CbioIdentity` n'est plus la surface principale du produit.
 
