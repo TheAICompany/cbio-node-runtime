@@ -21,7 +21,6 @@ import {
   createVaultService,
   initializePersistentVault,
   recoverPersistentVault,
-  InMemoryVaultCapabilityResolver,
   LocalVaultTransport,
   createOwnerClient,
   createAgentClient,

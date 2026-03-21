@@ -9,6 +9,7 @@ export type {
 export type {
   OwnerAuditQueryInput,
   OwnerExportSecretInput,
+  OwnerRegisterCapabilityInput,
   OwnerRegisterCustomHttpFlowInput,
   OwnerRegisterAgentIdentityInput,
   OwnerRegisterOwnerIdentityInput,

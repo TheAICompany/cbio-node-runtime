@@ -6,6 +6,7 @@ import type {
   DispatchRequest,
   DispatchResult,
   OwnerExportSecretRequest,
+  OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerRegisterOwnerIdentityCommand,
@@ -190,6 +191,61 @@ export class DefaultVaultCore implements VaultCore {
       );
       throw error;
     }
+  }
+
+  async registerCapability(command: OwnerRegisterCapabilityCommand): Promise<void> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("capability registration vault mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    if (command.capability.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("capability vault mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    if (command.capability.agentId !== command.capability.agentId.trim() || !command.capability.agentId.trim()) {
+      throw new VaultCoreError("capability agent id required", "VAULT_IDENTITY_DENIED");
+    }
+    if (!command.capability.capabilityId.trim()) {
+      throw new VaultCoreError("capability id required", "VAULT_IDENTITY_DENIED");
+    }
+    try {
+      await this._deps.ownerProofVerifier.verifyRegisterCapability(command);
+      await this._deps.capabilities.register(command.capability);
+      await this.appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          "register_capability",
+          "succeeded",
+          `capability registered: ${command.capability.capabilityId}`,
+          {
+            capabilityId: command.capability.capabilityId,
+            operation: command.capability.operation,
+          },
+        ),
+      );
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      await this.appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          "register_capability",
+          "denied",
+          detail,
+          {
+            capabilityId: command.capability.capabilityId,
+            operation: command.capability.operation,
+          },
+        ),
+      );
+      throw error;
+    }
+  }
+
+  async getCapability(vaultId: import("./contracts.js").VaultId, agentId: string, capabilityId: string) {
+    if (vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("capability lookup vault mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    return this._deps.capabilities.get(vaultId, agentId, capabilityId);
   }
 
   async registerCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void> {

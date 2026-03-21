@@ -1,7 +1,6 @@
 import {
   createVaultCore,
   type AgentCapability,
-  type AgentIdentityRecord,
   type VaultTargetBinding,
   type VaultCore,
   type VaultCoreDependencies,
@@ -10,6 +9,7 @@ import {
   type Clock,
   type OwnerAuditRequest,
   type OwnerExportSecretRequest,
+  type OwnerRegisterCapabilityCommand,
   type OwnerRegisterAgentIdentityCommand,
   type OwnerRegisterCustomHttpFlowCommand,
   type OwnerRegisterOwnerIdentityCommand,
@@ -37,10 +37,6 @@ export type VaultAcquireSecretFlow =
   | "oauth_token_response.access_token"
   | "oauth_token_response.refresh_token"
   | "openid_token_response.id_token";
-
-export interface VaultCapabilityResolver {
-  resolve(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability>;
-}
 
 export interface VaultAgentDispatchRequest {
   vaultId: string;
@@ -103,6 +99,7 @@ export interface VaultCustomFlowResolver {
 export interface VaultService {
   readonly vaultId: VaultCore["vaultId"];
   bootstrapOwnerIdentity(request: OwnerIdentityRecord): Promise<void>;
+  registerCapability(request: OwnerRegisterCapabilityCommand): Promise<void>;
   registerAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void>;
   registerOwnerIdentity(request: OwnerRegisterOwnerIdentityCommand): Promise<void>;
   registerCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
@@ -117,7 +114,6 @@ export interface VaultService {
 class LocalVaultService implements VaultService {
   constructor(
     private readonly _authority: VaultCore,
-    private readonly _capabilities?: VaultCapabilityResolver,
     private readonly _customFlows?: VaultCustomFlowResolver,
     private readonly _clock?: Clock,
     private readonly _fetchImpl: typeof fetch = fetch,
@@ -129,6 +125,10 @@ class LocalVaultService implements VaultService {
 
   bootstrapOwnerIdentity(request: OwnerIdentityRecord): Promise<void> {
     return this._authority.bootstrapOwnerIdentity(request);
+  }
+
+  registerCapability(request: OwnerRegisterCapabilityCommand): Promise<void> {
+    return this._authority.registerCapability(request);
   }
 
   registerAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void> {
@@ -460,10 +460,11 @@ class LocalVaultService implements VaultService {
   }
 
   private async resolveCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability> {
-    if (!this._capabilities) {
-      throw new Error("VAULT_CAPABILITY_RESOLVER_NOT_CONFIGURED");
+    const capability = await this._authority.getCapability(vaultId, agentId, capabilityId);
+    if (!capability) {
+      throw new Error("VAULT_CAPABILITY_NOT_FOUND");
     }
-    return this._capabilities.resolve(vaultId, agentId, capabilityId);
+    return capability;
   }
 
   private parseBody(body: string | undefined): unknown {
@@ -495,25 +496,23 @@ class LocalVaultService implements VaultService {
 export function createVaultService(
   deps: VaultCoreDependencies,
   options: {
-    capabilities?: VaultCapabilityResolver;
     customFlows?: VaultCustomFlowResolver;
     clock?: Clock;
     fetchImpl?: typeof fetch;
   } = {},
 ): VaultService {
-  return new LocalVaultService(createVaultCore(deps), options.capabilities, options.customFlows ?? deps.customFlows, options.clock, options.fetchImpl);
+  return new LocalVaultService(createVaultCore(deps), options.customFlows ?? deps.customFlows, options.clock, options.fetchImpl);
 }
 
 export function wrapVaultCoreAsVaultService(
   core: VaultCore,
   options: {
-    capabilities?: VaultCapabilityResolver;
     customFlows?: VaultCustomFlowResolver;
     clock?: Clock;
     fetchImpl?: typeof fetch;
   } = {},
 ): VaultService {
-  return new LocalVaultService(core, options.capabilities, options.customFlows, options.clock, options.fetchImpl);
+  return new LocalVaultService(core, options.customFlows, options.clock, options.fetchImpl);
 }
 
 export type { OwnerHttpFlowBoundary } from "./flow-factories.js";

@@ -1,26 +1,5 @@
 import type { AgentDispatchTransport } from "../clients/agent/index.js";
-import type { AgentCapability } from "../vault-core/index.js";
-import type { VaultCapabilityResolver, VaultService } from "./index.js";
-
-export class InMemoryVaultCapabilityResolver implements VaultCapabilityResolver {
-  private readonly _capabilities = new Map<string, AgentCapability>();
-
-  set(capability: AgentCapability): void {
-    this._capabilities.set(`${capability.vaultId.value}:${capability.agentId}:${capability.capabilityId}`, capability);
-  }
-
-  async resolve(
-    vaultId: import("../vault-core/index.js").VaultId,
-    agentId: string,
-    capabilityId: string,
-  ): Promise<AgentCapability> {
-    const capability = this._capabilities.get(`${vaultId.value}:${agentId}:${capabilityId}`);
-    if (!capability) {
-      throw new Error("VAULT_CAPABILITY_NOT_FOUND");
-    }
-    return capability;
-  }
-}
+import type { VaultService } from "./index.js";
 
 export class LocalVaultTransport implements AgentDispatchTransport {
   constructor(

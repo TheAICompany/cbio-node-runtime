@@ -23,7 +23,7 @@ Recommended persistent-vault lifecycle:
   Agent-facing client for signed dispatch requests. It never receives secret plaintext.
 
 - `vault-ingress`
-  Accepts request-shaped calls, resolves capability inside the vault boundary, performs trusted acquisition flows, and forwards dispatch into vault-core internals.
+  Accepts request-shaped calls, resolves vault-managed capability records inside the vault boundary, performs trusted acquisition flows, and forwards dispatch into vault-core internals.
 
 ## Core Rules
 

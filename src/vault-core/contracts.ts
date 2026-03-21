@@ -125,6 +125,15 @@ export interface OwnerRegisterCustomHttpFlowCommand {
   proof: OwnerProof;
 }
 
+export interface OwnerRegisterCapabilityCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal & { kind: "owner" };
+  capability: AgentCapability;
+  requestedAt: string;
+  proof: OwnerProof;
+}
+
 export interface AgentCapability {
   vaultId: VaultId;
   capabilityId: string;
@@ -220,6 +229,7 @@ export interface AuditEntry {
     | "register_agent_identity"
     | "register_owner_identity"
     | "register_custom_flow"
+    | "register_capability"
     | "write_secret"
     | "export_secret"
     | "reassign_alias"

@@ -3,6 +3,7 @@ import type { VaultService } from "../../vault-ingress/index.js";
 import type {
   OwnerAuditQueryInput,
   OwnerExportSecretInput,
+  OwnerRegisterCapabilityInput,
   OwnerRegisterCustomHttpFlowInput,
   OwnerRegisterAgentIdentityInput,
   OwnerRegisterOwnerIdentityInput,
@@ -21,6 +22,7 @@ export interface OwnerSigner {
 export interface OwnerClient {
   writeSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   exportSecret(input: OwnerExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+  registerCapability(input: OwnerRegisterCapabilityInput): Promise<void>;
   getAudit(query?: OwnerAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   registerAgentIdentity(input: OwnerRegisterAgentIdentityInput): Promise<void>;
   registerOwnerIdentity(input: OwnerRegisterOwnerIdentityInput): Promise<void>;
@@ -143,6 +145,37 @@ class DefaultOwnerClient implements OwnerClient {
         id: this._identity.ownerId,
       },
       agentIdentity,
+      requestedAt,
+      proof: {
+        ownerId: this._identity.ownerId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async registerCapability(input: OwnerRegisterCapabilityInput): Promise<void> {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.ownerId}:${requestedAt}:${input.capability.capabilityId}:register_capability`;
+    const capability = {
+      ...input.capability,
+      vaultId: this._vault.vaultId,
+    };
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.ownerId,
+      capability,
+    }));
+    await this._vault.registerCapability({
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: {
+        kind: "owner",
+        id: this._identity.ownerId,
+      },
+      capability,
       requestedAt,
       proof: {
         ownerId: this._identity.ownerId,

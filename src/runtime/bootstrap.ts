@@ -12,7 +12,6 @@ import {
 import {
   wrapVaultCoreAsVaultService,
   type VaultService,
-  type VaultCapabilityResolver,
   type VaultCustomFlowResolver,
 } from "../vault-ingress/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
@@ -21,7 +20,6 @@ export interface InitializePersistentVaultOptions extends Omit<CreatePersistentV
   custody?: InitializeVaultCustodyOptions;
   bootstrapOwner?: OwnerIdentityRecord;
   vault?: {
-    capabilities?: VaultCapabilityResolver;
     customFlows?: VaultCustomFlowResolver;
     fetchImpl?: typeof fetch;
   };
@@ -37,7 +35,6 @@ export interface RecoverPersistentVaultOptions extends Omit<CreatePersistentVaul
   vaultRecoveryKey: string;
   custodyStorageKey?: string;
   vault?: {
-    capabilities?: VaultCapabilityResolver;
     customFlows?: VaultCustomFlowResolver;
     fetchImpl?: typeof fetch;
   };

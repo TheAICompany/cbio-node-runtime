@@ -43,3 +43,8 @@ export interface OwnerRegisterCustomHttpFlowInput extends OwnerHttpFlowBoundary 
   flowId: string;
   requestedAt?: string;
 }
+
+export interface OwnerRegisterCapabilityInput {
+  capability: import("../../vault-core/index.js").AgentCapability;
+  requestedAt?: string;
+}

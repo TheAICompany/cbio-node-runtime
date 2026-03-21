@@ -174,6 +174,8 @@ const capability = {
   allowedMethods: ['POST'],
   issuedAt: new Date().toISOString(),
 };
+
+await owner.registerCapability({ capability });
 ```
 
 Custom capability example:
@@ -190,6 +192,8 @@ const customCapability = {
   allowedMethods: ['POST'],
   issuedAt: new Date().toISOString(),
 };
+
+await owner.registerCapability({ capability: customCapability });
 ```
 
 ## Acquisition Result Shape

@@ -48,7 +48,6 @@ import {
   createOwnerClient,
   createAgentClient,
   FsStorageProvider,
-  InMemoryVaultCapabilityResolver,
   LocalVaultTransport,
 } from '@the-ai-company/cbio-node-runtime';
 ```
@@ -117,8 +116,7 @@ This package now exposes the production local vault runtime surface as the prima
 ## Example Shape
 
 ```ts
-const capabilities = new InMemoryVaultCapabilityResolver();
-const vault = createVaultService(createDefaultVaultCoreDependencies(), { capabilities });
+const vault = createVaultService(createDefaultVaultCoreDependencies());
 const owner = createOwnerClient(ownerIdentity, vault, ownerSigner, clock);
 const transport = new LocalVaultTransport(vault, capability.capabilityId);
 const agent = createAgentClient(agentIdentity, capability, signer, transport, clock);
@@ -137,6 +135,8 @@ const capability = {
   allowedMethods: ['POST'],
   issuedAt: new Date().toISOString(),
 };
+
+await owner.registerCapability({ capability });
 ```
 
 Custom flow example:

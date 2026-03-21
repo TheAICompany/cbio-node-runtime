@@ -33,6 +33,7 @@ export {
   type InitializedVaultCustody,
   type CreatePersistentVaultCoreDependenciesOptions,
   PersistentVaultAuditLog,
+  PersistentVaultCapabilityRegistry,
   PersistentVaultCapabilityRevocationRegistry,
   PersistentVaultCustomHttpFlowRegistry,
   PersistentVaultRateLimitStore,
@@ -41,6 +42,7 @@ export {
   PersistentVaultSecretRepository,
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
+  InMemoryCapabilityRegistry,
   InMemoryCapabilityRevocationRegistry,
   InMemoryCustomHttpFlowRegistry,
   InMemoryRateLimitStore,
@@ -59,6 +61,7 @@ export {
   type AgentProof,
   type OwnerAuditRequest,
   type OwnerExportSecretRequest,
+  type OwnerRegisterCapabilityCommand,
   type OwnerRegisterAgentIdentityCommand,
   type OwnerRegisterCustomHttpFlowCommand,
   type OwnerRegisterOwnerIdentityCommand,
@@ -98,6 +101,7 @@ export {
   type AgentIdentityRegistry,
   type AgentProofVerifier,
   type CapabilityRevocationRegistry,
+  type CapabilityRegistry,
 } from "../vault-core/index.js";
 
 export {
@@ -107,6 +111,7 @@ export {
   type OwnerSigner,
   type OwnerAuditQueryInput,
   type OwnerExportSecretInput,
+  type OwnerRegisterCapabilityInput,
   type OwnerRegisterCustomHttpFlowInput,
   type OwnerRegisterAgentIdentityInput,
   type OwnerRegisterOwnerIdentityInput,
@@ -136,7 +141,6 @@ export {
   type VaultAcquireSecretResult,
   type VaultAcquireSecretFlow,
   type VaultCustomFlowResolver,
-  type VaultCapabilityResolver,
   type VaultAgentDispatchRequest,
   type VaultAgentDispatchResponse,
   type VaultAgentDispatchErrorResponse,
@@ -145,6 +149,5 @@ export {
 } from "../vault-ingress/index.js";
 
 export {
-  InMemoryVaultCapabilityResolver,
   LocalVaultTransport,
 } from "../vault-ingress/defaults.js";

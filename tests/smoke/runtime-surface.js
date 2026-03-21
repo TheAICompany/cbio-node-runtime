@@ -18,12 +18,12 @@ import {
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryAuditLog,
+  InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
   InMemoryReplayGuard,
   InMemoryOwnerIdentityRegistry,
   InMemorySecretCustody,
   InMemorySecretRepository,
-  InMemoryVaultCapabilityResolver,
   LocalVaultTransport,
   LocalSigner,
   PersistentVaultAuditLog,
@@ -78,6 +78,7 @@ const authority = createVaultCore({
   executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
   agentIdentities: runtimeSurfaceAgentIdentities,
   ownerIdentities: runtimeSurfaceOwnerIdentities,
+  capabilities: new InMemoryCapabilityRegistry(),
   proofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities),
   ownerProofVerifier: new SignatureOwnerProofVerifier(runtimeSurfaceOwnerIdentities),
   customFlows: runtimeSurfaceCustomFlows,
@@ -85,9 +86,7 @@ const authority = createVaultCore({
   clock: new SystemClock(),
   ids: new RandomIdGenerator(),
 });
-const capabilityResolver = new InMemoryVaultCapabilityResolver();
 const vault = wrapVaultCoreAsVaultService(authority, {
-  capabilities: capabilityResolver,
   customFlows: runtimeSurfaceCustomFlows,
   fetchImpl: runtimeSurfaceFetch,
 });
@@ -125,7 +124,7 @@ const exportedSecret = await owner.exportSecret({ alias: "api-token" });
 assert.equal(exportedSecret.plaintext, "super-secret");
 assert.equal(exportedSecret.alias.value, "api-token");
 
-capabilityResolver.set({
+const dispatchCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-1",
   agentId: "agent-1",
@@ -135,20 +134,13 @@ capabilityResolver.set({
   allowedMethods: ["POST"],
   issuedAt: new Date().toISOString(),
   auditRequired: true,
-});
+};
+await owner.registerCapability({ capability: dispatchCapability });
 
 const agent = createAgentClient(
   { agentId: "agent-1" },
   {
-    vaultId: authority.vaultId,
-    capabilityId: "cap-1",
-    agentId: "agent-1",
-    secretIds: [ownedRecord.secretId.value],
-    operation: "dispatch_http",
-    allowedTargets: ["https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment"],
-    allowedMethods: ["POST"],
-    issuedAt: new Date().toISOString(),
-    auditRequired: true,
+    ...dispatchCapability,
   },
   new LocalSigner(agentKeyPair),
   new LocalVaultTransport(vault, "cap-1"),
@@ -174,7 +166,7 @@ await owner.registerCustomFlow({
   responseVisibility: "shape_only",
 });
 
-capabilityResolver.set({
+const customCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-custom",
   agentId: "agent-1",
@@ -185,21 +177,13 @@ capabilityResolver.set({
   allowedMethods: ["POST"],
   issuedAt: new Date().toISOString(),
   auditRequired: true,
-});
+};
+await owner.registerCapability({ capability: customCapability });
 
 const customAgent = createAgentClient(
   { agentId: "agent-1" },
   {
-    vaultId: authority.vaultId,
-    capabilityId: "cap-custom",
-    agentId: "agent-1",
-    customFlowId: "flow-shape-only",
-    secretIds: [ownedRecord.secretId.value],
-    operation: "custom_http",
-    allowedTargets: ["https://api.example.com/custom-status"],
-    allowedMethods: ["POST"],
-    issuedAt: new Date().toISOString(),
-    auditRequired: true,
+    ...customCapability,
   },
   new LocalSigner(agentKeyPair),
   new LocalVaultTransport(vault, "cap-custom"),
@@ -229,7 +213,7 @@ await owner.registerCustomFlow({
   },
 });
 
-capabilityResolver.set({
+const customAcquireCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-custom-acquire",
   agentId: "agent-1",
@@ -239,20 +223,13 @@ capabilityResolver.set({
   allowedMethods: ["POST"],
   issuedAt: new Date().toISOString(),
   auditRequired: true,
-});
+};
+await owner.registerCapability({ capability: customAcquireCapability });
 
 const customAcquireAgent = createAgentClient(
   { agentId: "agent-1" },
   {
-    vaultId: authority.vaultId,
-    capabilityId: "cap-custom-acquire",
-    agentId: "agent-1",
-    customFlowId: "flow-custom-acquire",
-    operation: "custom_http",
-    allowedTargets: ["https://api.example.com/custom-acquire"],
-    allowedMethods: ["POST"],
-    issuedAt: new Date().toISOString(),
-    auditRequired: true,
+    ...customAcquireCapability,
   },
   new LocalSigner(agentKeyPair),
   new LocalVaultTransport(vault, "cap-custom-acquire"),
@@ -345,8 +322,7 @@ try {
   assert.equal(recoveredPersistentVault.vaultWorkingKey, vaultWorkingKey);
   const acquiredAgentKeyPair = generateIdentityKeys();
   await ownerForAudit.registerAgentIdentity({ agentId: "agent-acquired", publicKey: acquiredAgentKeyPair.publicKey });
-  const acquiredCapabilities = new InMemoryVaultCapabilityResolver();
-  acquiredCapabilities.set({
+  const acquiredCapability = {
     vaultId: persistentAuthority.vaultId,
     capabilityId: "cap-acquired",
     agentId: "agent-acquired",
@@ -356,22 +332,13 @@ try {
     allowedMethods: ["GET"],
     issuedAt: new Date().toISOString(),
     auditRequired: true,
-  });
-  const acquiredVault = wrapVaultCoreAsVaultService(persistentAuthority, {
-    capabilities: acquiredCapabilities,
-  });
+  };
+  await ownerForAudit.registerCapability({ capability: acquiredCapability });
+  const acquiredVault = wrapVaultCoreAsVaultService(persistentAuthority);
   const acquiredAgent = createAgentClient(
     { agentId: "agent-acquired" },
     {
-      vaultId: persistentAuthority.vaultId,
-      capabilityId: "cap-acquired",
-      agentId: "agent-acquired",
-      secretAliases: ["issuer-token"],
-      operation: "dispatch_http",
-      allowedTargets: ["https://issuer.example.com/other"],
-      allowedMethods: ["GET"],
-      issuedAt: new Date().toISOString(),
-      auditRequired: true,
+      ...acquiredCapability,
     },
     new LocalSigner(acquiredAgentKeyPair),
     new LocalVaultTransport(acquiredVault, "cap-acquired"),

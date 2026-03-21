@@ -1,10 +1,12 @@
 import type {
   AuditEntry,
   AuditQuery,
+  AgentCapability,
   AgentIdentityRecord,
   OwnerIdentityRecord,
   OwnerAuditRequest,
   OwnerExportSecretRequest,
+  OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerRegisterOwnerIdentityCommand,
@@ -90,6 +92,7 @@ export interface OwnerProofVerifier {
   verifyWrite(command: Extract<VaultWriteSecretCommand, { kind: "owner.write_secret" }>): Promise<void>;
   verifyAudit(request: OwnerAuditRequest): Promise<void>;
   verifyExport(request: OwnerExportSecretRequest): Promise<void>;
+  verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
   verifyRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
   verifyRegisterOwnerIdentity(command: OwnerRegisterOwnerIdentityCommand): Promise<void>;
   verifyRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
@@ -98,6 +101,11 @@ export interface OwnerProofVerifier {
 export interface CustomHttpFlowRegistry {
   register(flow: CustomHttpFlowDefinition): Promise<void>;
   get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null>;
+}
+
+export interface CapabilityRegistry {
+  register(capability: AgentCapability): Promise<void>;
+  get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null>;
 }
 
 export interface VaultCoreDependencies {
@@ -111,6 +119,7 @@ export interface VaultCoreDependencies {
   agentIdentities: AgentIdentityRegistry;
   ownerProofVerifier: OwnerProofVerifier;
   ownerIdentities: OwnerIdentityRegistry;
+  capabilities: CapabilityRegistry;
   customFlows: CustomHttpFlowRegistry;
   replayGuard: ReplayGuard;
   clock: Clock;
@@ -125,7 +134,9 @@ export interface VaultCore {
   bootstrapOwnerIdentity(identity: OwnerIdentityRecord): Promise<void>;
   registerAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
   registerOwnerIdentity(command: OwnerRegisterOwnerIdentityCommand): Promise<void>;
+  registerCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
   registerCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
+  getCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null>;
   storeCustomFlowSecret(flow: CustomHttpFlowDefinition, alias: string, plaintext: string): Promise<SecretRecord>;
   getAudit(
     actor: VaultPrincipal & { kind: "owner" },

@@ -16,7 +16,6 @@ import {
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryOwnerIdentityRegistry,
-  InMemoryVaultCapabilityResolver,
   PersistentVaultSecretCustody,
   LocalVaultTransport,
   LocalSigner,
@@ -51,8 +50,7 @@ try {
     proofVerifier: new SignatureAgentProofVerifier(policyAgentIdentities, { maxSkewMs: 60_000 }),
     ownerProofVerifier: new SignatureOwnerProofVerifier(policyOwnerIdentities, { maxSkewMs: 60_000 }),
   });
-  const capabilityResolver = new InMemoryVaultCapabilityResolver();
-  const vault = wrapVaultCoreAsVaultService(authority, { capabilities: capabilityResolver });
+  const vault = wrapVaultCoreAsVaultService(authority);
 
   const ownerKeyPair = generateIdentityKeys();
   await authority.bootstrapOwnerIdentity({
@@ -88,7 +86,7 @@ try {
     agentId: "agent-restricted",
     publicKey: agentKeyPair.publicKey,
   });
-  capabilityResolver.set({
+  const restrictedCapability = {
     vaultId: authority.vaultId,
     capabilityId: "cap-restricted",
     agentId: "agent-restricted",
@@ -99,21 +97,13 @@ try {
     allowedPaths: ["/resource"],
     issuedAt: new Date().toISOString(),
     auditRequired: true,
-  });
+  };
+  await owner.registerCapability({ capability: restrictedCapability });
 
   const agent = createAgentClient(
     { agentId: "agent-restricted" },
     {
-      vaultId: authority.vaultId,
-      capabilityId: "cap-restricted",
-      agentId: "agent-restricted",
-      secretIds: [restrictedRecord.secretId.value],
-      operation: "dispatch_http",
-      allowedTargets: ["https://allowed.example.com/resource"],
-      allowedMethods: ["POST"],
-      allowedPaths: ["/resource"],
-      issuedAt: new Date().toISOString(),
-      auditRequired: true,
+      ...restrictedCapability,
     },
     new LocalSigner(agentKeyPair),
     new LocalVaultTransport(vault, "cap-restricted"),
@@ -144,7 +134,7 @@ try {
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
 
-  capabilityResolver.set({
+  const rateLimitedCapability = {
     vaultId: authority.vaultId,
     capabilityId: "cap-limited",
     agentId: "agent-restricted",
@@ -159,24 +149,12 @@ try {
       windowMs: 60_000,
     },
     auditRequired: true,
-  });
+  };
+  await owner.registerCapability({ capability: rateLimitedCapability });
   const rateLimitedAgent = createAgentClient(
     { agentId: "agent-restricted" },
     {
-      vaultId: authority.vaultId,
-      capabilityId: "cap-limited",
-      agentId: "agent-restricted",
-      secretIds: [restrictedRecord.secretId.value],
-      operation: "dispatch_http",
-      allowedTargets: ["https://allowed.example.com/resource"],
-      allowedMethods: ["POST"],
-      allowedPaths: ["/resource"],
-      issuedAt: new Date().toISOString(),
-      rateLimit: {
-        maxRequests: 1,
-        windowMs: 60_000,
-      },
-      auditRequired: true,
+      ...rateLimitedCapability,
     },
     new LocalSigner(agentKeyPair),
     new LocalVaultTransport(vault, "cap-limited"),

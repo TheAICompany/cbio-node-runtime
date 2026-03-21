@@ -1,9 +1,11 @@
 import * as crypto from "node:crypto";
 import { verifySignature } from "../protocol/crypto.js";
 import type {
+  AgentCapability,
   AgentIdentityRecord,
   OwnerAuditRequest,
   OwnerExportSecretRequest,
+  OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerRegisterOwnerIdentityCommand,
@@ -25,6 +27,7 @@ import type {
   AgentIdentityRegistry,
   AgentProofVerifier,
   AuditLog,
+  CapabilityRegistry,
   CustomHttpFlowRegistry,
   CapabilityRevocationRegistry,
   Clock,
@@ -172,6 +175,15 @@ function createOwnerRegisterCustomFlowBinding(command: OwnerRegisterCustomHttpFl
   });
 }
 
+function createOwnerRegisterCapabilityBinding(command: OwnerRegisterCapabilityCommand): string {
+  return JSON.stringify({
+    requestId: command.requestId,
+    requestedAt: command.requestedAt,
+    ownerId: command.owner.id,
+    capability: command.capability,
+  });
+}
+
 export class SystemClock implements Clock {
   nowIso(): string {
     return new Date().toISOString();
@@ -306,6 +318,21 @@ export class InMemoryCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
 
   async get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null> {
     return this._flows.get(`${vaultId.value}:${flowId}`) ?? null;
+  }
+}
+
+export class InMemoryCapabilityRegistry implements CapabilityRegistry {
+  private readonly _capabilities = new Map<string, AgentCapability>();
+
+  async register(capability: AgentCapability): Promise<void> {
+    this._capabilities.set(
+      `${capability.vaultId.value}:${capability.agentId}:${capability.capabilityId}`,
+      capability,
+    );
+  }
+
+  async get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null> {
+    return this._capabilities.get(`${vaultId.value}:${agentId}:${capabilityId}`) ?? null;
   }
 }
 
@@ -604,6 +631,29 @@ export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
     );
   }
 
+  async verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void> {
+    if (command.proof.ownerId !== command.owner.id) {
+      throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
+      throw new VaultCoreError("owner proof binding mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    try {
+      await this.verifyBinding(
+        command.owner.id,
+        command.vaultId,
+        command.requestedAt,
+        command.proof.signature,
+        createOwnerRegisterCapabilityBinding(command),
+      );
+    } catch (error) {
+      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
+        throw new VaultCoreError(error.message, "VAULT_IDENTITY_DENIED");
+      }
+      throw error;
+    }
+  }
+
   async verifyRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void> {
     if (command.proof.ownerId !== command.owner.id) {
       throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
@@ -765,6 +815,7 @@ export function createDefaultVaultCoreDependencies(
   proofVerifier: SignatureAgentProofVerifier;
   ownerProofVerifier: SignatureOwnerProofVerifier;
   customFlows: InMemoryCustomHttpFlowRegistry;
+  capabilities: InMemoryCapabilityRegistry;
   replayGuard: InMemoryReplayGuard;
   clock: SystemClock;
   ids: RandomIdGenerator;
@@ -787,6 +838,7 @@ export function createDefaultVaultCoreDependencies(
     ownerIdentities,
     proofVerifier: new SignatureAgentProofVerifier(agentIdentities, options.proofVerifier),
     ownerProofVerifier: new SignatureOwnerProofVerifier(ownerIdentities, options.proofVerifier),
+    capabilities: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: new InMemoryReplayGuard(options.proofVerifier),
     clock: new SystemClock(),
