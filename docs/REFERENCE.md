@@ -17,8 +17,9 @@ The main constructors are:
 
 - `createVaultCore(...)`
 - `createVaultService(...)`
-- `initializePersistentVault(...)`
-- `recoverPersistentVault(...)`
+- `createIdentity(...)`
+- `createOwnedVault(...)`
+- `recoverVault(...)`
 - `createOwnerClient(...)`
 - `createAgentClient(...)`
 - `LocalVaultTransport`
@@ -29,13 +30,29 @@ Related design note:
 
 Recommended persistent-vault entrypoints:
 
-- `initializePersistentVault(...)`
-- `recoverPersistentVault(...)`
+- `createOwnedVault(...)`
+- `recoverVault(...)`
 
 Lower-level custody helpers:
 
 - `initializeVaultCustody(...)`
 - `recoverVaultWorkingKey(...)`
+
+## Terms
+
+- `identity`
+  An external principal represented by a public/private keypair.
+- `owner`
+  The single admin role that a vault binds to one identity.
+- `agent`
+  A delegated role that a vault binds to an identity registered by the owner.
+
+Role rules:
+
+- outside the vault there are only identities
+- inside a vault, identities are bound to roles such as `owner` or `agent`
+- identities are independent; there is no built-in lineage or inheritance between identities
+- the same identity may be `owner` in one vault and `agent` in another
 
 ## Secret-Flow Model
 
@@ -93,7 +110,7 @@ The runtime treats this first owner as the single vault admin. Additional princi
 
 ## Owner Client
 
-`clients/owner` is the owner-facing caller surface.
+`clients/owner` is the caller surface for the identity currently bound to the vault's single owner role.
 
 Current owner operations:
 
@@ -142,7 +159,7 @@ const exportedSecret = await owner.exportSecret({
 
 ## Agent Client
 
-`clients/agent` creates signed dispatch requests. It never receives plaintext secrets.
+`clients/agent` creates signed dispatch requests for an identity currently bound to an agent role in that vault. It never receives plaintext secrets.
 
 Current dispatch capabilities use `dispatch_http` as the explicit secret-send operation.
 It is intended for standard secret-backed resource access, not for token mint / refresh / exchange / registration-finalize style acquisition flows.
@@ -294,8 +311,9 @@ If the custom flow mode includes secret acquisition, the owner also defines a re
 - persistent replay guard
 - persistent rate-limit state
 - persistent capability revocation state
-
-It still expects caller-provided identity registries unless you supply your own persistent registry adapters.
+- persistent owner identity record
+- persistent agent identity registry
+- persistent capability registry
 
 ## Storage Provider
 

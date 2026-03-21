@@ -19,8 +19,9 @@ npm install @the-ai-company/cbio-node-runtime
 ```ts
 import {
   createVaultService,
-  initializePersistentVault,
-  recoverPersistentVault,
+  createIdentity,
+  createOwnedVault,
+  recoverVault,
   LocalVaultTransport,
   createOwnerClient,
   createAgentClient,
@@ -37,8 +38,8 @@ import {
 
 Ruta principal recomendada para vault persistente:
 
-- inicializar el vault persistente con `initializePersistentVault(...)`
-- recuperar el vault persistente con `recoverPersistentVault(...)` usando la recovery key
+- crear el vault persistente con `createOwnedVault(...)`
+- recuperar el vault persistente con `recoverVault(...)` usando la recovery key
 
 La API antigua centrada en `CbioIdentity` ya no es la superficie principal del producto.
 

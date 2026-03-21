@@ -4,17 +4,21 @@
  */
 
 export { IdentityError, IdentityErrorCode } from "../errors.js";
-export { generateIdentityKeys, derivePublicKey, LocalSigner } from "../protocol/crypto.js";
+export { derivePublicKey, LocalSigner } from "../protocol/crypto.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
 export {
-  initializePersistentVault,
-  recoverPersistentVault,
-  type InitializePersistentVaultOptions,
-  type InitializedPersistentVault,
-  type RecoverPersistentVaultOptions,
-  type RecoveredPersistentVault,
+  createIdentity,
+  type CreatedIdentity,
+} from "./identity.js";
+export {
+  createOwnedVault,
+  recoverVault,
+  type CreateOwnedVaultOptions,
+  type CreatedOwnedVault,
+  type RecoverVaultOptions,
+  type RecoveredVault,
 } from "./bootstrap.js";
 
 export {

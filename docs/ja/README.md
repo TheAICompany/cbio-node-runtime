@@ -19,8 +19,9 @@ npm install @the-ai-company/cbio-node-runtime
 ```ts
 import {
   createVaultService,
-  initializePersistentVault,
-  recoverPersistentVault,
+  createIdentity,
+  createOwnedVault,
+  recoverVault,
   LocalVaultTransport,
   createOwnerClient,
   createAgentClient,
@@ -37,8 +38,8 @@ import {
 
 推奨される persistent-vault の主経路:
 
-- `initializePersistentVault(...)` で persistent vault を初期化する
-- `recoverPersistentVault(...)` で recovery key を使って persistent vault を復旧する
+- `createOwnedVault(...)` で persistent vault を作成する
+- `recoverVault(...)` で recovery key を使って persistent vault を復旧する
 
 旧 `CbioIdentity` 中心 API は、もはや主要な公開面ではありません。
 

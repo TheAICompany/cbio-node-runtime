@@ -5,11 +5,30 @@ Current product architecture is vault-first.
 Related design note:
 
 - [Custody Model](CUSTODY_MODEL.md)
+- [Identity Model](IDENTITY_MODEL.md)
 
 Recommended persistent-vault lifecycle:
 
-- initialize through `initializePersistentVault(...)`
-- recover through `recoverPersistentVault(...)`
+- create through `createOwnedVault(...)`
+- recover through `recoverVault(...)`
+
+## Identity And Roles
+
+The runtime distinguishes external identities from vault-local roles.
+
+- `identity`
+  An external principal represented by a public/private keypair.
+- `owner`
+  The single admin role that a vault binds to one identity.
+- `agent`
+  A delegated role that a vault binds to an identity registered by the owner.
+
+This means:
+
+- outside the vault there are only identities
+- inside a specific vault, identities are bound to roles such as `owner` or `agent`
+- identities are independent; there is no built-in parent/child lineage between identities
+- an identity may be the `owner` of one vault and an `agent` in another vault
 
 ## Public Modules
 

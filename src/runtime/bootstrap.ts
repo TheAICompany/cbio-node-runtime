@@ -16,7 +16,7 @@ import {
 } from "../vault-ingress/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 
-export interface InitializePersistentVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
+export interface CreateOwnedVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
   custody?: InitializeVaultCustodyOptions;
   bootstrapOwner: OwnerIdentityRecord;
   vault?: {
@@ -25,13 +25,13 @@ export interface InitializePersistentVaultOptions extends Omit<CreatePersistentV
   };
 }
 
-export interface InitializedPersistentVault {
+export interface CreatedOwnedVault {
   initializedCustody: InitializedVaultCustody;
   core: VaultCore;
   vault: VaultService;
 }
 
-export interface RecoverPersistentVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
+export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
   vaultRecoveryKey: string;
   custodyStorageKey?: string;
   vault?: {
@@ -40,16 +40,16 @@ export interface RecoverPersistentVaultOptions extends Omit<CreatePersistentVaul
   };
 }
 
-export interface RecoveredPersistentVault {
+export interface RecoveredVault {
   vaultWorkingKey: string;
   core: VaultCore;
   vault: VaultService;
 }
 
-export async function initializePersistentVault(
+export async function createOwnedVault(
   storage: IStorageProvider,
-  options: InitializePersistentVaultOptions,
-): Promise<InitializedPersistentVault> {
+  options: CreateOwnedVaultOptions,
+): Promise<CreatedOwnedVault> {
   const initializedCustody = await initializeVaultCustody(storage, options.custody);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
@@ -64,10 +64,10 @@ export async function initializePersistentVault(
   };
 }
 
-export async function recoverPersistentVault(
+export async function recoverVault(
   storage: IStorageProvider,
-  options: RecoverPersistentVaultOptions,
-): Promise<RecoveredPersistentVault> {
+  options: RecoverVaultOptions,
+): Promise<RecoveredVault> {
   const vaultWorkingKey = await recoverVaultWorkingKey(
     storage,
     options.vaultRecoveryKey,

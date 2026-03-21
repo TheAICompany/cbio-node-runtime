@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import {
   createVaultCore,
   createPersistentVaultCoreDependencies,
-  initializePersistentVault,
-  recoverPersistentVault,
+  createOwnedVault,
+  recoverVault,
   recoverVaultWorkingKey,
   wrapVaultCoreAsVaultService,
   createStandardAcquireBoundary,
@@ -36,7 +36,7 @@ import {
   VaultCoreError,
   IdentityError,
   IdentityErrorCode,
-  generateIdentityKeys,
+  createIdentity,
 } from "../../dist/runtime/index.js";
 
 assert.equal(typeof createVaultCore, "function");
@@ -50,10 +50,11 @@ assert.equal(typeof VaultCoreError, "function");
 assert.equal(typeof IdentityError, "function");
 assert.equal(typeof IdentityErrorCode, "object");
 
-const agentKeyPair = generateIdentityKeys();
-const ownerKeyPair = generateIdentityKeys();
-assert.equal(typeof agentKeyPair.privateKey, "string");
-assert.equal(typeof agentKeyPair.publicKey, "string");
+const agentIdentity = createIdentity();
+const ownerIdentity = createIdentity();
+assert.equal(typeof agentIdentity.privateKey, "string");
+assert.equal(typeof agentIdentity.publicKey, "string");
+assert.equal(typeof agentIdentity.identityId, "string");
 
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {
@@ -93,13 +94,13 @@ const vault = wrapVaultCoreAsVaultService(authority, {
 await authority.bootstrapOwnerIdentity({
   vaultId: authority.vaultId,
   ownerId: "owner-1",
-  publicKey: ownerKeyPair.publicKey,
+  publicKey: ownerIdentity.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-1" }, vault, new LocalSigner(ownerKeyPair), new SystemClock());
+const owner = createOwnerClient({ ownerId: "owner-1" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
 await owner.registerAgentIdentity({
   agentId: "agent-1",
-  publicKey: agentKeyPair.publicKey,
+  publicKey: agentIdentity.publicKey,
 });
 const ownedRecord = await owner.writeSecret({
   alias: "api-token",
@@ -142,7 +143,7 @@ const agent = createAgentClient(
   {
     ...dispatchCapability,
   },
-  new LocalSigner(agentKeyPair),
+  new LocalSigner(agentIdentity),
   new LocalVaultTransport(vault, "cap-1"),
   new SystemClock(),
 );
@@ -185,7 +186,7 @@ const customAgent = createAgentClient(
   {
     ...customCapability,
   },
-  new LocalSigner(agentKeyPair),
+  new LocalSigner(agentIdentity),
   new LocalVaultTransport(vault, "cap-custom"),
   new SystemClock(),
 );
@@ -231,7 +232,7 @@ const customAcquireAgent = createAgentClient(
   {
     ...customAcquireCapability,
   },
-  new LocalSigner(agentKeyPair),
+  new LocalSigner(agentIdentity),
   new LocalVaultTransport(vault, "cap-custom-acquire"),
   new SystemClock(),
 );
@@ -247,7 +248,7 @@ assert.equal(customAcquireResult.responseBody, JSON.stringify({ custom_token: nu
 const tempDir = await mkdtemp(join(tmpdir(), "cbio-authority-"));
 try {
   const storage = new FsStorageProvider(tempDir);
-  const initializedPersistentVault = await initializePersistentVault(storage, {
+  const createdVault = await createOwnedVault(storage, {
     vaultId: "vault-runtime-persistent",
     policy: {
       trustedIssuerIds: ["issuer-1"],
@@ -255,7 +256,7 @@ try {
     bootstrapOwner: {
       vaultId: { value: "vault-runtime-persistent" },
       ownerId: "owner-1",
-      publicKey: ownerKeyPair.publicKey,
+      publicKey: ownerIdentity.publicKey,
     },
     vault: {
       fetchImpl: async () => new Response(JSON.stringify({
@@ -266,8 +267,8 @@ try {
       }), { status: 200 }),
     },
   });
-  const vaultWorkingKey = initializedPersistentVault.initializedCustody.vaultWorkingKey;
-  const recoveredVaultWorkingKey = await recoverVaultWorkingKey(storage, initializedPersistentVault.initializedCustody.vaultRecoveryKey);
+  const vaultWorkingKey = createdVault.initializedCustody.vaultWorkingKey;
+  const recoveredVaultWorkingKey = await recoverVaultWorkingKey(storage, createdVault.initializedCustody.vaultRecoveryKey);
   assert.equal(recoveredVaultWorkingKey, vaultWorkingKey);
   const persistentAgentIdentities = new InMemoryAgentIdentityRegistry();
   const persistentOwnerIdentities = new InMemoryOwnerIdentityRegistry();
@@ -288,7 +289,7 @@ try {
   await persistentAuthority.bootstrapOwnerIdentity({
     vaultId: persistentAuthority.vaultId,
     ownerId: "owner-1",
-    publicKey: ownerKeyPair.publicKey,
+    publicKey: ownerIdentity.publicKey,
   });
   const persistentVault = wrapVaultCoreAsVaultService(persistentAuthority, {
     fetchImpl: async () => new Response(JSON.stringify({
@@ -310,18 +311,18 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  const ownerForAudit = createOwnerClient({ ownerId: "owner-1" }, persistentVault, new LocalSigner(ownerKeyPair), new SystemClock());
+  const ownerForAudit = createOwnerClient({ ownerId: "owner-1" }, persistentVault, new LocalSigner(ownerIdentity), new SystemClock());
   const audit = await ownerForAudit.getAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
   const persistentExport = await ownerForAudit.exportSecret({ alias: "issuer-token" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
-  const recoveredPersistentVault = await recoverPersistentVault(storage, {
+  const recoveredVaultInstance = await recoverVault(storage, {
     vaultId: "vault-runtime-persistent",
-    vaultRecoveryKey: initializedPersistentVault.initializedCustody.vaultRecoveryKey,
+    vaultRecoveryKey: createdVault.initializedCustody.vaultRecoveryKey,
   });
-  assert.equal(recoveredPersistentVault.vaultWorkingKey, vaultWorkingKey);
-  const acquiredAgentKeyPair = generateIdentityKeys();
-  await ownerForAudit.registerAgentIdentity({ agentId: "agent-acquired", publicKey: acquiredAgentKeyPair.publicKey });
+  assert.equal(recoveredVaultInstance.vaultWorkingKey, vaultWorkingKey);
+  const acquiredAgentIdentity = createIdentity();
+  await ownerForAudit.registerAgentIdentity({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });
   const acquiredCapability = {
     vaultId: persistentAuthority.vaultId,
     capabilityId: "cap-acquired",
@@ -340,7 +341,7 @@ try {
     {
       ...acquiredCapability,
     },
-    new LocalSigner(acquiredAgentKeyPair),
+    new LocalSigner(acquiredAgentIdentity),
     new LocalVaultTransport(acquiredVault, "cap-acquired"),
     new SystemClock(),
   );
@@ -379,7 +380,7 @@ try {
   await bootstrapRollbackAuthority.bootstrapOwnerIdentity({
     vaultId: bootstrapRollbackAuthority.vaultId,
     ownerId: "owner-rollback",
-    publicKey: ownerKeyPair.publicKey,
+    publicKey: ownerIdentity.publicKey,
   });
   const rollbackAuthority = createVaultCore({
     vaultId: { value: "vault-rollback" },
@@ -405,7 +406,7 @@ try {
     ids: new RandomIdGenerator(),
   });
   const rollbackVault = wrapVaultCoreAsVaultService(rollbackAuthority);
-  const rollbackOwner = createOwnerClient({ ownerId: "owner-rollback" }, rollbackVault, new LocalSigner(ownerKeyPair), new SystemClock());
+  const rollbackOwner = createOwnerClient({ ownerId: "owner-rollback" }, rollbackVault, new LocalSigner(ownerIdentity), new SystemClock());
   const custodyDir = join(tempDir, "vault/custody");
   const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
   await assert.rejects(

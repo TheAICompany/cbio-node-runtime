@@ -25,7 +25,7 @@ import {
   SignatureAgentProofVerifier,
   SignatureOwnerProofVerifier,
   SystemClock,
-  generateIdentityKeys,
+  createIdentity,
 } from "../../dist/runtime/index.js";
 
 const tempDir = await mkdtemp(join(tmpdir(), "cbio-policy-"));
@@ -52,13 +52,13 @@ try {
   });
   const vault = wrapVaultCoreAsVaultService(authority);
 
-  const ownerKeyPair = generateIdentityKeys();
+  const ownerIdentity = createIdentity();
   await authority.bootstrapOwnerIdentity({
     vaultId: authority.vaultId,
     ownerId: "owner-2",
-    publicKey: ownerKeyPair.publicKey,
+    publicKey: ownerIdentity.publicKey,
   });
-  const owner = createOwnerClient({ ownerId: "owner-2" }, vault, new LocalSigner(ownerKeyPair), new SystemClock());
+  const owner = createOwnerClient({ ownerId: "owner-2" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
   await assert.rejects(
     () => owner.writeSecret({
       alias: "unscoped-token",
@@ -81,10 +81,10 @@ try {
     ],
   });
 
-  const agentKeyPair = generateIdentityKeys();
+  const agentIdentity = createIdentity();
   await owner.registerAgentIdentity({
     agentId: "agent-restricted",
-    publicKey: agentKeyPair.publicKey,
+    publicKey: agentIdentity.publicKey,
   });
   const restrictedCapability = {
     vaultId: authority.vaultId,
@@ -105,7 +105,7 @@ try {
     {
       ...restrictedCapability,
     },
-    new LocalSigner(agentKeyPair),
+    new LocalSigner(agentIdentity),
     new LocalVaultTransport(vault, "cap-restricted"),
     new SystemClock(),
   );
@@ -156,7 +156,7 @@ try {
     {
       ...rateLimitedCapability,
     },
-    new LocalSigner(agentKeyPair),
+    new LocalSigner(agentIdentity),
     new LocalVaultTransport(vault, "cap-limited"),
     new SystemClock(),
   );
@@ -220,16 +220,16 @@ try {
   await reloadedAuthority.bootstrapOwnerIdentity({
     vaultId: reloadedAuthority.vaultId,
     ownerId: "owner-2",
-    publicKey: ownerKeyPair.publicKey,
+    publicKey: ownerIdentity.publicKey,
   });
   const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
-  const reloadedOwner = createOwnerClient({ ownerId: "owner-2" }, reloadedVault, new LocalSigner(ownerKeyPair), new SystemClock());
+  const reloadedOwner = createOwnerClient({ ownerId: "owner-2" }, reloadedVault, new LocalSigner(ownerIdentity), new SystemClock());
   await reloadedOwner.registerAgentIdentity({
     agentId: "agent-restricted",
-    publicKey: agentKeyPair.publicKey,
+    publicKey: agentIdentity.publicKey,
   });
 
-  const verifierSigner = new LocalSigner(agentKeyPair);
+  const verifierSigner = new LocalSigner(agentIdentity);
   const requestedAt = new Date().toISOString();
   const requestId = "manual-check";
   const reloadedCapabilityId = "cap-reloaded";
@@ -341,20 +341,20 @@ try {
   await restartedAuthority.bootstrapOwnerIdentity({
     vaultId: restartedAuthority.vaultId,
     ownerId: "owner-2",
-    publicKey: ownerKeyPair.publicKey,
+    publicKey: ownerIdentity.publicKey,
   });
   const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
-  const restartedOwner = createOwnerClient({ ownerId: "owner-2" }, restartedVault, new LocalSigner(ownerKeyPair), new SystemClock());
+  const restartedOwner = createOwnerClient({ ownerId: "owner-2" }, restartedVault, new LocalSigner(ownerIdentity), new SystemClock());
   await restartedOwner.registerAgentIdentity({
     agentId: "agent-restricted",
-    publicKey: agentKeyPair.publicKey,
+    publicKey: agentIdentity.publicKey,
   });
   await assert.rejects(
     () => restartedAuthority.dispatchSecret(persistedReplayRequest),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /replay/.test(error.message),
   );
 
-  const restartedRateLimitSigner = new LocalSigner(agentKeyPair);
+  const restartedRateLimitSigner = new LocalSigner(agentIdentity);
   const restartedRateLimitRequestedAt = new Date().toISOString();
   const restartedRateLimitRequestId = "restarted-rate-limit";
   const restartedRateLimitCapabilityId = "cap-limited";

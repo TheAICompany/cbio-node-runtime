@@ -17,12 +17,12 @@ import {
   SignatureOwnerProofVerifier,
   SystemClock,
   LocalSigner,
-  generateIdentityKeys,
+  createIdentity,
 } from "../../dist/runtime/index.js";
 
-const agentKeyPair = generateIdentityKeys();
-const signer = new LocalSigner(agentKeyPair);
-const ownerKeyPair = generateIdentityKeys();
+const agentIdentity = createIdentity();
+const signer = new LocalSigner(agentIdentity);
+const ownerIdentity = createIdentity();
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
 const replayOwnerIdentities = new InMemoryOwnerIdentityRegistry();
 const authority = createVaultCore({
@@ -45,13 +45,13 @@ const vault = wrapVaultCoreAsVaultService(authority);
 await authority.bootstrapOwnerIdentity({
   vaultId: authority.vaultId,
   ownerId: "owner-replay",
-  publicKey: ownerKeyPair.publicKey,
+  publicKey: ownerIdentity.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-replay" }, vault, new LocalSigner(ownerKeyPair), new SystemClock());
+const owner = createOwnerClient({ ownerId: "owner-replay" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
 await owner.registerAgentIdentity({
   agentId: "agent-replay",
-  publicKey: agentKeyPair.publicKey,
+  publicKey: agentIdentity.publicKey,
 });
 
 const replayRecord = await owner.writeSecret({

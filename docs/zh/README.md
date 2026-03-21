@@ -19,8 +19,9 @@ npm install @the-ai-company/cbio-node-runtime
 ```ts
 import {
   createVaultService,
-  initializePersistentVault,
-  recoverPersistentVault,
+  createIdentity,
+  createOwnedVault,
+  recoverVault,
   LocalVaultTransport,
   createOwnerClient,
   createAgentClient,
@@ -37,8 +38,8 @@ import {
 
 推荐的持久化主路径：
 
-- 通过 `initializePersistentVault(...)` 初始化持久化 vault
-- 通过 `recoverPersistentVault(...)` 用 recovery key 恢复持久化 vault
+- 通过 `createOwnedVault(...)` 创建持久化 vault
+- 通过 `recoverVault(...)` 用 recovery key 恢复持久化 vault
 
 ## 构建
 

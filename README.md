@@ -8,6 +8,7 @@ Node.js vault runtime with a hard-cut architecture: vault core first, explicit c
 
 - [English](README.md)
 - [Custody Model](docs/CUSTODY_MODEL.md)
+- [Identity Model](docs/IDENTITY_MODEL.md)
 - [中文](docs/zh/README.md)
 - [日本語](docs/ja/README.md)
 - [한국어](docs/ko/README.md)
@@ -40,8 +41,9 @@ npm install @the-ai-company/cbio-node-runtime
 import {
   createVaultService,
   createDefaultVaultCoreDependencies,
-  initializePersistentVault,
-  recoverPersistentVault,
+  createIdentity,
+  createOwnedVault,
+  recoverVault,
   createOwnerHttpFlowBoundary,
   createStandardAcquireBoundary,
   createStandardDispatchBoundary,
@@ -53,6 +55,21 @@ import {
 ```
 
 ## Architecture
+
+Core terms:
+
+- `identity`
+  An external principal represented by a public/private keypair.
+- `owner`
+  The single admin role that a vault binds to one identity.
+- `agent`
+  A delegated role that a vault binds to an identity registered by the owner.
+
+Important role rule:
+
+- outside the vault there are only identities
+- inside a specific vault, those identities may be bound to roles such as `owner` or `agent`
+- identities are independent; they do not imply parent/child lineage or inheritance by default
 
 The public runtime surface follows four hard rules:
 
@@ -116,10 +133,12 @@ This package now exposes the production local vault runtime surface as the prima
 ## Example Shape
 
 ```ts
+const ownerIdentity = createIdentity();
+const agentIdentity = createIdentity();
 const vault = createVaultService(createDefaultVaultCoreDependencies());
-const owner = createOwnerClient(ownerIdentity, vault, ownerSigner, clock);
+const owner = createOwnerClient({ ownerId: ownerIdentity.identityId }, vault, new LocalSigner(ownerIdentity), clock);
 const transport = new LocalVaultTransport(vault, capability.capabilityId);
-const agent = createAgentClient(agentIdentity, capability, signer, transport, clock);
+const agent = createAgentClient({ agentId: agentIdentity.identityId }, capability, new LocalSigner(agentIdentity), transport, clock);
 ```
 
 Capability example:
@@ -183,22 +202,23 @@ console.log(exported.plaintext);
 Persistent custody bootstrap example:
 
 ```ts
+const ownerIdentity = createIdentity();
 const storage = new FsStorageProvider('/tmp/cbio-vault');
-const initializedVault = await initializePersistentVault(storage, {
+const createdVault = await createOwnedVault(storage, {
   vaultId: 'vault-persistent',
   bootstrapOwner: {
     vaultId: { value: 'vault-persistent' },
-    ownerId: 'owner-1',
-    publicKey: ownerPublicKey,
+    ownerId: ownerIdentity.identityId,
+    publicKey: ownerIdentity.publicKey,
   },
 });
 
 // Show once to the owner and let them store it offline.
-console.log(initializedVault.initializedCustody.vaultRecoveryKey);
+console.log(createdVault.initializedCustody.vaultRecoveryKey);
 
-const recoveredVault = await recoverPersistentVault(storage, {
+const recoveredVault = await recoverVault(storage, {
   vaultId: 'vault-persistent',
-  vaultRecoveryKey: initializedVault.initializedCustody.vaultRecoveryKey,
+  vaultRecoveryKey: createdVault.initializedCustody.vaultRecoveryKey,
 });
 ```
 

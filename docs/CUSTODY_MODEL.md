@@ -144,8 +144,8 @@ Future hardening such as MFA/TOTP may be added on top of this model, but it does
 
 The runtime now includes:
 
-1. formal persistent-vault initialization through `initializePersistentVault(...)`
-2. formal recovery-key based re-entry through `recoverPersistentVault(...)`
+1. formal owned-vault creation through `createOwnedVault(...)`
+2. formal recovery-key based re-entry through `recoverVault(...)`
 3. explicit `vaultWorkingKey` terminology in the persistent dependency surface
 4. continued support for explicit owner export through `exportSecret(...)`
 

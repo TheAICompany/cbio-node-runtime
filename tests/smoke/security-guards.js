@@ -6,12 +6,12 @@ import {
   wrapVaultCoreAsVaultService,
   VaultCoreError,
   LocalSigner,
-  generateIdentityKeys,
+  createIdentity,
 } from "../../dist/runtime/index.js";
 
-const agentKeyPair = generateIdentityKeys();
-const signer = new LocalSigner(agentKeyPair);
-const ownerKeyPair = generateIdentityKeys();
+const agentIdentity = createIdentity();
+const signer = new LocalSigner(agentIdentity);
+const ownerIdentity = createIdentity();
 
 const authority = createVaultCore(createDefaultVaultCoreDependencies({
   vaultId: "vault-security",
@@ -21,15 +21,15 @@ const vault = wrapVaultCoreAsVaultService(authority);
 await authority.bootstrapOwnerIdentity({
   vaultId: authority.vaultId,
   ownerId: "owner-security",
-  publicKey: ownerKeyPair.publicKey,
+  publicKey: ownerIdentity.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-security" }, vault, new LocalSigner(ownerKeyPair), {
+const owner = createOwnerClient({ ownerId: "owner-security" }, vault, new LocalSigner(ownerIdentity), {
   nowIso: () => new Date().toISOString(),
 });
 await owner.registerAgentIdentity({
   agentId: "agent-security",
-  publicKey: agentKeyPair.publicKey,
+  publicKey: agentIdentity.publicKey,
 });
 
 const guardedRecord = await owner.writeSecret({
@@ -156,7 +156,7 @@ await assert.rejects(
     agentIdentity: {
       vaultId: authority.vaultId,
       agentId: "agent-forged",
-      publicKey: agentKeyPair.publicKey,
+      publicKey: agentIdentity.publicKey,
     },
     requestedAt: unauthorizedIdentityRequestedAt,
     proof: {
