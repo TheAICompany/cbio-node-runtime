@@ -22,6 +22,11 @@ export interface OwnerAuditQueryInput {
   since?: string;
 }
 
+export interface OwnerExportSecretInput {
+  alias: string;
+  requestedAt?: string;
+}
+
 export interface OwnerRegisterAgentIdentityInput {
   agentId: string;
   publicKey: string;

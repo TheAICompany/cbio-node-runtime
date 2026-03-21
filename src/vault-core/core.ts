@@ -5,9 +5,11 @@ import type {
   DispatchAuthorization,
   DispatchRequest,
   DispatchResult,
+  OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerRegisterOwnerIdentityCommand,
+  OwnerSecretExport,
   SecretRecord,
   VaultPrincipal,
   VaultWriteSecretCommand,
@@ -486,6 +488,58 @@ export class DefaultVaultCore implements VaultCore {
       toAuditEntry(this._deps, actor, "read_audit", "allowed", "audit queried"),
     );
     return entries;
+  }
+
+  async exportSecret(
+    actor: VaultPrincipal & { kind: "owner" },
+    alias: string,
+    request?: Omit<OwnerExportSecretRequest, "actor" | "alias" | "vaultId">,
+  ): Promise<OwnerSecretExport> {
+    if (!request) {
+      throw new VaultCoreError("owner export proof required", "VAULT_AUDIT_DENIED");
+    }
+    try {
+      await this._deps.ownerProofVerifier.verifyExport({
+        vaultId: this._deps.vaultId,
+        actor,
+        alias,
+        requestId: request.requestId,
+        requestedAt: request.requestedAt,
+        proof: request.proof,
+      });
+      const record = await this._deps.secrets.getByAlias({ value: alias });
+      if (!record) {
+        throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
+      }
+      const plaintext = await this._deps.custody.load(record.secretId);
+      if (plaintext === null) {
+        throw new VaultCoreError("secret material not found", "VAULT_SECRET_NOT_FOUND");
+      }
+      const exportedAt = this._deps.clock.nowIso();
+      await this.appendAudit(
+        toAuditEntry(this._deps, actor, "export_secret", "succeeded", "secret exported", {
+          requestId: request.requestId,
+          secretAlias: record.alias.value,
+          secretId: record.secretId.value,
+        }),
+      );
+      return {
+        vaultId: this._deps.vaultId,
+        secretId: record.secretId,
+        alias: record.alias,
+        plaintext,
+        exportedAt,
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      await this.appendAudit(
+        toAuditEntry(this._deps, actor, "export_secret", "denied", detail, {
+          requestId: request.requestId,
+          secretAlias: alias,
+        }),
+      );
+      throw error;
+    }
   }
 }
 

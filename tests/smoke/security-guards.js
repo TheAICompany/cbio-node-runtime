@@ -9,9 +9,9 @@ import {
   generateIdentityKeys,
 } from "../../dist/runtime/index.js";
 
-const keys = generateIdentityKeys();
-const signer = new LocalSigner(keys);
-const ownerKeys = generateIdentityKeys();
+const agentKeyPair = generateIdentityKeys();
+const signer = new LocalSigner(agentKeyPair);
+const ownerKeyPair = generateIdentityKeys();
 
 const authority = createVaultCore(createDefaultVaultCoreDependencies({
   vaultId: "vault-security",
@@ -21,15 +21,15 @@ const vault = wrapVaultCoreAsVaultService(authority);
 await authority.bootstrapOwnerIdentity({
   vaultId: authority.vaultId,
   ownerId: "owner-security",
-  publicKey: ownerKeys.publicKey,
+  publicKey: ownerKeyPair.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-security" }, vault, new LocalSigner(ownerKeys), {
+const owner = createOwnerClient({ ownerId: "owner-security" }, vault, new LocalSigner(ownerKeyPair), {
   nowIso: () => new Date().toISOString(),
 });
 await owner.registerAgentIdentity({
   agentId: "agent-security",
-  publicKey: keys.publicKey,
+  publicKey: agentKeyPair.publicKey,
 });
 
 const guardedRecord = await owner.writeSecret({
@@ -156,7 +156,7 @@ await assert.rejects(
     agentIdentity: {
       vaultId: authority.vaultId,
       agentId: "agent-forged",
-      publicKey: keys.publicKey,
+      publicKey: agentKeyPair.publicKey,
     },
     requestedAt: unauthorizedIdentityRequestedAt,
     proof: {
@@ -177,6 +177,18 @@ await assert.rejects(
   () => authority.getAudit(
     { kind: "trusted_executor", id: "not-an-owner" },
     { secretAlias: "guarded-token" },
+  ),
+  (error) => {
+    assert.equal(error instanceof VaultCoreError, true);
+    assert.equal(error.code, "VAULT_AUDIT_DENIED");
+    return true;
+  },
+);
+
+await assert.rejects(
+  () => authority.exportSecret(
+    { kind: "owner", id: "owner-security" },
+    "guarded-token",
   ),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);

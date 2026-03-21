@@ -3,6 +3,7 @@ import { verifySignature } from "../protocol/crypto.js";
 import type {
   AgentIdentityRecord,
   OwnerAuditRequest,
+  OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerRegisterOwnerIdentityCommand,
@@ -132,6 +133,15 @@ function createOwnerAuditBinding(request: OwnerAuditRequest): string {
     requestedAt: request.requestedAt,
     ownerId: request.actor.id,
     query: request.query,
+  });
+}
+
+function createOwnerExportBinding(request: OwnerExportSecretRequest): string {
+  return JSON.stringify({
+    requestId: request.requestId,
+    requestedAt: request.requestedAt,
+    ownerId: request.actor.id,
+    alias: request.alias,
   });
 }
 
@@ -575,6 +585,22 @@ export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
       request.requestedAt,
       request.proof.signature,
       createOwnerAuditBinding(request),
+    );
+  }
+
+  async verifyExport(request: OwnerExportSecretRequest): Promise<void> {
+    if (request.proof.ownerId !== request.actor.id) {
+      throw new VaultCoreError("owner proof identity mismatch", "VAULT_AUDIT_DENIED");
+    }
+    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
+      throw new VaultCoreError("owner proof binding mismatch", "VAULT_AUDIT_DENIED");
+    }
+    await this.verifyBinding(
+      request.actor.id,
+      request.vaultId,
+      request.requestedAt,
+      request.proof.signature,
+      createOwnerExportBinding(request),
     );
   }
 

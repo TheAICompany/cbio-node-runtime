@@ -221,6 +221,7 @@ export interface AuditEntry {
     | "register_owner_identity"
     | "register_custom_flow"
     | "write_secret"
+    | "export_secret"
     | "reassign_alias"
     | "authorize_dispatch"
     | "dispatch_secret"
@@ -254,4 +255,21 @@ export interface OwnerAuditRequest {
   requestId: string;
   requestedAt: string;
   proof: OwnerProof;
+}
+
+export interface OwnerExportSecretRequest {
+  vaultId: VaultId;
+  actor: VaultPrincipal & { kind: "owner" };
+  alias: string;
+  requestId: string;
+  requestedAt: string;
+  proof: OwnerProof;
+}
+
+export interface OwnerSecretExport {
+  vaultId: VaultId;
+  secretId: SecretId;
+  alias: SecretAlias;
+  plaintext: string;
+  exportedAt: string;
 }

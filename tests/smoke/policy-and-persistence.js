@@ -32,12 +32,12 @@ const tempDir = await mkdtemp(join(tmpdir(), "cbio-policy-"));
 
 try {
   const storage = new FsStorageProvider(tempDir);
-  const custodyKey = Buffer.alloc(32, 9).toString("base64url");
+  const vaultCustodyKey = Buffer.alloc(32, 9).toString("base64url");
   const policyAgentIdentities = new InMemoryAgentIdentityRegistry();
   const policyOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const persistentDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: "vault-policy",
-    custodyKey,
+    custodyKey: vaultCustodyKey,
   });
   const revocations = persistentDeps.capabilityRevocations;
   const authority = createVaultCore({
@@ -51,13 +51,13 @@ try {
   const capabilityResolver = new InMemoryVaultCapabilityResolver();
   const vault = wrapVaultCoreAsVaultService(authority, { capabilities: capabilityResolver });
 
-  const ownerKeys = generateIdentityKeys();
+  const ownerKeyPair = generateIdentityKeys();
   await authority.bootstrapOwnerIdentity({
     vaultId: authority.vaultId,
     ownerId: "owner-2",
-    publicKey: ownerKeys.publicKey,
+    publicKey: ownerKeyPair.publicKey,
   });
-  const owner = createOwnerClient({ ownerId: "owner-2" }, vault, new LocalSigner(ownerKeys), new SystemClock());
+  const owner = createOwnerClient({ ownerId: "owner-2" }, vault, new LocalSigner(ownerKeyPair), new SystemClock());
   await assert.rejects(
     () => owner.writeSecret({
       alias: "unscoped-token",
@@ -80,10 +80,10 @@ try {
     ],
   });
 
-  const keys = generateIdentityKeys();
+  const agentKeyPair = generateIdentityKeys();
   await owner.registerAgentIdentity({
     agentId: "agent-restricted",
-    publicKey: keys.publicKey,
+    publicKey: agentKeyPair.publicKey,
   });
   capabilityResolver.set({
     vaultId: authority.vaultId,
@@ -112,7 +112,7 @@ try {
       issuedAt: new Date().toISOString(),
       auditRequired: true,
     },
-    new LocalSigner(keys),
+    new LocalSigner(agentKeyPair),
     new LocalVaultTransport(vault, "cap-restricted"),
     new SystemClock(),
   );
@@ -129,6 +129,8 @@ try {
   const audit = await owner.getAudit({ secretAlias: "restricted-token" });
   assert.ok(audit.length >= 1);
   assert.ok(audit.some((entry) => entry.outcome === "denied" && /target denied|record target denied/.test(entry.detail)));
+  const exportedRestrictedSecret = await owner.exportSecret({ alias: "restricted-token" });
+  assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
   await assert.rejects(
     () => agent.dispatch({
@@ -173,7 +175,7 @@ try {
       },
       auditRequired: true,
     },
-    new LocalSigner(keys),
+    new LocalSigner(agentKeyPair),
     new LocalVaultTransport(vault, "cap-limited"),
     new SystemClock(),
   );
@@ -223,7 +225,7 @@ try {
   const reloadedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const reloadedDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: authority.vaultId.value,
-    custodyKey,
+    custodyKey: vaultCustodyKey,
     proofVerifier: { maxSkewMs: 60_000 },
   });
   const reloadedAuthority = createVaultCore({
@@ -237,16 +239,16 @@ try {
   await reloadedAuthority.bootstrapOwnerIdentity({
     vaultId: reloadedAuthority.vaultId,
     ownerId: "owner-2",
-    publicKey: ownerKeys.publicKey,
+    publicKey: ownerKeyPair.publicKey,
   });
   const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
-  const reloadedOwner = createOwnerClient({ ownerId: "owner-2" }, reloadedVault, new LocalSigner(ownerKeys), new SystemClock());
+  const reloadedOwner = createOwnerClient({ ownerId: "owner-2" }, reloadedVault, new LocalSigner(ownerKeyPair), new SystemClock());
   await reloadedOwner.registerAgentIdentity({
     agentId: "agent-restricted",
-    publicKey: keys.publicKey,
+    publicKey: agentKeyPair.publicKey,
   });
 
-  const verifierSigner = new LocalSigner(keys);
+  const verifierSigner = new LocalSigner(agentKeyPair);
   const requestedAt = new Date().toISOString();
   const requestId = "manual-check";
   const reloadedCapabilityId = "cap-reloaded";
@@ -344,7 +346,7 @@ try {
   const restartedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const restartedDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: authority.vaultId.value,
-    custodyKey,
+    custodyKey: vaultCustodyKey,
     proofVerifier: { maxSkewMs: 60_000 },
   });
   const restartedAuthority = createVaultCore({
@@ -358,20 +360,20 @@ try {
   await restartedAuthority.bootstrapOwnerIdentity({
     vaultId: restartedAuthority.vaultId,
     ownerId: "owner-2",
-    publicKey: ownerKeys.publicKey,
+    publicKey: ownerKeyPair.publicKey,
   });
   const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
-  const restartedOwner = createOwnerClient({ ownerId: "owner-2" }, restartedVault, new LocalSigner(ownerKeys), new SystemClock());
+  const restartedOwner = createOwnerClient({ ownerId: "owner-2" }, restartedVault, new LocalSigner(ownerKeyPair), new SystemClock());
   await restartedOwner.registerAgentIdentity({
     agentId: "agent-restricted",
-    publicKey: keys.publicKey,
+    publicKey: agentKeyPair.publicKey,
   });
   await assert.rejects(
     () => restartedAuthority.dispatchSecret(persistedReplayRequest),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /replay/.test(error.message),
   );
 
-  const restartedRateLimitSigner = new LocalSigner(keys);
+  const restartedRateLimitSigner = new LocalSigner(agentKeyPair);
   const restartedRateLimitRequestedAt = new Date().toISOString();
   const restartedRateLimitRequestId = "restarted-rate-limit";
   const restartedRateLimitCapabilityId = "cap-limited";
@@ -423,6 +425,7 @@ try {
 
   const reloadedAudit = await owner.getAudit({ secretAlias: "restricted-token" });
   assert.ok(reloadedAudit.some((entry) => entry.action === "reassign_alias" && entry.outcome === "denied"));
+  assert.ok(reloadedAudit.some((entry) => entry.action === "export_secret" && entry.outcome === "succeeded"));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /capability revoked/.test(entry.detail)));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /path denied|capability rate limit exceeded/.test(entry.detail)));
 

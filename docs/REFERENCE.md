@@ -56,6 +56,7 @@ Important methods:
 - `registerAgentIdentity(...)`
 - `registerOwnerIdentity(...)`
 - `writeSecret(...)`
+- `exportSecret(...)`
 - `acquireSecret(...)`
 - `dispatch(...)`
 - `handleAgentDispatch(...)`
@@ -82,6 +83,7 @@ After that, additional owner and agent identities should be registered through o
 Current owner operations:
 
 - `writeSecret(...)`
+- `exportSecret(...)`
 - `getAudit(...)`
 - `registerAgentIdentity(...)`
 - `registerOwnerIdentity(...)`
@@ -116,6 +118,10 @@ await owner.writeSecret({
       methods: ['POST'],
     },
   ],
+});
+
+const exportedSecret = await owner.exportSecret({
+  alias: 'api-token',
 });
 ```
 

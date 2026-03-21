@@ -4,9 +4,11 @@ import type {
   AgentIdentityRecord,
   OwnerIdentityRecord,
   OwnerAuditRequest,
+  OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerRegisterOwnerIdentityCommand,
+  OwnerSecretExport,
   CustomHttpFlowDefinition,
   DispatchInstruction,
   DispatchRequest,
@@ -87,6 +89,7 @@ export interface CapabilityRevocationRegistry {
 export interface OwnerProofVerifier {
   verifyWrite(command: Extract<VaultWriteSecretCommand, { kind: "owner.write_secret" }>): Promise<void>;
   verifyAudit(request: OwnerAuditRequest): Promise<void>;
+  verifyExport(request: OwnerExportSecretRequest): Promise<void>;
   verifyRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
   verifyRegisterOwnerIdentity(command: OwnerRegisterOwnerIdentityCommand): Promise<void>;
   verifyRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
@@ -129,4 +132,9 @@ export interface VaultCore {
     query: AuditQuery,
     request?: Omit<OwnerAuditRequest, "actor" | "query" | "vaultId">,
   ): Promise<readonly AuditEntry[]>;
+  exportSecret(
+    actor: VaultPrincipal & { kind: "owner" },
+    alias: string,
+    request?: Omit<OwnerExportSecretRequest, "actor" | "alias" | "vaultId">,
+  ): Promise<OwnerSecretExport>;
 }

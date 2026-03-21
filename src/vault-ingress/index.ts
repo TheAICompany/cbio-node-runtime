@@ -9,11 +9,13 @@ import {
   type DispatchResult,
   type Clock,
   type OwnerAuditRequest,
+  type OwnerExportSecretRequest,
   type OwnerRegisterAgentIdentityCommand,
   type OwnerRegisterCustomHttpFlowCommand,
   type OwnerRegisterOwnerIdentityCommand,
   type CustomHttpFlowDefinition,
   type OwnerIdentityRecord,
+  type OwnerSecretExport,
   type SecretRecord,
   type VaultId,
 } from "../vault-core/index.js";
@@ -109,6 +111,7 @@ export interface VaultService {
   dispatch(request: DispatchRequest): Promise<DispatchResult>;
   handleAgentDispatch(request: VaultAgentDispatchRequest): Promise<VaultAgentDispatchResponse | VaultAgentDispatchErrorResponse>;
   readAudit(request: OwnerAuditRequest): Promise<readonly import("../vault-core/index.js").AuditEntry[]>;
+  exportSecret(request: OwnerExportSecretRequest): Promise<OwnerSecretExport>;
 }
 
 class LocalVaultService implements VaultService {
@@ -442,6 +445,14 @@ class LocalVaultService implements VaultService {
 
   readAudit(request: OwnerAuditRequest): Promise<readonly import("../vault-core/index.js").AuditEntry[]> {
     return this._authority.getAudit(request.actor, request.query, {
+      requestId: request.requestId,
+      requestedAt: request.requestedAt,
+      proof: request.proof,
+    });
+  }
+
+  exportSecret(request: OwnerExportSecretRequest): Promise<OwnerSecretExport> {
+    return this._authority.exportSecret(request.actor, request.alias, {
       requestId: request.requestId,
       requestedAt: request.requestedAt,
       proof: request.proof,

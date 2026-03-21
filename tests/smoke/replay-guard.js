@@ -20,9 +20,9 @@ import {
   generateIdentityKeys,
 } from "../../dist/runtime/index.js";
 
-const keys = generateIdentityKeys();
-const signer = new LocalSigner(keys);
-const ownerKeys = generateIdentityKeys();
+const agentKeyPair = generateIdentityKeys();
+const signer = new LocalSigner(agentKeyPair);
+const ownerKeyPair = generateIdentityKeys();
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
 const replayOwnerIdentities = new InMemoryOwnerIdentityRegistry();
 const authority = createVaultCore({
@@ -45,13 +45,13 @@ const vault = wrapVaultCoreAsVaultService(authority);
 await authority.bootstrapOwnerIdentity({
   vaultId: authority.vaultId,
   ownerId: "owner-replay",
-  publicKey: ownerKeys.publicKey,
+  publicKey: ownerKeyPair.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-replay" }, vault, new LocalSigner(ownerKeys), new SystemClock());
+const owner = createOwnerClient({ ownerId: "owner-replay" }, vault, new LocalSigner(ownerKeyPair), new SystemClock());
 await owner.registerAgentIdentity({
   agentId: "agent-replay",
-  publicKey: keys.publicKey,
+  publicKey: agentKeyPair.publicKey,
 });
 
 const replayRecord = await owner.writeSecret({

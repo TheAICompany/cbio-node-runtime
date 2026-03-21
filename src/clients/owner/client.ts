@@ -2,6 +2,7 @@ import type { Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
   OwnerAuditQueryInput,
+  OwnerExportSecretInput,
   OwnerRegisterCustomHttpFlowInput,
   OwnerRegisterAgentIdentityInput,
   OwnerRegisterOwnerIdentityInput,
@@ -19,6 +20,7 @@ export interface OwnerSigner {
 
 export interface OwnerClient {
   writeSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  exportSecret(input: OwnerExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
   getAudit(query?: OwnerAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   registerAgentIdentity(input: OwnerRegisterAgentIdentityInput): Promise<void>;
   registerOwnerIdentity(input: OwnerRegisterOwnerIdentityInput): Promise<void>;
@@ -81,6 +83,33 @@ class DefaultOwnerClient implements OwnerClient {
         id: this._identity.ownerId,
       },
       query,
+      requestId,
+      requestedAt,
+      proof: {
+        ownerId: this._identity.ownerId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async exportSecret(input: OwnerExportSecretInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.ownerId}:${requestedAt}:${input.alias}:export_secret`;
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.ownerId,
+      alias: input.alias,
+    }));
+    return this._vault.exportSecret({
+      vaultId: this._vault.vaultId,
+      actor: {
+        kind: "owner",
+        id: this._identity.ownerId,
+      },
+      alias: input.alias,
       requestId,
       requestedAt,
       proof: {

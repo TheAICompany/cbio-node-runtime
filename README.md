@@ -100,7 +100,7 @@ An owner-defined exception path also exists for non-standard but intentional int
   Vault boundary/facade. Accepts request-shaped calls, handles trusted acquisition paths, and keeps capability resolution plus dispatch ingress inside the vault trust boundary.
 
 - `clients/owner`
-  Owner-facing client. Writes secrets and reads audit.
+  Owner-facing client. Writes secrets, exports plaintext secrets, and reads audit.
 
 - `clients/agent`
   Agent-facing client. Creates signed dispatch requests. Never handles plaintext secret.
@@ -168,6 +168,12 @@ const acquired = await vault.acquireSecret({
 
 console.log(acquired.responseShape);
 // { token_type: 'Bearer', expires_in: 3600, scope: 'read write' }
+
+const exported = await owner.exportSecret({
+  alias: 'issuer-token',
+});
+
+console.log(exported.plaintext);
 ```
 
 ## Build
