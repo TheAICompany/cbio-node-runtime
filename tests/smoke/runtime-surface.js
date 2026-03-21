@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import {
   createVaultCore,
   createPersistentVaultCoreDependencies,
-  createOwnedVault,
+  createVault,
   recoverVault,
   recoverVaultWorkingKey,
   wrapVaultCoreAsVaultService,
@@ -50,11 +50,12 @@ assert.equal(typeof VaultCoreError, "function");
 assert.equal(typeof IdentityError, "function");
 assert.equal(typeof IdentityErrorCode, "object");
 
-const agentIdentity = createIdentity();
-const ownerIdentity = createIdentity();
+const agentIdentity = createIdentity({ nickname: "agent-1" });
+const ownerIdentity = createIdentity({ nickname: "owner-1" });
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
 assert.equal(typeof agentIdentity.identityId, "string");
+assert.equal(agentIdentity.nickname, "agent-1");
 
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {
@@ -248,16 +249,12 @@ assert.equal(customAcquireResult.responseBody, JSON.stringify({ custom_token: nu
 const tempDir = await mkdtemp(join(tmpdir(), "cbio-authority-"));
 try {
   const storage = new FsStorageProvider(tempDir);
-  const createdVault = await createOwnedVault(storage, {
+  const createdVault = await createVault(storage, {
     vaultId: "vault-runtime-persistent",
     policy: {
       trustedIssuerIds: ["issuer-1"],
     },
-    bootstrapOwner: {
-      vaultId: { value: "vault-runtime-persistent" },
-      ownerId: "owner-1",
-      publicKey: ownerIdentity.publicKey,
-    },
+    ownerIdentity,
     vault: {
       fetchImpl: async () => new Response(JSON.stringify({
         access_token: "issuer-secret",

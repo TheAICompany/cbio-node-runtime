@@ -10,13 +10,14 @@ export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
 export {
   createIdentity,
+  type CreateIdentityOptions,
   type CreatedIdentity,
 } from "./identity.js";
 export {
-  createOwnedVault,
+  createVault,
   recoverVault,
-  type CreateOwnedVaultOptions,
-  type CreatedOwnedVault,
+  type CreateVaultOptions,
+  type CreatedVault,
   type RecoverVaultOptions,
   type RecoveredVault,
 } from "./bootstrap.js";

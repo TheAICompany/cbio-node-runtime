@@ -9,7 +9,7 @@ Related design note:
 
 Recommended persistent-vault lifecycle:
 
-- create through `createOwnedVault(...)`
+- create through `createVault(...)`
 - recover through `recoverVault(...)`
 
 ## Identity And Roles

@@ -74,6 +74,8 @@ Examples:
 
 These should be treated as labels, aliases, or local names rather than the deepest identity truth.
 
+The runtime now exposes this concept directly as optional `nickname` on `createIdentity(...)`.
+
 In other words:
 
 - public key or a stable derived id answers "who is this cryptographically"

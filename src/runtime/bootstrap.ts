@@ -15,17 +15,18 @@ import {
   type VaultCustomFlowResolver,
 } from "../vault-ingress/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
+import type { CreatedIdentity } from "./identity.js";
 
-export interface CreateOwnedVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
+export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey"> {
   custody?: InitializeVaultCustodyOptions;
-  bootstrapOwner: OwnerIdentityRecord;
+  ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
     fetchImpl?: typeof fetch;
   };
 }
 
-export interface CreatedOwnedVault {
+export interface CreatedVault {
   initializedCustody: InitializedVaultCustody;
   core: VaultCore;
   vault: VaultService;
@@ -46,17 +47,22 @@ export interface RecoveredVault {
   vault: VaultService;
 }
 
-export async function createOwnedVault(
+export async function createVault(
   storage: IStorageProvider,
-  options: CreateOwnedVaultOptions,
-): Promise<CreatedOwnedVault> {
+  options: CreateVaultOptions,
+): Promise<CreatedVault> {
   const initializedCustody = await initializeVaultCustody(storage, options.custody);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
     vaultWorkingKey: initializedCustody.vaultWorkingKey,
   });
   const core = createVaultCore(deps);
-  await core.bootstrapOwnerIdentity(options.bootstrapOwner);
+  const bootstrapOwner: OwnerIdentityRecord = {
+    vaultId: core.vaultId,
+    ownerId: options.ownerIdentity.identityId,
+    publicKey: options.ownerIdentity.publicKey,
+  };
+  await core.bootstrapOwnerIdentity(bootstrapOwner);
   return {
     initializedCustody,
     core,

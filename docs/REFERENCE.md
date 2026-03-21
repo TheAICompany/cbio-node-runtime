@@ -18,7 +18,7 @@ The main constructors are:
 - `createVaultCore(...)`
 - `createVaultService(...)`
 - `createIdentity(...)`
-- `createOwnedVault(...)`
+- `createVault(...)`
 - `recoverVault(...)`
 - `createOwnerClient(...)`
 - `createAgentClient(...)`
@@ -30,7 +30,7 @@ Related design note:
 
 Recommended persistent-vault entrypoints:
 
-- `createOwnedVault(...)`
+- `createVault(...)`
 - `recoverVault(...)`
 
 Lower-level custody helpers:
@@ -53,6 +53,17 @@ Role rules:
 - inside a vault, identities are bound to roles such as `owner` or `agent`
 - identities are independent; there is no built-in lineage or inheritance between identities
 - the same identity may be `owner` in one vault and `agent` in another
+
+## Identity Creation
+
+`createIdentity(...)` returns:
+
+- `identityId`
+- `publicKey`
+- `privateKey`
+- optional `nickname`
+
+`nickname` is human-readable only. It does not affect the derived `identityId`, cryptographic verification, or vault-local role binding.
 
 ## Secret-Flow Model
 

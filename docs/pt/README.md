@@ -20,7 +20,7 @@ npm install @the-ai-company/cbio-node-runtime
 import {
   createVaultService,
   createIdentity,
-  createOwnedVault,
+  createVault,
   recoverVault,
   LocalVaultTransport,
   createOwnerClient,
@@ -38,7 +38,7 @@ import {
 
 Caminho principal recomendado para vault persistente:
 
-- criar o vault persistente com `createOwnedVault(...)`
+- criar o vault persistente com `createVault(...)`
 - recuperar o vault persistente com `recoverVault(...)` usando a recovery key
 
 A antiga API centrada em `CbioIdentity` nao e mais a superficie principal do produto.

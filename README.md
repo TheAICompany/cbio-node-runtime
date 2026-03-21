@@ -42,7 +42,7 @@ import {
   createVaultService,
   createDefaultVaultCoreDependencies,
   createIdentity,
-  createOwnedVault,
+  createVault,
   recoverVault,
   createOwnerHttpFlowBoundary,
   createStandardAcquireBoundary,
@@ -133,8 +133,8 @@ This package now exposes the production local vault runtime surface as the prima
 ## Example Shape
 
 ```ts
-const ownerIdentity = createIdentity();
-const agentIdentity = createIdentity();
+const ownerIdentity = createIdentity({ nickname: 'owner-main' });
+const agentIdentity = createIdentity({ nickname: 'agent-worker' });
 const vault = createVaultService(createDefaultVaultCoreDependencies());
 const owner = createOwnerClient({ ownerId: ownerIdentity.identityId }, vault, new LocalSigner(ownerIdentity), clock);
 const transport = new LocalVaultTransport(vault, capability.capabilityId);
@@ -202,15 +202,11 @@ console.log(exported.plaintext);
 Persistent custody bootstrap example:
 
 ```ts
-const ownerIdentity = createIdentity();
+const ownerIdentity = createIdentity({ nickname: 'owner-main' });
 const storage = new FsStorageProvider('/tmp/cbio-vault');
-const createdVault = await createOwnedVault(storage, {
+const createdVault = await createVault(storage, {
   vaultId: 'vault-persistent',
-  bootstrapOwner: {
-    vaultId: { value: 'vault-persistent' },
-    ownerId: ownerIdentity.identityId,
-    publicKey: ownerIdentity.publicKey,
-  },
+  ownerIdentity,
 });
 
 // Show once to the owner and let them store it offline.
