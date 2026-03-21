@@ -111,15 +111,15 @@ export {
 } from "../vault-core/index.js";
 
 export {
-  createOwnerClient,
-  type OwnerClient,
-  type OwnerIdentity,
-  type OwnerSigner,
-  type OwnerAuditQueryInput,
-  type OwnerExportSecretInput,
-  type OwnerRegisterCapabilityInput,
-  type OwnerRegisterCustomHttpFlowInput,
-  type OwnerRegisterAgentIdentityInput,
+  createVaultClient,
+  type VaultClient,
+  type VaultIdentity,
+  type VaultSigner,
+  type VaultAuditQueryInput,
+  type VaultExportSecretInput,
+  type VaultGrantCapabilityInput,
+  type VaultRegisterFlowInput,
+  type VaultRegisterAgentInput,
   type OwnerSecretTargetBinding,
   type OwnerWriteSecretInput,
 } from "../clients/owner/index.js";

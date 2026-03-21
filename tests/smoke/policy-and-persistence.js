@@ -10,7 +10,7 @@ import {
   initializeVaultCustody,
   recoverVaultWorkingKey,
   wrapVaultCoreAsVaultService,
-  createOwnerClient,
+  createVaultClient,
   DefaultPolicyEngine,
   FsStorageProvider,
   HttpDispatchExecutor,
@@ -58,9 +58,9 @@ try {
     ownerId: "owner-2",
     publicKey: ownerIdentity.publicKey,
   });
-  const owner = createOwnerClient({ ownerId: "owner-2" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
+  const client = createVaultClient({ identityId: "owner-2" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
   await assert.rejects(
-    () => owner.writeSecret({
+    () => client.writeSecret({
       alias: "unscoped-token",
       plaintext: "secret-0",
       targetBindings: [],
@@ -68,7 +68,7 @@ try {
     (error) => error instanceof VaultCoreError && error.code === "VAULT_WRITE_DENIED",
   );
 
-  const restrictedRecord = await owner.writeSecret({
+  const restrictedRecord = await client.writeSecret({
     alias: "restricted-token",
     plaintext: "secret-2",
     targetBindings: [
@@ -82,7 +82,7 @@ try {
   });
 
   const agentIdentity = createIdentity();
-  await owner.registerAgentIdentity({
+  await client.registerAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
   });
@@ -98,7 +98,7 @@ try {
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
-  await owner.registerCapability({ capability: restrictedCapability });
+  await client.grantCapability({ capability: restrictedCapability });
 
   const agent = createAgentClient(
     { agentId: "agent-restricted" },
@@ -119,10 +119,10 @@ try {
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
 
-  const audit = await owner.getAudit({ secretAlias: "restricted-token" });
+  const audit = await client.readAudit({ secretAlias: "restricted-token" });
   assert.ok(audit.length >= 1);
   assert.ok(audit.some((entry) => entry.outcome === "denied" && /target denied|record target denied/.test(entry.detail)));
-  const exportedRestrictedSecret = await owner.exportSecret({ alias: "restricted-token" });
+  const exportedRestrictedSecret = await client.exportSecret({ alias: "restricted-token" });
   assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
   await assert.rejects(
@@ -150,7 +150,7 @@ try {
     },
     auditRequired: true,
   };
-  await owner.registerCapability({ capability: rateLimitedCapability });
+  await client.grantCapability({ capability: rateLimitedCapability });
   const rateLimitedAgent = createAgentClient(
     { agentId: "agent-restricted" },
     {
@@ -187,7 +187,7 @@ try {
   );
 
   await assert.rejects(
-    () => owner.writeSecret({
+    () => client.writeSecret({
       alias: "restricted-token",
       plaintext: "replacement-secret",
       targetBindings: [
@@ -223,8 +223,8 @@ try {
     publicKey: ownerIdentity.publicKey,
   });
   const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
-  const reloadedOwner = createOwnerClient({ ownerId: "owner-2" }, reloadedVault, new LocalSigner(ownerIdentity), new SystemClock());
-  await reloadedOwner.registerAgentIdentity({
+  const reloadedClient = createVaultClient({ identityId: "owner-2" }, reloadedVault, new LocalSigner(ownerIdentity), new SystemClock());
+  await reloadedClient.registerAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
   });
@@ -344,8 +344,8 @@ try {
     publicKey: ownerIdentity.publicKey,
   });
   const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
-  const restartedOwner = createOwnerClient({ ownerId: "owner-2" }, restartedVault, new LocalSigner(ownerIdentity), new SystemClock());
-  await restartedOwner.registerAgentIdentity({
+  const restartedClient = createVaultClient({ identityId: "owner-2" }, restartedVault, new LocalSigner(ownerIdentity), new SystemClock());
+  await restartedClient.registerAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
   });
@@ -404,7 +404,7 @@ try {
     (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /rate limit/.test(error.message),
   );
 
-  const reloadedAudit = await owner.getAudit({ secretAlias: "restricted-token" });
+  const reloadedAudit = await client.readAudit({ secretAlias: "restricted-token" });
   assert.ok(reloadedAudit.some((entry) => entry.action === "reassign_alias" && entry.outcome === "denied"));
   assert.ok(reloadedAudit.some((entry) => entry.action === "export_secret" && entry.outcome === "succeeded"));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /capability revoked/.test(entry.detail)));

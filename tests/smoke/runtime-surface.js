@@ -11,7 +11,7 @@ import {
   wrapVaultCoreAsVaultService,
   createStandardAcquireBoundary,
   createStandardDispatchBoundary,
-  createOwnerClient,
+  createVaultClient,
   createAgentClient,
   DefaultPolicyEngine,
   FsStorageProvider,
@@ -43,7 +43,7 @@ import {
 assert.equal(typeof createVaultCore, "function");
 assert.equal(typeof createStandardAcquireBoundary, "function");
 assert.equal(typeof createStandardDispatchBoundary, "function");
-assert.equal(typeof createOwnerClient, "function");
+assert.equal(typeof createVaultClient, "function");
 assert.equal(typeof createAgentClient, "function");
 assert.equal(typeof InMemorySecretRepository, "function");
 assert.equal(typeof HttpDispatchExecutor, "function");
@@ -104,12 +104,12 @@ await authority.bootstrapOwnerIdentity({
   publicKey: ownerIdentity.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-1" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
-await owner.registerAgentIdentity({
+const client = createVaultClient({ identityId: "owner-1" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
+await client.registerAgent({
   agentId: "agent-1",
   publicKey: agentIdentity.publicKey,
 });
-const ownedRecord = await owner.writeSecret({
+const ownedRecord = await client.writeSecret({
   alias: "api-token",
   plaintext: "super-secret",
   targetBindings: [
@@ -128,7 +128,7 @@ const ownedRecord = await owner.writeSecret({
   ],
 });
 
-const exportedSecret = await owner.exportSecret({ alias: "api-token" });
+const exportedSecret = await client.exportSecret({ alias: "api-token" });
 assert.equal(exportedSecret.plaintext, "super-secret");
 assert.equal(exportedSecret.alias.value, "api-token");
 
@@ -143,7 +143,7 @@ const dispatchCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await owner.registerCapability({ capability: dispatchCapability });
+await client.grantCapability({ capability: dispatchCapability });
 
 const agent = createAgentClient(
   { agentId: "agent-1" },
@@ -166,7 +166,7 @@ assert.equal(result.status, "succeeded");
 assert.equal(seenAuthHeader, "Bearer super-secret");
 assert.equal(result.responseBody, "ok");
 
-await owner.registerCustomFlow({
+await client.registerFlow({
   flowId: "flow-shape-only",
   mode: "send_secret",
   targetUrl: "https://api.example.com/custom-status",
@@ -186,7 +186,7 @@ const customCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await owner.registerCapability({ capability: customCapability });
+await client.grantCapability({ capability: customCapability });
 
 const customAgent = createAgentClient(
   { agentId: "agent-1" },
@@ -208,7 +208,7 @@ const customResult = await customAgent.dispatch({
 assert.equal(customResult.status, "succeeded");
 assert.equal(customResult.responseBody, JSON.stringify({ state: null, nested: { code: null } }));
 
-await owner.registerCustomFlow({
+await client.registerFlow({
   flowId: "flow-custom-acquire",
   mode: "acquire_secret",
   targetUrl: "https://api.example.com/custom-acquire",
@@ -232,7 +232,7 @@ const customAcquireCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await owner.registerCapability({ capability: customAcquireCapability });
+await client.grantCapability({ capability: customAcquireCapability });
 
 const customAcquireAgent = createAgentClient(
   { agentId: "agent-1" },
@@ -314,10 +314,10 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  const ownerForAudit = createOwnerClient({ ownerId: "owner-1" }, persistentVault, new LocalSigner(ownerIdentity), new SystemClock());
-  const audit = await ownerForAudit.getAudit({ secretAlias: "issuer-token" });
+  const auditClient = createVaultClient({ identityId: "owner-1" }, persistentVault, new LocalSigner(ownerIdentity), new SystemClock());
+  const audit = await auditClient.readAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
-  const persistentExport = await ownerForAudit.exportSecret({ alias: "issuer-token" });
+  const persistentExport = await auditClient.exportSecret({ alias: "issuer-token" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
   const recoveredVaultInstance = await recoverVault(storage, {
     vaultId: "vault-runtime-persistent",
@@ -325,7 +325,7 @@ try {
   });
   assert.equal(recoveredVaultInstance.vaultWorkingKey, vaultWorkingKey);
   const acquiredAgentIdentity = createIdentity();
-  await ownerForAudit.registerAgentIdentity({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });
+  await auditClient.registerAgent({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });
   const acquiredCapability = {
     vaultId: persistentAuthority.vaultId,
     capabilityId: "cap-acquired",
@@ -337,7 +337,7 @@ try {
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
-  await ownerForAudit.registerCapability({ capability: acquiredCapability });
+  await auditClient.grantCapability({ capability: acquiredCapability });
   const acquiredVault = wrapVaultCoreAsVaultService(persistentAuthority);
   const acquiredAgent = createAgentClient(
     { agentId: "agent-acquired" },
@@ -409,11 +409,11 @@ try {
     ids: new RandomIdGenerator(),
   });
   const rollbackVault = wrapVaultCoreAsVaultService(rollbackAuthority);
-  const rollbackOwner = createOwnerClient({ ownerId: "owner-rollback" }, rollbackVault, new LocalSigner(ownerIdentity), new SystemClock());
+  const rollbackClient = createVaultClient({ identityId: "owner-rollback" }, rollbackVault, new LocalSigner(ownerIdentity), new SystemClock());
   const custodyDir = join(tempDir, "vault/custody");
   const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
   await assert.rejects(
-    () => rollbackOwner.writeSecret({
+    () => rollbackClient.writeSecret({
       alias: "should-rollback",
       plaintext: "rollback-secret",
       targetBindings: [

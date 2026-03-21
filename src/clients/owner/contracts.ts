@@ -15,30 +15,30 @@ export interface OwnerWriteSecretInput {
   requestedAt?: string;
 }
 
-export interface OwnerAuditQueryInput {
+export interface VaultAuditQueryInput {
   actorId?: string;
   secretAlias?: string;
   requestId?: string;
   since?: string;
 }
 
-export interface OwnerExportSecretInput {
+export interface VaultExportSecretInput {
   alias: string;
   requestedAt?: string;
 }
 
-export interface OwnerRegisterAgentIdentityInput {
+export interface VaultRegisterAgentInput {
   agentId: string;
   publicKey: string;
   requestedAt?: string;
 }
 
-export interface OwnerRegisterCustomHttpFlowInput extends OwnerHttpFlowBoundary {
+export interface VaultRegisterFlowInput extends OwnerHttpFlowBoundary {
   flowId: string;
   requestedAt?: string;
 }
 
-export interface OwnerRegisterCapabilityInput {
+export interface VaultGrantCapabilityInput {
   capability: import("../../vault-core/index.js").AgentCapability;
   requestedAt?: string;
 }

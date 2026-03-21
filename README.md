@@ -48,10 +48,11 @@ import {
   createOwnerHttpFlowBoundary,
   createStandardAcquireBoundary,
   createStandardDispatchBoundary,
-  createOwnerClient,
+  createVaultClient,
   createAgentClient,
   FsStorageProvider,
   LocalVaultTransport,
+  LocalSigner,
 } from '@the-ai-company/cbio-node-runtime';
 ```
 
@@ -143,7 +144,7 @@ This package now exposes the production local vault runtime surface as the prima
 const ownerIdentity = createIdentity({ nickname: 'owner-main' });
 const agentIdentity = createIdentity({ nickname: 'agent-worker' });
 const vault = createVaultService(createDefaultVaultCoreDependencies());
-const owner = createOwnerClient({ ownerId: ownerIdentity.identityId }, vault, new LocalSigner(ownerIdentity), clock);
+const client = createVaultClient({ identityId: ownerIdentity.identityId }, vault, new LocalSigner(ownerIdentity), clock);
 const transport = new LocalVaultTransport(vault, capability.capabilityId);
 const agent = createAgentClient({ agentId: agentIdentity.identityId }, capability, new LocalSigner(agentIdentity), transport, clock);
 ```
@@ -162,13 +163,13 @@ const capability = {
   issuedAt: new Date().toISOString(),
 };
 
-await owner.registerCapability({ capability });
+await client.grantCapability({ capability });
 ```
 
 Custom flow example:
 
 ```ts
-await owner.registerCustomFlow({
+await client.registerFlow({
   flowId: 'custom-status-read',
   ...createOwnerHttpFlowBoundary({
     mode: 'send_secret',
@@ -199,7 +200,7 @@ const acquired = await vault.acquireSecret({
 console.log(acquired.responseShape);
 // { token_type: 'Bearer', expires_in: 3600, scope: 'read write' }
 
-const exported = await owner.exportSecret({
+const exported = await client.exportSecret({
   alias: 'issuer-token',
 });
 

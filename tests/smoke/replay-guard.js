@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  createOwnerClient,
+  createVaultClient,
   createVaultCore,
   wrapVaultCoreAsVaultService,
   DefaultPolicyEngine,
@@ -48,13 +48,13 @@ await authority.bootstrapOwnerIdentity({
   publicKey: ownerIdentity.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-replay" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
-await owner.registerAgentIdentity({
+const client = createVaultClient({ identityId: "owner-replay" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
+await client.registerAgent({
   agentId: "agent-replay",
   publicKey: agentIdentity.publicKey,
 });
 
-const replayRecord = await owner.writeSecret({
+const replayRecord = await client.writeSecret({
   alias: "replay-token",
   plaintext: "replay-secret",
   targetBindings: [
@@ -121,7 +121,7 @@ await assert.rejects(
   },
 );
 
-const replayAudit = await owner.getAudit({ secretAlias: "replay-token" });
+const replayAudit = await client.readAudit({ secretAlias: "replay-token" });
 assert.ok(replayAudit.some((entry) => entry.outcome === "denied" && /replay/.test(entry.detail)));
 
 console.log("replay guard smoke test passed");

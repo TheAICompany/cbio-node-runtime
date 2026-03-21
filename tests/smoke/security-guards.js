@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  createOwnerClient,
+  createVaultClient,
   createVaultCore,
   createDefaultVaultCoreDependencies,
   wrapVaultCoreAsVaultService,
@@ -24,15 +24,15 @@ await authority.bootstrapOwnerIdentity({
   publicKey: ownerIdentity.publicKey,
 });
 
-const owner = createOwnerClient({ ownerId: "owner-security" }, vault, new LocalSigner(ownerIdentity), {
+const client = createVaultClient({ identityId: "owner-security" }, vault, new LocalSigner(ownerIdentity), {
   nowIso: () => new Date().toISOString(),
 });
-await owner.registerAgentIdentity({
+await client.registerAgent({
   agentId: "agent-security",
   publicKey: agentIdentity.publicKey,
 });
 
-const guardedRecord = await owner.writeSecret({
+const guardedRecord = await client.writeSecret({
   alias: "guarded-token",
   plaintext: "guarded-secret",
   targetBindings: [
@@ -143,7 +143,7 @@ await assert.rejects(
   },
 );
 
-const securityAudit = await owner.getAudit({ secretAlias: "guarded-token" });
+const securityAudit = await client.readAudit({ secretAlias: "guarded-token" });
 assert.ok(securityAudit.some((entry) => entry.outcome === "denied" && /expired|binding mismatch|timestamp out of range|invalid proof signature/.test(entry.detail)));
 
 const unauthorizedIdentityRequestId = "unauthorized-agent-registration";

@@ -23,7 +23,7 @@ import {
   createVault,
   recoverVault,
   LocalVaultTransport,
-  createOwnerClient,
+  createVaultClient,
   createAgentClient,
   FsStorageProvider,
 } from '@the-ai-company/cbio-node-runtime';

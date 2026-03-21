@@ -1,47 +1,47 @@
 import type { Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
-  OwnerAuditQueryInput,
-  OwnerExportSecretInput,
-  OwnerRegisterCapabilityInput,
-  OwnerRegisterCustomHttpFlowInput,
-  OwnerRegisterAgentIdentityInput,
+  VaultAuditQueryInput,
+  VaultExportSecretInput,
+  VaultGrantCapabilityInput,
+  VaultRegisterFlowInput,
+  VaultRegisterAgentInput,
   OwnerWriteSecretInput,
 } from "./contracts.js";
 
-export interface OwnerIdentity {
-  ownerId: string;
+export interface VaultIdentity {
+  identityId: string;
 }
 
-export interface OwnerSigner {
+export interface VaultSigner {
   getPublicKey(): Promise<string>;
   sign(input: string): Promise<string>;
 }
 
-export interface OwnerClient {
+export interface VaultClient {
   writeSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
-  exportSecret(input: OwnerExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
-  registerCapability(input: OwnerRegisterCapabilityInput): Promise<void>;
-  getAudit(query?: OwnerAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
-  registerAgentIdentity(input: OwnerRegisterAgentIdentityInput): Promise<void>;
-  registerCustomFlow(input: OwnerRegisterCustomHttpFlowInput): Promise<void>;
+  exportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+  grantCapability(input: VaultGrantCapabilityInput): Promise<void>;
+  readAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
+  registerAgent(input: VaultRegisterAgentInput): Promise<void>;
+  registerFlow(input: VaultRegisterFlowInput): Promise<void>;
 }
 
-class DefaultOwnerClient implements OwnerClient {
+class DefaultVaultClient implements VaultClient {
   constructor(
-    private readonly _identity: OwnerIdentity,
+    private readonly _identity: VaultIdentity,
     private readonly _vault: VaultService,
-    private readonly _signer: OwnerSigner,
+    private readonly _signer: VaultSigner,
     private readonly _clock: Clock,
   ) {}
 
   async writeSecret(input: OwnerWriteSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identity.ownerId}:${requestedAt}:${input.alias}:write_secret`;
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.alias}:write_secret`;
     const signature = await this._signer.sign(JSON.stringify({
       requestId,
       requestedAt,
-      ownerId: this._identity.ownerId,
+      ownerId: this._identity.identityId,
       alias: input.alias,
       plaintext: input.plaintext,
       targetBindings: input.targetBindings,
@@ -52,14 +52,14 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identity.ownerId,
+        id: this._identity.identityId,
       },
       alias: input.alias,
       plaintext: input.plaintext,
       targetBindings: input.targetBindings,
       requestedAt,
       proof: {
-        ownerId: this._identity.ownerId,
+        ownerId: this._identity.identityId,
         signature,
         requestId,
         requestedAt,
@@ -67,26 +67,26 @@ class DefaultOwnerClient implements OwnerClient {
     });
   }
 
-  async getAudit(query: OwnerAuditQueryInput = {}) {
+  async readAudit(query: VaultAuditQueryInput = {}) {
     const requestedAt = this._clock.nowIso();
-    const requestId = `${this._identity.ownerId}:${requestedAt}:read_audit`;
+    const requestId = `${this._identity.identityId}:${requestedAt}:read_audit`;
     const signature = await this._signer.sign(JSON.stringify({
       requestId,
       requestedAt,
-      ownerId: this._identity.ownerId,
+      ownerId: this._identity.identityId,
       query,
     }));
     return this._vault.readAudit({
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
-        id: this._identity.ownerId,
+        id: this._identity.identityId,
       },
       query,
       requestId,
       requestedAt,
       proof: {
-        ownerId: this._identity.ownerId,
+        ownerId: this._identity.identityId,
         signature,
         requestId,
         requestedAt,
@@ -94,26 +94,26 @@ class DefaultOwnerClient implements OwnerClient {
     });
   }
 
-  async exportSecret(input: OwnerExportSecretInput) {
+  async exportSecret(input: VaultExportSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identity.ownerId}:${requestedAt}:${input.alias}:export_secret`;
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.alias}:export_secret`;
     const signature = await this._signer.sign(JSON.stringify({
       requestId,
       requestedAt,
-      ownerId: this._identity.ownerId,
+      ownerId: this._identity.identityId,
       alias: input.alias,
     }));
     return this._vault.exportSecret({
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
-        id: this._identity.ownerId,
+        id: this._identity.identityId,
       },
       alias: input.alias,
       requestId,
       requestedAt,
       proof: {
-        ownerId: this._identity.ownerId,
+        ownerId: this._identity.identityId,
         signature,
         requestId,
         requestedAt,
@@ -121,9 +121,9 @@ class DefaultOwnerClient implements OwnerClient {
     });
   }
 
-  async registerAgentIdentity(input: OwnerRegisterAgentIdentityInput): Promise<void> {
+  async registerAgent(input: VaultRegisterAgentInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identity.ownerId}:${requestedAt}:${input.agentId}:register_agent_identity`;
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.agentId}:register_agent_identity`;
     const agentIdentity = {
       vaultId: this._vault.vaultId,
       agentId: input.agentId,
@@ -132,7 +132,7 @@ class DefaultOwnerClient implements OwnerClient {
     const signature = await this._signer.sign(JSON.stringify({
       requestId,
       requestedAt,
-      ownerId: this._identity.ownerId,
+      ownerId: this._identity.identityId,
       agentIdentity,
     }));
     await this._vault.registerAgentIdentity({
@@ -140,12 +140,12 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identity.ownerId,
+        id: this._identity.identityId,
       },
       agentIdentity,
       requestedAt,
       proof: {
-        ownerId: this._identity.ownerId,
+        ownerId: this._identity.identityId,
         signature,
         requestId,
         requestedAt,
@@ -153,9 +153,9 @@ class DefaultOwnerClient implements OwnerClient {
     });
   }
 
-  async registerCapability(input: OwnerRegisterCapabilityInput): Promise<void> {
+  async grantCapability(input: VaultGrantCapabilityInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identity.ownerId}:${requestedAt}:${input.capability.capabilityId}:register_capability`;
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.capability.capabilityId}:register_capability`;
     const capability = {
       ...input.capability,
       vaultId: this._vault.vaultId,
@@ -163,7 +163,7 @@ class DefaultOwnerClient implements OwnerClient {
     const signature = await this._signer.sign(JSON.stringify({
       requestId,
       requestedAt,
-      ownerId: this._identity.ownerId,
+      ownerId: this._identity.identityId,
       capability,
     }));
     await this._vault.registerCapability({
@@ -171,12 +171,12 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identity.ownerId,
+        id: this._identity.identityId,
       },
       capability,
       requestedAt,
       proof: {
-        ownerId: this._identity.ownerId,
+        ownerId: this._identity.identityId,
         signature,
         requestId,
         requestedAt,
@@ -184,9 +184,9 @@ class DefaultOwnerClient implements OwnerClient {
     });
   }
 
-  async registerCustomFlow(input: OwnerRegisterCustomHttpFlowInput): Promise<void> {
+  async registerFlow(input: VaultRegisterFlowInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identity.ownerId}:${requestedAt}:${input.flowId}:register_custom_flow`;
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.flowId}:register_custom_flow`;
     const flow = {
       flowId: input.flowId,
       mode: input.mode,
@@ -198,7 +198,7 @@ class DefaultOwnerClient implements OwnerClient {
     const signature = await this._signer.sign(JSON.stringify({
       requestId,
       requestedAt,
-      ownerId: this._identity.ownerId,
+      ownerId: this._identity.identityId,
       flow,
     }));
     await this._vault.registerCustomFlow({
@@ -206,12 +206,12 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identity.ownerId,
+        id: this._identity.identityId,
       },
       flow,
       requestedAt,
       proof: {
-        ownerId: this._identity.ownerId,
+        ownerId: this._identity.identityId,
         signature,
         requestId,
         requestedAt,
@@ -220,11 +220,11 @@ class DefaultOwnerClient implements OwnerClient {
   }
 }
 
-export function createOwnerClient(
-  identity: OwnerIdentity,
+export function createVaultClient(
+  identity: VaultIdentity,
   vault: VaultService,
-  signer: OwnerSigner,
+  signer: VaultSigner,
   clock: Clock,
-): OwnerClient {
-  return new DefaultOwnerClient(identity, vault, signer, clock);
+): VaultClient {
+  return new DefaultVaultClient(identity, vault, signer, clock);
 }

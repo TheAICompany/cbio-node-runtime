@@ -1,17 +1,17 @@
-export { createOwnerClient } from "./client.js";
+export { createVaultClient } from "./client.js";
 
 export type {
-  OwnerClient,
-  OwnerIdentity,
-  OwnerSigner,
+  VaultClient,
+  VaultIdentity,
+  VaultSigner,
 } from "./client.js";
 
 export type {
-  OwnerAuditQueryInput,
-  OwnerExportSecretInput,
-  OwnerRegisterCapabilityInput,
-  OwnerRegisterCustomHttpFlowInput,
-  OwnerRegisterAgentIdentityInput,
+  VaultAuditQueryInput,
+  VaultExportSecretInput,
+  VaultGrantCapabilityInput,
+  VaultRegisterFlowInput,
+  VaultRegisterAgentInput,
   OwnerSecretTargetBinding,
   OwnerWriteSecretInput,
 } from "./contracts.js";

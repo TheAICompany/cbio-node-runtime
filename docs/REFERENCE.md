@@ -21,7 +21,7 @@ The main constructors are:
 - `restoreIdentity(...)`
 - `createVault(...)`
 - `recoverVault(...)`
-- `createOwnerClient(...)`
+- `createVaultClient(...)`
 - `createAgentClient(...)`
 - `LocalVaultTransport`
 
@@ -100,7 +100,7 @@ The runtime does not claim to understand arbitrary network protocols. The API co
 Important methods:
 
 - `bootstrapOwnerIdentity(...)`
-- `registerAgentIdentity(...)`
+- `registerAgent(...)`
 - `writeSecret(...)`
 - `exportSecret(...)`
 - `acquireSecret(...)`
@@ -122,30 +122,30 @@ await vault.bootstrapOwnerIdentity({
 
 The runtime treats this first owner as the single vault admin. Additional principals should be modeled as agents plus capabilities rather than extra owners.
 
-## Owner Client
+## Vault Client
 
-`clients/owner` is the caller surface for the identity currently bound to the vault's single owner role.
+`clients/owner` currently implements the public vault-management client surface for the identity currently bound to the vault's single admin role.
 
-Current owner operations:
+Current management operations:
 
 - `writeSecret(...)`
 - `exportSecret(...)`
-- `getAudit(...)`
-- `registerAgentIdentity(...)`
-- `registerCapability(...)`
-- `registerCustomFlow(...)`
+- `readAudit(...)`
+- `registerAgent(...)`
+- `grantCapability(...)`
+- `registerFlow(...)`
 
 Example:
 
 ```ts
-const owner = createOwnerClient(ownerIdentity, vault, ownerSigner, clock);
+const client = createVaultClient({ identityId: ownerIdentity.identityId }, vault, ownerSigner, clock);
 
-await owner.registerAgentIdentity({
+await client.registerAgent({
   agentId: 'agent-1',
   publicKey: agentPublicKey,
 });
 
-await owner.registerCustomFlow({
+await client.registerFlow({
   flowId: 'custom-status-read',
   mode: 'send_secret',
   targetUrl: 'https://api.example.com/custom-status',
@@ -153,7 +153,7 @@ await owner.registerCustomFlow({
   responseVisibility: 'shape_only',
 });
 
-await owner.writeSecret({
+await client.writeSecret({
   alias: 'api-token',
   plaintext: 'secret-value',
   targetBindings: [
@@ -166,7 +166,7 @@ await owner.writeSecret({
   ],
 });
 
-const exportedSecret = await owner.exportSecret({
+const exportedSecret = await client.exportSecret({
   alias: 'api-token',
 });
 ```
@@ -205,7 +205,7 @@ const capability = {
   issuedAt: new Date().toISOString(),
 };
 
-await owner.registerCapability({ capability });
+await client.grantCapability({ capability });
 ```
 
 Custom capability example:
@@ -223,7 +223,7 @@ const customCapability = {
   issuedAt: new Date().toISOString(),
 };
 
-await owner.registerCapability({ capability: customCapability });
+await client.grantCapability({ capability: customCapability });
 ```
 
 ## Acquisition Result Shape
