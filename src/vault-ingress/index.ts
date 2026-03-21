@@ -25,6 +25,9 @@ import {
 
 export type RedactedResponseShape =
   | null
+  | string
+  | number
+  | boolean
   | RedactedResponseShape[]
   | { [key: string]: RedactedResponseShape };
 
@@ -156,6 +159,31 @@ class LocalVaultService implements VaultService {
     return null;
   }
 
+  private buildAcquireResponseShape(flow: VaultAcquireSecretFlow, payload: unknown): RedactedResponseShape {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return this.redactResponseShape(payload);
+    }
+    const record = payload as Record<string, unknown>;
+    const response: Record<string, RedactedResponseShape> = {};
+    switch (flow) {
+      case "oauth_token_response.access_token":
+      case "oauth_token_response.refresh_token":
+      case "openid_token_response.id_token": {
+        if ("token_type" in record) {
+          response.token_type = typeof record.token_type === "string" ? record.token_type : null;
+        }
+        if ("expires_in" in record) {
+          response.expires_in = typeof record.expires_in === "number" ? record.expires_in : null;
+        }
+        if ("scope" in record) {
+          response.scope = typeof record.scope === "string" ? record.scope : null;
+        }
+        break;
+      }
+    }
+    return response;
+  }
+
   private extractSecretForFlow(flow: VaultAcquireSecretFlow, payload: unknown): string {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       throw new Error("VAULT_ACQUISITION_RESPONSE_INVALID");
@@ -274,7 +302,7 @@ class LocalVaultService implements VaultService {
       status: "stored",
       responseStatus: payload.responseStatus,
       contentType: payload.contentType,
-      responseShape: this.redactResponseShape(payload.parsedBody),
+      responseShape: this.buildAcquireResponseShape(request.flow, payload.parsedBody),
     };
   }
 

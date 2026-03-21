@@ -283,7 +283,12 @@ try {
     ownerProofVerifier: new SignatureOwnerProofVerifier(persistentOwnerIdentities),
   });
   const persistentVault = wrapVaultCoreAsVaultService(persistentAuthority, {
-    fetchImpl: async () => new Response(JSON.stringify({ access_token: "issuer-secret" }), { status: 200 }),
+    fetchImpl: async () => new Response(JSON.stringify({
+      access_token: "issuer-secret",
+      token_type: "Bearer",
+      expires_in: 3600,
+      scope: "read write",
+    }), { status: 200 }),
   });
   const issuerResult = await persistentVault.acquireSecret({
     alias: "issuer-token",
@@ -292,7 +297,11 @@ try {
     flow: "oauth_token_response.access_token",
   });
   assert.equal(issuerResult.status, "stored");
-  assert.deepEqual(issuerResult.responseShape, { access_token: null });
+  assert.deepEqual(issuerResult.responseShape, {
+    token_type: "Bearer",
+    expires_in: 3600,
+    scope: "read write",
+  });
   await persistentAuthority.bootstrapOwnerIdentity({
     vaultId: persistentAuthority.vaultId,
     ownerId: "owner-1",

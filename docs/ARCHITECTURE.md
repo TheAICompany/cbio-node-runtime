@@ -28,7 +28,7 @@ Current product architecture is vault-first.
 The current runtime surface supports two explicit flow classes:
 
 - `acquire_secret`
-  Vault performs an acquisition flow, stores the extracted secret, and returns only protocol metadata plus a redacted response shape.
+  Vault performs an acquisition flow, stores the extracted secret, and returns only protocol metadata plus a flow-specific redacted response shape.
 
 - `send_secret`
   Vault sends a stored secret to an approved target and returns the remote response as normal agent-visible output.
@@ -39,6 +39,7 @@ The runtime does not attempt to enumerate or understand arbitrary remote protoco
 This is deliberate rather than accidental:
 
 - acquisition flows are treated as sensitive on the response path because they may mint or return new secret material
+- built-in acquisition flows may still expose protocol-defined non-sensitive fields such as expiry or token type
 - normal secret-backed dispatch is treated as a standard protocol call to an owner-approved target
 
 If a target returns sensitive values during a normal dispatch flow, the vault does not try to reinterpret the remote protocol and redact it retroactively. That responsibility belongs to the remote protocol contract and the owner's authorization boundary.

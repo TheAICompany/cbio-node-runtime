@@ -169,7 +169,7 @@ const acquired = await vault.acquireSecret({
 });
 
 console.log(acquired.responseShape);
-// { access_token: null }
+// { token_type: 'Bearer', expires_in: 3600, scope: 'read write' }
 ```
 
 ## Build

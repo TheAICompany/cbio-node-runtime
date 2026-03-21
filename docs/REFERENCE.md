@@ -211,17 +211,15 @@ type VaultAcquireSecretResult = {
 };
 ```
 
-`responseShape` preserves only structure. Leaf values are redacted to `null`.
+`responseShape` is flow-specific. It preserves only the protocol-defined non-sensitive fields that the runtime explicitly allows for that built-in flow.
 
 Example:
 
 ```ts
 {
-  access_token: null,
-  user: {
-    id: null,
-    email: null,
-  },
+  token_type: 'Bearer',
+  expires_in: 3600,
+  scope: 'read write',
 }
 ```
 
