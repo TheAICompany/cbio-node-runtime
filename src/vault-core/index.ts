@@ -23,6 +23,9 @@ export {
 } from "./defaults.js";
 export {
   createPersistentVaultCoreDependencies,
+  initializeVaultCustody,
+  recoverVaultWorkingKey,
+  DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY,
   FileAuditLog as PersistentVaultAuditLog,
   FileCapabilityRevocationRegistry as PersistentVaultCapabilityRevocationRegistry,
   FileCustomHttpFlowRegistry as PersistentVaultCustomHttpFlowRegistry,
@@ -30,6 +33,12 @@ export {
   FileReplayGuard as PersistentVaultReplayGuard,
   FileSecretCustody as PersistentVaultSecretCustody,
   FileSecretRepository as PersistentVaultSecretRepository,
+} from "./persistence.js";
+
+export type {
+  InitializeVaultCustodyOptions,
+  InitializedVaultCustody,
+  CreatePersistentVaultCoreDependenciesOptions,
 } from "./persistence.js";
 
 export type {

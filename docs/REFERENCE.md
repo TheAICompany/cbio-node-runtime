@@ -17,9 +17,25 @@ The main constructors are:
 
 - `createVaultCore(...)`
 - `createVaultService(...)`
+- `initializePersistentVault(...)`
+- `recoverPersistentVault(...)`
 - `createOwnerClient(...)`
 - `createAgentClient(...)`
 - `LocalVaultTransport`
+
+Related design note:
+
+- [Custody Model](CUSTODY_MODEL.md)
+
+Recommended persistent-vault entrypoints:
+
+- `initializePersistentVault(...)`
+- `recoverPersistentVault(...)`
+
+Lower-level custody helpers:
+
+- `initializeVaultCustody(...)`
+- `recoverVaultWorkingKey(...)`
 
 ## Secret-Flow Model
 

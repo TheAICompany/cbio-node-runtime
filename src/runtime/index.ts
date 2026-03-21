@@ -8,6 +8,14 @@ export { generateIdentityKeys, derivePublicKey, LocalSigner } from "../protocol/
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
+export {
+  initializePersistentVault,
+  recoverPersistentVault,
+  type InitializePersistentVaultOptions,
+  type InitializedPersistentVault,
+  type RecoverPersistentVaultOptions,
+  type RecoveredPersistentVault,
+} from "./bootstrap.js";
 
 export {
   createVaultCore,
@@ -18,6 +26,12 @@ export {
   type DefaultPolicyEngineOptions,
   DefaultPolicyEngine,
   createPersistentVaultCoreDependencies,
+  initializeVaultCustody,
+  recoverVaultWorkingKey,
+  DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY,
+  type InitializeVaultCustodyOptions,
+  type InitializedVaultCustody,
+  type CreatePersistentVaultCoreDependenciesOptions,
   PersistentVaultAuditLog,
   PersistentVaultCapabilityRevocationRegistry,
   PersistentVaultCustomHttpFlowRegistry,

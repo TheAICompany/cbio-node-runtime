@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { Buffer } from "node:buffer";
 import {
   createVaultCore,
   createPersistentVaultCoreDependencies,
+  initializePersistentVault,
+  recoverPersistentVault,
+  recoverVaultWorkingKey,
   wrapVaultCoreAsVaultService,
   createStandardAcquireBoundary,
   createStandardDispatchBoundary,
@@ -268,23 +270,48 @@ assert.equal(customAcquireResult.responseBody, JSON.stringify({ custom_token: nu
 const tempDir = await mkdtemp(join(tmpdir(), "cbio-authority-"));
 try {
   const storage = new FsStorageProvider(tempDir);
-  const vaultCustodyKey = Buffer.alloc(32, 7).toString("base64url");
-  const persistentAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const persistentOwnerIdentities = new InMemoryOwnerIdentityRegistry();
-  const persistentDeps = createPersistentVaultCoreDependencies(storage, {
+  const initializedPersistentVault = await initializePersistentVault(storage, {
     vaultId: "vault-runtime-persistent",
-    custodyKey: vaultCustodyKey,
     policy: {
       trustedIssuerIds: ["issuer-1"],
     },
+    bootstrapOwner: {
+      vaultId: { value: "vault-runtime-persistent" },
+      ownerId: "owner-1",
+      publicKey: ownerKeyPair.publicKey,
+    },
+    vault: {
+      fetchImpl: async () => new Response(JSON.stringify({
+        access_token: "issuer-secret",
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: "read write",
+      }), { status: 200 }),
+    },
   });
+  const vaultWorkingKey = initializedPersistentVault.initializedCustody.vaultWorkingKey;
+  const recoveredVaultWorkingKey = await recoverVaultWorkingKey(storage, initializedPersistentVault.initializedCustody.vaultRecoveryKey);
+  assert.equal(recoveredVaultWorkingKey, vaultWorkingKey);
+  const persistentAgentIdentities = new InMemoryAgentIdentityRegistry();
+  const persistentOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const persistentAuthority = createVaultCore({
-    ...persistentDeps,
+    ...createPersistentVaultCoreDependencies(storage, {
+      vaultId: "vault-runtime-persistent",
+      vaultWorkingKey,
+      policy: {
+        trustedIssuerIds: ["issuer-1"],
+      },
+    }),
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: persistentAgentIdentities,
     ownerIdentities: persistentOwnerIdentities,
     proofVerifier: new SignatureAgentProofVerifier(persistentAgentIdentities),
     ownerProofVerifier: new SignatureOwnerProofVerifier(persistentOwnerIdentities),
+  });
+  await persistentAuthority.bootstrapOwnerIdentity({
+    vaultId: persistentAuthority.vaultId,
+    ownerId: "owner-1",
+    publicKey: ownerKeyPair.publicKey,
   });
   const persistentVault = wrapVaultCoreAsVaultService(persistentAuthority, {
     fetchImpl: async () => new Response(JSON.stringify({
@@ -306,16 +333,16 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  await persistentAuthority.bootstrapOwnerIdentity({
-    vaultId: persistentAuthority.vaultId,
-    ownerId: "owner-1",
-    publicKey: ownerKeyPair.publicKey,
-  });
   const ownerForAudit = createOwnerClient({ ownerId: "owner-1" }, persistentVault, new LocalSigner(ownerKeyPair), new SystemClock());
   const audit = await ownerForAudit.getAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
   const persistentExport = await ownerForAudit.exportSecret({ alias: "issuer-token" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
+  const recoveredPersistentVault = await recoverPersistentVault(storage, {
+    vaultId: "vault-runtime-persistent",
+    vaultRecoveryKey: initializedPersistentVault.initializedCustody.vaultRecoveryKey,
+  });
+  assert.equal(recoveredPersistentVault.vaultWorkingKey, vaultWorkingKey);
   const acquiredAgentKeyPair = generateIdentityKeys();
   await ownerForAudit.registerAgentIdentity({ agentId: "agent-acquired", publicKey: acquiredAgentKeyPair.publicKey });
   const acquiredCapabilities = new InMemoryVaultCapabilityResolver();
@@ -369,7 +396,7 @@ try {
   const bootstrapRollbackAuthority = createVaultCore({
     vaultId: { value: "vault-rollback" },
     secrets: new PersistentVaultSecretRepository(failingAuditStorage),
-    custody: new PersistentVaultSecretCustody(failingAuditStorage, vaultCustodyKey),
+    custody: new PersistentVaultSecretCustody(failingAuditStorage, vaultWorkingKey),
     policy: new DefaultPolicyEngine(),
     audit: new InMemoryAuditLog(),
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
@@ -390,7 +417,7 @@ try {
   const rollbackAuthority = createVaultCore({
     vaultId: { value: "vault-rollback" },
     secrets: new PersistentVaultSecretRepository(failingAuditStorage),
-    custody: new PersistentVaultSecretCustody(failingAuditStorage, vaultCustodyKey),
+    custody: new PersistentVaultSecretCustody(failingAuditStorage, vaultWorkingKey),
     policy: new DefaultPolicyEngine(),
     audit: {
       async append() {

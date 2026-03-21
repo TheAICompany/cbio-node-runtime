@@ -747,7 +747,6 @@ export interface CreateDefaultVaultCoreDependenciesOptions {
   fetchImpl?: typeof fetch;
   authHeaderName?: string;
   authPrefix?: string;
-  custodyKey?: string;
   policy?: DefaultPolicyEngineOptions;
   proofVerifier?: SignatureAgentProofVerifierOptions;
 }

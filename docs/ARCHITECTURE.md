@@ -2,13 +2,22 @@
 
 Current product architecture is vault-first.
 
+Related design note:
+
+- [Custody Model](CUSTODY_MODEL.md)
+
+Recommended persistent-vault lifecycle:
+
+- initialize through `initializePersistentVault(...)`
+- recover through `recoverPersistentVault(...)`
+
 ## Public Modules
 
 - `vault-core`
   Stores secret plaintext, validates writes, validates dispatch, appends audit, invokes trusted executors.
 
 - `clients/owner`
-  Owner-facing client for secret writes and audit reads.
+  Owner-facing client for secret writes, explicit plaintext export, and audit reads.
 
 - `clients/agent`
   Agent-facing client for signed dispatch requests. It never receives secret plaintext.

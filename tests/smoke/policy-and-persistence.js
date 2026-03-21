@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { Buffer } from "node:buffer";
 import {
   VaultCoreError,
   createAgentClient,
   createVaultCore,
   createPersistentVaultCoreDependencies,
+  initializeVaultCustody,
+  recoverVaultWorkingKey,
   wrapVaultCoreAsVaultService,
   createOwnerClient,
   DefaultPolicyEngine,
@@ -32,12 +33,14 @@ const tempDir = await mkdtemp(join(tmpdir(), "cbio-policy-"));
 
 try {
   const storage = new FsStorageProvider(tempDir);
-  const vaultCustodyKey = Buffer.alloc(32, 9).toString("base64url");
+  const initializedCustody = await initializeVaultCustody(storage);
+  const vaultWorkingKey = initializedCustody.vaultWorkingKey;
+  assert.equal(await recoverVaultWorkingKey(storage, initializedCustody.vaultRecoveryKey), vaultWorkingKey);
   const policyAgentIdentities = new InMemoryAgentIdentityRegistry();
   const policyOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const persistentDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: "vault-policy",
-    custodyKey: vaultCustodyKey,
+    vaultWorkingKey,
   });
   const revocations = persistentDeps.capabilityRevocations;
   const authority = createVaultCore({
@@ -225,7 +228,7 @@ try {
   const reloadedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const reloadedDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: authority.vaultId.value,
-    custodyKey: vaultCustodyKey,
+    vaultWorkingKey,
     proofVerifier: { maxSkewMs: 60_000 },
   });
   const reloadedAuthority = createVaultCore({
@@ -346,7 +349,7 @@ try {
   const restartedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const restartedDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: authority.vaultId.value,
-    custodyKey: vaultCustodyKey,
+    vaultWorkingKey,
     proofVerifier: { maxSkewMs: 60_000 },
   });
   const restartedAuthority = createVaultCore({

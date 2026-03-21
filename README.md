@@ -7,6 +7,7 @@ Node.js vault runtime with a hard-cut architecture: vault core first, explicit c
 ## Documentation / 文档 / ドキュメント / 문서 / Docs
 
 - [English](README.md)
+- [Custody Model](docs/CUSTODY_MODEL.md)
 - [中文](docs/zh/README.md)
 - [日本語](docs/ja/README.md)
 - [한국어](docs/ko/README.md)
@@ -39,11 +40,14 @@ npm install @the-ai-company/cbio-node-runtime
 import {
   createVaultService,
   createDefaultVaultCoreDependencies,
+  initializePersistentVault,
+  recoverPersistentVault,
   createOwnerHttpFlowBoundary,
   createStandardAcquireBoundary,
   createStandardDispatchBoundary,
   createOwnerClient,
   createAgentClient,
+  FsStorageProvider,
   InMemoryVaultCapabilityResolver,
   LocalVaultTransport,
 } from '@the-ai-company/cbio-node-runtime';
@@ -174,6 +178,28 @@ const exported = await owner.exportSecret({
 });
 
 console.log(exported.plaintext);
+```
+
+Persistent custody bootstrap example:
+
+```ts
+const storage = new FsStorageProvider('/tmp/cbio-vault');
+const initializedVault = await initializePersistentVault(storage, {
+  vaultId: 'vault-persistent',
+  bootstrapOwner: {
+    vaultId: { value: 'vault-persistent' },
+    ownerId: 'owner-1',
+    publicKey: ownerPublicKey,
+  },
+});
+
+// Show once to the owner and let them store it offline.
+console.log(initializedVault.initializedCustody.vaultRecoveryKey);
+
+const recoveredVault = await recoverPersistentVault(storage, {
+  vaultId: 'vault-persistent',
+  initializedVault.initializedCustody.vaultRecoveryKey,
+});
 ```
 
 ## Build

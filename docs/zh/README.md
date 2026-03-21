@@ -19,19 +19,27 @@ npm install @the-ai-company/cbio-node-runtime
 ```ts
 import {
   createVaultService,
+  initializePersistentVault,
+  recoverPersistentVault,
   InMemoryVaultCapabilityResolver,
   LocalVaultTransport,
   createOwnerClient,
   createAgentClient,
+  FsStorageProvider,
 } from '@the-ai-company/cbio-node-runtime';
 ```
 
 ## 架构
 
 1. secret 明文只存在于 `vault-core`
-2. `clients/owner` 负责 owner 写入与审计读取
+2. `clients/owner` 负责 owner 写入、明文导出与审计读取
 3. `clients/agent` 负责 agent 签名 dispatch 请求
 4. `vault-ingress` 负责在 vault 边界内部处理 capability 解析与 dispatch ingress
+
+推荐的持久化主路径：
+
+- 通过 `initializePersistentVault(...)` 初始化持久化 vault
+- 通过 `recoverPersistentVault(...)` 用 recovery key 恢复持久化 vault
 
 ## 构建
 

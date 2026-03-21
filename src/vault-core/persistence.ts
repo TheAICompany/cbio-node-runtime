@@ -23,7 +23,7 @@ import {
   createDefaultVaultCoreDependencies,
   type CreateDefaultVaultCoreDependenciesOptions,
 } from "./defaults.js";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { VaultCoreError } from "./errors.js";
 import type { DispatchRequest } from "./contracts.js";
 
@@ -47,6 +47,25 @@ interface CustomFlowState {
   flows: CustomHttpFlowDefinition[];
 }
 
+export const DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY = "vault/custody/working-key.sealed";
+
+export interface InitializeVaultCustodyOptions {
+  vaultWorkingKey?: string;
+  vaultRecoveryKey?: string;
+  storageKey?: string;
+  overwrite?: boolean;
+}
+
+export interface InitializedVaultCustody {
+  vaultWorkingKey: string;
+  vaultRecoveryKey: string;
+  storageKey: string;
+}
+
+export interface CreatePersistentVaultCoreDependenciesOptions extends CreateDefaultVaultCoreDependenciesOptions {
+  vaultWorkingKey: string;
+}
+
 function serializeJson(value: unknown): Buffer {
   return Buffer.from(JSON.stringify(value, null, 2), "utf8");
 }
@@ -64,6 +83,57 @@ async function withStorageLock<T>(storage: IStorageProvider, key: string, task: 
     return storage.withLock(key, task);
   }
   return task();
+}
+
+function newBase64UrlKey(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+export async function initializeVaultCustody(
+  storage: IStorageProvider,
+  options: InitializeVaultCustodyOptions = {},
+): Promise<InitializedVaultCustody> {
+  const storageKey = options.storageKey ?? DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY;
+  if (!options.overwrite && await storage.has(storageKey)) {
+    throw new Error("vault custody already initialized");
+  }
+  const vaultWorkingKey = options.vaultWorkingKey ?? newBase64UrlKey();
+  const vaultRecoveryKey = options.vaultRecoveryKey ?? newBase64UrlKey();
+  const sealed = sealBlob(
+    {
+      version: "v1.0",
+      secrets: {
+        vaultWorkingKey,
+      },
+      secretMetadata: {
+        kind: "vault_working_key",
+      },
+    },
+    vaultRecoveryKey,
+  );
+  await storage.write(storageKey, Buffer.from(sealed, "utf8"));
+  return {
+    vaultWorkingKey,
+    vaultRecoveryKey,
+    storageKey,
+  };
+}
+
+export async function recoverVaultWorkingKey(
+  storage: IStorageProvider,
+  vaultRecoveryKey: string,
+  storageKey = DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY,
+): Promise<string> {
+  const payload = await storage.read(storageKey);
+  if (!payload) {
+    throw new Error("vault custody not initialized");
+  }
+  const unsealed = unsealBlob(payload.toString("utf8"), vaultRecoveryKey);
+  const vaultWorkingKey = unsealed.secrets.vaultWorkingKey;
+  if (typeof vaultWorkingKey !== "string" || !vaultWorkingKey) {
+    throw new Error("vault working key missing from custody blob");
+  }
+  return vaultWorkingKey;
 }
 
 export class FileSecretRepository implements SecretRepository {
@@ -180,7 +250,7 @@ export class FileAuditLog implements AuditLog {
 export class FileSecretCustody implements SecretCustody {
   constructor(
     private readonly _storage: IStorageProvider,
-    private readonly _custodyKey: string,
+    private readonly _vaultWorkingKey: string,
     private readonly _keyPrefix = "vault/custody",
   ) {}
 
@@ -200,7 +270,7 @@ export class FileSecretCustody implements SecretCustody {
             secretId: secretId.value,
           },
         },
-        this._custodyKey,
+        this._vaultWorkingKey,
       );
       await this._storage.write(this.key(secretId), Buffer.from(sealed, "utf8"));
     });
@@ -211,7 +281,7 @@ export class FileSecretCustody implements SecretCustody {
     if (!payload) {
       return null;
     }
-    const unsealed = unsealBlob(payload.toString("utf8"), this._custodyKey);
+    const unsealed = unsealBlob(payload.toString("utf8"), this._vaultWorkingKey);
     return unsealed.secrets.material ?? null;
   }
 
@@ -339,7 +409,7 @@ export class FileCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
 
 export function createPersistentVaultCoreDependencies(
   storage: IStorageProvider,
-  options: CreateDefaultVaultCoreDependenciesOptions = {},
+  options: CreatePersistentVaultCoreDependenciesOptions,
 ): {
   vaultId: ReturnType<typeof createDefaultVaultCoreDependencies>["vaultId"];
   secrets: FileSecretRepository;
@@ -357,16 +427,13 @@ export function createPersistentVaultCoreDependencies(
   clock: ReturnType<typeof createDefaultVaultCoreDependencies>["clock"];
   ids: ReturnType<typeof createDefaultVaultCoreDependencies>["ids"];
 } {
-  if (!options.custodyKey) {
-    throw new Error("persistent vault dependencies require custodyKey");
-  }
   const defaults = createDefaultVaultCoreDependencies(options);
   const capabilityRevocations = new FileCapabilityRevocationRegistry(storage);
   const customFlows = new FileCustomHttpFlowRegistry(storage);
   return {
     ...defaults,
     secrets: new FileSecretRepository(storage),
-    custody: new FileSecretCustody(storage, options.custodyKey),
+    custody: new FileSecretCustody(storage, options.vaultWorkingKey),
     audit: new FileAuditLog(storage),
     policy: new DefaultPolicyEngine({
       ...(options.policy ?? {}),
