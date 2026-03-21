@@ -1,100 +1,67 @@
-# CBIO Runtime Architecture
+# Architecture
 
-This document defines the architectural boundaries and naming rules for the runtime.
+Current product architecture is vault-first.
 
-For cross-language runtime rules that Node and Rust must share, see [spec/runtime/README.md](./spec/runtime/README.md).
+## Public Modules
 
-## Layer Boundaries
+- `vault-core`
+  Stores secret plaintext, validates writes, validates dispatch, appends audit, invokes trusted executors.
 
-- `runtime/`: public consumer surface only.
-- `protocol/`: protocol adapters and identity/crypto helpers layered on top of `cbio-protocol`.
-- `vault/`: local secret storage, persistence, recovery, and secret policy enforcement.
-- `agent/`: identity and managed-agent orchestration.
-- `http/`: HTTP-facing workflows and local proxy helpers.
-- `audit/`: activity log data structures and persistence helpers.
-- `docs/`: examples, guidance, and integration patterns. Not executable product logic.
-- `docs/spec/runtime/`: shared runtime contracts for multi-language implementations.
+- `clients/owner`
+  Owner-facing client for secret writes and audit reads.
 
-## Naming Rules
+- `clients/agent`
+  Agent-facing client for signed dispatch requests. It never receives secret plaintext.
 
-### 1. One name, one layer
+- `vault-ingress`
+  Accepts request-shaped calls, resolves capability inside the vault boundary, performs trusted acquisition flows, and forwards dispatch into vault-core internals.
 
-Do not use the same term for different layers of authority or behavior.
+## Core Rules
 
-- Protocol-level privileges must be named differently from runtime handle permissions.
-- Internal storage records must not be named like public API concepts.
+1. Secret plaintext exists only inside vault-core.
+2. Only owner and trusted issuer paths may write secrets.
+3. Agent can only request dispatch through capability + proof.
+4. Vault validates and audits every dispatch.
 
-Good examples:
+## Current HTTP Secret Flows
 
-- `issuedCapabilities`: privileges embedded into a signed identity document
-- `runtimePermissions`: permissions granted to a returned `CbioAgent` handle
+The current runtime surface supports two explicit flow classes:
 
-### 2. Name by responsibility
+- `acquire_secret`
+  Vault performs an acquisition flow, stores the extracted secret, and returns only protocol metadata plus a redacted response shape.
 
-Names should describe what the code does, not merely what topic it is near.
+- `send_secret`
+  Vault sends a stored secret to an approved target and returns the remote response as normal agent-visible output.
+  This is the standard secret-use path, not the acquisition path.
 
-Good:
+The runtime does not attempt to enumerate or understand arbitrary remote protocols. Acquisition is limited to built-in standard flows rather than caller-defined extraction logic. Unsupported mixed or non-secret flows are outside the current first-version surface.
 
-- `startLocalAuthProxy`
-- `fetchWithAuth`
-- `getManagedAgentCapabilities`
+This is deliberate rather than accidental:
 
-Bad:
+- acquisition flows are treated as sensitive on the response path because they may mint or return new secret material
+- normal secret-backed dispatch is treated as a standard protocol call to an owner-approved target
 
-- vague helper names
-- names that only imply a provider or product example
+If a target returns sensitive values during a normal dispatch flow, the vault does not try to reinterpret the remote protocol and redact it retroactively. That responsibility belongs to the remote protocol contract and the owner's authorization boundary.
 
-### 3. Name public contracts by actual requirements
+## Owner-Defined Custom HTTP Flows
 
-Public option and parameter names must reflect what callers truly need.
+The current runtime also exposes a narrow exception path for non-standard integrations:
 
-Good:
+- owner registers a `custom_http` flow
+- the flow fixes `mode`, `targetUrl`, `method`, and `responseVisibility`
+- agent capabilities reference `customFlowId`
+- agent may trigger the flow, but may not redefine it
 
-- `IdentityLoadKeys`: requires `privateKey`, allows optional `publicKey`
+The owner HTTP boundary itself is modeled as a factory surface:
 
-Bad:
+- `createOwnerHttpFlowBoundary(...)`
+- `createStandardAcquireBoundary(...)`
+- `createStandardDispatchBoundary(...)`
 
-- names that imply stronger requirements than the implementation actually needs
+This keeps the escape hatch inside the vault boundary rather than reopening caller-defined open extraction or open response policies.
 
-### 4. Do not promote examples into core abstractions
+Current custom modes are:
 
-Common configurations belong in docs, not in the core naming system.
-
-- External service examples such as OpenAI, Anthropic, or Resend are documentation concerns.
-- Core APIs should accept general configuration such as `upstreamBaseUrl`, `authHeaderName`, and `authPrefix`.
-
-### 5. Split option objects by operation
-
-If one options type starts describing multiple operations, split it.
-
-A single options object may still group inputs that are consumed by one concrete operation path.
-For example, an identity load API may accept both storage binding and issued-identity binding if both are applied during the same load step.
-
-Good:
-
-- `ManagedAgentIssueOptions`
-- `ManagedAgentLoadOptions`
-- `RegisterChildIdentityOptions`
-
-Bad:
-
-- one broad options object that mixes issue, load, storage, and permission semantics
-
-### 6. Internal escape hatches stay internal
-
-If a method exists only to let implementation pieces cooperate, it should not become part of the public API shape.
-
-- Prefer module-local coordination over public bridge methods.
-- Avoid exposing internal records, vault objects, or persistence schemas from `runtime/`.
-
-## Review Checklist
-
-When evaluating a new function, type, or field name, ask:
-
-1. Does this name describe one thing only?
-2. Does it reveal the correct layer and authority level?
-3. Would a user infer the correct behavior without reading implementation code?
-4. Is this a stable domain concept, or just a popular example?
-5. Is this exposing an internal detail as if it were public API?
-
-If any answer is "no", rename or split before expanding the API surface.
+- `acquire_secret`
+- `send_secret`
+- `bidirectional_secret`

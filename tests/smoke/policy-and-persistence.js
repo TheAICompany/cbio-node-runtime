@@ -1,0 +1,432 @@
+import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { Buffer } from "node:buffer";
+import {
+  VaultCoreError,
+  createAgentClient,
+  createVaultCore,
+  createPersistentVaultCoreDependencies,
+  wrapVaultCoreAsVaultService,
+  createOwnerClient,
+  DefaultPolicyEngine,
+  FsStorageProvider,
+  HttpDispatchExecutor,
+  InMemoryAgentIdentityRegistry,
+  InMemoryOwnerIdentityRegistry,
+  InMemoryVaultCapabilityResolver,
+  PersistentVaultSecretCustody,
+  LocalVaultTransport,
+  LocalSigner,
+  PersistentVaultAuditLog,
+  PersistentVaultSecretRepository,
+  RandomIdGenerator,
+  SignatureAgentProofVerifier,
+  SignatureOwnerProofVerifier,
+  SystemClock,
+  generateIdentityKeys,
+} from "../../dist/runtime/index.js";
+
+const tempDir = await mkdtemp(join(tmpdir(), "cbio-policy-"));
+
+try {
+  const storage = new FsStorageProvider(tempDir);
+  const custodyKey = Buffer.alloc(32, 9).toString("base64url");
+  const policyAgentIdentities = new InMemoryAgentIdentityRegistry();
+  const policyOwnerIdentities = new InMemoryOwnerIdentityRegistry();
+  const persistentDeps = createPersistentVaultCoreDependencies(storage, {
+    vaultId: "vault-policy",
+    custodyKey,
+  });
+  const revocations = persistentDeps.capabilityRevocations;
+  const authority = createVaultCore({
+    ...persistentDeps,
+    executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
+    agentIdentities: policyAgentIdentities,
+    ownerIdentities: policyOwnerIdentities,
+    proofVerifier: new SignatureAgentProofVerifier(policyAgentIdentities, { maxSkewMs: 60_000 }),
+    ownerProofVerifier: new SignatureOwnerProofVerifier(policyOwnerIdentities, { maxSkewMs: 60_000 }),
+  });
+  const capabilityResolver = new InMemoryVaultCapabilityResolver();
+  const vault = wrapVaultCoreAsVaultService(authority, { capabilities: capabilityResolver });
+
+  const ownerKeys = generateIdentityKeys();
+  await authority.bootstrapOwnerIdentity({
+    vaultId: authority.vaultId,
+    ownerId: "owner-2",
+    publicKey: ownerKeys.publicKey,
+  });
+  const owner = createOwnerClient({ ownerId: "owner-2" }, vault, new LocalSigner(ownerKeys), new SystemClock());
+  await assert.rejects(
+    () => owner.writeSecret({
+      alias: "unscoped-token",
+      plaintext: "secret-0",
+      targetBindings: [],
+    }),
+    (error) => error instanceof VaultCoreError && error.code === "VAULT_WRITE_DENIED",
+  );
+
+  const restrictedRecord = await owner.writeSecret({
+    alias: "restricted-token",
+    plaintext: "secret-2",
+    targetBindings: [
+      {
+        kind: "site",
+        targetId: "allowed-site",
+        targetUrl: "https://allowed.example.com/resource",
+        methods: ["POST"],
+      },
+    ],
+  });
+
+  const keys = generateIdentityKeys();
+  await owner.registerAgentIdentity({
+    agentId: "agent-restricted",
+    publicKey: keys.publicKey,
+  });
+  capabilityResolver.set({
+    vaultId: authority.vaultId,
+    capabilityId: "cap-restricted",
+    agentId: "agent-restricted",
+    secretIds: [restrictedRecord.secretId.value],
+    operation: "dispatch_http",
+    allowedTargets: ["https://allowed.example.com/resource"],
+    allowedMethods: ["POST"],
+    allowedPaths: ["/resource"],
+    issuedAt: new Date().toISOString(),
+    auditRequired: true,
+  });
+
+  const agent = createAgentClient(
+    { agentId: "agent-restricted" },
+    {
+      vaultId: authority.vaultId,
+      capabilityId: "cap-restricted",
+      agentId: "agent-restricted",
+      secretIds: [restrictedRecord.secretId.value],
+      operation: "dispatch_http",
+      allowedTargets: ["https://allowed.example.com/resource"],
+      allowedMethods: ["POST"],
+      allowedPaths: ["/resource"],
+      issuedAt: new Date().toISOString(),
+      auditRequired: true,
+    },
+    new LocalSigner(keys),
+    new LocalVaultTransport(vault, "cap-restricted"),
+    new SystemClock(),
+  );
+
+  await assert.rejects(
+    () => agent.dispatch({
+      secretAlias: "restricted-token",
+      targetUrl: "https://denied.example.com/resource",
+      method: "POST",
+    }),
+    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
+  );
+
+  const audit = await owner.getAudit({ secretAlias: "restricted-token" });
+  assert.ok(audit.length >= 1);
+  assert.ok(audit.some((entry) => entry.outcome === "denied" && /target denied|record target denied/.test(entry.detail)));
+
+  await assert.rejects(
+    () => agent.dispatch({
+      secretAlias: "restricted-token",
+      targetUrl: "https://allowed.example.com/other",
+      method: "POST",
+    }),
+    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
+  );
+
+  capabilityResolver.set({
+    vaultId: authority.vaultId,
+    capabilityId: "cap-limited",
+    agentId: "agent-restricted",
+    secretIds: [restrictedRecord.secretId.value],
+    operation: "dispatch_http",
+    allowedTargets: ["https://allowed.example.com/resource"],
+    allowedMethods: ["POST"],
+    allowedPaths: ["/resource"],
+    issuedAt: new Date().toISOString(),
+    rateLimit: {
+      maxRequests: 1,
+      windowMs: 60_000,
+    },
+    auditRequired: true,
+  });
+  const rateLimitedAgent = createAgentClient(
+    { agentId: "agent-restricted" },
+    {
+      vaultId: authority.vaultId,
+      capabilityId: "cap-limited",
+      agentId: "agent-restricted",
+      secretIds: [restrictedRecord.secretId.value],
+      operation: "dispatch_http",
+      allowedTargets: ["https://allowed.example.com/resource"],
+      allowedMethods: ["POST"],
+      allowedPaths: ["/resource"],
+      issuedAt: new Date().toISOString(),
+      rateLimit: {
+        maxRequests: 1,
+        windowMs: 60_000,
+      },
+      auditRequired: true,
+    },
+    new LocalSigner(keys),
+    new LocalVaultTransport(vault, "cap-limited"),
+    new SystemClock(),
+  );
+  const firstLimited = await rateLimitedAgent.dispatch({
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+  });
+  assert.equal(firstLimited.status, "succeeded");
+  await assert.rejects(
+    () => rateLimitedAgent.dispatch({
+      secretAlias: "restricted-token",
+      targetUrl: "https://allowed.example.com/resource",
+      method: "POST",
+    }),
+    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
+  );
+
+  const revokedVersion = await revocations.revoke(authority.vaultId, "agent-restricted", "cap-restricted");
+  assert.equal(revokedVersion, 1);
+  await assert.rejects(
+    () => agent.dispatch({
+      secretAlias: "restricted-token",
+      targetUrl: "https://allowed.example.com/resource",
+      method: "POST",
+    }),
+    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
+  );
+
+  await assert.rejects(
+    () => owner.writeSecret({
+      alias: "restricted-token",
+      plaintext: "replacement-secret",
+      targetBindings: [
+        {
+          kind: "site",
+          targetId: "allowed-site",
+          targetUrl: "https://allowed.example.com/resource",
+          methods: ["POST"],
+        },
+      ],
+    }),
+    (error) => error instanceof VaultCoreError && error.code === "VAULT_WRITE_DENIED",
+  );
+
+  const reloadedAgentIdentities = new InMemoryAgentIdentityRegistry();
+  const reloadedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
+  const reloadedDeps = createPersistentVaultCoreDependencies(storage, {
+    vaultId: authority.vaultId.value,
+    custodyKey,
+    proofVerifier: { maxSkewMs: 60_000 },
+  });
+  const reloadedAuthority = createVaultCore({
+    ...reloadedDeps,
+    executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
+    agentIdentities: reloadedAgentIdentities,
+    ownerIdentities: reloadedOwnerIdentities,
+    proofVerifier: new SignatureAgentProofVerifier(reloadedAgentIdentities, { maxSkewMs: 60_000 }),
+    ownerProofVerifier: new SignatureOwnerProofVerifier(reloadedOwnerIdentities, { maxSkewMs: 60_000 }),
+  });
+  await reloadedAuthority.bootstrapOwnerIdentity({
+    vaultId: reloadedAuthority.vaultId,
+    ownerId: "owner-2",
+    publicKey: ownerKeys.publicKey,
+  });
+  const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
+  const reloadedOwner = createOwnerClient({ ownerId: "owner-2" }, reloadedVault, new LocalSigner(ownerKeys), new SystemClock());
+  await reloadedOwner.registerAgentIdentity({
+    agentId: "agent-restricted",
+    publicKey: keys.publicKey,
+  });
+
+  const verifierSigner = new LocalSigner(keys);
+  const requestedAt = new Date().toISOString();
+  const requestId = "manual-check";
+  const reloadedCapabilityId = "cap-reloaded";
+  const binding = JSON.stringify({
+    requestId,
+    requestedAt,
+    agentId: "agent-restricted",
+    capabilityId: reloadedCapabilityId,
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+    body: null,
+  });
+
+  const authorization = await reloadedAuthority.authorizeDispatch({
+    vaultId: reloadedAuthority.vaultId,
+    requestId,
+    requestedAt,
+    agent: { kind: "agent", id: "agent-restricted" },
+    capability: {
+      vaultId: reloadedAuthority.vaultId,
+      capabilityId: reloadedCapabilityId,
+      agentId: "agent-restricted",
+      secretIds: [restrictedRecord.secretId.value],
+      operation: "dispatch_http",
+      allowedTargets: ["https://allowed.example.com/resource"],
+      allowedMethods: ["POST"],
+      allowedPaths: ["/resource"],
+      issuedAt: new Date().toISOString(),
+      auditRequired: true,
+    },
+    proof: {
+      agentId: "agent-restricted",
+      signature: await verifierSigner.sign(binding),
+      requestId,
+      requestedAt,
+    },
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+  }).catch((error) => {
+    if (error instanceof VaultCoreError) {
+      throw error;
+    }
+    throw error;
+  });
+
+  assert.equal(authorization.decision, "allow");
+  const persistedSecrets = await readFile(join(tempDir, "vault/secrets.json"), "utf8");
+  assert.ok(!persistedSecrets.includes("secret-2"));
+
+  const persistedReplayRequestedAt = new Date().toISOString();
+  const persistedReplayRequestId = "persisted-replay";
+  const persistedReplayBinding = JSON.stringify({
+    requestId: persistedReplayRequestId,
+    requestedAt: persistedReplayRequestedAt,
+    agentId: "agent-restricted",
+    capabilityId: "cap-reloaded",
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+    body: null,
+  });
+  const persistedReplayRequest = {
+    vaultId: reloadedAuthority.vaultId,
+    requestId: persistedReplayRequestId,
+    requestedAt: persistedReplayRequestedAt,
+    agent: { kind: "agent", id: "agent-restricted" },
+    capability: {
+      vaultId: reloadedAuthority.vaultId,
+      capabilityId: "cap-reloaded",
+      agentId: "agent-restricted",
+      secretIds: [restrictedRecord.secretId.value],
+      operation: "dispatch_http",
+      allowedTargets: ["https://allowed.example.com/resource"],
+      allowedMethods: ["POST"],
+      allowedPaths: ["/resource"],
+      issuedAt: new Date().toISOString(),
+      auditRequired: true,
+    },
+    proof: {
+      agentId: "agent-restricted",
+      signature: await verifierSigner.sign(persistedReplayBinding),
+      requestId: persistedReplayRequestId,
+      requestedAt: persistedReplayRequestedAt,
+    },
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+  };
+  const persistedReplayFirst = await reloadedAuthority.dispatchSecret(persistedReplayRequest);
+  assert.equal(persistedReplayFirst.status, "succeeded");
+
+  const restartedAgentIdentities = new InMemoryAgentIdentityRegistry();
+  const restartedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
+  const restartedDeps = createPersistentVaultCoreDependencies(storage, {
+    vaultId: authority.vaultId.value,
+    custodyKey,
+    proofVerifier: { maxSkewMs: 60_000 },
+  });
+  const restartedAuthority = createVaultCore({
+    ...restartedDeps,
+    executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
+    agentIdentities: restartedAgentIdentities,
+    ownerIdentities: restartedOwnerIdentities,
+    proofVerifier: new SignatureAgentProofVerifier(restartedAgentIdentities, { maxSkewMs: 60_000 }),
+    ownerProofVerifier: new SignatureOwnerProofVerifier(restartedOwnerIdentities, { maxSkewMs: 60_000 }),
+  });
+  await restartedAuthority.bootstrapOwnerIdentity({
+    vaultId: restartedAuthority.vaultId,
+    ownerId: "owner-2",
+    publicKey: ownerKeys.publicKey,
+  });
+  const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
+  const restartedOwner = createOwnerClient({ ownerId: "owner-2" }, restartedVault, new LocalSigner(ownerKeys), new SystemClock());
+  await restartedOwner.registerAgentIdentity({
+    agentId: "agent-restricted",
+    publicKey: keys.publicKey,
+  });
+  await assert.rejects(
+    () => restartedAuthority.dispatchSecret(persistedReplayRequest),
+    (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /replay/.test(error.message),
+  );
+
+  const restartedRateLimitSigner = new LocalSigner(keys);
+  const restartedRateLimitRequestedAt = new Date().toISOString();
+  const restartedRateLimitRequestId = "restarted-rate-limit";
+  const restartedRateLimitCapabilityId = "cap-limited";
+  const restartedRateLimitBinding = JSON.stringify({
+    requestId: restartedRateLimitRequestId,
+    requestedAt: restartedRateLimitRequestedAt,
+    agentId: "agent-restricted",
+    capabilityId: restartedRateLimitCapabilityId,
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+    body: null,
+  });
+  const restartedRateLimitSignature = await restartedRateLimitSigner.sign(restartedRateLimitBinding);
+  await assert.rejects(
+    () => restartedAuthority.dispatchSecret({
+      vaultId: restartedAuthority.vaultId,
+      requestId: restartedRateLimitRequestId,
+      requestedAt: restartedRateLimitRequestedAt,
+      agent: { kind: "agent", id: "agent-restricted" },
+      capability: {
+        vaultId: restartedAuthority.vaultId,
+        capabilityId: restartedRateLimitCapabilityId,
+        agentId: "agent-restricted",
+        secretIds: [restrictedRecord.secretId.value],
+        operation: "dispatch_http",
+        allowedTargets: ["https://allowed.example.com/resource"],
+        allowedMethods: ["POST"],
+        allowedPaths: ["/resource"],
+        issuedAt: new Date().toISOString(),
+        rateLimit: {
+          maxRequests: 1,
+          windowMs: 60_000,
+        },
+        auditRequired: true,
+      },
+      proof: {
+        agentId: "agent-restricted",
+        signature: restartedRateLimitSignature,
+        requestId: restartedRateLimitRequestId,
+        requestedAt: restartedRateLimitRequestedAt,
+      },
+      secretAlias: "restricted-token",
+      targetUrl: "https://allowed.example.com/resource",
+      method: "POST",
+    }),
+    (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /rate limit/.test(error.message),
+  );
+
+  const reloadedAudit = await owner.getAudit({ secretAlias: "restricted-token" });
+  assert.ok(reloadedAudit.some((entry) => entry.action === "reassign_alias" && entry.outcome === "denied"));
+  assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /capability revoked/.test(entry.detail)));
+  assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /path denied|capability rate limit exceeded/.test(entry.detail)));
+
+  console.log("policy and persistence smoke test passed");
+} finally {
+  await rm(tempDir, { recursive: true, force: true });
+}

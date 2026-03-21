@@ -1,27 +1,11 @@
-# cbio Node Runtime
+# cbio Vault Runtime
 
-Runtime Node.js para caja de identidad y credenciales cbio. Solo biblioteca, sin CLI ni TUI.
+Primera version publica del runtime centrado en autoridad.
 
-Importa y usa `CbioIdentity`, `CbioAgent` desde el export principal.
+Superficie principal:
+- `vault-core`
+- `clients/owner`
+- `clients/agent`
+- `vault-ingress`
 
-## Instalación
-
-```bash
-npm install @the-ai-company/cbio-node-runtime
-```
-
-## Uso
-
-```ts
-import { CbioIdentity, generateIdentityKeys } from '@the-ai-company/cbio-node-runtime';
-
-const keys = generateIdentityKeys();
-const identity = await CbioIdentity.load({ privateKey: keys.privateKey });
-```
-
-## Compilación
-
-```bash
-npm run build
-npm run test
-```
+La API antigua centrada en `CbioIdentity` ya no forma parte del producto.

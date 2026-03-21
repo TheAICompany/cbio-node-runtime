@@ -6,6 +6,10 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { IStorageProvider } from './provider.js';
 
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class FsStorageProvider implements IStorageProvider {
     constructor(private baseDir?: string) {}
 
@@ -64,5 +68,29 @@ export class FsStorageProvider implements IStorageProvider {
 
     async rename(fromKey: string, toKey: string): Promise<void> {
         await fs.rename(this.resolve(fromKey), this.resolve(toKey));
+    }
+
+    async withLock<T>(key: string, task: () => Promise<T>): Promise<T> {
+        const fullPath = this.resolve(`${key}.lock`);
+        await fs.mkdir(path.dirname(fullPath), { recursive: true, mode: FsStorageProvider.DIRECTORY_MODE });
+
+        for (;;) {
+            try {
+                const fh = await fs.open(fullPath, 'wx', FsStorageProvider.FILE_MODE);
+                try {
+                    return await task();
+                } finally {
+                    await fh.close();
+                    await fs.unlink(fullPath).catch((error: any) => {
+                        if (error.code !== 'ENOENT') throw error;
+                    });
+                }
+            } catch (error: any) {
+                if (error.code !== 'EEXIST') {
+                    throw error;
+                }
+                await sleep(10);
+            }
+        }
     }
 }

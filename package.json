@@ -1,6 +1,6 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "0.39.0",
+  "version": "0.41.0",
   "description": "Node.js runtime for cbio identity and credential vault. Library only, no CLI or TUI.",
   "type": "module",
   "main": "./dist/runtime/index.js",
@@ -17,14 +17,6 @@
     ".": {
       "import": "./dist/runtime/index.js",
       "types": "./dist/runtime/index.d.ts"
-    },
-    "./protocol": {
-      "import": "./dist/protocol/identity.js",
-      "types": "./dist/protocol/identity.d.ts"
-    },
-    "./sealed": {
-      "import": "./dist/sealed/index.js",
-      "types": "./dist/sealed/index.d.ts"
     }
   },
   "dependencies": {
@@ -34,7 +26,7 @@
     "build": "node ./scripts/clean-dist.mjs && tsc",
     "prepare": "npm run build",
     "test": "npm run build && npm run test:acceptance",
-    "test:acceptance": "node tests/runtime/derivation.js && node tests/runtime/errors.js && node tests/runtime/hardened_vault.js && node tests/runtime/isolation_local.js && node tests/runtime/managed_agent_identity.js && node tests/runtime/merge_security_local.js && node tests/runtime/recursive_cbio.js && node tests/runtime/register_child.js && node tests/runtime/transparency.js && node tests/runtime/vault_resilience.js && node tests/runtime/activity_log.js && node tests/runtime/secret_rotation_policy.js && node tests/runtime/local_auth_proxy.js && node tests/runtime/local_secret_ingress.js && node tests/runtime/local_secret_proof.js && node tests/runtime/local_secret_validate.js && node tests/runtime/generic_secret_validator.js && node tests/runtime/local_secret_guardrails.js && node tests/storage/adaptability.js && node tests/runtime/autosave.js"
+    "test:acceptance": "node tests/smoke/runtime-surface.js && node tests/smoke/policy-and-persistence.js && node tests/smoke/replay-guard.js && node tests/smoke/security-guards.js"
   },
   "keywords": [
     "claw-biometric",

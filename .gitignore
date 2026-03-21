@@ -23,3 +23,6 @@ npm-debug.log*
 *.enc
 .c-bio/
 .cbio_*
+
+# Internal-only docs
+internal/

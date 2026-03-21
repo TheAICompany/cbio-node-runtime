@@ -1,61 +1,133 @@
 /**
- * Runtime export. For agent developers.
- * Owner, Agent, storage, errors. Consumer surface only.
+ * Runtime export.
+ * Hard-cut public surface: vault core plus explicit clients only.
  */
 
-export { CbioIdentity, CbioAgent } from "../agent/agent.js";
-export type {
-  ActivityLogConfig,
-  GetAgentOptions,
-  IssuedCapabilityName,
-  ManagedAgentHandleConfig,
-  ManagedAgentCapabilityInfo,
-  ManagedAgentCapabilityStatus,
-  ManagedAgentContext,
-  ManagedAgentIssueConfig,
-  ManagedAgentIssueOptions,
-  ManagedAgentLoadOptions,
-  ManagedAgentStorageConfig,
-  RegisterChildIdentityOptions,
-  RegisterChildIdentityResult,
-  IdentityLoadKeys,
-  IdentityLoadOptions,
-  RuntimePermissionName,
-  RuntimePermissions,
-  SecretValidationResult,
-  SecretValidationStatus,
-  SecretValidator,
-  SecretValidatorHandle,
-  SecretProofAlgorithm,
-  StartLocalSecretIngressOptions,
-} from "../agent/agent.js";
-export type { MergeResult } from "../vault/vault.js";
-export type {
-  FetchFailure,
-  FetchJsonAndAddSecretOptions,
-  FetchJsonAndUpdateSecretOptions,
-  FetchResult,
-  FetchSuccess,
-} from "../http/secretAcquisition.js";
-export { generateIdentityKeys, derivePublicKey } from "../protocol/crypto.js";
 export { IdentityError, IdentityErrorCode } from "../errors.js";
+export { generateIdentityKeys, derivePublicKey, LocalSigner } from "../protocol/crypto.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
+
 export {
-  startLocalAuthProxy,
-  type FetchWithAuthLike,
-  type LocalAuthProxyOptions,
-  type LocalAuthProxyHandle,
-} from "../http/localAuthProxy.js";
+  createVaultCore,
+  DefaultVaultCore,
+  VaultCoreError,
+  createDefaultVaultCoreDependencies,
+  type CreateDefaultVaultCoreDependenciesOptions,
+  type DefaultPolicyEngineOptions,
+  DefaultPolicyEngine,
+  createPersistentVaultCoreDependencies,
+  PersistentVaultAuditLog,
+  PersistentVaultCapabilityRevocationRegistry,
+  PersistentVaultCustomHttpFlowRegistry,
+  PersistentVaultRateLimitStore,
+  PersistentVaultReplayGuard,
+  PersistentVaultSecretCustody,
+  PersistentVaultSecretRepository,
+  HttpDispatchExecutor,
+  InMemoryAgentIdentityRegistry,
+  InMemoryCapabilityRevocationRegistry,
+  InMemoryCustomHttpFlowRegistry,
+  InMemoryRateLimitStore,
+  InMemoryReplayGuard,
+  InMemoryAuditLog,
+  InMemoryOwnerIdentityRegistry,
+  InMemorySecretCustody,
+  InMemorySecretRepository,
+  RandomIdGenerator,
+  SignatureOwnerProofVerifier,
+  type SignatureAgentProofVerifierOptions,
+  SignatureAgentProofVerifier,
+  SystemClock,
+  type AgentCapability,
+  type AgentIdentityRecord,
+  type AgentProof,
+  type OwnerAuditRequest,
+  type OwnerRegisterAgentIdentityCommand,
+  type OwnerRegisterCustomHttpFlowCommand,
+  type OwnerRegisterOwnerIdentityCommand,
+  type OwnerIdentityRecord,
+  type CustomHttpFlowDefinition,
+  type OwnerProof,
+  type AuditEntry,
+  type AuditLog,
+  type AuditQuery,
+  type Clock,
+  type DispatchAuthorization,
+  type DispatchInstruction,
+  type DispatchRequest,
+  type DispatchResult,
+  type IdGenerator,
+  type OwnerIdentityRegistry,
+  type OwnerProofVerifier,
+  type PolicyEngine,
+  type RateLimitStore,
+  type ReplayGuard,
+  type CustomHttpFlowRegistry,
+  type SecretAlias,
+  type SecretCustody,
+  type SecretId,
+  type SecretRecord,
+  type SecretRepository,
+  type SecretVersion,
+  type TrustedExecutor,
+  type VaultCore,
+  type VaultCoreDependencies,
+  type VaultPrincipal,
+  type VaultPrincipalKind,
+  type VaultTargetBinding,
+  type VaultWriteSecretCommand,
+  type VaultId,
+  type AgentIdentityRegistry,
+  type AgentProofVerifier,
+  type CapabilityRevocationRegistry,
+} from "../vault-core/index.js";
+
 export {
-  genericHttpValidator,
-  type GenericHttpSecretValidatorConfig,
-} from "../http/genericSecretValidator.js";
+  createOwnerClient,
+  type OwnerClient,
+  type OwnerIdentity,
+  type OwnerSigner,
+  type OwnerAuditQueryInput,
+  type OwnerRegisterCustomHttpFlowInput,
+  type OwnerRegisterAgentIdentityInput,
+  type OwnerRegisterOwnerIdentityInput,
+  type OwnerSecretTargetBinding,
+  type OwnerWriteSecretInput,
+} from "../clients/owner/index.js";
+
 export {
-  startLocalSecretIngress,
-  type LocalSecretIngressHandle,
-  type LocalSecretIngressOptions,
-  type LocalSecretIngressResult,
-  type LocalSecretIngressWriter,
-} from "../http/localSecretIngress.js";
+  createAgentClient,
+  type AgentClient,
+  type AgentIdentity,
+  type AgentCapabilityEnvelope,
+  type AgentDispatchIntent,
+  type AgentDispatchTransport,
+  type AgentSigner,
+} from "../clients/agent/index.js";
+
+export {
+  createVaultService,
+  wrapVaultCoreAsVaultService,
+  createOwnerHttpFlowBoundary,
+  createStandardAcquireBoundary,
+  createStandardDispatchBoundary,
+  toOwnerHttpFlowBoundary,
+  type VaultService,
+  type VaultAcquireSecretInput,
+  type VaultAcquireSecretResult,
+  type VaultAcquireSecretFlow,
+  type VaultCustomFlowResolver,
+  type VaultCapabilityResolver,
+  type VaultAgentDispatchRequest,
+  type VaultAgentDispatchResponse,
+  type VaultAgentDispatchErrorResponse,
+  type RedactedResponseShape,
+  type OwnerHttpFlowBoundary,
+} from "../vault-ingress/index.js";
+
+export {
+  InMemoryVaultCapabilityResolver,
+  LocalVaultTransport,
+} from "../vault-ingress/defaults.js";

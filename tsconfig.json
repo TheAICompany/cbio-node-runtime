@@ -12,6 +12,16 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/runtime/index.ts",
+    "src/errors.ts",
+    "src/protocol/crypto.ts",
+    "src/storage/**/*",
+    "src/authority-core/**/*",
+    "src/owner-client/**/*",
+    "src/agent-client/**/*",
+    "src/broker-gateway/**/*",
+    "src/issuer-client/**/*"
+  ],
   "exclude": ["node_modules", "dist"]
 }

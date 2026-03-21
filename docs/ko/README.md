@@ -1,27 +1,11 @@
-# cbio Node Runtime
+# cbio Vault Runtime
 
-cbio identity 및 credential vault용 Node.js 런타임. 라이브러리만 제공, CLI/TUI 없음.
+vault-first 1차 공개 런타임입니다.
 
-메인 export에서 `CbioIdentity`, `CbioAgent`를 import하여 사용.
+주요 공개 모듈:
+- `vault-core`
+- `clients/owner`
+- `clients/agent`
+- `vault-ingress`
 
-## 설치
-
-```bash
-npm install @the-ai-company/cbio-node-runtime
-```
-
-## 사용법
-
-```ts
-import { CbioIdentity, generateIdentityKeys } from '@the-ai-company/cbio-node-runtime';
-
-const keys = generateIdentityKeys();
-const identity = await CbioIdentity.load({ privateKey: keys.privateKey });
-```
-
-## 빌드
-
-```bash
-npm run build
-npm run test
-```
+이전 `CbioIdentity` 중심 API 는 더 이상 제품 표면이 아닙니다.

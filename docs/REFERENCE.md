@@ -1,291 +1,292 @@
-# CBIO SDK Deep Reference
+# CBIO Vault Runtime Reference
 
-This document provides a comprehensive technical reference for the CBIO SDK, covering advanced API usage, custom storage implementation, and structured error handling.
+This document describes the current implemented runtime surface.
 
-For high-level concepts and quick start, see [README.md](../README.md). For module structure and naming rules, see [ARCHITECTURE.md](./ARCHITECTURE.md). For cross-language runtime contracts, see [spec/runtime/README.md](./spec/runtime/README.md).
+This file is intentionally narrower: it documents what the shipped API does today.
 
----
+## Public Surface
 
-## 1. Advanced Identity APIs
+The current top-level modules are:
 
-These methods are available under `identity.admin` and its sub-facets, and are intended for administrative or high-privilege bootstrap logic.
+- `vault-core`
+- `vault-ingress`
+- `clients/owner`
+- `clients/agent`
 
-### 1.1 Vault Synchronization & Merging
-- **`identity.admin.vault.mergeFrom(otherIdentity, options?)`**: Atomically merges secrets from another vault.
-  - `onConflict`: `'abort'` (default), `'skip'`, or `'overwrite'`.
-  - Throws `MERGE_IDENTITY_MISMATCH` if root identities differ.
+The main constructors are:
 
-### 1.2 Backups & Sealing
-- **`identity.admin.vault.seal(kdk: string): string`**: Exports the entire vault as an encrypted blob.
-- **`identity.admin.vault.loadFromSealedBlob(kdk: string, blob: string)`**: Restores a vault from a sealed backup.
-- **`identity.admin.vault.saveVault()`**: Persists the current vault back to its bound storage.
-- **`identity.admin.vault.saveVaultAs(storageKey)`**: One-time save of the vault to an explicit key/path. Does NOT change the bound storage for subsequent `saveVault()` or autosave.
+- `createVaultCore(...)`
+- `createVaultService(...)`
+- `createOwnerClient(...)`
+- `createAgentClient(...)`
+- `LocalVaultTransport`
 
-Lower-level sealed blob primitives are also exported from the package subpath:
+## Secret-Flow Model
+
+The current HTTP-facing API supports two explicit secret-flow classes:
+
+- `acquire_secret`
+  No secret leaves the vault. A response-derived secret is stored into the vault. Agent-visible output is limited to protocol metadata and a redacted response shape.
+
+- `send_secret`
+  A stored secret is sent to an owner-approved target. The remote response is treated as normal business output and may be returned to the agent.
+
+This is a deliberate protocol boundary:
+
+- acquisition responses are assumed sensitive and are therefore redacted on the way back to the agent
+- dispatch responses are treated as ordinary HTTP results once the owner has authorized sending the secret to that target
+
+The runtime does not try to reinterpret every remote protocol. If an approved target returns sensitive values during a normal dispatch call, that is part of the target contract and owner authorization scope rather than a vault-side parsing obligation.
+
+The runtime does not claim to understand arbitrary network protocols. The API communicates only the currently supported boundary:
+
+- supported: explicit acquisition into vault through built-in standard flows
+- supported: explicit secret-backed outbound dispatch
+- supported: owner-defined `custom_http` flows for explicit exception cases
+- unsupported: mixed bidirectional-secret flows as a first-class surface
+- unsupported: no-secret operations as a first-class vault primitive
+
+## Vault Service
+
+`vault-ingress` is the request-shaped boundary around the vault kernel.
+
+Important methods:
+
+- `bootstrapOwnerIdentity(...)`
+- `registerAgentIdentity(...)`
+- `registerOwnerIdentity(...)`
+- `writeSecret(...)`
+- `acquireSecret(...)`
+- `dispatch(...)`
+- `handleAgentDispatch(...)`
+- `readAudit(...)`
+
+### Owner Bootstrap
+
+The very first owner is bootstrapped explicitly:
 
 ```ts
-import { sealBlob, unsealBlob } from '@the-ai-company/cbio-node-runtime/sealed';
+await vault.bootstrapOwnerIdentity({
+  vaultId: vault.vaultId,
+  ownerId: 'owner-1',
+  publicKey: ownerPublicKey,
+});
 ```
 
-### 1.3 Audit & Lifecycle
-- **`identity.admin.vault.getActivityLog()`**: Returns a read-only list of all vault-authenticated actions.
-- **`identity.admin.managedAgents.revokeManagedAgent(publicKey, reason?)`**: Permanently revokes a child identity.
-- **`identity.admin.managedAgents.getManagedAgentCapabilities(publicKey)`**: Returns `{ status, capabilities }` for a managed agent, so callers can distinguish active, revoked, missing, and invalid records.
+After that, additional owner and agent identities should be registered through owner-signed commands rather than direct raw records.
 
-### 1.4 Agent Handles
-- **`getAgent()`**: Returns a minimally privileged handle with `vault:fetch` and `vault:list`.
-- **`getAgent({ permissions })`**: Returns a handle with explicitly provided runtime permissions.
-- **`getAgent({ deriveFromIssuedIdentity: true })`**: Derives runtime permissions from the issued identity's protocol capabilities.
+## Owner Client
 
-`permissions` and `deriveFromIssuedIdentity` are mutually exclusive; do not pass both.
+`clients/owner` is the owner-facing caller surface.
 
-Secret-use operations on a `CbioAgent` require:
-- `vault:fetch` for remote authenticated use such as `fetchWithAuth(...)`
-- `vault:acquire` for acquisition, ingress, compare, proof, and validation operations
+Current owner operations:
 
-### 1.5 Recursive Child Identity Management
-When a child is registered via `registerChildIdentity(keys)`, its key material is stored in the parent vault. The method returns `{ publicKey }` (domain-level identifier). Treat the persisted child record as runtime-managed state rather than application-readable plaintext.
+- `writeSecret(...)`
+- `getAudit(...)`
+- `registerAgentIdentity(...)`
+- `registerOwnerIdentity(...)`
+- `registerCustomFlow(...)`
+
+Example:
+
 ```ts
-const { publicKey: childPublicKey } = await identity.registerChildIdentity(keys);
-console.log(childPublicKey);
+const owner = createOwnerClient(ownerIdentity, vault, ownerSigner, clock);
+
+await owner.registerAgentIdentity({
+  agentId: 'agent-1',
+  publicKey: agentPublicKey,
+});
+
+await owner.registerCustomFlow({
+  flowId: 'custom-status-read',
+  mode: 'send_secret',
+  targetUrl: 'https://api.example.com/custom-status',
+  method: 'POST',
+  responseVisibility: 'shape_only',
+});
+
+await owner.writeSecret({
+  alias: 'api-token',
+  plaintext: 'secret-value',
+  targetBindings: [
+    {
+      kind: 'site',
+      targetId: 'api.example.com',
+      targetUrl: 'https://api.example.com/endpoint',
+      methods: ['POST'],
+    },
+  ],
+});
 ```
 
----
+## Agent Client
 
-## 2. Storage Customization
+`clients/agent` creates signed dispatch requests. It never receives plaintext secrets.
 
-The SDK can run on any backend by implementing the `IStorageProvider` interface.
+Current dispatch capabilities use `dispatch_http` as the explicit secret-send operation.
+It is intended for standard secret-backed resource access, not for token mint / refresh / exchange / registration-finalize style acquisition flows.
 
-### 2.1 Interface Definition
+The runtime also supports `custom_http` as an owner-defined exception path. A `custom_http` capability must reference a registered `customFlowId`.
+Owner-defined HTTP boundaries share one factory layer:
+
+- `createOwnerHttpFlowBoundary(...)`
+- `createStandardAcquireBoundary(...)`
+- `createStandardDispatchBoundary(...)`
+
+The owner-defined flow may use one of three modes:
+
+- `acquire_secret`
+- `send_secret`
+- `bidirectional_secret`
+
+Example:
+
+```ts
+const capability = {
+  vaultId: vault.vaultId,
+  capabilityId: 'cap-1',
+  agentId: 'agent-1',
+  secretAliases: ['api-token'],
+  operation: 'dispatch_http',
+  allowedTargets: ['https://api.example.com/endpoint'],
+  allowedMethods: ['POST'],
+  issuedAt: new Date().toISOString(),
+};
+```
+
+Custom capability example:
+
+```ts
+const customCapability = {
+  vaultId: vault.vaultId,
+  capabilityId: 'cap-custom',
+  agentId: 'agent-1',
+  customFlowId: 'custom-status-read',
+  secretAliases: ['api-token'],
+  operation: 'custom_http',
+  allowedTargets: ['https://api.example.com/custom-status'],
+  allowedMethods: ['POST'],
+  issuedAt: new Date().toISOString(),
+};
+```
+
+## Acquisition Result Shape
+
+`acquireSecret(...)` is the explicit acquisition operation.
+
+It no longer accepts an open-ended extractor callback. The current surface only supports built-in protocol flows:
+
+- `oauth_token_response.access_token`
+- `oauth_token_response.refresh_token`
+- `openid_token_response.id_token`
+
+Input:
+
+```ts
+const acquireBoundary = createStandardAcquireBoundary({
+  targetUrl: 'https://issuer.example.com/token',
+  responseField: 'access_token',
+  storeAlias: 'issuer-token',
+});
+
+const acquired = await vault.acquireSecret({
+  alias: acquireBoundary.responseSecret.storeAlias,
+  issuerId: 'issuer-1',
+  url: acquireBoundary.targetUrl,
+  flow: 'oauth_token_response.access_token',
+  method: acquireBoundary.method,
+});
+```
+
+Output:
+
+```ts
+type VaultAcquireSecretResult = {
+  vaultId: VaultId;
+  alias: string;
+  status: 'stored';
+  responseStatus: number;
+  contentType: string | null;
+  responseShape: RedactedResponseShape;
+};
+```
+
+`responseShape` preserves only structure. Leaf values are redacted to `null`.
+
+Example:
+
+```ts
+{
+  access_token: null,
+  user: {
+    id: null,
+    email: null,
+  },
+}
+```
+
+## Dispatch Result Shape
+
+`dispatch_http` returns normal remote output:
+
+```ts
+type DispatchResult = {
+  vaultId: VaultId;
+  requestId: string;
+  status: 'succeeded' | 'denied' | 'failed';
+  targetUrl: string;
+  method: string;
+  responseStatus?: number;
+  responseBody?: string;
+  error?: string;
+};
+```
+
+This is an intentional current-surface choice: `dispatch_http` is treated as secret-out / non-secret-in.
+
+In other words, the vault respects the standard HTTP response surface for normal dispatch. It does not attempt to retroactively sanitize every downstream response body, because doing so would shift responsibility away from the target protocol and the owner's authorization decision.
+
+For `custom_http`, response visibility is chosen by the owner at flow registration time:
+
+- `passthrough`: return the remote body
+- `shape_only`: return a redacted shape-only body
+
+If the custom flow mode includes secret acquisition, the owner also defines a response secret rule. The current built-in rule shape is:
+
+```ts
+{
+  kind: 'json_field',
+  field: 'access_token',
+  storeAlias: 'new-token',
+}
+```
+
+## Persistent Dependencies
+
+`createPersistentVaultCoreDependencies(...)` builds a file-backed single-node profile with:
+
+- persistent secret metadata
+- sealed secret custody blobs
+- append-only tamper-evident audit
+- persistent replay guard
+- persistent rate-limit state
+- persistent capability revocation state
+
+It still expects caller-provided identity registries unless you supply your own persistent registry adapters.
+
+## Storage Provider
+
+Any backend can be used by implementing `IStorageProvider`:
+
 ```ts
 export interface IStorageProvider {
   read(key: string): Promise<Buffer | null>;
   write(key: string, data: Buffer): Promise<void>;
   delete(key: string): Promise<void>;
   has(key: string): Promise<boolean>;
-  rename?(fromKey: string, toKey: string): Promise<void>; // Improves atomic writes
+  rename?(fromKey: string, toKey: string): Promise<void>;
+  withLock?<T>(key: string, task: () => Promise<T>): Promise<T>;
 }
 ```
 
-### 2.2 Pre-built Providers
-- **`MemoryStorageProvider`**: Ephemeral storage for testing or in-memory caches.
-- **Filesystem (Default)**: Persists to `~/.c-bio/`. Use `C_BIO_VAULT_DIR` environment variable to override.
-
-When loading an identity, use `storageKey` to choose the persisted vault location or provider key. Activity log behavior is configured explicitly with `activityLog`, for example `activityLog: { key: 'my-vault.activity.jsonl' }` or `activityLog: { enabled: false }`.
-
----
-
-## 3. Advanced Request Patterns
-
-### 3.1 Custom Fetch for SDKs (OpenAI/Anthropic)
-If a third-party SDK supports a custom `fetch` implementation, use `createFetchWithAuth`. This keeps the vault boundary while using the official client.
-```ts
-const openai = new OpenAI({
-  fetch: agent.createFetchWithAuth('openai'),
-});
-```
-
-### 3.2 Complex HTTP Calls
-Use full request options for `fetchWithAuth`:
-```ts
-const response = await agent.fetchWithAuth('my-secret', 'https://api.example.com', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ key: 'value' }),
-  authPrefix: 'Token ', // Optional: default is 'Bearer '
-  withSignature: true,  // Optional: adds X-CBIO-Signature
-});
-```
-
-### 3.3 JSON Secret Acquisition
-Use `fetchJsonAndAddSecret(...)` and `fetchJsonAndUpdateSecret(...)` when the upstream returns a JSON payload that contains a secret value to store or rotate.
-
-```ts
-const acquired = await agent.fetchJsonAndAddSecret({
-  secretName: 'service-token',
-  url: 'https://issuer.example.com/token',
-  body: { scope: 'read' },
-  extractKey: (response: { api_key?: string }) => response.api_key ?? '',
-});
-```
-
-These methods are intentionally JSON-specific:
-- request bodies are JSON-stringified
-- responses are parsed with `response.json()`
-- `extractKey(...)` receives the parsed JSON body
-
-### 3.4 Local Auth Proxy
-Use `startLocalAuthProxy(...)` when a local process should forward requests to an upstream API while vault-backed auth is injected automatically.
-
-Required fields:
-- `authHandle`: any object with `fetchWithAuth(...)`
-- `secretName`: vault secret to inject
-- `upstreamBaseUrl`: upstream API base URL
-
-Optional fields:
-- `authHeaderName`: defaults to `Authorization`
-- `authPrefix`: defaults to `Bearer `
-- `host`: defaults to `127.0.0.1`
-- `port`: defaults to an ephemeral port
-
-OpenAI example:
-```ts
-const proxy = await startLocalAuthProxy({
-  authHandle: agent,
-  secretName: 'openai',
-  upstreamBaseUrl: 'https://api.openai.com',
-});
-```
-
-Anthropic example:
-```ts
-const proxy = await startLocalAuthProxy({
-  authHandle: agent,
-  secretName: 'anthropic',
-  upstreamBaseUrl: 'https://api.anthropic.com',
-  authHeaderName: 'x-api-key',
-  authPrefix: '',
-});
-```
-
-Resend example:
-```ts
-const proxy = await startLocalAuthProxy({
-  authHandle: agent,
-  secretName: 'resend',
-  upstreamBaseUrl: 'https://api.resend.com',
-});
-```
-
-### 3.5 Local Secret Ingress
-Use `startLocalSecretIngress(...)` when a trusted local process already has a newly issued secret and should hand it directly into CBIO without printing it to terminal output first.
-
-```ts
-const ingress = await identity.startLocalSecretIngress({
-  secretName: 'service-token',
-});
-
-await fetch(ingress.url, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${ingress.authToken}`,
-    'Content-Type': 'text/plain',
-  },
-  body: 'new-secret-value',
-});
-```
-
-Optional fields:
-- `allowedOrigins`
-- `overwrite`
-- `host`
-- `port`
-- `path`
-- `authToken`
-- `once`
-- `maxBodyBytes`
-
-### 3.6 Local Compare / Proof
-Use `compareSecret(...)` and `proveSecret(...)` when the application needs a local KMS-like operation without exporting the stored secret.
-
-```ts
-const same = await identity.compareSecret('service-token', 'candidate-value');
-const proof = await identity.proveSecret('service-token', 'challenge-123');
-```
-
-Current proof algorithms:
-- `sha256`
-- `sha512`
-
-`proveSecret(...)` returns a base64url-encoded HMAC proof for the active secret value and the provided challenge.
-
-### 3.7 Secret Validation
-Use `validateSecret(...)` when the application wants a structured validity result rather than exporting a secret and probing manually.
-
-`validateSecret(...)` accepts a `SecretValidator`, whose `validate(handle)` method receives a restricted handle with:
-- `fetchWithAuth(url, options?)`
-- `compare(candidate)`
-- `prove(challenge, options?)`
-
-The validator never receives the plaintext secret value.
-
-Result shape:
-
-```ts
-type SecretValidationResult = {
-  valid: boolean;
-  status: 'valid' | 'invalid' | 'indeterminate';
-  reason?: string;
-  providerSubject?: string;
-  expiresAt?: string;
-  scopes?: readonly string[];
-  metadata?: Record<string, unknown>;
-};
-```
-
-Minimal example:
-
-```ts
-const result = await identity.validateSecret('service-token', {
-  async validate(handle) {
-    const response = await handle.fetchWithAuth('https://api.example.com/me');
-    return {
-      valid: response.ok,
-      status: response.ok ? 'valid' : 'invalid',
-    };
-  },
-});
-```
-
-### 3.8 Generic HTTP Validator
-Use `genericHttpValidator(...)` when a remote service can be probed by a normal authenticated HTTP request and you want a reusable validator without writing custom validator boilerplate.
-
-```ts
-const validator = genericHttpValidator({
-  url: 'https://api.example.com/me',
-  extractResult: (_response, data: { subject?: string; scopes?: string[] } | undefined) => ({
-    providerSubject: data?.subject,
-    scopes: data?.scopes,
-  }),
-});
-
-const result = await identity.validateSecret('service-token', validator);
-```
-
-Supported config fields:
-- `url`
-- `method`
-- `headers`
-- `body`
-- `isValid(response, data)`
-- `classifyStatus(response, data)`
-- `extractResult(response, data)`
-
-Default behavior:
-- `2xx` -> `{ valid: true, status: 'valid' }`
-- `401/403` -> `{ valid: false, status: 'invalid', reason: 'http_<status>' }`
-- other non-`2xx` -> `{ valid: false, status: 'indeterminate', reason: 'http_<status>' }`
-
----
-
-## 4. Error Code Dictionary
-
-The SDK uses structured `IdentityError` objects with the following codes:
-
-| Code | Meaning | Typical Fix / Recovery |
-| :--- | :--- | :--- |
-| `PERMISSION_DENIED` | Handle lacks the required runtime capability. | Check `agent.can()` before calling. |
-| `SECRET_NOT_FOUND` | Secret name does not exist in the vault. | Add it first or check the naming. |
-| `ISSUED_IDENTITY_INVALID` | Bound or persisted issued identity failed protocol or authority/subject validation. | Re-issue the managed identity or load with the correct authority context. |
-| `SECRET_ALREADY_EXISTS` | `addSecret` used on an existing name. | Use a new name or `update`. |
-| `SECRET_POLICY_REQUIRED` | Agent rotation attempted without allowed origins. | Set origins in identity code. |
-| `SECRET_SOURCE_ORIGIN_MISMATCH` | Rotation came from a disallowed origin. | Check secret policy and rotation URL. |
-| `SECRET_OPERATION_RATE_LIMITED` | Local compare/proof/validate operation exceeded the runtime limit window. | Back off, reduce probe frequency, or avoid low-entropy repeated guesses. |
-| `VAULT_PERSISTENCE_FAILED` | Storage is not writable. | Fix permissions or check storage path. |
-| `VAULT_FILE_NOT_FOUND` | Expected vault file does not exist. | Initialize identity or check storage key. |
-| `VAULT_WRITE_INTEGRITY_FAILED` | Save verification failed. | Check disk space/integrity. |
-| `VAULT_CORRUPTED` | Vault file is truncated or unreadable. | Restore from backup; do not overwrite. |
-| `VAULT_DECRYPT_FAILED` | Decryption failed (wrong key or tampered). | Verify the correct Private Key was used. |
-| `MERGE_IDENTITY_MISMATCH` | Tried to merge vaults of different identities. | Only merge vaults of the same identity. |
-| `CHILD_IDENTITY_REQUIRES_PRIVATE_KEY` | Child keys were incomplete on registration. | Ensure child keys include Private Key. |
-| `SIGNER_REQUIRES_PRIVATE_KEY` | Administrative action requires a full signer. | Load identity from a full private key. |
+`withLock(...)` is used when present to serialize read-modify-write persistence sequences.

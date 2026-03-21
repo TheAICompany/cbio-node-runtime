@@ -1,6 +1,6 @@
-# cbio Node Runtime
+# cbio Vault Runtime
 
-Node.js runtime for cbio identity and credential vault. Library only.
+Node.js vault runtime with a hard-cut architecture: vault core first, explicit clients second.
 
 **⚠️ Actively under development — not a stable release.**
 
@@ -21,9 +21,11 @@ Node.js runtime for cbio identity and credential vault. Library only.
 - No CLI
 - No TUI
 
-Import and use `CbioIdentity`, `CbioAgent` from the main export.
-
-For registration flows that mint a new secret locally, use `startLocalSecretIngress(...)` to let a trusted local process `POST` the newly issued value straight into the vault without printing it to terminal output first.
+Main export now centers on:
+- `vault-core`
+- `vault-ingress`
+- `clients/owner`
+- `clients/agent`
 
 ## Install
 
@@ -36,76 +38,138 @@ npm install @the-ai-company/cbio-node-runtime
 ## Usage
 
 ```ts
-import { CbioIdentity, CbioAgent, generateIdentityKeys } from '@the-ai-company/cbio-node-runtime';
-
-const keys = generateIdentityKeys();
-const identity = await CbioIdentity.load({ privateKey: keys.privateKey });
-const agent: CbioAgent = identity.getAgent(); // minimal permissions: vault:fetch, vault:list
+import {
+  createVaultService,
+  createDefaultVaultCoreDependencies,
+  createOwnerHttpFlowBoundary,
+  createStandardAcquireBoundary,
+  createStandardDispatchBoundary,
+  createOwnerClient,
+  createAgentClient,
+  InMemoryVaultCapabilityResolver,
+  LocalVaultTransport,
+} from '@the-ai-company/cbio-node-runtime';
 ```
 
-## Secret Boundary Model
+## Architecture
 
-After root initialization, runtime-supported secret flows are designed around `no plaintext export`.
+The public runtime surface follows four hard rules:
 
-- Acquire and store from a remote issuer: `fetchJsonAndAddSecret(...)`
-- Ingest a newly issued local secret without `stdout`: `startLocalSecretIngress(...)`
-- Use a stored secret remotely: `fetchWithAuth(...)`, `createFetchWithAuth(...)`, `startLocalAuthProxy(...)`
-- Prove or compare a stored secret locally without exporting it: `proveSecret(...)`, `compareSecret(...)`
-- Validate a stored secret through a controlled validator: `validateSecret(...)`
+1. Secret plaintext lives only in vault core.
+2. Only owner and vault-trusted acquisition paths may write secrets.
+3. Secrets are dispatched only to owner-approved or issuer-bound targets.
+4. Vault validates and audits everything.
 
-The public runtime surface is intended to let applications use, prove, and validate secrets without retrieving them as cleartext.
+The current HTTP-facing interface distinguishes two supported secret-flow classes:
 
-## Recommended Paths
+- `A` / `acquire_secret`
+  No secret leaves the vault. A secret is extracted from the response and stored into the vault. Agent-visible output includes only protocol metadata plus a redacted response shape.
+- `B` / `send_secret`
+  A stored secret is sent to an owner-approved target. The response is treated as normal business output and may be returned to the agent.
 
-### Remote Issuer -> Vault
+This is an intentional boundary choice:
+
+- acquisition responses are treated as sensitive because they may contain newly issued secret material
+- dispatch responses are treated as ordinary protocol results because the operation itself is a standard secret-backed HTTP call to an owner-approved target
+
+The vault does not attempt to second-guess every remote protocol. If a target returns sensitive data during a normal dispatch flow, that is part of the target contract and the owner's authorization decision.
+
+The runtime does not claim to understand arbitrary remote protocols. The API boundary makes clear what is supported:
+
+- acquisition is explicit and redacted
+- secret-backed dispatch is explicit and capability-gated
+- unsupported `C` / `D` style flows are not part of the current surface
+
+Owner-defined HTTP boundaries share one factory layer:
+
+- `createOwnerHttpFlowBoundary(...)`
+- `createStandardAcquireBoundary(...)`
+- `createStandardDispatchBoundary(...)`
+
+An owner-defined exception path also exists for non-standard but intentional integrations:
+
+- owner may register a `custom_http` flow
+- the flow fixes mode, target, method, and response visibility inside the vault
+- agent may only invoke the registered `customFlowId`
+- this is an explicit escape hatch, not the default path
+
+## Modules
+
+- `vault-core`
+  The vault kernel. Stores plaintext, authorizes writes, authorizes dispatch, executes dispatch, appends audit.
+
+- `vault-ingress`
+  Vault boundary/facade. Accepts request-shaped calls, handles trusted acquisition paths, and keeps capability resolution plus dispatch ingress inside the vault trust boundary.
+
+- `clients/owner`
+  Owner-facing client. Writes secrets and reads audit.
+
+- `clients/agent`
+  Agent-facing client. Creates signed dispatch requests. Never handles plaintext secret.
+
+## Status
+
+The old identity-centric runtime is no longer the intended public architecture.
+This package now exposes the new vault-first skeleton as the primary surface.
+
+## Example Shape
 
 ```ts
-const acquired = await identity.fetchJsonAndAddSecret({
-  secretName: 'service-token',
-  url: 'https://issuer.example.com/token',
-  extractKey: (response: { token?: string }) => response.token ?? '',
-});
+const capabilities = new InMemoryVaultCapabilityResolver();
+const vault = createVaultService(createDefaultVaultCoreDependencies(), { capabilities });
+const owner = createOwnerClient(ownerIdentity, vault, ownerSigner, clock);
+const transport = new LocalVaultTransport(vault, capability.capabilityId);
+const agent = createAgentClient(agentIdentity, capability, signer, transport, clock);
 ```
 
-### Local Process -> Vault
+Capability example:
 
 ```ts
-const ingress = await identity.startLocalSecretIngress({
-  secretName: 'service-token',
-});
-
-await fetch(ingress.url, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${ingress.authToken}`,
-    'Content-Type': 'text/plain',
-  },
-  body: 'newly-issued-secret',
-});
+const capability = {
+  vaultId: vault.vaultId,
+  capabilityId: 'cap-1',
+  agentId: 'agent-1',
+  secretAliases: ['api-token'],
+  operation: 'dispatch_http',
+  allowedTargets: ['https://api.example.com/endpoint'],
+  allowedMethods: ['POST'],
+  issuedAt: new Date().toISOString(),
+};
 ```
 
-### Vault -> Remote Service
+Custom flow example:
 
 ```ts
-const response = await identity.fetchWithAuth('service-token', 'https://api.example.com/me');
-```
-
-### Vault -> Local Proof / Validation
-
-```ts
-const same = await identity.compareSecret('service-token', 'candidate-value');
-const proof = await identity.proveSecret('service-token', 'challenge-123');
-```
-
-```ts
-import { genericHttpValidator } from '@the-ai-company/cbio-node-runtime';
-
-const result = await identity.validateSecret(
-  'service-token',
-  genericHttpValidator({
-    url: 'https://api.example.com/me',
+await owner.registerCustomFlow({
+  flowId: 'custom-status-read',
+  ...createOwnerHttpFlowBoundary({
+    mode: 'send_secret',
+    targetUrl: 'https://api.example.com/custom-status',
+    method: 'POST',
+    responseVisibility: 'shape_only',
   }),
-);
+});
+```
+
+Acquisition example:
+
+```ts
+const acquireBoundary = createStandardAcquireBoundary({
+  targetUrl: 'https://issuer.example.com/token',
+  responseField: 'access_token',
+  storeAlias: 'issuer-token',
+});
+
+const acquired = await vault.acquireSecret({
+  alias: acquireBoundary.responseSecret.storeAlias,
+  issuerId: 'issuer-1',
+  url: acquireBoundary.targetUrl,
+  flow: 'oauth_token_response.access_token',
+  method: acquireBoundary.method,
+});
+
+console.log(acquired.responseShape);
+// { access_token: null }
 ```
 
 ## Build

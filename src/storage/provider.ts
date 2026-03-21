@@ -10,4 +10,6 @@ export interface IStorageProvider {
     has(key: string): Promise<boolean>;
     /** Optional. If present, used for atomic save. Otherwise vault does write+delete. */
     rename?(fromKey: string, toKey: string): Promise<void>;
+    /** Optional. If present, used to serialize read-modify-write sequences across writers. */
+    withLock?<T>(key: string, task: () => Promise<T>): Promise<T>;
 }
