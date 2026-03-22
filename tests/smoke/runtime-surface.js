@@ -9,6 +9,8 @@ import {
   deriveChildIdentity,
   ensureIdentityPrivateVault,
   getDefaultWorkspaceDir,
+  readIdentityPrivateVaultChildrenState,
+  readIdentityPrivateVaultProfile,
   recoverVault,
   createStandardAcquireBoundary,
   createVaultClient,
@@ -69,11 +71,17 @@ await ensureIdentityPrivateVault(identityTreeStorage, ownerIdentity);
 const derivedAgentIdentity = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-1" });
 const derivedAgentIdentityAgain = deriveChildIdentity(ownerIdentity, 0, { nickname: "worker-2" });
 const derivedAgentIdentitySibling = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-3" });
-const ownerPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(identityPrivateVaultProfileKey(ownerIdentity.identityId))).toString("utf8"));
-const ownerPrivateVaultChildren = JSON.parse((await identityTreeStorage.read(identityPrivateVaultChildrenKey(ownerIdentity.identityId))).toString("utf8"));
-const childPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(identityPrivateVaultProfileKey(derivedAgentIdentity.identityId))).toString("utf8"));
+const ownerPrivateVaultProfileBlob = (await identityTreeStorage.read(identityPrivateVaultProfileKey(ownerIdentity.identityId))).toString("utf8");
+const ownerPrivateVaultChildrenBlob = (await identityTreeStorage.read(identityPrivateVaultChildrenKey(ownerIdentity.identityId))).toString("utf8");
+const childPrivateVaultProfileBlob = (await identityTreeStorage.read(identityPrivateVaultProfileKey(derivedAgentIdentity.identityId))).toString("utf8");
+const ownerPrivateVaultProfile = await readIdentityPrivateVaultProfile(identityTreeStorage, ownerIdentity.privateKey);
+const ownerPrivateVaultChildren = await readIdentityPrivateVaultChildrenState(identityTreeStorage, ownerIdentity);
+const childPrivateVaultProfile = await readIdentityPrivateVaultProfile(identityTreeStorage, derivedAgentIdentity.privateKey);
 assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/profile.json`), false);
 assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/children.json`), false);
+assert.equal(ownerPrivateVaultProfileBlob.includes(ownerIdentity.identityId), false);
+assert.equal(ownerPrivateVaultChildrenBlob.includes("\"children\""), false);
+assert.equal(childPrivateVaultProfileBlob.includes(derivedAgentIdentity.identityId), false);
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
 assert.equal(typeof agentIdentity.identityId, "string");
@@ -82,6 +90,8 @@ assert.equal(restoredAgentIdentity.privateKey, agentIdentity.privateKey);
 assert.equal(restoredAgentIdentity.publicKey, agentIdentity.publicKey);
 assert.equal(restoredAgentIdentity.identityId, agentIdentity.identityId);
 assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
+assert.ok(ownerPrivateVaultProfile);
+assert.ok(childPrivateVaultProfile);
 assert.equal(ownerPrivateVaultProfile.identityId, ownerIdentity.identityId);
 assert.equal(ownerPrivateVaultChildren.nextChildIndex, 2);
 assert.equal(ownerPrivateVaultChildren.children.length, 2);

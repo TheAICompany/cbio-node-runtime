@@ -24,7 +24,7 @@ export async function createChildIdentity(
   }
   const run = async (): Promise<ChildIdentity> => {
     await ensureIdentityPrivateVault(storage, parent);
-    const state = await readIdentityPrivateVaultChildrenState(storage, parent.identityId);
+    const state = await readIdentityPrivateVaultChildrenState(storage, parent);
     const childIndex = state.nextChildIndex;
     const childIdentity = deriveChildIdentity(parent, childIndex, options);
     await ensureIdentityPrivateVault(storage, childIdentity);
@@ -36,8 +36,8 @@ export async function createChildIdentity(
       nickname: childIdentity.nickname,
       publicKey: childIdentity.publicKey,
     });
-    await writeIdentityPrivateVaultChildrenState(storage, parent.identityId, state);
+    await writeIdentityPrivateVaultChildrenState(storage, parent, state);
     return childIdentity;
   };
-  return withIdentityPrivateVaultLock(storage, parent.identityId, run);
+  return withIdentityPrivateVaultLock(storage, parent, run);
 }

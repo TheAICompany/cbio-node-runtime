@@ -207,6 +207,8 @@ export interface CbioRuntime {
   createChildIdentity: typeof import("./child-identity.js").createChildIdentity;
   deriveChildIdentity: typeof import("./identity.js").deriveChildIdentity;
   ensureIdentityPrivateVault: typeof import("./private-vault.js").ensureIdentityPrivateVault;
+  readIdentityPrivateVaultProfile: typeof import("./private-vault.js").readIdentityPrivateVaultProfile;
+  readIdentityPrivateVaultChildrenState: typeof import("./private-vault.js").readIdentityPrivateVaultChildrenState;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
   createVaultClient: typeof import("../clients/owner/index.js").createVaultClient;

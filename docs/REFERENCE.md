@@ -19,6 +19,8 @@ The main constructors are:
 - `createChildIdentity(...)`
 - `deriveChildIdentity(...)`
 - `ensureIdentityPrivateVault(...)`
+- `readIdentityPrivateVaultProfile(...)`
+- `readIdentityPrivateVaultChildrenState(...)`
 - `restoreIdentity(...)`
 - `createVault(...)`
 - `recoverVault(...)`
@@ -76,12 +78,28 @@ Role rules:
 
 `deriveChildIdentity(parentIdentity, childIndex, { nickname })` deterministically reconstructs a child identity for a known `childIndex`.
 
-`ensureIdentityPrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `vault/private/identities/<identityId>/...`. That namespace stores identity-level files such as:
+`ensureIdentityPrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `vault/private/identities/<identityId>/...`.
+
+That namespace stores identity-level files such as:
 
 - `profile.json`
 - `children.json`
 
+Those files are encrypted at rest with a key derived from that identity's private key. They are not readable as plain JSON on disk.
+
 `restoreIdentity(privateKey)` returns the same shape for an existing private key.
+
+`readIdentityPrivateVaultProfile(storage, identityOrPrivateKey)` decrypts and returns the current identity profile for the supplied identity or private key.
+
+`readIdentityPrivateVaultChildrenState(storage, identityOrPrivateKey)` decrypts and returns the child index state for the supplied identity or private key.
+
+Typical relationship lookup flow when you already have a private key:
+
+1. `const identity = restoreIdentity(privateKey)`
+2. `const profile = await readIdentityPrivateVaultProfile(storage, identity)`
+3. `const children = await readIdentityPrivateVaultChildrenState(storage, identity)`
+
+`profile.parentIdentityId` tells you whether the identity is a child. `children.children` tells you which child identities were created beneath that identity.
 
 ## Secret-Flow Model
 

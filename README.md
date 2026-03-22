@@ -43,6 +43,8 @@ import {
   createIdentity,
   createWorkspaceStorage,
   ensureIdentityPrivateVault,
+  readIdentityPrivateVaultProfile,
+  readIdentityPrivateVaultChildrenState,
   restoreIdentity,
   createVault,
   recoverVault,
@@ -68,6 +70,9 @@ await ensureIdentityPrivateVault(storage, rootIdentity);
 const childIdentity = await createChildIdentity(storage, rootIdentity, {
   nickname: 'worker-1',
 });
+
+const profile = await readIdentityPrivateVaultProfile(storage, rootIdentity);
+const children = await readIdentityPrivateVaultChildrenState(storage, rootIdentity.privateKey);
 ```
 
 Vaults also support an optional human-readable nickname:
@@ -95,6 +100,8 @@ Each identity now has its own private namespace in storage under `vault/private/
 
 - `profile.json`
 - `children.json`
+
+Those files are encrypted with a key derived from the identity private key, so they are not stored as plaintext JSON.
 
 ## Architecture
 

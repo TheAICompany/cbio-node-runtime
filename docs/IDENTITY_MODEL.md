@@ -80,6 +80,8 @@ For existing private keys, the runtime exposes `restoreIdentity(...)`, which rec
 
 For child identities, the runtime exposes `createChildIdentity(storage, parentIdentity, { nickname })` for user-facing creation, and `deriveChildIdentity(parentIdentity, childIndex, { nickname })` for deterministic reconstruction when the stored `childIndex` is known. `nickname` remains display-only.
 
+Identity-private state is stored under `vault/private/identities/<identityId>/...` and encrypted with a key derived from that identity's private key. To inspect those records, callers use `readIdentityPrivateVaultProfile(...)` and `readIdentityPrivateVaultChildrenState(...)` with the identity object or private key.
+
 In other words:
 
 - public key or a stable derived id answers "who is this cryptographically"
