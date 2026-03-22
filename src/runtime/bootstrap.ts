@@ -35,6 +35,7 @@ function vaultStoragePrefix(vaultId: string): string {
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
   nickname?: string;
+  exposeNickname?: boolean;
   ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
@@ -112,7 +113,8 @@ export async function createVault(
   await writeVaultProfile(storage, {
     vaultId,
     nickname,
-  });
+    exposeNickname: options.exposeNickname,
+  }, vaultWorkingKey);
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
@@ -139,7 +141,7 @@ export async function recoverVault(
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
-  const profile = await readVaultProfile(storage);
+  const profile = await readVaultProfile(storage, vaultWorkingKey);
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),

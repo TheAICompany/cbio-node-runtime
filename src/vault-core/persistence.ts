@@ -1,5 +1,5 @@
+import { sealBlob, unsealBlob, SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
-import { sealBlob, unsealBlob } from "../sealed/seal.js";
 import type {
   AgentCapability,
   AgentIdentityRecord,
@@ -86,18 +86,6 @@ export interface CreatePersistentVaultCoreDependenciesOptions extends CreateDefa
   vaultWorkingKey: string;
 }
 
-function serializeJson(value: unknown): Buffer {
-  return Buffer.from(JSON.stringify(value, null, 2), "utf8");
-}
-
-async function readJson<T>(storage: IStorageProvider, key: string, fallback: T): Promise<T> {
-  const payload = await storage.read(key);
-  if (!payload) {
-    return fallback;
-  }
-  return JSON.parse(payload.toString("utf8")) as T;
-}
-
 async function withStorageLock<T>(storage: IStorageProvider, key: string, task: () => Promise<T>): Promise<T> {
   if (storage.withLock) {
     return storage.withLock(key, task);
@@ -108,6 +96,7 @@ async function withStorageLock<T>(storage: IStorageProvider, key: string, task: 
 function newBase64UrlKey(): string {
   return randomBytes(32).toString("base64url");
 }
+
 
 export async function initializeVaultCustody(
   storage: IStorageProvider,
@@ -157,30 +146,35 @@ export async function recoverVaultWorkingKey(
 }
 
 export class FileSecretRepository implements SecretRepository {
+  private readonly _repo: SealedJsonRepository<PersistedSecretsState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/secrets.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/secrets.sealed",
     private readonly _lockKey = "vault/locks/secrets",
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   private async loadState(): Promise<PersistedSecretsState> {
-    return readJson(this._storage, this._key, { records: [] });
+    return this._repo.read({ records: [] });
   }
 
   async save(record: SecretRecord): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
       const next = state.records.filter((candidate) => candidate.secretId.value !== record.secretId.value);
       next.push(record);
-      await this._storage.write(this._key, serializeJson({ records: next }));
+      await this._repo.write({ records: next }, "secrets_state");
     });
   }
 
   async delete(secretId: SecretId): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
       const next = state.records.filter((candidate) => candidate.secretId.value !== secretId.value);
-      await this._storage.write(this._key, serializeJson({ records: next }));
+      await this._repo.write({ records: next }, "secrets_state");
     });
   }
 
@@ -196,24 +190,29 @@ export class FileSecretRepository implements SecretRepository {
 }
 
 export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
+  private readonly _repo: SealedJsonRepository<AgentIdentityState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/identities/agents.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/identities/agents.sealed",
     private readonly _lockKey = "vault/locks/agent-identities",
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   private async loadState(): Promise<AgentIdentityState> {
-    return readJson(this._storage, this._key, { identities: [] });
+    return this._repo.read({ identities: [] });
   }
 
   async register(identity: AgentIdentityRecord): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
       const next = state.identities.filter((candidate) =>
         !(candidate.vaultId.value === identity.vaultId.value && candidate.agentId === identity.agentId)
       );
       next.push(identity);
-      await this._storage.write(this._key, serializeJson({ identities: next }));
+      await this._repo.write({ identities: next }, "agent_identity_state");
     });
   }
 
@@ -224,24 +223,29 @@ export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
 }
 
 export class FileOwnerIdentityRegistry implements OwnerIdentityRegistry {
+  private readonly _repo: SealedJsonRepository<OwnerIdentityState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/identities/owners.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/identities/owners.sealed",
     private readonly _lockKey = "vault/locks/owner-identities",
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   private async loadState(): Promise<OwnerIdentityState> {
-    return readJson(this._storage, this._key, { identities: [] });
+    return this._repo.read({ identities: [] });
   }
 
   async register(identity: OwnerIdentityRecord): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
       const next = state.identities.filter((candidate) =>
         !(candidate.vaultId.value === identity.vaultId.value && candidate.ownerId === identity.ownerId)
       );
       next.push(identity);
-      await this._storage.write(this._key, serializeJson({ identities: next }));
+      await this._repo.write({ identities: next }, "owner_identity_state");
     });
   }
 
@@ -374,17 +378,22 @@ export class FileSecretCustody implements SecretCustody {
 }
 
 export class FileReplayGuard implements ReplayGuard {
+  private readonly _repo: SealedJsonRepository<ReplayState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/security/replay.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/security/replay.sealed",
     private readonly _lockKey = "vault/locks/replay",
     private readonly _ttlMs = 5 * 60 * 1000,
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   async assertNotReplayed(request: DispatchRequest): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const now = Date.now();
-      const state = await readJson<ReplayState>(this._storage, this._key, { seen: {} });
+      const state = await this._repo.read({ seen: {} });
       const nextSeen: Record<string, number> = {};
       for (const [key, seenAt] of Object.entries(state.seen)) {
         if (now - seenAt <= this._ttlMs) {
@@ -396,24 +405,29 @@ export class FileReplayGuard implements ReplayGuard {
         throw new VaultCoreError("request replay detected", "VAULT_DISPATCH_DENIED");
       }
       nextSeen[replayKey] = now;
-      await this._storage.write(this._key, serializeJson({ seen: nextSeen }));
+      await this._repo.write({ seen: nextSeen }, "replay_guard_state");
     });
   }
 }
 
 export class FileCapabilityRegistry implements CapabilityRegistry {
+  private readonly _repo: SealedJsonRepository<CapabilityState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/capabilities.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/capabilities.sealed",
     private readonly _lockKey = "vault/locks/capabilities",
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   private async loadState(): Promise<CapabilityState> {
-    return readJson(this._storage, this._key, { capabilities: [] });
+    return this._repo.read({ capabilities: [] });
   }
 
   async register(capability: AgentCapability): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
       const next = state.capabilities.filter((candidate) =>
         !(
@@ -423,7 +437,7 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
         )
       );
       next.push(capability);
-      await this._storage.write(this._key, serializeJson({ capabilities: next }));
+      await this._repo.write({ capabilities: next }, "capability_state");
     });
   }
 
@@ -438,15 +452,20 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
 }
 
 export class FileRateLimitStore implements RateLimitStore {
+  private readonly _repo: SealedJsonRepository<RateLimitState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/security/rate-limits.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/security/rate-limits.sealed",
     private readonly _lockKey = "vault/locks/rate-limits",
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   async consume(key: string, maxRequests: number, windowMs: number, nowMs: number): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
-      const state = await readJson<RateLimitState>(this._storage, this._key, { buckets: {} });
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
+      const state = await this._repo.read({ buckets: {} });
       const nextBuckets: Record<string, { count: number; resetAt: number }> = {};
       for (const [bucketKey, bucket] of Object.entries(state.buckets)) {
         if (nowMs < bucket.resetAt) {
@@ -465,56 +484,66 @@ export class FileRateLimitStore implements RateLimitStore {
         }
         current.count += 1;
       }
-      await this._storage.write(this._key, serializeJson({ buckets: nextBuckets }));
+      await this._repo.write({ buckets: nextBuckets }, "rate_limit_state");
     });
   }
 }
 
 export class FileCapabilityRevocationRegistry implements CapabilityRevocationRegistry {
+  private readonly _repo: SealedJsonRepository<RevocationState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/security/revocations.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/security/revocations.sealed",
     private readonly _lockKey = "vault/locks/revocations",
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   private compositeKey(vaultId: VaultId, agentId: string, capabilityId: string): string {
     return `${vaultId.value}:${agentId}:${capabilityId}`;
   }
 
   async get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> {
-    const state = await readJson<RevocationState>(this._storage, this._key, { versions: {} });
+    const state = await this._repo.read({ versions: {} });
     return state.versions[this.compositeKey(vaultId, agentId, capabilityId)] ?? 0;
   }
 
   async revoke(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> {
-    return withStorageLock(this._storage, this._lockKey, async () => {
-      const state = await readJson<RevocationState>(this._storage, this._key, { versions: {} });
+    return withStorageLock(this._repo.storage, this._lockKey, async () => {
+      const state = await this._repo.read({ versions: {} });
       const key = this.compositeKey(vaultId, agentId, capabilityId);
       const next = (state.versions[key] ?? 0) + 1;
       state.versions[key] = next;
-      await this._storage.write(this._key, serializeJson(state));
+      await this._repo.write(state, "revocation_state");
       return next;
     });
   }
 }
 
 export class FileCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
+  private readonly _repo: SealedJsonRepository<CustomFlowState>;
+
   constructor(
-    private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/custom-flows.json",
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "vault/custom-flows.sealed",
     private readonly _lockKey = "vault/locks/custom-flows",
-  ) {}
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
 
   private async loadState(): Promise<CustomFlowState> {
-    return readJson(this._storage, this._key, { flows: [] });
+    return this._repo.read({ flows: [] });
   }
 
   async register(flow: CustomHttpFlowDefinition): Promise<void> {
-    await withStorageLock(this._storage, this._lockKey, async () => {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
       const next = state.flows.filter((candidate) => candidate.flowId !== flow.flowId);
       next.push(flow);
-      await this._storage.write(this._key, serializeJson({ flows: next }));
+      await this._repo.write({ flows: next }, "custom_flow_state");
     });
   }
 
@@ -546,14 +575,14 @@ export function createPersistentVaultCoreDependencies(
   ids: ReturnType<typeof createDefaultVaultCoreDependencies>["ids"];
 } {
   const defaults = createDefaultVaultCoreDependencies(options);
-  const agentIdentities = new FileAgentIdentityRegistry(storage);
-  const ownerIdentities = new FileOwnerIdentityRegistry(storage);
-  const capabilityRevocations = new FileCapabilityRevocationRegistry(storage);
-  const capabilities = new FileCapabilityRegistry(storage);
-  const customFlows = new FileCustomHttpFlowRegistry(storage);
+  const agentIdentities = new FileAgentIdentityRegistry(storage, options.vaultWorkingKey);
+  const ownerIdentities = new FileOwnerIdentityRegistry(storage, options.vaultWorkingKey);
+  const capabilityRevocations = new FileCapabilityRevocationRegistry(storage, options.vaultWorkingKey);
+  const capabilities = new FileCapabilityRegistry(storage, options.vaultWorkingKey);
+  const customFlows = new FileCustomHttpFlowRegistry(storage, options.vaultWorkingKey);
   return {
     ...defaults,
-    secrets: new FileSecretRepository(storage),
+    secrets: new FileSecretRepository(storage, options.vaultWorkingKey),
     custody: new FileSecretCustody(storage, options.vaultWorkingKey),
     audit: new FileAuditLog(storage),
     agentIdentities,
@@ -561,11 +590,12 @@ export function createPersistentVaultCoreDependencies(
     policy: new DefaultPolicyEngine({
       ...(options.policy ?? {}),
       capabilityRevocationRegistry: capabilityRevocations,
-      rateLimitStore: new FileRateLimitStore(storage),
+      rateLimitStore: new FileRateLimitStore(storage, options.vaultWorkingKey),
     }),
     replayGuard: new FileReplayGuard(
       storage,
-      "vault/security/replay.json",
+      options.vaultWorkingKey,
+      "vault/security/replay.sealed",
       "vault/locks/replay",
       options.proofVerifier?.maxSkewMs ?? (5 * 60 * 1000),
     ),

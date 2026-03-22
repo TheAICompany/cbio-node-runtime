@@ -1,6 +1,5 @@
-import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import { SEALED_BLOB_VERSION, sealBlob, unsealBlob } from "../sealed/seal.js";
+import { SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import { restoreIdentity, type CreatedIdentity } from "./identity.js";
 
@@ -35,11 +34,11 @@ export function identityPrivateVaultPrefix(identityId: string): string {
 }
 
 export function identityPrivateVaultProfileKey(identityId: string): string {
-  return `${identityPrivateVaultPrefix(identityId)}/profile.json`;
+  return `${identityPrivateVaultPrefix(identityId)}/profile.sealed`;
 }
 
 export function identityPrivateVaultChildrenKey(identityId: string): string {
-  return `${identityPrivateVaultPrefix(identityId)}/children.json`;
+  return `${identityPrivateVaultPrefix(identityId)}/children.sealed`;
 }
 
 function lockKey(identityId: string): string {
@@ -63,42 +62,6 @@ function deriveIdentityPrivateVaultKey(identity: CreatedIdentity): string {
     .digest("base64url");
 }
 
-function sealIdentityPrivateVaultJson(identity: CreatedIdentity, value: unknown, kind: string): Buffer {
-  const sealed = sealBlob(
-    {
-      version: SEALED_BLOB_VERSION,
-      secrets: {
-        payload: JSON.stringify(value),
-      },
-      secretMetadata: {
-        kind,
-        identityId: identity.identityId,
-      },
-    },
-    deriveIdentityPrivateVaultKey(identity),
-  );
-  return Buffer.from(sealed, "utf8");
-}
-
-function unsealIdentityPrivateVaultJson<T>(
-  identity: CreatedIdentity,
-  payload: Buffer,
-  expectedKind: string,
-): T {
-  const unsealed = unsealBlob(payload.toString("utf8"), deriveIdentityPrivateVaultKey(identity));
-  if (unsealed.secretMetadata.kind !== expectedKind) {
-    throw new Error(`unexpected identity private vault payload kind: ${String(unsealed.secretMetadata.kind)}`);
-  }
-  if (unsealed.secretMetadata.identityId !== identity.identityId) {
-    throw new Error("identity private vault payload identity mismatch");
-  }
-  const secretPayload = unsealed.secrets.payload;
-  if (typeof secretPayload !== "string") {
-    throw new Error("identity private vault payload missing body");
-  }
-  return JSON.parse(secretPayload) as T;
-}
-
 export async function ensureIdentityPrivateVault(
   storage: IStorageProvider,
   identity: CreatedIdentity,
@@ -110,10 +73,12 @@ export async function ensureIdentityPrivateVault(
     parentIdentityId: identity.parentIdentityId,
     childIndex: identity.childIndex,
   };
-  await storage.write(
+  const profileRepo = new SealedJsonRepository<IdentityPrivateVaultProfile>(
+    storage,
     identityPrivateVaultProfileKey(identity.identityId),
-    sealIdentityPrivateVaultJson(identity, profile, "identity_private_vault_profile"),
+    deriveIdentityPrivateVaultKey(identity),
   );
+  await profileRepo.write(profile, "identity_private_vault_profile");
 
   const childrenKey = identityPrivateVaultChildrenKey(identity.identityId);
   if (!(await storage.has(childrenKey))) {
@@ -121,10 +86,12 @@ export async function ensureIdentityPrivateVault(
       nextChildIndex: 0,
       children: [],
     };
-    await storage.write(
+    const childrenRepo = new SealedJsonRepository<IdentityPrivateVaultChildrenState>(
+      storage,
       childrenKey,
-      sealIdentityPrivateVaultJson(identity, emptyState, "identity_private_vault_children"),
+      deriveIdentityPrivateVaultKey(identity),
     );
+    await childrenRepo.write(emptyState, "identity_private_vault_children");
   }
 }
 
@@ -133,15 +100,12 @@ export async function readIdentityPrivateVaultProfile(
   identityOrPrivateKey: IdentityPrivateVaultAccess,
 ): Promise<IdentityPrivateVaultProfile | null> {
   const identity = normalizeIdentityAccess(identityOrPrivateKey);
-  const raw = await storage.read(identityPrivateVaultProfileKey(identity.identityId));
-  if (!raw) {
-    return null;
-  }
-  return unsealIdentityPrivateVaultJson<IdentityPrivateVaultProfile>(
-    identity,
-    raw,
-    "identity_private_vault_profile",
+  const repo = new SealedJsonRepository<IdentityPrivateVaultProfile>(
+    storage,
+    identityPrivateVaultProfileKey(identity.identityId),
+    deriveIdentityPrivateVaultKey(identity),
   );
+  return repo.read(null as any);
 }
 
 export async function readIdentityPrivateVaultChildrenState(
@@ -149,15 +113,12 @@ export async function readIdentityPrivateVaultChildrenState(
   identityOrPrivateKey: IdentityPrivateVaultAccess,
 ): Promise<IdentityPrivateVaultChildrenState> {
   const identity = normalizeIdentityAccess(identityOrPrivateKey);
-  const raw = await storage.read(identityPrivateVaultChildrenKey(identity.identityId));
-  if (!raw) {
-    return { nextChildIndex: 0, children: [] };
-  }
-  const parsed = unsealIdentityPrivateVaultJson<IdentityPrivateVaultChildrenState>(
-    identity,
-    raw,
-    "identity_private_vault_children",
+  const repo = new SealedJsonRepository<IdentityPrivateVaultChildrenState>(
+    storage,
+    identityPrivateVaultChildrenKey(identity.identityId),
+    deriveIdentityPrivateVaultKey(identity),
   );
+  const parsed = await repo.read({ nextChildIndex: 0, children: [] });
   return {
     nextChildIndex: parsed.nextChildIndex ?? parsed.children.length,
     children: parsed.children ?? [],
@@ -170,10 +131,12 @@ export async function writeIdentityPrivateVaultChildrenState(
   state: IdentityPrivateVaultChildrenState,
 ): Promise<void> {
   const identity = normalizeIdentityAccess(identityOrPrivateKey);
-  await storage.write(
+  const repo = new SealedJsonRepository<IdentityPrivateVaultChildrenState>(
+    storage,
     identityPrivateVaultChildrenKey(identity.identityId),
-    sealIdentityPrivateVaultJson(identity, state, "identity_private_vault_children"),
+    deriveIdentityPrivateVaultKey(identity),
   );
+  await repo.write(state, "identity_private_vault_children");
 }
 
 export async function withIdentityPrivateVaultLock<T>(
