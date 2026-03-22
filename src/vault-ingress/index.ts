@@ -102,6 +102,7 @@ export interface VaultService {
   registerAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void>;
   registerCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
   writeSecret(request: import("../vault-core/index.js").VaultWriteSecretCommand): Promise<SecretRecord>;
+  defineSecretTargets(request: import("../vault-core/index.js").OwnerDefineSecretTargetsCommand): Promise<SecretRecord>;
   acquireSecret(request: VaultAcquireSecretInput): Promise<VaultAcquireSecretResult>;
   dispatch(request: DispatchRequest): Promise<DispatchResult>;
   handleAgentDispatch(request: VaultAgentDispatchRequest): Promise<VaultAgentDispatchResponse | VaultAgentDispatchErrorResponse>;
@@ -139,6 +140,10 @@ class LocalVaultService implements VaultService {
 
   writeSecret(request: import("../vault-core/index.js").VaultWriteSecretCommand): Promise<SecretRecord> {
     return this._authority.writeSecret(request);
+  }
+
+  defineSecretTargets(request: import("../vault-core/index.js").OwnerDefineSecretTargetsCommand): Promise<SecretRecord> {
+    return this._authority.defineSecretTargets(request);
   }
 
   private redactResponseShape(value: unknown): RedactedResponseShape {

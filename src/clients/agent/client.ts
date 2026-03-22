@@ -1,4 +1,8 @@
-import type { Clock } from "../../vault-core/index.js";
+import { LocalSigner } from "../../protocol/crypto.js";
+import type { CreatedIdentity } from "../../runtime/identity.js";
+import { SystemClock, type Clock } from "../../vault-core/index.js";
+import { LocalVaultTransport } from "../../vault-ingress/defaults.js";
+import type { VaultService } from "../../vault-ingress/index.js";
 import type {
   AgentCapabilityEnvelope,
   AgentDispatchIntent,
@@ -12,6 +16,15 @@ export interface AgentIdentity {
 
 export interface AgentClient {
   dispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
+}
+
+export interface CreateAgentClientOptions {
+  agentIdentity: CreatedIdentity | AgentIdentity;
+  capability: AgentCapabilityEnvelope;
+  vault?: VaultService;
+  transport?: AgentDispatchTransport;
+  signer?: AgentSigner;
+  clock?: Clock;
 }
 
 function createDispatchBinding(
@@ -48,7 +61,6 @@ class DefaultAgentClient implements AgentClient {
   async dispatch(intent: AgentDispatchIntent) {
     const requestedAt = intent.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identity.agentId}:${requestedAt}:${intent.secretAlias ?? "no-secret"}:${intent.method}`;
-    const publicKey = await this._signer.getPublicKey();
     const signature = await this._signer.sign(
       createDispatchBinding(
         requestId,
@@ -101,12 +113,51 @@ class DefaultAgentClient implements AgentClient {
   }
 }
 
-export function createAgentClient(
-  identity: AgentIdentity,
-  capability: AgentCapabilityEnvelope,
-  signer: AgentSigner,
-  transport: AgentDispatchTransport,
-  clock: Clock,
-): AgentClient {
-  return new DefaultAgentClient(identity, capability, signer, transport, clock);
+function isCreateAgentClientOptions(value: unknown): value is CreateAgentClientOptions {
+  return typeof value === "object" && value !== null && "agentIdentity" in value && "capability" in value;
+}
+
+function isCreatedIdentity(value: AgentIdentity | CreatedIdentity): value is CreatedIdentity {
+  return "privateKey" in value && "publicKey" in value;
+}
+
+function resolveAgentSigner(identity: AgentIdentity | CreatedIdentity, signer?: AgentSigner): AgentSigner {
+  if (signer) {
+    return signer;
+  }
+  if (isCreatedIdentity(identity)) {
+    return new LocalSigner(identity);
+  }
+  throw new Error("createAgentClient() requires signer when agentIdentity does not include keys");
+}
+
+function resolveAgentIdentity(options: CreateAgentClientOptions): AgentIdentity {
+  return "agentId" in options.agentIdentity
+    ? options.agentIdentity
+    : { agentId: options.agentIdentity.identityId };
+}
+
+function resolveAgentTransport(
+  options: CreateAgentClientOptions,
+): AgentDispatchTransport {
+  if (options.transport) {
+    return options.transport;
+  }
+  if (options.vault) {
+    return new LocalVaultTransport(options.vault);
+  }
+  throw new Error("createAgentClient() requires transport or vault");
+}
+
+export function createAgentClient(options: CreateAgentClientOptions): AgentClient {
+  if (!isCreateAgentClientOptions(options)) {
+    throw new Error("createAgentClient() requires a single options object");
+  }
+  return new DefaultAgentClient(
+    resolveAgentIdentity(options),
+    options.capability,
+    resolveAgentSigner(options.agentIdentity, options.signer),
+    resolveAgentTransport(options),
+    options.clock ?? new SystemClock(),
+  );
 }

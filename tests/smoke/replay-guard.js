@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
   createVaultClient,
+  createIdentity,
+} from "../../dist/runtime/index.js";
+import {
   createVaultCore,
-  wrapVaultCoreAsVaultService,
   DefaultPolicyEngine,
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
@@ -16,9 +18,9 @@ import {
   SignatureAgentProofVerifier,
   SignatureOwnerProofVerifier,
   SystemClock,
-  LocalSigner,
-  createIdentity,
-} from "../../dist/runtime/index.js";
+} from "../../dist/vault-core/index.js";
+import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
+import { LocalSigner } from "../../dist/protocol/crypto.js";
 
 const agentIdentity = createIdentity();
 const signer = new LocalSigner(agentIdentity);
@@ -48,7 +50,12 @@ await authority.bootstrapOwnerIdentity({
   publicKey: ownerIdentity.publicKey,
 });
 
-const client = createVaultClient({ identityId: "owner-replay" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
+const client = createVaultClient({
+  ownerIdentity: { identityId: "owner-replay" },
+  vault,
+  signer: new LocalSigner(ownerIdentity),
+  clock: new SystemClock(),
+});
 await client.registerAgent({
   agentId: "agent-replay",
   publicKey: agentIdentity.publicKey,

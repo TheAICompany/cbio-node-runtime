@@ -22,10 +22,10 @@ Node.js vault runtime with a hard-cut architecture: vault core first, explicit c
 - No TUI
 
 Main export now centers on:
-- `vault-core`
-- `vault-ingress`
-- `clients/owner`
-- `clients/agent`
+- identity creation and recovery
+- persistent vault bootstrap and recovery
+- owner and agent clients
+- owner flow-boundary helpers
 
 ## Install
 
@@ -39,8 +39,6 @@ npm install @the-ai-company/cbio-node-runtime
 
 ```ts
 import {
-  createVaultService,
-  createDefaultVaultCoreDependencies,
   createChildIdentity,
   createIdentity,
   createWorkspaceStorage,
@@ -50,12 +48,9 @@ import {
   recoverVault,
   createOwnerHttpFlowBoundary,
   createStandardAcquireBoundary,
-  createStandardDispatchBoundary,
   createVaultClient,
   createAgentClient,
   FsStorageProvider,
-  LocalVaultTransport,
-  LocalSigner,
 } from '@the-ai-company/cbio-node-runtime';
 ```
 
@@ -159,20 +154,6 @@ An owner-defined exception path also exists for non-standard but intentional int
 - agent may only invoke the registered `customFlowId`
 - this is an explicit escape hatch, not the default path
 
-## Modules
-
-- `vault-core`
-  The vault kernel. Stores plaintext, authorizes writes, authorizes dispatch, executes dispatch, appends audit.
-
-- `vault-ingress`
-  Vault boundary/facade. Accepts request-shaped calls, handles trusted acquisition paths, and keeps capability resolution plus dispatch ingress inside the vault trust boundary.
-
-- `clients/owner`
-  Owner-facing client. The owner is the single vault admin. It writes secrets, exports plaintext secrets, manages agents/capabilities, and reads audit.
-
-- `clients/agent`
-  Agent-facing client. Creates signed dispatch requests. Never handles plaintext secret.
-
 ## Status
 
 The old identity-centric runtime is no longer the intended public architecture.
@@ -183,11 +164,33 @@ This package now exposes the production local vault runtime surface as the prima
 ```ts
 const ownerIdentity = createIdentity({ nickname: 'owner-main' });
 const agentIdentity = createIdentity({ nickname: 'agent-worker' });
-const vault = createVaultService(createDefaultVaultCoreDependencies());
-const client = createVaultClient({ identityId: ownerIdentity.identityId }, vault, new LocalSigner(ownerIdentity), clock);
-const transport = new LocalVaultTransport(vault, capability.capabilityId);
-const agent = createAgentClient({ agentId: agentIdentity.identityId }, capability, new LocalSigner(agentIdentity), transport, clock);
+const createdVault = await createVault({ ownerIdentity });
+const client = createVaultClient({ ownerIdentity, vault: createdVault.vault });
+const agent = createAgentClient({ agentIdentity, capability, vault: createdVault.vault });
 ```
+
+Owner API example:
+
+```ts
+const storedSecret = await client.storeSecret({
+  alias: 'api-token',
+  plaintext: 'secret-value',
+});
+
+await client.defineSecretTargets({
+  alias: storedSecret.alias.value,
+  targetBindings: [
+    {
+      kind: 'site',
+      targetId: 'api.example.com',
+      targetUrl: 'https://api.example.com/endpoint',
+      methods: ['POST'],
+    },
+  ],
+});
+```
+
+`writeSecret(...)` is the one-step variant and requires `targetBindings`.
 
 Capability example:
 
@@ -195,7 +198,7 @@ Capability example:
 const capability = {
   vaultId: vault.vaultId,
   capabilityId: 'cap-1',
-  agentId: 'agent-1',
+  agentId: agentIdentity.identityId,
   secretAliases: ['api-token'],
   operation: 'dispatch_http',
   allowedTargets: ['https://api.example.com/endpoint'],

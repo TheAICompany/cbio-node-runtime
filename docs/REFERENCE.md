@@ -6,17 +6,15 @@ This file is intentionally narrower: it documents what the shipped API does toda
 
 ## Public Surface
 
-The current top-level modules are:
+The current top-level surface centers on:
 
-- `vault-core`
-- `vault-ingress`
-- `clients/owner`
-- `clients/agent`
+- identity creation and recovery
+- persistent vault bootstrap and recovery
+- owner and agent clients
+- owner flow-boundary helpers
 
 The main constructors are:
 
-- `createVaultCore(...)`
-- `createVaultService(...)`
 - `createIdentity(...)`
 - `createChildIdentity(...)`
 - `deriveChildIdentity(...)`
@@ -26,7 +24,6 @@ The main constructors are:
 - `recoverVault(...)`
 - `createVaultClient(...)`
 - `createAgentClient(...)`
-- `LocalVaultTransport`
 
 Related design note:
 
@@ -36,11 +33,6 @@ Recommended persistent-vault entrypoints:
 
 - `createVault(...)`
 - `recoverVault(...)`
-
-Lower-level custody helpers:
-
-- `initializeVaultCustody(...)`
-- `recoverVaultWorkingKey(...)`
 
 `createVault({ ownerIdentity, nickname })` creates a vault in the default workspace and persists `nickname` into `vaults/<vaultId>/vault/profile.json`.
 
@@ -116,41 +108,14 @@ The runtime does not claim to understand arbitrary network protocols. The API co
 - unsupported: mixed bidirectional-secret flows as a first-class surface
 - unsupported: no-secret operations as a first-class vault primitive
 
-## Vault Service
-
-`vault-ingress` is the request-shaped boundary around the vault kernel.
-
-Important methods:
-
-- `bootstrapOwnerIdentity(...)`
-- `registerAgent(...)`
-- `writeSecret(...)`
-- `exportSecret(...)`
-- `acquireSecret(...)`
-- `dispatch(...)`
-- `handleAgentDispatch(...)`
-- `readAudit(...)`
-
-### Owner Bootstrap
-
-The very first owner is bootstrapped explicitly:
-
-```ts
-await vault.bootstrapOwnerIdentity({
-  vaultId: vault.vaultId,
-  ownerId: 'owner-1',
-  publicKey: ownerPublicKey,
-});
-```
-
-The runtime treats this first owner as the single vault admin. Additional principals should be modeled as agents plus capabilities rather than extra owners.
-
 ## Vault Client
 
-`clients/owner` currently implements the public vault-management client surface for the identity currently bound to the vault's single admin role.
+`clients/owner` implements the public vault-management client surface for the identity currently bound to the vault's single admin role.
 
 Current management operations:
 
+- `storeSecret(...)`
+- `defineSecretTargets(...)`
 - `writeSecret(...)`
 - `exportSecret(...)`
 - `readAudit(...)`
@@ -161,7 +126,24 @@ Current management operations:
 Example:
 
 ```ts
-const client = createVaultClient({ identityId: ownerIdentity.identityId }, vault, ownerSigner, clock);
+const client = createVaultClient({ ownerIdentity, vault });
+
+const storedSecret = await client.storeSecret({
+  alias: 'api-token',
+  plaintext: 'secret-value',
+});
+
+await client.defineSecretTargets({
+  alias: storedSecret.alias.value,
+  targetBindings: [
+    {
+      kind: 'site',
+      targetId: 'api.example.com',
+      targetUrl: 'https://api.example.com/endpoint',
+      methods: ['POST'],
+    },
+  ],
+});
 
 await client.registerAgent({
   agentId: 'agent-1',
@@ -177,7 +159,7 @@ await client.registerFlow({
 });
 
 await client.writeSecret({
-  alias: 'api-token',
+  alias: 'secondary-token',
   plaintext: 'secret-value',
   targetBindings: [
     {
@@ -193,6 +175,8 @@ const exportedSecret = await client.exportSecret({
   alias: 'api-token',
 });
 ```
+
+`writeSecret(...)` is the one-step variant and requires `targetBindings`.
 
 ## Agent Client
 
@@ -220,7 +204,7 @@ Example:
 const capability = {
   vaultId: vault.vaultId,
   capabilityId: 'cap-1',
-  agentId: 'agent-1',
+  agentId: agentIdentity.identityId,
   secretAliases: ['api-token'],
   operation: 'dispatch_http',
   allowedTargets: ['https://api.example.com/endpoint'],
@@ -231,13 +215,15 @@ const capability = {
 await client.grantCapability({ capability });
 ```
 
+The public agent capability type is the same shape as core `AgentCapability`, so `custom_http` capabilities are valid here too.
+
 Custom capability example:
 
 ```ts
 const customCapability = {
   vaultId: vault.vaultId,
   capabilityId: 'cap-custom',
-  agentId: 'agent-1',
+  agentId: agentIdentity.identityId,
   customFlowId: 'custom-status-read',
   secretAliases: ['api-token'],
   operation: 'custom_http',
@@ -247,6 +233,16 @@ const customCapability = {
 };
 
 await client.grantCapability({ capability: customCapability });
+```
+
+Recommended agent client shape:
+
+```ts
+const agent = createAgentClient({
+  agentIdentity,
+  capability,
+  vault,
+});
 ```
 
 ## Acquisition Result Shape

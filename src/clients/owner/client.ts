@@ -1,11 +1,15 @@
-import type { Clock } from "../../vault-core/index.js";
+import { LocalSigner } from "../../protocol/crypto.js";
+import type { CreatedIdentity } from "../../runtime/identity.js";
+import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
   VaultAuditQueryInput,
+  OwnerDefineSecretTargetsInput,
   VaultExportSecretInput,
   VaultGrantCapabilityInput,
   VaultRegisterFlowInput,
   VaultRegisterAgentInput,
+  OwnerStoreSecretInput,
   OwnerWriteSecretInput,
 } from "./contracts.js";
 
@@ -14,17 +18,25 @@ export interface VaultIdentity {
 }
 
 export interface VaultSigner {
-  getPublicKey(): Promise<string>;
   sign(input: string): Promise<string>;
 }
 
 export interface VaultClient {
+  storeSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  defineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   writeSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   exportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
   grantCapability(input: VaultGrantCapabilityInput): Promise<void>;
   readAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   registerAgent(input: VaultRegisterAgentInput): Promise<void>;
   registerFlow(input: VaultRegisterFlowInput): Promise<void>;
+}
+
+export interface CreateVaultClientOptions {
+  ownerIdentity: CreatedIdentity | VaultIdentity;
+  vault: VaultService;
+  signer?: VaultSigner;
+  clock?: Clock;
 }
 
 class DefaultVaultClient implements VaultClient {
@@ -35,7 +47,7 @@ class DefaultVaultClient implements VaultClient {
     private readonly _clock: Clock,
   ) {}
 
-  async writeSecret(input: OwnerWriteSecretInput) {
+  async storeSecret(input: OwnerStoreSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identity.identityId}:${requestedAt}:${input.alias}:write_secret`;
     const signature = await this._signer.sign(JSON.stringify({
@@ -44,7 +56,7 @@ class DefaultVaultClient implements VaultClient {
       ownerId: this._identity.identityId,
       alias: input.alias,
       plaintext: input.plaintext,
-      targetBindings: input.targetBindings,
+      targetBindings: [],
     }));
     return this._vault.writeSecret({
       kind: "owner.write_secret",
@@ -56,7 +68,70 @@ class DefaultVaultClient implements VaultClient {
       },
       alias: input.alias,
       plaintext: input.plaintext,
-      targetBindings: input.targetBindings,
+      targetBindings: [],
+      requestedAt,
+      proof: {
+        ownerId: this._identity.identityId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async defineSecretTargets(input: OwnerDefineSecretTargetsInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.alias}:define_secret_targets`;
+    const targetBindings = [...input.targetBindings];
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.identityId,
+      alias: input.alias,
+      targetBindings,
+    }));
+    return this._vault.defineSecretTargets({
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: {
+        kind: "owner",
+        id: this._identity.identityId,
+      },
+      alias: input.alias,
+      targetBindings,
+      requestedAt,
+      proof: {
+        ownerId: this._identity.identityId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async writeSecret(input: OwnerWriteSecretInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.alias}:write_secret`;
+    const targetBindings = [...input.targetBindings];
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.identityId,
+      alias: input.alias,
+      plaintext: input.plaintext,
+      targetBindings,
+    }));
+    return this._vault.writeSecret({
+      kind: "owner.write_secret",
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: {
+        kind: "owner",
+        id: this._identity.identityId,
+      },
+      alias: input.alias,
+      plaintext: input.plaintext,
+      targetBindings,
       requestedAt,
       proof: {
         ownerId: this._identity.identityId,
@@ -220,11 +295,38 @@ class DefaultVaultClient implements VaultClient {
   }
 }
 
-export function createVaultClient(
-  identity: VaultIdentity,
-  vault: VaultService,
-  signer: VaultSigner,
-  clock: Clock,
-): VaultClient {
-  return new DefaultVaultClient(identity, vault, signer, clock);
+function isCreateVaultClientOptions(value: unknown): value is CreateVaultClientOptions {
+  return typeof value === "object" && value !== null && "ownerIdentity" in value && "vault" in value;
+}
+
+function isCreatedIdentity(value: VaultIdentity | CreatedIdentity): value is CreatedIdentity {
+  return "privateKey" in value && "publicKey" in value;
+}
+
+function resolveVaultSigner(identity: VaultIdentity | CreatedIdentity, signer?: VaultSigner): VaultSigner {
+  if (signer) {
+    return signer;
+  }
+  if (isCreatedIdentity(identity)) {
+    return new LocalSigner(identity);
+  }
+  throw new Error("createVaultClient() requires signer when ownerIdentity does not include keys");
+}
+
+function resolveVaultIdentity(options: CreateVaultClientOptions): VaultIdentity {
+  return {
+    identityId: options.ownerIdentity.identityId,
+  };
+}
+
+export function createVaultClient(options: CreateVaultClientOptions): VaultClient {
+  if (!isCreateVaultClientOptions(options)) {
+    throw new Error("createVaultClient() requires a single options object");
+  }
+  return new DefaultVaultClient(
+    resolveVaultIdentity(options),
+    options.vault,
+    resolveVaultSigner(options.ownerIdentity, options.signer),
+    options.clock ?? new SystemClock(),
+  );
 }

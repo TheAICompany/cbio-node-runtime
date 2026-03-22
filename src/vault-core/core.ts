@@ -5,6 +5,7 @@ import type {
   DispatchAuthorization,
   DispatchRequest,
   DispatchResult,
+  OwnerDefineSecretTargetsCommand,
   OwnerExportSecretRequest,
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
@@ -62,7 +63,7 @@ function buildSecretRecord(
     issuerId: command.kind === "issuer.write_secret" ? command.issuerSiteId : null,
     targetBindings: command.kind === "issuer.write_secret"
       ? [...(command.targetBindings ?? [{ kind: "site", targetId: command.issuerSiteId }])]
-      : [...command.targetBindings],
+      : [...(command.targetBindings ?? [])],
     createdAt: now,
     updatedAt: now,
   };
@@ -381,6 +382,57 @@ export class DefaultVaultCore implements VaultCore {
       throw error;
     }
     return record;
+  }
+
+  async defineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<SecretRecord> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+    }
+    try {
+      await this._deps.ownerProofVerifier.verifyDefineSecretTargets(command);
+      await this._deps.policy.authorizeDefineSecretTargets(command);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      await this.appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          "define_secret_targets",
+          "denied",
+          detail,
+          {
+            secretAlias: command.alias,
+          },
+        ),
+      );
+      throw error;
+    }
+
+    const existing = await this._deps.secrets.getByAlias({ value: command.alias });
+    if (!existing) {
+      const error = new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
+      await this.appendAudit(
+        toAuditEntry(this._deps, command.owner, "define_secret_targets", "denied", error.message, {
+          secretAlias: command.alias,
+        }),
+      );
+      throw error;
+    }
+
+    const nextRecord: SecretRecord = {
+      ...existing,
+      targetBindings: [...command.targetBindings],
+      updatedAt: this._deps.clock.nowIso(),
+    };
+    await this._deps.secrets.save(nextRecord);
+    await this.appendAudit(
+      toAuditEntry(this._deps, command.owner, "define_secret_targets", "succeeded", "secret targets defined", {
+        requestId: command.requestId,
+        secretAlias: nextRecord.alias.value,
+        secretId: nextRecord.secretId.value,
+      }),
+    );
+    return nextRecord;
   }
 
   async authorizeDispatch(request: DispatchRequest): Promise<DispatchAuthorization> {

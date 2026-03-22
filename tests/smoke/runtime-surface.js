@@ -3,26 +3,27 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
-  createVaultCore,
-  createPersistentVaultCoreDependencies,
   createChildIdentity,
   createVault,
   createWorkspaceStorage,
   deriveChildIdentity,
   ensurePrivateVault,
   getDefaultWorkspaceDir,
-  privateVaultChildrenKey,
-  privateVaultProfileKey,
-  readVaultProfile,
   recoverVault,
-  initializeVaultCustody,
-  wrapVaultCoreAsVaultService,
   createStandardAcquireBoundary,
-  createStandardDispatchBoundary,
   createVaultClient,
   createAgentClient,
-  DefaultPolicyEngine,
   FsStorageProvider,
+  VaultCoreError,
+  IdentityError,
+  IdentityErrorCode,
+  createIdentity,
+  restoreIdentity,
+} from "../../dist/runtime/index.js";
+import {
+  createVaultCore,
+  createPersistentVaultCoreDependencies,
+  DefaultPolicyEngine,
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryAuditLog,
@@ -32,9 +33,6 @@ import {
   InMemoryOwnerIdentityRegistry,
   InMemorySecretCustody,
   InMemorySecretRepository,
-  LocalVaultTransport,
-  LocalSigner,
-  MemoryStorageProvider,
   PersistentVaultAuditLog,
   PersistentVaultSecretCustody,
   PersistentVaultSecretRepository,
@@ -42,20 +40,21 @@ import {
   SignatureAgentProofVerifier,
   SignatureOwnerProofVerifier,
   SystemClock,
-  VaultCoreError,
-  IdentityError,
-  IdentityErrorCode,
-  createIdentity,
-  restoreIdentity,
-} from "../../dist/runtime/index.js";
+  initializeVaultCustody,
+} from "../../dist/vault-core/index.js";
+import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
+import { LocalSigner } from "../../dist/protocol/crypto.js";
+import { MemoryStorageProvider } from "../../dist/storage/memory.js";
+import {
+  privateVaultChildrenKey,
+  privateVaultProfileKey,
+} from "../../dist/runtime/private-vault.js";
+import { readVaultProfile } from "../../dist/runtime/vault-metadata.js";
 
 assert.equal(typeof createVaultCore, "function");
 assert.equal(typeof createStandardAcquireBoundary, "function");
-assert.equal(typeof createStandardDispatchBoundary, "function");
 assert.equal(typeof createVaultClient, "function");
 assert.equal(typeof createAgentClient, "function");
-assert.equal(typeof InMemorySecretRepository, "function");
-assert.equal(typeof HttpDispatchExecutor, "function");
 assert.equal(typeof VaultCoreError, "function");
 assert.equal(typeof IdentityError, "function");
 assert.equal(typeof IdentityErrorCode, "object");
@@ -137,7 +136,14 @@ await authority.bootstrapOwnerIdentity({
   publicKey: ownerIdentity.publicKey,
 });
 
-const client = createVaultClient({ identityId: "owner-1" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
+const client = createVaultClient({
+  ownerIdentity: { identityId: "owner-1" },
+  vault,
+  signer: new LocalSigner(ownerIdentity),
+  clock: new SystemClock(),
+});
+assert.equal(typeof client.storeSecret, "function");
+assert.equal(typeof client.defineSecretTargets, "function");
 await client.registerAgent({
   agentId: "agent-1",
   publicKey: agentIdentity.publicKey,
@@ -178,15 +184,14 @@ const dispatchCapability = {
 };
 await client.grantCapability({ capability: dispatchCapability });
 
-const agent = createAgentClient(
-  { agentId: "agent-1" },
-  {
+const agent = createAgentClient({
+  agentIdentity: { agentId: "agent-1" },
+  capability: {
     ...dispatchCapability,
   },
-  new LocalSigner(agentIdentity),
-  new LocalVaultTransport(vault, "cap-1"),
-  new SystemClock(),
-);
+  vault,
+  signer: new LocalSigner(agentIdentity),
+});
 
 const result = await agent.dispatch({
   secretAlias: "api-token",
@@ -221,15 +226,14 @@ const customCapability = {
 };
 await client.grantCapability({ capability: customCapability });
 
-const customAgent = createAgentClient(
-  { agentId: "agent-1" },
-  {
+const customAgent = createAgentClient({
+  agentIdentity: { agentId: "agent-1" },
+  capability: {
     ...customCapability,
   },
-  new LocalSigner(agentIdentity),
-  new LocalVaultTransport(vault, "cap-custom"),
-  new SystemClock(),
-);
+  vault,
+  signer: new LocalSigner(agentIdentity),
+});
 
 const customResult = await customAgent.dispatch({
   secretAlias: "api-token",
@@ -267,15 +271,14 @@ const customAcquireCapability = {
 };
 await client.grantCapability({ capability: customAcquireCapability });
 
-const customAcquireAgent = createAgentClient(
-  { agentId: "agent-1" },
-  {
+const customAcquireAgent = createAgentClient({
+  agentIdentity: { agentId: "agent-1" },
+  capability: {
     ...customAcquireCapability,
   },
-  new LocalSigner(agentIdentity),
-  new LocalVaultTransport(vault, "cap-custom-acquire"),
-  new SystemClock(),
-);
+  vault,
+  signer: new LocalSigner(agentIdentity),
+});
 
 const customAcquireResult = await customAcquireAgent.dispatch({
   targetUrl: "https://api.example.com/custom-acquire",
@@ -327,7 +330,7 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  const auditClient = createVaultClient({ identityId: ownerIdentity.identityId }, persistentVault, new LocalSigner(ownerIdentity), new SystemClock());
+  const auditClient = createVaultClient({ ownerIdentity, vault: persistentVault });
   const audit = await auditClient.readAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
   const persistentExport = await auditClient.exportSecret({ alias: "issuer-token" });
@@ -380,15 +383,14 @@ try {
   };
   await auditClient.grantCapability({ capability: acquiredCapability });
   const acquiredVault = wrapVaultCoreAsVaultService(recoveredVaultInstance.core);
-  const acquiredAgent = createAgentClient(
-    { agentId: "agent-acquired" },
-    {
+  const acquiredAgent = createAgentClient({
+    agentIdentity: { agentId: "agent-acquired" },
+    capability: {
       ...acquiredCapability,
     },
-    new LocalSigner(acquiredAgentIdentity),
-    new LocalVaultTransport(acquiredVault, "cap-acquired"),
-    new SystemClock(),
-  );
+    vault: acquiredVault,
+    signer: new LocalSigner(acquiredAgentIdentity),
+  });
   await assert.rejects(
     () => acquiredAgent.dispatch({
       secretAlias: "issuer-token",
@@ -453,7 +455,11 @@ try {
     ids: new RandomIdGenerator(),
   });
   const rollbackVault = wrapVaultCoreAsVaultService(rollbackAuthority);
-  const rollbackClient = createVaultClient({ identityId: "owner-rollback" }, rollbackVault, new LocalSigner(ownerIdentity), new SystemClock());
+  const rollbackClient = createVaultClient({
+    ownerIdentity: { identityId: "owner-rollback" },
+    vault: rollbackVault,
+    signer: new LocalSigner(ownerIdentity),
+  });
   const custodyDir = join(tempDir, "vaults/vault-runtime-persistent/vault/custody");
   const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
   await assert.rejects(

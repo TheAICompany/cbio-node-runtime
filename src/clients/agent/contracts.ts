@@ -7,28 +7,9 @@ export interface AgentDispatchIntent {
   requestedAt?: string;
 }
 
-export interface AgentCapabilityEnvelope {
-  vaultId: import("../../vault-core/index.js").VaultId;
-  capabilityId: string;
-  agentId: string;
-  secretIds?: readonly string[];
-  secretAliases?: readonly string[];
-  operation: "dispatch_http";
-  allowedTargets: readonly string[];
-  allowedMethods: readonly string[];
-  allowedPaths?: readonly string[];
-  issuedAt: string;
-  expiresAt?: string;
-  revocationVersion?: number;
-  rateLimit?: {
-    maxRequests: number;
-    windowMs: number;
-  };
-  auditRequired?: boolean;
-}
+export type AgentCapabilityEnvelope = import("../../vault-core/index.js").AgentCapability;
 
 export interface AgentSigner {
-  getPublicKey(): Promise<string>;
   sign(input: string): Promise<string>;
 }
 

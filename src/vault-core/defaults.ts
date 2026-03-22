@@ -129,6 +129,18 @@ function createOwnerWriteBinding(
   });
 }
 
+function createOwnerDefineSecretTargetsBinding(
+  command: import("./contracts.js").OwnerDefineSecretTargetsCommand,
+): string {
+  return JSON.stringify({
+    requestId: command.requestId,
+    requestedAt: command.requestedAt,
+    ownerId: command.owner.id,
+    alias: command.alias,
+    targetBindings: command.targetBindings,
+  });
+}
+
 function createOwnerAuditBinding(request: OwnerAuditRequest): string {
   return JSON.stringify({
     requestId: request.requestId,
@@ -420,7 +432,9 @@ export class DefaultPolicyEngine implements PolicyEngine {
       if (!command.owner.id.trim()) {
         throw new VaultCoreError("owner id required", "VAULT_WRITE_DENIED");
       }
-      this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
+      if (command.targetBindings?.length) {
+        this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
+      }
       return;
     }
     if (command.issuer.id !== command.issuerSiteId) {
@@ -433,6 +447,19 @@ export class DefaultPolicyEngine implements PolicyEngine {
       throw new VaultCoreError("trusted issuer target bindings required", "VAULT_WRITE_DENIED");
     }
     this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
+  }
+
+  async authorizeDefineSecretTargets(command: import("./contracts.js").OwnerDefineSecretTargetsCommand): Promise<void> {
+    if (!command.owner.id.trim()) {
+      throw new VaultCoreError("owner id required", "VAULT_WRITE_DENIED");
+    }
+    if (!command.alias.trim()) {
+      throw new VaultCoreError("secret alias required", "VAULT_WRITE_DENIED");
+    }
+    this.validateRequestedAt(command.requestedAt, "requestedAt");
+    if (command.targetBindings.length > 0) {
+      this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
+    }
   }
 
   async authorizeDispatch(request: DispatchRequest, record?: SecretRecord | null): Promise<void> {
@@ -581,6 +608,29 @@ export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
     const binding = createOwnerWriteBinding(command);
     try {
       await this.verifyBinding(command.owner.id, command.vaultId, command.requestedAt, command.proof.signature, binding);
+    } catch (error) {
+      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
+        throw new VaultCoreError(error.message, "VAULT_WRITE_DENIED");
+      }
+      throw error;
+    }
+  }
+
+  async verifyDefineSecretTargets(command: import("./contracts.js").OwnerDefineSecretTargetsCommand): Promise<void> {
+    if (command.proof.ownerId !== command.owner.id) {
+      throw new VaultCoreError("owner proof identity mismatch", "VAULT_WRITE_DENIED");
+    }
+    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
+      throw new VaultCoreError("owner proof binding mismatch", "VAULT_WRITE_DENIED");
+    }
+    try {
+      await this.verifyBinding(
+        command.owner.id,
+        command.vaultId,
+        command.requestedAt,
+        command.proof.signature,
+        createOwnerDefineSecretTargetsBinding(command),
+      );
     } catch (error) {
       if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
         throw new VaultCoreError(error.message, "VAULT_WRITE_DENIED");

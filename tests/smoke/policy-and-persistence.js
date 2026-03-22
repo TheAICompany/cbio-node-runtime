@@ -3,30 +3,32 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
-  VaultCoreError,
   createAgentClient,
+  createVaultClient,
+  FsStorageProvider,
+  createIdentity,
+} from "../../dist/runtime/index.js";
+import {
+  VaultCoreError,
   createVaultCore,
   createPersistentVaultCoreDependencies,
   initializeVaultCustody,
   recoverVaultWorkingKey,
-  wrapVaultCoreAsVaultService,
-  createVaultClient,
   DefaultPolicyEngine,
-  FsStorageProvider,
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryOwnerIdentityRegistry,
   PersistentVaultSecretCustody,
-  LocalVaultTransport,
-  LocalSigner,
   PersistentVaultAuditLog,
   PersistentVaultSecretRepository,
   RandomIdGenerator,
   SignatureAgentProofVerifier,
   SignatureOwnerProofVerifier,
   SystemClock,
-  createIdentity,
-} from "../../dist/runtime/index.js";
+} from "../../dist/vault-core/index.js";
+import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
+import { LocalVaultTransport } from "../../dist/vault-ingress/defaults.js";
+import { LocalSigner } from "../../dist/protocol/crypto.js";
 
 const tempDir = await mkdtemp(join(tmpdir(), "cbio-policy-"));
 
@@ -58,12 +60,55 @@ try {
     ownerId: "owner-2",
     publicKey: ownerIdentity.publicKey,
   });
-  const client = createVaultClient({ identityId: "owner-2" }, vault, new LocalSigner(ownerIdentity), new SystemClock());
+  const client = createVaultClient({
+    ownerIdentity: { identityId: "owner-2" },
+    vault,
+    signer: new LocalSigner(ownerIdentity),
+    clock: new SystemClock(),
+  });
+  const unscopedRecord = await client.storeSecret({
+    alias: "unscoped-token",
+    plaintext: "secret-0",
+  });
+  assert.equal(unscopedRecord.targetBindings.length, 0);
+
+  const unscopedArrayRecord = await client.storeSecret({
+    alias: "unscoped-array-token",
+    plaintext: "secret-0b",
+  });
+  assert.equal(unscopedArrayRecord.targetBindings.length, 0);
+
+  const storedThenDefinedRecord = await client.storeSecret({
+    alias: "stored-then-defined-token",
+    plaintext: "secret-1",
+  });
+  assert.equal(storedThenDefinedRecord.targetBindings.length, 0);
+
+  const definedRecord = await client.defineSecretTargets({
+    alias: "stored-then-defined-token",
+    targetBindings: [
+      {
+        kind: "site",
+        targetId: "allowed-site",
+        targetUrl: "https://allowed.example.com/resource",
+        methods: ["POST"],
+      },
+    ],
+  });
+  assert.equal(definedRecord.targetBindings.length, 1);
+
   await assert.rejects(
     () => client.writeSecret({
-      alias: "unscoped-token",
-      plaintext: "secret-0",
-      targetBindings: [],
+      alias: "malformed-token",
+      plaintext: "secret-bad",
+      targetBindings: [
+        {
+          kind: "site",
+          targetId: "bad-site",
+          targetUrl: "https://bad.example.com/endpoint",
+          methods: [],
+        },
+      ],
     }),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_WRITE_DENIED",
   );
@@ -99,15 +144,66 @@ try {
     auditRequired: true,
   };
   await client.grantCapability({ capability: restrictedCapability });
+  const storedThenDefinedCapability = {
+    vaultId: authority.vaultId,
+    capabilityId: "cap-stored-then-defined",
+    agentId: "agent-restricted",
+    secretIds: [storedThenDefinedRecord.secretId.value],
+    operation: "dispatch_http",
+    allowedTargets: ["https://allowed.example.com/resource"],
+    allowedMethods: ["POST"],
+    allowedPaths: ["/resource"],
+    issuedAt: new Date().toISOString(),
+    auditRequired: true,
+  };
+  await client.grantCapability({ capability: storedThenDefinedCapability });
 
-  const agent = createAgentClient(
-    { agentId: "agent-restricted" },
-    {
+  const agent = createAgentClient({
+    agentIdentity: { agentId: "agent-restricted" },
+    capability: {
       ...restrictedCapability,
     },
-    new LocalSigner(agentIdentity),
-    new LocalVaultTransport(vault, "cap-restricted"),
-    new SystemClock(),
+    signer: new LocalSigner(agentIdentity),
+    transport: new LocalVaultTransport(vault),
+    clock: new SystemClock(),
+  });
+  const storedThenDefinedAgent = createAgentClient({
+    agentIdentity: { agentId: "agent-restricted" },
+    capability: {
+      ...storedThenDefinedCapability,
+    },
+    signer: new LocalSigner(agentIdentity),
+    transport: new LocalVaultTransport(vault),
+    clock: new SystemClock(),
+  });
+
+  await assert.rejects(
+    () => agent.dispatch({
+      secretAlias: "unscoped-token",
+      targetUrl: "https://allowed.example.com/resource",
+      method: "POST",
+    }),
+    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
+  );
+  const storedThenDefinedResult = await storedThenDefinedAgent.dispatch({
+    secretAlias: "stored-then-defined-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+  });
+  assert.equal(storedThenDefinedResult.status, "succeeded");
+
+  const clearedRecord = await client.defineSecretTargets({
+    alias: "stored-then-defined-token",
+    targetBindings: [],
+  });
+  assert.equal(clearedRecord.targetBindings.length, 0);
+  await assert.rejects(
+    () => storedThenDefinedAgent.dispatch({
+      secretAlias: "stored-then-defined-token",
+      targetUrl: "https://allowed.example.com/resource",
+      method: "POST",
+    }),
+    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
 
   await assert.rejects(
@@ -151,15 +247,15 @@ try {
     auditRequired: true,
   };
   await client.grantCapability({ capability: rateLimitedCapability });
-  const rateLimitedAgent = createAgentClient(
-    { agentId: "agent-restricted" },
-    {
+  const rateLimitedAgent = createAgentClient({
+    agentIdentity: { agentId: "agent-restricted" },
+    capability: {
       ...rateLimitedCapability,
     },
-    new LocalSigner(agentIdentity),
-    new LocalVaultTransport(vault, "cap-limited"),
-    new SystemClock(),
-  );
+    signer: new LocalSigner(agentIdentity),
+    transport: new LocalVaultTransport(vault),
+    clock: new SystemClock(),
+  });
   const firstLimited = await rateLimitedAgent.dispatch({
     secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/resource",
@@ -223,7 +319,12 @@ try {
     publicKey: ownerIdentity.publicKey,
   });
   const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
-  const reloadedClient = createVaultClient({ identityId: "owner-2" }, reloadedVault, new LocalSigner(ownerIdentity), new SystemClock());
+  const reloadedClient = createVaultClient({
+    ownerIdentity: { identityId: "owner-2" },
+    vault: reloadedVault,
+    signer: new LocalSigner(ownerIdentity),
+    clock: new SystemClock(),
+  });
   await reloadedClient.registerAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
@@ -344,7 +445,12 @@ try {
     publicKey: ownerIdentity.publicKey,
   });
   const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
-  const restartedClient = createVaultClient({ identityId: "owner-2" }, restartedVault, new LocalSigner(ownerIdentity), new SystemClock());
+  const restartedClient = createVaultClient({
+    ownerIdentity: { identityId: "owner-2" },
+    vault: restartedVault,
+    signer: new LocalSigner(ownerIdentity),
+    clock: new SystemClock(),
+  });
   await restartedClient.registerAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
@@ -409,6 +515,8 @@ try {
   assert.ok(reloadedAudit.some((entry) => entry.action === "export_secret" && entry.outcome === "succeeded"));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /capability revoked/.test(entry.detail)));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /path denied|capability rate limit exceeded/.test(entry.detail)));
+  const storedThenDefinedAudit = await client.readAudit({ secretAlias: "stored-then-defined-token" });
+  assert.ok(storedThenDefinedAudit.some((entry) => entry.action === "define_secret_targets" && entry.outcome === "succeeded"));
 
   console.log("policy and persistence smoke test passed");
 } finally {

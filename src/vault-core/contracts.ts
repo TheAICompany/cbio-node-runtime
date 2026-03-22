@@ -51,6 +51,16 @@ export interface OwnerWriteSecretCommand {
   owner: VaultPrincipal & { kind: "owner" };
   alias: string;
   plaintext: string;
+  targetBindings?: readonly VaultTargetBinding[];
+  requestedAt: string;
+  proof: OwnerProof;
+}
+
+export interface OwnerDefineSecretTargetsCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal & { kind: "owner" };
+  alias: string;
   targetBindings: readonly VaultTargetBinding[];
   requestedAt: string;
   proof: OwnerProof;
@@ -221,6 +231,7 @@ export interface AuditEntry {
     | "register_custom_flow"
     | "register_capability"
     | "write_secret"
+    | "define_secret_targets"
     | "export_secret"
     | "reassign_alias"
     | "authorize_dispatch"

@@ -51,6 +51,7 @@ export type {
   AgentProof,
   OwnerAuditRequest,
   OwnerExportSecretRequest,
+  OwnerDefineSecretTargetsCommand,
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,

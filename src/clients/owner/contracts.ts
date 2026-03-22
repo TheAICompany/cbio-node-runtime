@@ -15,6 +15,18 @@ export interface OwnerWriteSecretInput {
   requestedAt?: string;
 }
 
+export interface OwnerStoreSecretInput {
+  alias: string;
+  plaintext: string;
+  requestedAt?: string;
+}
+
+export interface OwnerDefineSecretTargetsInput {
+  alias: string;
+  targetBindings: readonly OwnerSecretTargetBinding[];
+  requestedAt?: string;
+}
+
 export interface VaultAuditQueryInput {
   actorId?: string;
   secretAlias?: string;

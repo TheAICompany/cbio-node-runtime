@@ -6,6 +6,7 @@ import type {
   OwnerIdentityRecord,
   OwnerAuditRequest,
   OwnerExportSecretRequest,
+  OwnerDefineSecretTargetsCommand,
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
@@ -37,6 +38,7 @@ export interface SecretCustody {
 
 export interface PolicyEngine {
   authorizeWrite(command: VaultWriteSecretCommand): Promise<void>;
+  authorizeDefineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<void>;
   authorizeDispatch(request: DispatchRequest, record?: SecretRecord | null): Promise<void>;
 }
 
@@ -89,6 +91,7 @@ export interface CapabilityRevocationRegistry {
 
 export interface OwnerProofVerifier {
   verifyWrite(command: Extract<VaultWriteSecretCommand, { kind: "owner.write_secret" }>): Promise<void>;
+  verifyDefineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<void>;
   verifyAudit(request: OwnerAuditRequest): Promise<void>;
   verifyExport(request: OwnerExportSecretRequest): Promise<void>;
   verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
@@ -127,6 +130,7 @@ export interface VaultCoreDependencies {
 export interface VaultCore {
   readonly vaultId: VaultId;
   writeSecret(command: VaultWriteSecretCommand): Promise<SecretRecord>;
+  defineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<SecretRecord>;
   authorizeDispatch(request: DispatchRequest): Promise<import("./contracts.js").DispatchAuthorization>;
   dispatchSecret(request: DispatchRequest): Promise<DispatchResult>;
   bootstrapOwnerIdentity(identity: OwnerIdentityRecord): Promise<void>;

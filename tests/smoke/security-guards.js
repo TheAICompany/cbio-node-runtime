@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import {
   createVaultClient,
-  createVaultCore,
-  createDefaultVaultCoreDependencies,
-  wrapVaultCoreAsVaultService,
-  VaultCoreError,
-  LocalSigner,
   createIdentity,
 } from "../../dist/runtime/index.js";
+import {
+  createVaultCore,
+  createDefaultVaultCoreDependencies,
+  VaultCoreError,
+} from "../../dist/vault-core/index.js";
+import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
+import { LocalSigner } from "../../dist/protocol/crypto.js";
 
 const agentIdentity = createIdentity();
 const signer = new LocalSigner(agentIdentity);
@@ -24,8 +26,13 @@ await authority.bootstrapOwnerIdentity({
   publicKey: ownerIdentity.publicKey,
 });
 
-const client = createVaultClient({ identityId: "owner-security" }, vault, new LocalSigner(ownerIdentity), {
-  nowIso: () => new Date().toISOString(),
+const client = createVaultClient({
+  ownerIdentity: { identityId: "owner-security" },
+  vault,
+  signer: new LocalSigner(ownerIdentity),
+  clock: {
+    nowIso: () => new Date().toISOString(),
+  },
 });
 await client.registerAgent({
   agentId: "agent-security",

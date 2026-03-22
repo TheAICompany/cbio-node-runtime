@@ -2,10 +2,7 @@ import type { AgentDispatchTransport } from "../clients/agent/index.js";
 import type { VaultService } from "./index.js";
 
 export class LocalVaultTransport implements AgentDispatchTransport {
-  constructor(
-    private readonly _vault: VaultService,
-    private readonly _capabilityId: string,
-  ) {}
+  constructor(private readonly _vault: VaultService) {}
 
   async dispatch(
     request: import("../vault-core/index.js").DispatchRequest,
@@ -15,7 +12,7 @@ export class LocalVaultTransport implements AgentDispatchTransport {
       requestId: request.requestId,
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
-      capabilityId: this._capabilityId,
+      capabilityId: request.capability.capabilityId,
       secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
       method: request.method,
