@@ -27,6 +27,10 @@ export {
   type VaultProfile,
 } from "./vault-metadata.js";
 export {
+  createWorkspaceStorage,
+  getDefaultWorkspaceDir,
+} from "./workspace-storage.js";
+export {
   ensurePrivateVault,
   readPrivateVaultProfile,
   readPrivateVaultChildrenState,

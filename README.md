@@ -43,6 +43,7 @@ import {
   createDefaultVaultCoreDependencies,
   createChildIdentity,
   createIdentity,
+  createWorkspaceStorage,
   ensurePrivateVault,
   restoreIdentity,
   createVault,
@@ -77,6 +78,16 @@ const childIdentity = await createChildIdentity(storage, rootIdentity, {
 Vaults also support an optional human-readable nickname:
 
 ```ts
+const createdVault = await createVault({
+  ownerIdentity: rootIdentity,
+  nickname: 'main-vault',
+});
+```
+
+If you want to override the default workspace directory:
+
+```ts
+const storage = createWorkspaceStorage('/tmp/cbio');
 const createdVault = await createVault(storage, {
   ownerIdentity: rootIdentity,
   nickname: 'main-vault',

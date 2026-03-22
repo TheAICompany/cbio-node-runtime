@@ -7,8 +7,10 @@ import {
   createPersistentVaultCoreDependencies,
   createChildIdentity,
   createVault,
+  createWorkspaceStorage,
   deriveChildIdentity,
   ensurePrivateVault,
+  getDefaultWorkspaceDir,
   privateVaultChildrenKey,
   privateVaultProfileKey,
   readVaultProfile,
@@ -57,6 +59,8 @@ assert.equal(typeof HttpDispatchExecutor, "function");
 assert.equal(typeof VaultCoreError, "function");
 assert.equal(typeof IdentityError, "function");
 assert.equal(typeof IdentityErrorCode, "object");
+assert.equal(typeof createWorkspaceStorage, "function");
+assert.equal(typeof getDefaultWorkspaceDir, "function");
 
 const agentIdentity = createIdentity({ nickname: "agent-1" });
 const ownerIdentity = createIdentity({ nickname: "owner-1" });
@@ -333,6 +337,22 @@ try {
     ownerIdentity,
   });
   assert.equal(recoveredVaultInstance.nickname, "persistent-main");
+
+  const defaultWorkspaceDir = await mkdtemp(join(tmpdir(), "cbio-default-workspace-"));
+  process.env.C_BIO_WORKSPACE_DIR = defaultWorkspaceDir;
+  const autoCreatedVault = await createVault({
+    vaultId: "vault-runtime-default-storage",
+    nickname: "default-storage-vault",
+    ownerIdentity,
+  });
+  assert.equal(autoCreatedVault.nickname, "default-storage-vault");
+  assert.equal(await autoCreatedVault.storage.has("vault/profile.json"), true);
+  const autoRecoveredVault = await recoverVault({
+    vaultId: "vault-runtime-default-storage",
+    ownerIdentity,
+  });
+  assert.equal(autoRecoveredVault.nickname, "default-storage-vault");
+  delete process.env.C_BIO_WORKSPACE_DIR;
   const acquiredAgentIdentity = createIdentity();
   await auditClient.registerAgent({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });
   const acquiredCapability = {
