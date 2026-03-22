@@ -304,7 +304,7 @@ try {
       }), { status: 200 }),
     },
   });
-  const createdVaultProfile = await readVaultProfile(storage);
+  const createdVaultProfile = await readVaultProfile(createdVault.storage);
   assert.equal(createdVault.nickname, "persistent-main");
   assert.equal(createdVaultProfile?.nickname, "persistent-main");
   const persistentVault = wrapVaultCoreAsVaultService(createdVault.core, {
@@ -347,11 +347,23 @@ try {
   });
   assert.equal(autoCreatedVault.nickname, "default-storage-vault");
   assert.equal(await autoCreatedVault.storage.has("vault/profile.json"), true);
+  assert.equal(await autoCreatedVault.storage.has("vault/secrets.json"), false);
   const autoRecoveredVault = await recoverVault({
     vaultId: "vault-runtime-default-storage",
     ownerIdentity,
   });
   assert.equal(autoRecoveredVault.nickname, "default-storage-vault");
+  const siblingVault = await createVault(storage, {
+    vaultId: "vault-runtime-sibling",
+    nickname: "sibling-vault",
+    ownerIdentity,
+  });
+  const siblingProfile = await readVaultProfile(siblingVault.storage);
+  assert.equal(siblingProfile?.nickname, "sibling-vault");
+  assert.equal(await storage.has("vaults/vault-runtime-persistent/vault/profile.json"), true);
+  assert.equal(await storage.has("vaults/vault-runtime-sibling/vault/profile.json"), true);
+  assert.equal(await siblingVault.storage.has("vault/profile.json"), true);
+  assert.equal(await siblingVault.storage.has("vaults/vault-runtime-sibling/vault/profile.json"), false);
   delete process.env.C_BIO_WORKSPACE_DIR;
   const acquiredAgentIdentity = createIdentity();
   await auditClient.registerAgent({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });
@@ -385,9 +397,9 @@ try {
     }),
     /VAULT_AGENT_DISPATCH_REJECTED|VAULT_DISPATCH_DENIED/,
   );
-  const secretsFile = await readFile(join(tempDir, "vault/secrets.json"), "utf8");
+  const secretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent/vault/secrets.json"), "utf8");
   assert.ok(!secretsFile.includes("issuer-secret"));
-  const custodyDirEntries = await readdir(join(tempDir, "vault/custody"));
+  const custodyDirEntries = await readdir(join(tempDir, "vaults/vault-runtime-persistent/vault/custody"));
   assert.ok(custodyDirEntries.length >= 1);
 
   const rollbackDir = await mkdtemp(join(tmpdir(), "cbio-authority-rollback-"));
@@ -442,7 +454,7 @@ try {
   });
   const rollbackVault = wrapVaultCoreAsVaultService(rollbackAuthority);
   const rollbackClient = createVaultClient({ identityId: "owner-rollback" }, rollbackVault, new LocalSigner(ownerIdentity), new SystemClock());
-  const custodyDir = join(tempDir, "vault/custody");
+  const custodyDir = join(tempDir, "vaults/vault-runtime-persistent/vault/custody");
   const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
   await assert.rejects(
     () => rollbackClient.writeSecret({
@@ -459,7 +471,7 @@ try {
     }),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_AUDIT_FAILED",
   );
-  const rollbackSecretsFile = await readFile(join(tempDir, "vault/secrets.json"), "utf8").catch(() => "");
+  const rollbackSecretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent/vault/secrets.json"), "utf8").catch(() => "");
   assert.ok(!rollbackSecretsFile.includes("should-rollback"));
   const custodyCountAfter = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
   assert.equal(custodyCountAfter, custodyCountBefore);

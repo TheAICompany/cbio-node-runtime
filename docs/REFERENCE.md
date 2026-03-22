@@ -42,7 +42,7 @@ Lower-level custody helpers:
 - `initializeVaultCustody(...)`
 - `recoverVaultWorkingKey(...)`
 
-`createVault({ ownerIdentity, nickname })` creates a vault in the default workspace and persists `nickname` into `vault/profile.json`.
+`createVault({ ownerIdentity, nickname })` creates a vault in the default workspace and persists `nickname` into `vaults/<vaultId>/vault/profile.json`.
 
 `createVault(storage, { ownerIdentity, nickname })` overrides the workspace storage explicitly.
 
@@ -84,7 +84,7 @@ Role rules:
 
 `deriveChildIdentity(parentIdentity, childIndex, { nickname })` deterministically reconstructs a child identity for a known `childIndex`.
 
-`ensurePrivateVault(storage, identity)` creates or refreshes the identity's fixed private-vault namespace. The private vault stores identity-level files such as:
+`ensurePrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `identities/<identityId>/...`. That namespace stores identity-level files such as:
 
 - `profile.json`
 - `children.json`

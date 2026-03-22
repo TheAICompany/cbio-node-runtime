@@ -11,6 +11,7 @@ import {
   type VaultService,
   type VaultCustomFlowResolver,
 } from "../vault-ingress/index.js";
+import { createPrefixedStorage } from "../storage/prefix.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
@@ -25,6 +26,10 @@ function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
     .update("\n")
     .update(privateKey)
     .digest("base64url");
+}
+
+function vaultStoragePrefix(vaultId: string): string {
+  return `vaults/${vaultId}`;
 }
 
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
@@ -82,11 +87,12 @@ export async function createVault(
   storageOrOptions: IStorageProvider | CreateVaultOptions,
   maybeOptions?: CreateVaultOptions,
 ): Promise<CreatedVault> {
-  const { storage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
+  const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
     storage: IStorageProvider;
     options: CreateVaultOptions;
   };
   const vaultId = options.vaultId ?? `vault_${crypto.randomUUID()}`;
+  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
@@ -119,10 +125,11 @@ export async function recoverVault(
   storageOrOptions: IStorageProvider | RecoverVaultOptions,
   maybeOptions?: RecoverVaultOptions,
 ): Promise<RecoveredVault> {
-  const { storage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
+  const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
     storage: IStorageProvider;
     options: RecoverVaultOptions;
   };
+  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(options.vaultId));
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, options.vaultId);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
