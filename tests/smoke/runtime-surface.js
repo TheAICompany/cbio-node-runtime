@@ -72,6 +72,8 @@ const derivedAgentIdentitySibling = await createChildIdentity(identityTreeStorag
 const ownerPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(privateVaultProfileKey(ownerIdentity.identityId))).toString("utf8"));
 const ownerPrivateVaultChildren = JSON.parse((await identityTreeStorage.read(privateVaultChildrenKey(ownerIdentity.identityId))).toString("utf8"));
 const childPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(privateVaultProfileKey(derivedAgentIdentity.identityId))).toString("utf8"));
+assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/profile.json`), false);
+assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/children.json`), false);
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
 assert.equal(typeof agentIdentity.identityId, "string");

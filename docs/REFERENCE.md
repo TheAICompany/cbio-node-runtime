@@ -76,7 +76,7 @@ Role rules:
 
 `deriveChildIdentity(parentIdentity, childIndex, { nickname })` deterministically reconstructs a child identity for a known `childIndex`.
 
-`ensurePrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `identities/<identityId>/...`. That namespace stores identity-level files such as:
+`ensurePrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `vault/private/identities/<identityId>/...`. That namespace stores identity-level files such as:
 
 - `profile.json`
 - `children.json`

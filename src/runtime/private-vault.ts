@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
 
-const PRIVATE_VAULT_PREFIX = "identities";
+const PRIVATE_VAULT_PREFIX = "vault/private/identities";
 const PRIVATE_VAULT_LOCK_SUFFIX = ".lock";
 
 export interface PrivateVaultProfile {

@@ -91,7 +91,7 @@ const createdVault = await createVault(storage, {
 
 The workspace root can contain many vaults. Each vault is isolated under `vaults/<vaultId>/...`.
 
-Each identity now has its own namespace in storage under `identities/<identityId>/...`. That namespace holds identity-level metadata such as:
+Each identity now has its own private namespace in storage under `vault/private/identities/<identityId>/...`. That namespace holds identity-level metadata such as:
 
 - `profile.json`
 - `children.json`
