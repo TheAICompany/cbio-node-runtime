@@ -78,7 +78,7 @@ The runtime now exposes this concept directly as optional `nickname` on `createI
 
 For existing private keys, the runtime exposes `restoreIdentity(...)`, which reconstructs the same identity shape from the private key alone.
 
-For child identities, the runtime exposes `deriveIdentity(parentPrivateKey, path)`, which deterministically derives the same child identity every time for the same parent key and path.
+For child identities, the runtime exposes `createIdentity(parentIdentity, { nickname })`. Child identities include `parentIdentityId`, while `nickname` remains display-only.
 
 In other words:
 

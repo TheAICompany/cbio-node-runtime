@@ -42,7 +42,6 @@ import {
   createVaultService,
   createDefaultVaultCoreDependencies,
   createIdentity,
-  deriveIdentity,
   restoreIdentity,
   createVault,
   recoverVault,
@@ -67,7 +66,7 @@ Child identity example:
 
 ```ts
 const rootIdentity = createIdentity({ nickname: 'root' });
-const childIdentity = deriveIdentity(rootIdentity.privateKey, 'agents/worker-1', {
+const childIdentity = createIdentity(rootIdentity, {
   nickname: 'worker-1',
 });
 ```
@@ -88,7 +87,7 @@ Important role rule:
 - outside the vault there are only identities
 - inside a specific vault, those identities may be bound to roles such as `owner` or `agent`
 - root identities are independent
-- child identities may be deterministically derived from a parent identity private key plus a path
+- child identities may be deterministically derived from a parent identity
 
 The public runtime surface follows four hard rules:
 

@@ -1,10 +1,11 @@
-import { createHmac, createPrivateKey, createPublicKey } from "node:crypto";
+import { createHmac, createPrivateKey, createPublicKey, randomBytes } from "node:crypto";
 import { derivePublicKey, generateIdentityKeys } from "../protocol/crypto.js";
 import { deriveIdentityId } from "../protocol/identity.js";
 
 export interface CreatedIdentity {
   identityId: string;
   nickname?: string;
+  parentIdentityId?: string;
   publicKey: string;
   privateKey: string;
 }
@@ -43,7 +44,14 @@ function encodeEd25519PrivateKey(seed: Buffer): string {
   return Buffer.concat([ED25519_PKCS8_PREFIX, seed]).toString("base64url");
 }
 
-export function createIdentity(options: CreateIdentityOptions = {}): CreatedIdentity {
+function toParentPrivateKey(parent?: CreatedIdentity | string): string | undefined {
+  if (!parent) {
+    return undefined;
+  }
+  return typeof parent === "string" ? parent.trim() : parent.privateKey.trim();
+}
+
+function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentity {
   const keyPair = generateIdentityKeys();
   if (!keyPair.publicKey || !keyPair.privateKey) {
     throw new Error("identity generation failed");
@@ -54,6 +62,40 @@ export function createIdentity(options: CreateIdentityOptions = {}): CreatedIden
     nickname,
     publicKey: keyPair.publicKey,
     privateKey: keyPair.privateKey,
+  };
+}
+
+export function createIdentity(parent?: CreatedIdentity | string, options?: CreateIdentityOptions): CreatedIdentity;
+export function createIdentity(options?: CreateIdentityOptions): CreatedIdentity;
+export function createIdentity(
+  parentOrOptions?: CreatedIdentity | string | CreateIdentityOptions,
+  maybeOptions: CreateIdentityOptions = {},
+): CreatedIdentity {
+  const hasParent =
+    typeof parentOrOptions === "string" ||
+    (typeof parentOrOptions === "object" &&
+      parentOrOptions !== null &&
+      "privateKey" in parentOrOptions);
+
+  if (!hasParent) {
+    return createRootIdentity((parentOrOptions as CreateIdentityOptions | undefined) ?? {});
+  }
+
+  const parentPrivateKey = toParentPrivateKey(parentOrOptions as CreatedIdentity | string);
+  if (!parentPrivateKey) {
+    return createRootIdentity(maybeOptions);
+  }
+
+  const nickname = normalizeNickname(maybeOptions.nickname);
+  const relationId = randomBytes(16).toString("base64url");
+  const childIdentity = deriveIdentity(parentPrivateKey, relationId, { nickname });
+  const parentIdentity = typeof parentOrOptions === "string"
+    ? restoreIdentity(parentPrivateKey)
+    : parentOrOptions as CreatedIdentity;
+
+  return {
+    ...childIdentity,
+    parentIdentityId: parentIdentity.identityId,
   };
 }
 
@@ -72,25 +114,25 @@ export function restoreIdentity(privateKey: string, options: RestoreIdentityOpti
   };
 }
 
-export function deriveIdentity(
+function deriveIdentity(
   parentPrivateKey: string,
-  path: string,
+  relationId: string,
   options: DeriveIdentityOptions = {},
 ): CreatedIdentity {
   const normalizedParentPrivateKey = parentPrivateKey.trim();
-  const normalizedPath = path.trim();
+  const normalizedRelationId = relationId.trim();
   if (!normalizedParentPrivateKey) {
     throw new Error("parent private key is required");
   }
-  if (!normalizedPath) {
-    throw new Error("path is required");
+  if (!normalizedRelationId) {
+    throw new Error("relationId is required");
   }
 
   const parentSeed = decodeEd25519Seed(normalizedParentPrivateKey);
   const childSeed = createHmac("sha256", parentSeed)
     .update("cbio:identity:child:v1")
     .update("\0")
-    .update(normalizedPath)
+    .update(normalizedRelationId)
     .digest();
 
   const privateKey = encodeEd25519PrivateKey(childSeed);

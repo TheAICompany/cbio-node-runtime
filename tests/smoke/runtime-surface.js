@@ -6,7 +6,6 @@ import {
   createVaultCore,
   createPersistentVaultCoreDependencies,
   createVault,
-  deriveIdentity,
   recoverVault,
   initializeVaultCustody,
   wrapVaultCoreAsVaultService,
@@ -55,9 +54,7 @@ assert.equal(typeof IdentityErrorCode, "object");
 const agentIdentity = createIdentity({ nickname: "agent-1" });
 const ownerIdentity = createIdentity({ nickname: "owner-1" });
 const restoredAgentIdentity = restoreIdentity(agentIdentity.privateKey, { nickname: "agent-1-restored" });
-const derivedAgentIdentity = deriveIdentity(ownerIdentity.privateKey, "agents/worker-1", { nickname: "worker-1" });
-const derivedAgentIdentityAgain = deriveIdentity(ownerIdentity.privateKey, "agents/worker-1");
-const derivedAgentIdentitySibling = deriveIdentity(ownerIdentity.privateKey, "agents/worker-2");
+const unnamedDerivedAgentIdentity = createIdentity(ownerIdentity);
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
 assert.equal(typeof agentIdentity.identityId, "string");
@@ -66,12 +63,9 @@ assert.equal(restoredAgentIdentity.privateKey, agentIdentity.privateKey);
 assert.equal(restoredAgentIdentity.publicKey, agentIdentity.publicKey);
 assert.equal(restoredAgentIdentity.identityId, agentIdentity.identityId);
 assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
-assert.equal(derivedAgentIdentity.privateKey, derivedAgentIdentityAgain.privateKey);
-assert.equal(derivedAgentIdentity.publicKey, derivedAgentIdentityAgain.publicKey);
-assert.equal(derivedAgentIdentity.identityId, derivedAgentIdentityAgain.identityId);
-assert.notEqual(derivedAgentIdentity.privateKey, derivedAgentIdentitySibling.privateKey);
-assert.notEqual(derivedAgentIdentity.identityId, derivedAgentIdentitySibling.identityId);
-assert.equal(derivedAgentIdentity.nickname, "worker-1");
+assert.equal(unnamedDerivedAgentIdentity.parentIdentityId, ownerIdentity.identityId);
+assert.equal(typeof unnamedDerivedAgentIdentity.identityId, "string");
+assert.equal(typeof unnamedDerivedAgentIdentity.privateKey, "string");
 
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {
