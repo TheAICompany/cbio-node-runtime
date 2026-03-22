@@ -42,7 +42,7 @@ import {
   createChildIdentity,
   createIdentity,
   createWorkspaceStorage,
-  ensurePrivateVault,
+  ensureIdentityPrivateVault,
   restoreIdentity,
   createVault,
   recoverVault,
@@ -64,7 +64,7 @@ Child identity example:
 
 ```ts
 const rootIdentity = createIdentity({ nickname: 'root' });
-await ensurePrivateVault(storage, rootIdentity);
+await ensureIdentityPrivateVault(storage, rootIdentity);
 const childIdentity = await createChildIdentity(storage, rootIdentity, {
   nickname: 'worker-1',
 });

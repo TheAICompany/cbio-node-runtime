@@ -2,10 +2,10 @@ import type { IStorageProvider } from "../storage/provider.js";
 import type { ChildIdentity, CreatedIdentity, CreateIdentityOptions } from "./identity.js";
 import { deriveChildIdentity } from "./identity.js";
 import {
-  ensurePrivateVault,
-  readPrivateVaultChildrenState,
-  withPrivateVaultLock,
-  writePrivateVaultChildrenState,
+  ensureIdentityPrivateVault,
+  readIdentityPrivateVaultChildrenState,
+  withIdentityPrivateVaultLock,
+  writeIdentityPrivateVaultChildrenState,
 } from "./private-vault.js";
 
 export interface CreateChildIdentityOptions extends CreateIdentityOptions {}
@@ -23,11 +23,11 @@ export async function createChildIdentity(
     throw new Error("parent identity object is required");
   }
   const run = async (): Promise<ChildIdentity> => {
-    await ensurePrivateVault(storage, parent);
-    const state = await readPrivateVaultChildrenState(storage, parent.identityId);
+    await ensureIdentityPrivateVault(storage, parent);
+    const state = await readIdentityPrivateVaultChildrenState(storage, parent.identityId);
     const childIndex = state.nextChildIndex;
     const childIdentity = deriveChildIdentity(parent, childIndex, options);
-    await ensurePrivateVault(storage, childIdentity);
+    await ensureIdentityPrivateVault(storage, childIdentity);
     state.nextChildIndex += 1;
     state.children.push({
       identityId: childIdentity.identityId,
@@ -36,8 +36,8 @@ export async function createChildIdentity(
       nickname: childIdentity.nickname,
       publicKey: childIdentity.publicKey,
     });
-    await writePrivateVaultChildrenState(storage, parent.identityId, state);
+    await writeIdentityPrivateVaultChildrenState(storage, parent.identityId, state);
     return childIdentity;
   };
-  return withPrivateVaultLock(storage, parent.identityId, run);
+  return withIdentityPrivateVaultLock(storage, parent.identityId, run);
 }

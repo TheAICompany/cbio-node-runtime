@@ -7,7 +7,7 @@ import {
   createVault,
   createWorkspaceStorage,
   deriveChildIdentity,
-  ensurePrivateVault,
+  ensureIdentityPrivateVault,
   getDefaultWorkspaceDir,
   recoverVault,
   createStandardAcquireBoundary,
@@ -46,8 +46,8 @@ import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 import { LocalSigner } from "../../dist/protocol/crypto.js";
 import { MemoryStorageProvider } from "../../dist/storage/memory.js";
 import {
-  privateVaultChildrenKey,
-  privateVaultProfileKey,
+  identityPrivateVaultChildrenKey,
+  identityPrivateVaultProfileKey,
 } from "../../dist/runtime/private-vault.js";
 import { readVaultProfile } from "../../dist/runtime/vault-metadata.js";
 
@@ -65,13 +65,13 @@ const agentIdentity = createIdentity({ nickname: "agent-1" });
 const ownerIdentity = createIdentity({ nickname: "owner-1" });
 const restoredAgentIdentity = restoreIdentity(agentIdentity.privateKey, { nickname: "agent-1-restored" });
 const identityTreeStorage = new MemoryStorageProvider();
-await ensurePrivateVault(identityTreeStorage, ownerIdentity);
+await ensureIdentityPrivateVault(identityTreeStorage, ownerIdentity);
 const derivedAgentIdentity = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-1" });
 const derivedAgentIdentityAgain = deriveChildIdentity(ownerIdentity, 0, { nickname: "worker-2" });
 const derivedAgentIdentitySibling = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-3" });
-const ownerPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(privateVaultProfileKey(ownerIdentity.identityId))).toString("utf8"));
-const ownerPrivateVaultChildren = JSON.parse((await identityTreeStorage.read(privateVaultChildrenKey(ownerIdentity.identityId))).toString("utf8"));
-const childPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(privateVaultProfileKey(derivedAgentIdentity.identityId))).toString("utf8"));
+const ownerPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(identityPrivateVaultProfileKey(ownerIdentity.identityId))).toString("utf8"));
+const ownerPrivateVaultChildren = JSON.parse((await identityTreeStorage.read(identityPrivateVaultChildrenKey(ownerIdentity.identityId))).toString("utf8"));
+const childPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(identityPrivateVaultProfileKey(derivedAgentIdentity.identityId))).toString("utf8"));
 assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/profile.json`), false);
 assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/children.json`), false);
 assert.equal(typeof agentIdentity.privateKey, "string");

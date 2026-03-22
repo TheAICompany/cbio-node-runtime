@@ -5,7 +5,7 @@ import type { CreatedIdentity } from "./identity.js";
 const PRIVATE_VAULT_PREFIX = "vault/private/identities";
 const PRIVATE_VAULT_LOCK_SUFFIX = ".lock";
 
-export interface PrivateVaultProfile {
+export interface IdentityPrivateVaultProfile {
   identityId: string;
   nickname?: string;
   publicKey: string;
@@ -13,7 +13,7 @@ export interface PrivateVaultProfile {
   childIndex?: number;
 }
 
-export interface PrivateVaultChildRecord {
+export interface IdentityPrivateVaultChildRecord {
   identityId: string;
   parentIdentityId: string;
   childIndex: number;
@@ -21,32 +21,32 @@ export interface PrivateVaultChildRecord {
   publicKey: string;
 }
 
-export interface PrivateVaultChildrenState {
+export interface IdentityPrivateVaultChildrenState {
   nextChildIndex: number;
-  children: PrivateVaultChildRecord[];
+  children: IdentityPrivateVaultChildRecord[];
 }
 
-export function privateVaultPrefix(identityId: string): string {
+export function identityPrivateVaultPrefix(identityId: string): string {
   return `${PRIVATE_VAULT_PREFIX}/${identityId}`;
 }
 
-export function privateVaultProfileKey(identityId: string): string {
-  return `${privateVaultPrefix(identityId)}/profile.json`;
+export function identityPrivateVaultProfileKey(identityId: string): string {
+  return `${identityPrivateVaultPrefix(identityId)}/profile.json`;
 }
 
-export function privateVaultChildrenKey(identityId: string): string {
-  return `${privateVaultPrefix(identityId)}/children.json`;
+export function identityPrivateVaultChildrenKey(identityId: string): string {
+  return `${identityPrivateVaultPrefix(identityId)}/children.json`;
 }
 
 function lockKey(identityId: string): string {
-  return `${privateVaultPrefix(identityId)}${PRIVATE_VAULT_LOCK_SUFFIX}`;
+  return `${identityPrivateVaultPrefix(identityId)}${PRIVATE_VAULT_LOCK_SUFFIX}`;
 }
 
-export async function ensurePrivateVault(
+export async function ensureIdentityPrivateVault(
   storage: IStorageProvider,
   identity: CreatedIdentity,
 ): Promise<void> {
-  const profile: PrivateVaultProfile = {
+  const profile: IdentityPrivateVaultProfile = {
     identityId: identity.identityId,
     nickname: identity.nickname,
     publicKey: identity.publicKey,
@@ -54,13 +54,13 @@ export async function ensurePrivateVault(
     childIndex: identity.childIndex,
   };
   await storage.write(
-    privateVaultProfileKey(identity.identityId),
+    identityPrivateVaultProfileKey(identity.identityId),
     Buffer.from(JSON.stringify(profile, null, 2)),
   );
 
-  const childrenKey = privateVaultChildrenKey(identity.identityId);
+  const childrenKey = identityPrivateVaultChildrenKey(identity.identityId);
   if (!(await storage.has(childrenKey))) {
-    const emptyState: PrivateVaultChildrenState = {
+    const emptyState: IdentityPrivateVaultChildrenState = {
       nextChildIndex: 0,
       children: [],
     };
@@ -68,44 +68,44 @@ export async function ensurePrivateVault(
   }
 }
 
-export async function readPrivateVaultProfile(
+export async function readIdentityPrivateVaultProfile(
   storage: IStorageProvider,
   identityId: string,
-): Promise<PrivateVaultProfile | null> {
-  const raw = await storage.read(privateVaultProfileKey(identityId));
+): Promise<IdentityPrivateVaultProfile | null> {
+  const raw = await storage.read(identityPrivateVaultProfileKey(identityId));
   if (!raw) {
     return null;
   }
-  return JSON.parse(raw.toString("utf8")) as PrivateVaultProfile;
+  return JSON.parse(raw.toString("utf8")) as IdentityPrivateVaultProfile;
 }
 
-export async function readPrivateVaultChildrenState(
+export async function readIdentityPrivateVaultChildrenState(
   storage: IStorageProvider,
   identityId: string,
-): Promise<PrivateVaultChildrenState> {
-  const raw = await storage.read(privateVaultChildrenKey(identityId));
+): Promise<IdentityPrivateVaultChildrenState> {
+  const raw = await storage.read(identityPrivateVaultChildrenKey(identityId));
   if (!raw) {
     return { nextChildIndex: 0, children: [] };
   }
-  const parsed = JSON.parse(raw.toString("utf8")) as PrivateVaultChildrenState;
+  const parsed = JSON.parse(raw.toString("utf8")) as IdentityPrivateVaultChildrenState;
   return {
     nextChildIndex: parsed.nextChildIndex ?? parsed.children.length,
     children: parsed.children ?? [],
   };
 }
 
-export async function writePrivateVaultChildrenState(
+export async function writeIdentityPrivateVaultChildrenState(
   storage: IStorageProvider,
   identityId: string,
-  state: PrivateVaultChildrenState,
+  state: IdentityPrivateVaultChildrenState,
 ): Promise<void> {
   await storage.write(
-    privateVaultChildrenKey(identityId),
+    identityPrivateVaultChildrenKey(identityId),
     Buffer.from(JSON.stringify(state, null, 2)),
   );
 }
 
-export async function withPrivateVaultLock<T>(
+export async function withIdentityPrivateVaultLock<T>(
   storage: IStorageProvider,
   identityId: string,
   task: () => Promise<T>,

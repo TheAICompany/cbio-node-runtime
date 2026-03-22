@@ -32,15 +32,15 @@ export {
   getDefaultWorkspaceDir,
 } from "./workspace-storage.js";
 export {
-  ensurePrivateVault,
-  readPrivateVaultProfile,
-  readPrivateVaultChildrenState,
-  privateVaultPrefix,
-  privateVaultProfileKey,
-  privateVaultChildrenKey,
-  type PrivateVaultProfile,
-  type PrivateVaultChildRecord,
-  type PrivateVaultChildrenState,
+  ensureIdentityPrivateVault,
+  readIdentityPrivateVaultProfile,
+  readIdentityPrivateVaultChildrenState,
+  identityPrivateVaultPrefix,
+  identityPrivateVaultProfileKey,
+  identityPrivateVaultChildrenKey,
+  type IdentityPrivateVaultProfile,
+  type IdentityPrivateVaultChildRecord,
+  type IdentityPrivateVaultChildrenState,
 } from "./private-vault.js";
 export {
   createVault,
@@ -206,7 +206,7 @@ export interface CbioRuntime {
   restoreIdentity: typeof import("./identity.js").restoreIdentity;
   createChildIdentity: typeof import("./child-identity.js").createChildIdentity;
   deriveChildIdentity: typeof import("./identity.js").deriveChildIdentity;
-  ensurePrivateVault: typeof import("./private-vault.js").ensurePrivateVault;
+  ensureIdentityPrivateVault: typeof import("./private-vault.js").ensureIdentityPrivateVault;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
   createVaultClient: typeof import("../clients/owner/index.js").createVaultClient;
