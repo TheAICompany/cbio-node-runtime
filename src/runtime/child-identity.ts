@@ -1,5 +1,5 @@
 import type { IStorageProvider } from "../storage/provider.js";
-import type { CreatedIdentity, CreateIdentityOptions } from "./identity.js";
+import type { ChildIdentity, CreatedIdentity, CreateIdentityOptions } from "./identity.js";
 import { deriveChildIdentity } from "./identity.js";
 import {
   ensurePrivateVault,
@@ -14,7 +14,7 @@ export async function createChildIdentity(
   storage: IStorageProvider,
   parentIdentity: CreatedIdentity | string,
   options: CreateChildIdentityOptions = {},
-): Promise<CreatedIdentity> {
+): Promise<ChildIdentity> {
   const parent =
     typeof parentIdentity === "string"
       ? undefined
@@ -22,7 +22,7 @@ export async function createChildIdentity(
   if (!parent) {
     throw new Error("parent identity object is required");
   }
-  const run = async (): Promise<CreatedIdentity> => {
+  const run = async (): Promise<ChildIdentity> => {
     await ensurePrivateVault(storage, parent);
     const state = await readPrivateVaultChildrenState(storage, parent.identityId);
     const childIndex = state.nextChildIndex;

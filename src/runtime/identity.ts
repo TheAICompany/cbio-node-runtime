@@ -11,6 +11,11 @@ export interface CreatedIdentity {
   privateKey: string;
 }
 
+export interface ChildIdentity extends CreatedIdentity {
+  parentIdentityId: string;
+  childIndex: number;
+}
+
 export interface CreateIdentityOptions {
   nickname?: string;
 }
@@ -144,7 +149,7 @@ export function deriveChildIdentity(
   parent: CreatedIdentity | string,
   childIndex: number,
   options: DeriveIdentityOptions = {},
-): CreatedIdentity {
+): ChildIdentity {
   const parentPrivateKey = toParentPrivateKey(parent);
   if (!parentPrivateKey) {
     throw new Error("parent private key is required");

@@ -49,6 +49,13 @@ export interface CreatedVault {
   storage: IStorageProvider;
 }
 
+export interface VaultObject {
+  core: VaultCore;
+  vault: VaultService;
+  nickname?: string;
+  storage: IStorageProvider;
+}
+
 export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId: string;
   ownerIdentity: CreatedIdentity;
@@ -58,12 +65,7 @@ export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDepen
   };
 }
 
-export interface RecoveredVault {
-  core: VaultCore;
-  vault: VaultService;
-  nickname?: string;
-  storage: IStorageProvider;
-}
+export interface RecoveredVault extends VaultObject {}
 
 function resolveStorage(
   storageOrOptions: IStorageProvider | CreateVaultOptions | RecoverVaultOptions,
