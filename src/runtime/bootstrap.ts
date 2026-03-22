@@ -13,6 +13,7 @@ import {
 } from "../vault-ingress/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
+import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
 
 function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
   return crypto
@@ -27,6 +28,7 @@ function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
 
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
+  nickname?: string;
   ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
@@ -37,6 +39,7 @@ export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDepend
 export interface CreatedVault {
   core: VaultCore;
   vault: VaultService;
+  nickname?: string;
 }
 
 export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
@@ -51,6 +54,7 @@ export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDepen
 export interface RecoveredVault {
   core: VaultCore;
   vault: VaultService;
+  nickname?: string;
 }
 
 export async function createVault(
@@ -71,9 +75,15 @@ export async function createVault(
     publicKey: options.ownerIdentity.publicKey,
   };
   await core.bootstrapOwnerIdentity(bootstrapOwner);
+  const nickname = options.nickname?.trim() ? options.nickname.trim() : undefined;
+  await writeVaultProfile(storage, {
+    vaultId,
+    nickname,
+  });
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
+    nickname,
   };
 }
 
@@ -88,8 +98,10 @@ export async function recoverVault(
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
+  const profile = await readVaultProfile(storage);
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
+    nickname: profile?.nickname,
   };
 }

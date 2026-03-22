@@ -11,6 +11,7 @@ import {
   ensurePrivateVault,
   privateVaultChildrenKey,
   privateVaultProfileKey,
+  readVaultProfile,
   recoverVault,
   initializeVaultCustody,
   wrapVaultCoreAsVaultService,
@@ -285,6 +286,7 @@ try {
   const storage = new FsStorageProvider(tempDir);
   const createdVault = await createVault(storage, {
     vaultId: "vault-runtime-persistent",
+    nickname: "persistent-main",
     policy: {
       trustedIssuerIds: ["issuer-1"],
     },
@@ -298,6 +300,9 @@ try {
       }), { status: 200 }),
     },
   });
+  const createdVaultProfile = await readVaultProfile(storage);
+  assert.equal(createdVault.nickname, "persistent-main");
+  assert.equal(createdVaultProfile?.nickname, "persistent-main");
   const persistentVault = wrapVaultCoreAsVaultService(createdVault.core, {
     fetchImpl: async () => new Response(JSON.stringify({
       access_token: "issuer-secret",
@@ -327,6 +332,7 @@ try {
     vaultId: "vault-runtime-persistent",
     ownerIdentity,
   });
+  assert.equal(recoveredVaultInstance.nickname, "persistent-main");
   const acquiredAgentIdentity = createIdentity();
   await auditClient.registerAgent({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });
   const acquiredCapability = {

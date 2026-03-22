@@ -42,6 +42,10 @@ Lower-level custody helpers:
 - `initializeVaultCustody(...)`
 - `recoverVaultWorkingKey(...)`
 
+`createVault(storage, { ownerIdentity, nickname })` creates a vault and persists `nickname` into `vault/profile.json`.
+
+`recoverVault(storage, { vaultId, ownerIdentity })` returns the persisted `nickname` when present.
+
 ## Terms
 
 - `identity`

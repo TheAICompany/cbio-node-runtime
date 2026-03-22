@@ -74,6 +74,15 @@ const childIdentity = await createChildIdentity(storage, rootIdentity, {
 });
 ```
 
+Vaults also support an optional human-readable nickname:
+
+```ts
+const createdVault = await createVault(storage, {
+  ownerIdentity: rootIdentity,
+  nickname: 'main-vault',
+});
+```
+
 Each identity now has a private vault namespace in storage. That namespace holds identity-level metadata such as:
 
 - `profile.json`

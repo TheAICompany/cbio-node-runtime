@@ -22,6 +22,11 @@ export {
   type CreateChildIdentityOptions,
 } from "./child-identity.js";
 export {
+  readVaultProfile,
+  writeVaultProfile,
+  type VaultProfile,
+} from "./vault-metadata.js";
+export {
   ensurePrivateVault,
   readPrivateVaultProfile,
   readPrivateVaultChildrenState,
