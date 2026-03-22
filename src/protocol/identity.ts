@@ -17,6 +17,6 @@ export function deriveIdentityId(publicKey: string): string {
 
 export function getVaultPath(publicKey: string): string {
     const hash = crypto.createHash('sha256').update(publicKey).digest('hex').substring(0, 12);
-    const baseDir = process.env.C_BIO_VAULT_DIR || path.join(os.homedir(), '.c-bio');
+    const baseDir = process.env.C_BIO_VAULT_DIR || path.join(os.homedir(), 'cbio');
     return path.join(baseDir, `vault_${hash}.enc`);
 }
