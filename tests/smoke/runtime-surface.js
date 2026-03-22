@@ -5,7 +5,12 @@ import { tmpdir } from "node:os";
 import {
   createVaultCore,
   createPersistentVaultCoreDependencies,
+  createChildIdentity,
   createVault,
+  deriveChildIdentity,
+  ensurePrivateVault,
+  privateVaultChildrenKey,
+  privateVaultProfileKey,
   recoverVault,
   initializeVaultCustody,
   wrapVaultCoreAsVaultService,
@@ -26,6 +31,7 @@ import {
   InMemorySecretRepository,
   LocalVaultTransport,
   LocalSigner,
+  MemoryStorageProvider,
   PersistentVaultAuditLog,
   PersistentVaultSecretCustody,
   PersistentVaultSecretRepository,
@@ -54,7 +60,14 @@ assert.equal(typeof IdentityErrorCode, "object");
 const agentIdentity = createIdentity({ nickname: "agent-1" });
 const ownerIdentity = createIdentity({ nickname: "owner-1" });
 const restoredAgentIdentity = restoreIdentity(agentIdentity.privateKey, { nickname: "agent-1-restored" });
-const unnamedDerivedAgentIdentity = createIdentity(ownerIdentity);
+const identityTreeStorage = new MemoryStorageProvider();
+await ensurePrivateVault(identityTreeStorage, ownerIdentity);
+const derivedAgentIdentity = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-1" });
+const derivedAgentIdentityAgain = deriveChildIdentity(ownerIdentity, 0, { nickname: "worker-2" });
+const derivedAgentIdentitySibling = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-3" });
+const ownerPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(privateVaultProfileKey(ownerIdentity.identityId))).toString("utf8"));
+const ownerPrivateVaultChildren = JSON.parse((await identityTreeStorage.read(privateVaultChildrenKey(ownerIdentity.identityId))).toString("utf8"));
+const childPrivateVaultProfile = JSON.parse((await identityTreeStorage.read(privateVaultProfileKey(derivedAgentIdentity.identityId))).toString("utf8"));
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
 assert.equal(typeof agentIdentity.identityId, "string");
@@ -63,9 +76,20 @@ assert.equal(restoredAgentIdentity.privateKey, agentIdentity.privateKey);
 assert.equal(restoredAgentIdentity.publicKey, agentIdentity.publicKey);
 assert.equal(restoredAgentIdentity.identityId, agentIdentity.identityId);
 assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
-assert.equal(unnamedDerivedAgentIdentity.parentIdentityId, ownerIdentity.identityId);
-assert.equal(typeof unnamedDerivedAgentIdentity.identityId, "string");
-assert.equal(typeof unnamedDerivedAgentIdentity.privateKey, "string");
+assert.equal(ownerPrivateVaultProfile.identityId, ownerIdentity.identityId);
+assert.equal(ownerPrivateVaultChildren.nextChildIndex, 2);
+assert.equal(ownerPrivateVaultChildren.children.length, 2);
+assert.equal(childPrivateVaultProfile.parentIdentityId, ownerIdentity.identityId);
+assert.equal(derivedAgentIdentity.parentIdentityId, ownerIdentity.identityId);
+assert.equal(derivedAgentIdentity.childIndex, 0);
+assert.equal(derivedAgentIdentity.privateKey, derivedAgentIdentityAgain.privateKey);
+assert.equal(derivedAgentIdentity.publicKey, derivedAgentIdentityAgain.publicKey);
+assert.equal(derivedAgentIdentity.identityId, derivedAgentIdentityAgain.identityId);
+assert.notEqual(derivedAgentIdentity.privateKey, derivedAgentIdentitySibling.privateKey);
+assert.notEqual(derivedAgentIdentity.identityId, derivedAgentIdentitySibling.identityId);
+assert.equal(derivedAgentIdentity.nickname, "worker-1");
+assert.equal(derivedAgentIdentityAgain.nickname, "worker-2");
+assert.equal(derivedAgentIdentitySibling.childIndex, 1);
 
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {

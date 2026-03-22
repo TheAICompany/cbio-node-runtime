@@ -18,6 +18,9 @@ The main constructors are:
 - `createVaultCore(...)`
 - `createVaultService(...)`
 - `createIdentity(...)`
+- `createChildIdentity(...)`
+- `deriveChildIdentity(...)`
+- `ensurePrivateVault(...)`
 - `restoreIdentity(...)`
 - `createVault(...)`
 - `recoverVault(...)`
@@ -65,10 +68,18 @@ Role rules:
 - `privateKey`
 - optional `nickname`
 - optional `parentIdentityId` for child identities
+- optional `childIndex` for child identities
 
 `nickname` is human-readable only. It does not affect the derived `identityId`, cryptographic verification, or vault-local role binding.
 
-`createIdentity(parentIdentity, { nickname })` creates a child identity when a parent identity is provided, and the returned identity includes `parentIdentityId`.
+`createChildIdentity(storage, parentIdentity, { nickname })` allocates the next `childIndex` from storage and creates a child identity.
+
+`deriveChildIdentity(parentIdentity, childIndex, { nickname })` deterministically reconstructs a child identity for a known `childIndex`.
+
+`ensurePrivateVault(storage, identity)` creates or refreshes the identity's fixed private-vault namespace. The private vault stores identity-level files such as:
+
+- `profile.json`
+- `children.json`
 
 `restoreIdentity(privateKey)` returns the same shape for an existing private key.
 

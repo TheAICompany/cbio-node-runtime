@@ -1,4 +1,4 @@
-import { createHmac, createPrivateKey, createPublicKey, randomBytes } from "node:crypto";
+import { createHmac, createPrivateKey, createPublicKey } from "node:crypto";
 import { derivePublicKey, generateIdentityKeys } from "../protocol/crypto.js";
 import { deriveIdentityId } from "../protocol/identity.js";
 
@@ -6,6 +6,7 @@ export interface CreatedIdentity {
   identityId: string;
   nickname?: string;
   parentIdentityId?: string;
+  childIndex?: number;
   publicKey: string;
   privateKey: string;
 }
@@ -65,10 +66,10 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
   };
 }
 
-export function createIdentity(parent?: CreatedIdentity | string, options?: CreateIdentityOptions): CreatedIdentity;
 export function createIdentity(options?: CreateIdentityOptions): CreatedIdentity;
 export function createIdentity(
   parentOrOptions?: CreatedIdentity | string | CreateIdentityOptions,
+  childIndexOrOptions?: number | CreateIdentityOptions,
   maybeOptions: CreateIdentityOptions = {},
 ): CreatedIdentity {
   const hasParent =
@@ -77,26 +78,10 @@ export function createIdentity(
       parentOrOptions !== null &&
       "privateKey" in parentOrOptions);
 
-  if (!hasParent) {
-    return createRootIdentity((parentOrOptions as CreateIdentityOptions | undefined) ?? {});
+  if (hasParent) {
+    throw new Error("createIdentity() only creates root identities; use createChildIdentity() or deriveChildIdentity()");
   }
-
-  const parentPrivateKey = toParentPrivateKey(parentOrOptions as CreatedIdentity | string);
-  if (!parentPrivateKey) {
-    return createRootIdentity(maybeOptions);
-  }
-
-  const nickname = normalizeNickname(maybeOptions.nickname);
-  const relationId = randomBytes(16).toString("base64url");
-  const childIdentity = deriveIdentity(parentPrivateKey, relationId, { nickname });
-  const parentIdentity = typeof parentOrOptions === "string"
-    ? restoreIdentity(parentPrivateKey)
-    : parentOrOptions as CreatedIdentity;
-
-  return {
-    ...childIdentity,
-    parentIdentityId: parentIdentity.identityId,
-  };
+  return createRootIdentity((parentOrOptions as CreateIdentityOptions | undefined) ?? {});
 }
 
 export function restoreIdentity(privateKey: string, options: RestoreIdentityOptions = {}): CreatedIdentity {
@@ -116,23 +101,22 @@ export function restoreIdentity(privateKey: string, options: RestoreIdentityOpti
 
 function deriveIdentity(
   parentPrivateKey: string,
-  relationId: string,
+  childIndex: number,
   options: DeriveIdentityOptions = {},
 ): CreatedIdentity {
   const normalizedParentPrivateKey = parentPrivateKey.trim();
-  const normalizedRelationId = relationId.trim();
   if (!normalizedParentPrivateKey) {
     throw new Error("parent private key is required");
   }
-  if (!normalizedRelationId) {
-    throw new Error("relationId is required");
+  if (!Number.isInteger(childIndex) || childIndex < 0) {
+    throw new Error("childIndex must be a non-negative integer");
   }
 
   const parentSeed = decodeEd25519Seed(normalizedParentPrivateKey);
   const childSeed = createHmac("sha256", parentSeed)
     .update("cbio:identity:child:v1")
     .update("\0")
-    .update(normalizedRelationId)
+    .update(String(childIndex))
     .digest();
 
   const privateKey = encodeEd25519PrivateKey(childSeed);
@@ -153,5 +137,24 @@ function deriveIdentity(
     nickname: normalizeNickname(options.nickname),
     publicKey,
     privateKey,
+  };
+}
+
+export function deriveChildIdentity(
+  parent: CreatedIdentity | string,
+  childIndex: number,
+  options: DeriveIdentityOptions = {},
+): CreatedIdentity {
+  const parentPrivateKey = toParentPrivateKey(parent);
+  if (!parentPrivateKey) {
+    throw new Error("parent private key is required");
+  }
+  const parentIdentity = typeof parent === "string"
+    ? restoreIdentity(parentPrivateKey)
+    : parent;
+  return {
+    ...deriveIdentity(parentPrivateKey, childIndex, options),
+    parentIdentityId: parentIdentity.identityId,
+    childIndex,
   };
 }

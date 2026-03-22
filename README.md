@@ -41,7 +41,9 @@ npm install @the-ai-company/cbio-node-runtime
 import {
   createVaultService,
   createDefaultVaultCoreDependencies,
+  createChildIdentity,
   createIdentity,
+  ensurePrivateVault,
   restoreIdentity,
   createVault,
   recoverVault,
@@ -66,10 +68,16 @@ Child identity example:
 
 ```ts
 const rootIdentity = createIdentity({ nickname: 'root' });
-const childIdentity = createIdentity(rootIdentity, {
+await ensurePrivateVault(storage, rootIdentity);
+const childIdentity = await createChildIdentity(storage, rootIdentity, {
   nickname: 'worker-1',
 });
 ```
+
+Each identity now has a private vault namespace in storage. That namespace holds identity-level metadata such as:
+
+- `profile.json`
+- `children.json`
 
 ## Architecture
 

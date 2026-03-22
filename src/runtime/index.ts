@@ -11,11 +11,27 @@ export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
 export {
   createIdentity,
+  deriveChildIdentity,
   restoreIdentity,
   type CreateIdentityOptions,
   type RestoreIdentityOptions,
   type CreatedIdentity,
 } from "./identity.js";
+export {
+  createChildIdentity,
+  type CreateChildIdentityOptions,
+} from "./child-identity.js";
+export {
+  ensurePrivateVault,
+  readPrivateVaultProfile,
+  readPrivateVaultChildrenState,
+  privateVaultPrefix,
+  privateVaultProfileKey,
+  privateVaultChildrenKey,
+  type PrivateVaultProfile,
+  type PrivateVaultChildRecord,
+  type PrivateVaultChildrenState,
+} from "./private-vault.js";
 export {
   createVault,
   recoverVault,
