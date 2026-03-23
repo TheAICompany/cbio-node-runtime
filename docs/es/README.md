@@ -38,8 +38,9 @@ import {
 
 Ruta principal recomendada para vault persistente:
 
-- crear el vault persistente con `createVault(...)`
+- crear el vault persistente con `createVault(...)` (soporta `publicMetadata` para el descubrimiento de información pública)
 - recuperar el vault persistente con `recoverVault(...)` usando la identidad del owner
+- Capas de almacenamiento divididas: `vaults/` (Bóvedas con nombre) e `identities/` (Espacio de identidad personal)
 
 La API antigua centrada en `CbioIdentity` ya no es la superficie principal del producto.
 

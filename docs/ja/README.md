@@ -38,8 +38,9 @@ import {
 
 推奨される persistent-vault の主経路:
 
-- `createVault(...)` で persistent vault を作成する
+- `createVault(...)` で persistent vault を作成する (`publicMetadata` による公開情報のディスカバリをサポート)
 - `recoverVault(...)` で owner identity を使って persistent vault を復旧する
+- 分離されたストレージ層: `vaults/` (具名 Vault) と `identities/` (個人 ID スペース)
 
 旧 `CbioIdentity` 中心 API は、もはや主要な公開面ではありません。
 

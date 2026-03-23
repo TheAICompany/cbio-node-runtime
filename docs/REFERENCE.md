@@ -36,11 +36,11 @@ Recommended persistent-vault entrypoints:
 - `createVault(...)`
 - `recoverVault(...)`
 
-`createVault({ ownerIdentity, nickname })` creates a vault in the default workspace and persists `nickname` into `vaults/<vaultId>/vault/profile.json`.
+`createVault({ ownerIdentity, nickname, publicMetadata })` creates a vault in the default workspace.
 
-`createVault(storage, { ownerIdentity, nickname })` overrides the workspace storage explicitly.
+`createVault(storage, { ownerIdentity, nickname, publicMetadata })` overrides the workspace storage explicitly.
 
-`recoverVault({ vaultId, ownerIdentity })` reopens a vault from the default workspace and returns the persisted `nickname` when present.
+`recoverVault({ vaultId, ownerIdentity })` reopens a vault and returns the `nickname` from the sealed profile.
 
 `recoverVault(storage, { vaultId, ownerIdentity })` overrides the workspace storage explicitly.
 
@@ -78,14 +78,14 @@ Role rules:
 
 `deriveChildIdentity(parentIdentity, childIndex, { nickname })` deterministically reconstructs a child identity for a known `childIndex`.
 
-`ensureIdentityPrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `vault/private/identities/<identityId>/...`.
+`ensureIdentityPrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `identities/<identityId>/...`.
+ 
+ That namespace stores identity-level files such as:
 
-That namespace stores identity-level files such as:
+- `sealed/profile.sealed`
+- `sealed/children.sealed`
 
-- `profile.json`
-- `children.json`
-
-Those files are encrypted at rest with a key derived from that identity's private key. They are not readable as plain JSON on disk.
+Those files are encrypted at rest in the `sealed/` sub-directory and are not readable as plain JSON on disk.
 
 `restoreIdentity(privateKey)` returns the same shape for an existing private key.
 
@@ -354,7 +354,7 @@ If the custom flow mode includes secret acquisition, the owner also defines a re
 
 ## Persistent Dependencies
 
-`createPersistentVaultCoreDependencies(...)` builds a file-backed single-node profile with:
+`createPersistentVaultCoreDependencies(...)` builds a file-backed single-node profile under `vault/sealed/` with:
 
 - persistent secret metadata
 - sealed secret custody blobs

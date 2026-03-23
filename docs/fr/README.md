@@ -38,8 +38,9 @@ import {
 
 Chemin principal recommande pour un vault persistant :
 
-- creer le vault persistant avec `createVault(...)`
-- restaurer le vault persistant avec `recoverVault(...)` via l'identite du owner
+- créer le coffre persistant avec `createVault(...)` (prend en charge `publicMetadata` pour la découverte d'informations publiques)
+- restaurer le coffre persistant avec `recoverVault(...)` via l'identité de l'owner
+- Couches de stockage divisées : `vaults/` (Coffres nommés) et `identities/` (Espace d'identité personnel)
 
 L'ancienne API centree sur `CbioIdentity` n'est plus la surface principale du produit.
 

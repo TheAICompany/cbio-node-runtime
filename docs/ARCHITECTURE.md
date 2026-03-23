@@ -44,6 +44,20 @@ This means:
 
 - `vault-ingress`
   Accepts request-shaped calls, resolves vault-managed capability records inside the vault boundary, performs trusted acquisition flows, and forwards dispatch into vault-core internals.
+ 
+## Dual-Area Storage
+
+The vault is physically divided into two partitions to balance security and discoverability:
+
+- **Sealed Area (`vault/sealed/`)**
+  - **Security**: AES-256-GCM encrypted blobs (`.sealed`).
+  - **Access**: Requires the Vault Working Key (identity-derived) for both read and write.
+  - **Auditing**: Every access is tracked and logged in the append-only audit trail.
+
+- **Public Area (`vault/public/`)**
+  - **Security**: Plaintext JSON (`.json`).
+  - **Access**: Identity is required for **writing** (authorized update), but **reading is open**.
+  - **Auditing**: Reading from the public area is **untracked**, reducing audit noise for discovery / identity resolution.
 
 ## Core Rules
 
@@ -51,6 +65,8 @@ This means:
 2. Only owner and trusted issuer paths may write secrets.
 3. Agent can only request dispatch through capability + proof.
 4. Vault validates and audits every dispatch.
+5. Public data (e.g., nicknames, public keys) is explicitly mirrored to the Public Area for discovery.
+6. Identity-specific private data is stored in `identities/`, separate from named `vaults/`.
 
 ## Current HTTP Secret Flows
 

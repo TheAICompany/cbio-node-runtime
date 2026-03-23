@@ -38,8 +38,9 @@ import {
 
 推荐的持久化主路径：
 
-- 通过 `createVault(...)` 创建持久化 vault
+- 通过 `createVault(...)` 创建持久化 vault (支持 `publicMetadata` 用于公开发现)
 - 通过 `recoverVault(...)` 用 owner 身份恢复持久化 vault
+- 分区存储：`vaults/` (具名保险箱) 与 `identities/` (身份私有空间)
 
 ## 构建
 
