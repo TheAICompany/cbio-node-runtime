@@ -41,6 +41,7 @@ export interface VaultMetadata extends Record<string, any> {
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
   nickname?: string;
+  publicMetadata?: Record<string, any>;
   ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
@@ -133,8 +134,8 @@ export async function createVault(
   
   const nickname = options.nickname?.trim() ? options.nickname.trim() : undefined;
   
-  // 1. All sensitive metadata is in the private sealed profile (requires owner PK)
-  // 2. Discovery metadata (nickname) is in the public sealed profile (requires only vaultId)
+  // 1. Critical configuration (e.g. key materials, sensitive bounds) remains in private
+  // 2. Discovery metadata (ownerId, nickname, custom tags) is stored in the public sealed profile for easy UI retrieval
   await writeVaultProfile(storage, {
     sealedPrivate: {
       vaultId,
@@ -142,7 +143,9 @@ export async function createVault(
     },
     sealedPublic: {
       vaultId,
-      nickname,
+      ownerId: options.ownerIdentity.identityId,
+      ...options.publicMetadata,
+      nickname, // Nickname override takes precedence
     }
   }, vaultWorkingKey, vaultId);
 
@@ -222,7 +225,7 @@ export async function listVaults(storage: IStorageProvider): Promise<Array<{ vau
  */
 export async function updateVaultMetadata(
   vault: CreatedVault | RecoveredVault,
-  options: { nickname?: string; ownerIdentity: CreatedIdentity },
+  options: { nickname?: string; publicMetadata?: Record<string, any>; ownerIdentity: CreatedIdentity },
 ): Promise<void> {
   const vaultId = vault.core.vaultId.value;
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
@@ -233,7 +236,10 @@ export async function updateVaultMetadata(
   await writeVaultProfile(vault.storage, {
     sealedPrivate: current?.sealedPrivate || { vaultId, ownerId: options.ownerIdentity.identityId },
     sealedPublic: {
+      ...current?.sealedPublic, // Preserve existing public metadata
       vaultId,
+      ownerId: options.ownerIdentity.identityId, // Ensure ownerId is always populated for discovery
+      ...(options.publicMetadata ?? {}), // Merge new custom fields if any
       nickname: options.nickname ?? current?.sealedPublic.nickname,
     }
   }, vaultWorkingKey, vaultId);
