@@ -71,7 +71,8 @@ const childIdentity = await createChildIdentity(storage, rootIdentity, {
   nickname: 'worker-1',
 });
 
-const profile = await readIdentityPrivateVaultProfile(storage, rootIdentity);
+const profile = await readIdentityMetadata(storage, rootIdentity.identityId); // Public Discovery
+const fullProfile = await readIdentityMetadata(storage, rootIdentity.identityId, rootIdentity.privateKey); // Full Authorized Profile
 const children = await readIdentityPrivateVaultChildrenState(storage, rootIdentity.privateKey);
 ```
 

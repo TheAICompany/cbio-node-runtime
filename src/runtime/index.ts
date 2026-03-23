@@ -35,12 +35,14 @@ export {
   ensureIdentityPrivateVault,
   readIdentityPrivateVaultProfile,
   readIdentityPrivateVaultChildrenState,
+  readIdentityMetadata,
   identityPrivateVaultPrefix,
   identityPrivateVaultProfileKey,
   identityPrivateVaultChildrenKey,
   type IdentityPrivateVaultProfile,
   type IdentityPrivateVaultChildRecord,
   type IdentityPrivateVaultChildrenState,
+  type IdentityPublicProfile,
 } from "./private-vault.js";
 export {
   createVault,
@@ -209,6 +211,7 @@ export interface CbioRuntime {
   ensureIdentityPrivateVault: typeof import("./private-vault.js").ensureIdentityPrivateVault;
   readIdentityPrivateVaultProfile: typeof import("./private-vault.js").readIdentityPrivateVaultProfile;
   readIdentityPrivateVaultChildrenState: typeof import("./private-vault.js").readIdentityPrivateVaultChildrenState;
+  readIdentityMetadata: typeof import("./private-vault.js").readIdentityMetadata;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
   createVaultClient: typeof import("../clients/owner/index.js").createVaultClient;

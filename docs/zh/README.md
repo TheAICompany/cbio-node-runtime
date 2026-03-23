@@ -20,6 +20,8 @@ npm install @the-ai-company/cbio-node-runtime
 import {
   createVaultService,
   createIdentity,
+  readIdentityPrivateVaultProfile,
+  readIdentityMetadata,
   createVault,
   recoverVault,
   LocalVaultTransport,

@@ -27,6 +27,13 @@ export interface IdentityPrivateVaultChildrenState {
   children: IdentityPrivateVaultChildRecord[];
 }
 
+export interface IdentityPublicProfile {
+  identityId: string;
+  publicKey: string;
+  nickname?: string;
+  parentIdentityId?: string;
+}
+
 type IdentityPrivateVaultAccess = CreatedIdentity | string;
 
 export function identityPrivateVaultPrefix(identityId: string): string {
@@ -39,6 +46,10 @@ export function identityPrivateVaultProfileKey(identityId: string): string {
 
 export function identityPrivateVaultChildrenKey(identityId: string): string {
   return `${identityPrivateVaultPrefix(identityId)}/sealed/children.sealed`;
+}
+
+export function identityPrivateVaultPublicProfileKey(identityId: string): string {
+  return `${identityPrivateVaultPrefix(identityId)}/public/profile.json`;
 }
 
 function lockKey(identityId: string): string {
@@ -80,6 +91,18 @@ export async function ensureIdentityPrivateVault(
   );
   await profileRepo.write(profile, "identity_private_vault_profile");
 
+  // Write public profile mirror (Plaintext)
+  const publicProfile: IdentityPublicProfile = {
+    identityId: profile.identityId,
+    publicKey: profile.publicKey,
+    nickname: profile.nickname,
+    parentIdentityId: profile.parentIdentityId,
+  };
+  await storage.write(
+    identityPrivateVaultPublicProfileKey(identity.identityId),
+    Buffer.from(JSON.stringify(publicProfile, null, 2)),
+  );
+
   const childrenKey = identityPrivateVaultChildrenKey(identity.identityId);
   if (!(await storage.has(childrenKey))) {
     const emptyState: IdentityPrivateVaultChildrenState = {
@@ -106,6 +129,41 @@ export async function readIdentityPrivateVaultProfile(
     deriveIdentityPrivateVaultKey(identity),
   );
   return repo.read(null as any);
+}
+
+/**
+ * Unified metadata reader for identities.
+ * Handles both open discovery (identityId only) and authorized read (privateKey).
+ */
+export async function readIdentityMetadata(
+  storage: IStorageProvider,
+  identityId: string,
+  privateKey?: string,
+): Promise<IdentityPrivateVaultProfile | IdentityPublicProfile | null> {
+  // If private key is provided, we prefer the full sealed profile
+  if (privateKey) {
+    try {
+      const identity = restoreIdentity(privateKey);
+      if (identity.identityId !== identityId) {
+        throw new Error("identityId mismatch");
+      }
+      return await readIdentityPrivateVaultProfile(storage, identity);
+    } catch {
+      // Fallback to public if privateKey is invalid or decryption fails
+    }
+  }
+
+  // Otherwise, read the public discovery profile
+  const publicPath = identityPrivateVaultPublicProfileKey(identityId);
+  const publicData = await storage.read(publicPath);
+  if (publicData) {
+    try {
+      return JSON.parse(publicData.toString()) as IdentityPublicProfile;
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 export async function readIdentityPrivateVaultChildrenState(

@@ -92,6 +92,10 @@ Those files are encrypted at rest in the `sealed/` sub-directory and are not rea
 `readIdentityPrivateVaultProfile(storage, identityOrPrivateKey)` decrypts and returns the current identity profile for the supplied identity or private key.
 
 `readIdentityPrivateVaultChildrenState(storage, identityOrPrivateKey)` decrypts and returns the child index state for the supplied identity or private key.
+ 
+`readIdentityMetadata(storage, identityId, [privateKey])` is the unified metadata reader.
+If `privateKey` is provided, it returns the full sealed profile.
+If `privateKey` is missing, it returns the public discovery profile (nickname, publicKey, parentIdentityId).
 
 Typical relationship lookup flow when you already have a private key:
 
