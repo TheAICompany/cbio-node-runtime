@@ -49,6 +49,7 @@ export {
 export {
   createVault,
   recoverVault,
+  deriveVaultWorkingKey,
   listVaults,
   updateVaultMetadata,
   type CreateVaultOptions,
@@ -227,6 +228,7 @@ export interface CbioRuntime {
   listVaults: typeof import("./bootstrap.js").listVaults;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
+  deriveVaultWorkingKey: typeof import("./bootstrap.js").deriveVaultWorkingKey;
   createVaultClient: typeof import("../clients/owner/index.js").createVaultClient;
   createAgentClient: typeof import("../clients/agent/index.js").createAgentClient;
   createVaultCore: typeof import("../vault-core/index.js").createVaultCore;

@@ -17,7 +17,7 @@ import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile, readVaultPublicMetadata } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
 
-function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
+export function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
   return crypto
     .createHash("sha256")
     .update("cbio:vault-working-key:v1")
