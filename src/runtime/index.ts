@@ -240,3 +240,8 @@ export interface CbioRuntime {
   createStandardDispatchBoundary: typeof import("../vault-ingress/index.js").createStandardDispatchBoundary;
   LocalVaultTransport: typeof import("../vault-ingress/defaults.js").LocalVaultTransport;
 }
+
+/**
+ * Common export for runtime module.
+ */
+export type CbioRuntimeModule = CbioRuntime;

@@ -15,6 +15,7 @@ import { createPrefixedStorage } from "../storage/prefix.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
+import { createWorkspaceStorage } from "./workspace-storage.js";
 import { writeVerifiableMetadata, readVerifiableMetadata } from "./verifiable-metadata.js";
 
 function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
@@ -73,20 +74,48 @@ export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDepen
 
 export interface RecoveredVault extends VaultObject {}
 
+function resolveStorage(
+  storageOrOptions: IStorageProvider | CreateVaultOptions | RecoverVaultOptions,
+  maybeOptions?: CreateVaultOptions | RecoverVaultOptions,
+): { storage: IStorageProvider; options: CreateVaultOptions | RecoverVaultOptions } {
+  if (maybeOptions) {
+    return {
+      storage: storageOrOptions as IStorageProvider,
+      options: maybeOptions,
+    };
+  }
+  // Fallback to default workspace storage for Node.js convenience
+  return {
+    storage: createWorkspaceStorage(),
+    options: storageOrOptions as CreateVaultOptions | RecoverVaultOptions,
+  };
+}
+
 /**
  * Creates a new vault.
  * 
  * @param storage The storage provider to use.
  * @param options Configuration for the new vault.
  */
+export async function createVault(storage: IStorageProvider, options: CreateVaultOptions): Promise<CreatedVault>;
+/**
+ * Creates a new vault using the default workspace storage.
+ * 
+ * @param options Configuration for the new vault.
+ */
+export async function createVault(options: CreateVaultOptions): Promise<CreatedVault>;
 export async function createVault(
-  storage: IStorageProvider,
-  options: CreateVaultOptions,
+  storageOrOptions: IStorageProvider | CreateVaultOptions,
+  maybeOptions?: CreateVaultOptions,
 ): Promise<CreatedVault> {
+  const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
+    storage: IStorageProvider;
+    options: CreateVaultOptions;
+  };
   const vaultId = options.vaultId ?? `vault_${crypto.randomUUID()}`;
-  const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(vaultId));
+  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
-  const deps = createPersistentVaultCoreDependencies(vaultStorage, {
+  const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
     vaultId,
     vaultWorkingKey,
@@ -136,13 +165,24 @@ export async function createVault(
  * @param storage The storage provider where the vault is located.
  * @param options Recovery options including vaultId and owner identity.
  */
+export async function recoverVault(storage: IStorageProvider, options: RecoverVaultOptions): Promise<RecoveredVault>;
+/**
+ * Recovers an existing vault using the default workspace storage.
+ * 
+ * @param options Recovery options including vaultId and owner identity.
+ */
+export async function recoverVault(options: RecoverVaultOptions): Promise<RecoveredVault>;
 export async function recoverVault(
-  storage: IStorageProvider,
-  options: RecoverVaultOptions,
+  storageOrOptions: IStorageProvider | RecoverVaultOptions,
+  maybeOptions?: RecoverVaultOptions,
 ): Promise<RecoveredVault> {
-  const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(options.vaultId));
+  const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
+    storage: IStorageProvider;
+    options: RecoverVaultOptions;
+  };
+  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(options.vaultId));
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, options.vaultId);
-  const deps = createPersistentVaultCoreDependencies(vaultStorage, {
+  const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
     vaultId: options.vaultId,
     vaultWorkingKey,

@@ -36,13 +36,24 @@ Recommended persistent-vault entrypoints:
 - `createVault(...)`
 - `recoverVault(...)`
 
-`createVault({ ownerIdentity, nickname, publicMetadata })` creates a vault in the default workspace.
+`createVault({ ownerIdentity, nickname, publicMetadata })` creates a vault in the default workspace. `publicMetadata` follows the `VaultPublicMetadata` interface.
 
 `createVault(storage, { ownerIdentity, nickname, publicMetadata })` overrides the workspace storage explicitly.
 
 `recoverVault({ vaultId, ownerIdentity })` reopens a vault and returns metadata (including `nickname`) from the **public signed profile**.
 
 `recoverVault(storage, { vaultId, ownerIdentity })` overrides the workspace storage explicitly.
+
+### Discovery Metadata
+
+New in v1.28.0, the SDK exports the `VaultPublicMetadata` interface to standardize vault discovery:
+
+```ts
+export interface VaultPublicMetadata extends Record<string, any> {
+  nickname?: string;
+  ownerId?: string;
+}
+```
 
 ## Terms
 
@@ -97,11 +108,11 @@ Identities also maintain a **public discovery area** at `public/profile.json`. T
  
 `readIdentityMetadata(storage, identityId, [privateKey])` is the unified metadata reader.
 If `privateKey` is provided, it returns the full sealed profile.
-If `privateKey` is missing, it returns the public discovery profile (nickname, publicKey, parentIdentityId).
+If `privateKey` is missing, it returns the public discovery profile (`IdentityPublicProfile`).
 
-`listIdentities(storage)` returns all identity discovery profiles. These profiles are automatically verified for signature integrity.
+`listIdentities(storage)` returns `Promise<IdentityPublicProfile[]>`. These profiles are automatically verified for signature integrity.
 
-`listVaults(storage)` returns all vault metadata summaries. These summaries are pulled from the public signed profiles and verified.
+`listVaults(storage)` returns `Promise<Array<{ vaultId: string; public: VaultPublicMetadata }>>`. These summaries are pulled from the public signed profiles and verified.
 
 Typical relationship lookup flow when you already have a private key:
 

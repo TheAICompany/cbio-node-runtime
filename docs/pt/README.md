@@ -44,9 +44,7 @@ Caminho principal recomendado para vault persistente:
 - criar o cofre persistente com `createVault(...)` (suporta `publicMetadata` para a descoberta de informações públicas)
 - recuperar o cofre persistente com `recoverVault(...)` usando a identidade do owner
 - Camadas de armazenamento divididas: `vaults/` (Cofres nomeados) e `identities/` (Espaço de identidade pessoal)
-- **Descoberta Verificável (Verifiable Discovery)**:
-    - A área pública (`public/`) utiliza o modelo **“Leitura Anônima, Escrita do Proprietário”**.
-    - Todos os metadados públicos (como o apelido) incluem uma **assinatura digital**, que o SDK verifica automaticamente para evitar adulterações anônimas.
+    - Todos os metadados públicos (como o apelido) agora seguem a interface `VaultPublicMetadata` e incluem uma **assinatura digital**, que o SDK verifica automaticamente.
 
 A antiga API centrada em `CbioIdentity` nao e mais a superficie principal do produto.
 

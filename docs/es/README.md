@@ -44,9 +44,7 @@ Ruta principal recomendada para vault persistente:
 - crear el vault persistente con `createVault(...)` (soporta `publicMetadata` para el descubrimiento de información pública)
 - recuperar el vault persistente con `recoverVault(...)` usando la identidad del owner
 - Capas de almacenamiento divididas: `vaults/` (Bóvedas con nombre) e `identities/` (Espacio de identidad personal)
-- **Descubrimiento Verificable (Verifiable Discovery)**:
-    - El área pública (`public/`) utiliza el modelo **“Lectura Anónima, Escritura del Propietario”**.
-    - Todos los metadatos públicos (como el apodo) incluyen una **firma digital**, la cual el SDK verifica automáticamente para prevenir manipulaciones anónimas.
+    - Todos los metadatos públicos (como el apodo) ahora siguen la interfaz `VaultPublicMetadata` e incluyen una **firma digital**, la cual el SDK verifica automáticamente.
 
 La API antigua centrada en `CbioIdentity` ya no es la superficie principal del producto.
 

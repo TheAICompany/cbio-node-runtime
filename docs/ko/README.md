@@ -44,9 +44,7 @@ import {
 - `createVault(...)` 로 persistent vault 를 생성합니다 (`publicMetadata` 를 통한 공개 정보 검색 지원)
 - `recoverVault(...)` 로 owner identity 를 사용해 persistent vault 를 복구합니다
 - 분리된 스토리지 계층: `vaults/` (기명 Vault) 및 `identities/` (개인 ID 공간)
-- **검증 가능한 디스커버리 (Verifiable Discovery)**:
-    - 공개 영역 (`public/`)은 **"익명 읽기, 소유자 쓰기"** 모델을 채택하고 있습니다.
-    - 닉네임과 같은 모든 공개 메타데이터에는 **디지털 서명**이 포함되어 있으며, SDK가 그 정당성을 자동으로 검증하여 익명에 의한 변조를 방지합니다.
+    - 닉네임과 같은 모든 공개 메타데이터는 `VaultPublicMetadata` 인터페이스를 따르며, **디지털 서명**이 포함되어 있어 SDK가 그 정당성을 자동으로 검증합니다.
 
 이전 `CbioIdentity` 중심 API 는 더 이상 주요 제품 표면이 아닙니다.
 

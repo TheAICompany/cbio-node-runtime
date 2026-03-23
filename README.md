@@ -80,16 +80,20 @@ const fullProfile = await readIdentityMetadata(storage, rootIdentity.identityId,
 const children = await readIdentityPrivateVaultChildrenState(storage, rootIdentity.privateKey);
 ```
 
-Vaults also support optional public metadata for discovery:
+Vaults also support standardized public metadata for discovery:
  
  ```ts
+ import { type VaultPublicMetadata } from '@the-ai-company/cbio-node-runtime';
+
+ const publicMetadata: VaultPublicMetadata = {
+   displayName: 'Primary Vault',
+   tags: ['production', 'main'],
+ };
+
  const createdVault = await createVault({
    ownerIdentity: rootIdentity,
    nickname: 'main-vault',
-   publicMetadata: {
-     displayName: 'Primary Vault',
-     tags: ['production', 'main'],
-   },
+   publicMetadata,
  });
  ```
 

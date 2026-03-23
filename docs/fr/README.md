@@ -44,6 +44,8 @@ Chemin principal recommande pour un vault persistant :
 - créer le coffre persistant avec `createVault(...)` (prend en charge `publicMetadata` pour la découverte d'informations publiques)
 - restaurer le coffre persistant avec `recoverVault(...)` via l'identité de l'owner
 - Couches de stockage divisées : `vaults/` (Coffres nommés) et `identities/` (Espace d'identité personnel)
+- **Découverte Vérifiable (Verifiable Discovery)** :
+    - Toutes les métadonnées publiques (comme le pseudo) suivent désormais l'interface `VaultPublicMetadata` et incluent une **signature numérique** que le SDK vérifie automatiquement.
 
 L'ancienne API centree sur `CbioIdentity` n'est plus la surface principale du produit.
 
