@@ -35,6 +35,7 @@ function vaultStoragePrefix(vaultId: string): string {
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
   nickname?: string;
+  exposeNickname?: boolean;
   publicMetadata?: Record<string, any>;
   ownerIdentity: CreatedIdentity;
   vault?: {
@@ -110,12 +111,16 @@ export async function createVault(
   };
   await core.bootstrapOwnerIdentity(bootstrapOwner);
   const nickname = options.nickname?.trim() ? options.nickname.trim() : undefined;
+  const publicMetadata = { ...(options.publicMetadata || {}) };
+  if (options.exposeNickname && nickname) {
+    publicMetadata.nickname = nickname;
+  }
   await writeVaultProfile(storage, {
     sealed: {
       vaultId,
       nickname,
     },
-    public: options.publicMetadata ?? {},
+    public: publicMetadata,
   }, vaultWorkingKey);
   return {
     core,

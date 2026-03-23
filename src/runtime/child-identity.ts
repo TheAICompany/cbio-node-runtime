@@ -23,7 +23,6 @@ export async function createChildIdentity(
     throw new Error("parent identity object is required");
   }
   const run = async (): Promise<ChildIdentity> => {
-    await ensureIdentityPrivateVault(storage, parent);
     const state = await readIdentityPrivateVaultChildrenState(storage, parent);
     const childIndex = state.nextChildIndex;
     const childIdentity = deriveChildIdentity(parent, childIndex, options);

@@ -77,31 +77,42 @@ export async function ensureIdentityPrivateVault(
   storage: IStorageProvider,
   identity: CreatedIdentity,
 ): Promise<void> {
-  const profile: IdentityPrivateVaultProfile = {
-    identityId: identity.identityId,
-    nickname: identity.nickname,
-    publicKey: identity.publicKey,
-    parentIdentityId: identity.parentIdentityId,
-    childIndex: identity.childIndex,
-  };
+  const profileKey = identityPrivateVaultProfileKey(identity.identityId);
   const profileRepo = new SealedJsonRepository<IdentityPrivateVaultProfile>(
     storage,
-    identityPrivateVaultProfileKey(identity.identityId),
+    profileKey,
     deriveIdentityPrivateVaultKey(identity),
   );
-  await profileRepo.write(profile, "identity_private_vault_profile");
 
-  // Write public profile mirror (Plaintext)
-  const publicProfile: IdentityPublicProfile = {
-    identityId: profile.identityId,
-    publicKey: profile.publicKey,
-    nickname: profile.nickname,
-    parentIdentityId: profile.parentIdentityId,
+  const existingProfile = await profileRepo.read(null as any);
+  const profile: IdentityPrivateVaultProfile = {
+    identityId: identity.identityId,
+    nickname: identity.nickname || existingProfile?.nickname,
+    publicKey: identity.publicKey,
+    parentIdentityId: identity.parentIdentityId || existingProfile?.parentIdentityId,
+    childIndex: identity.childIndex ?? existingProfile?.childIndex,
   };
-  await storage.write(
-    identityPrivateVaultPublicProfileKey(identity.identityId),
-    Buffer.from(JSON.stringify(publicProfile, null, 2)),
-  );
+
+  // Only write if new profile differs or doesn't exist
+  if (
+    !existingProfile ||
+    profile.nickname !== existingProfile.nickname ||
+    profile.parentIdentityId !== existingProfile.parentIdentityId
+  ) {
+    await profileRepo.write(profile, "identity_private_vault_profile");
+
+    // Sync public profile mirror (Plaintext)
+    const publicProfile: IdentityPublicProfile = {
+      identityId: profile.identityId,
+      publicKey: profile.publicKey,
+      nickname: profile.nickname,
+      parentIdentityId: profile.parentIdentityId,
+    };
+    await storage.write(
+      identityPrivateVaultPublicProfileKey(identity.identityId),
+      Buffer.from(JSON.stringify(publicProfile, null, 2)),
+    );
+  }
 
   const childrenKey = identityPrivateVaultChildrenKey(identity.identityId);
   if (!(await storage.has(childrenKey))) {
