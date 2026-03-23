@@ -221,10 +221,16 @@ export interface DispatchInstruction {
   body?: string;
 }
 
+export enum DispatchStatus {
+  SUCCEEDED = "SUCCEEDED",
+  DENIED = "DENIED",
+  FAILED = "FAILED",
+}
+
 export interface DispatchResult {
   vaultId: VaultId;
   requestId: string;
-  status: "succeeded" | "denied" | "failed";
+  status: DispatchStatus;
   targetUrl: string;
   method: string;
   responseStatus?: number;
@@ -239,35 +245,45 @@ export interface AuditQuery {
   since?: string;
 }
 
+export enum AuditAction {
+  BOOTSTRAP_OWNER_IDENTITY = "BOOTSTRAP_OWNER_IDENTITY",
+  REGISTER_AGENT_IDENTITY = "REGISTER_AGENT_IDENTITY",
+  REGISTER_CUSTOM_FLOW = "REGISTER_CUSTOM_FLOW",
+  REGISTER_CAPABILITY = "REGISTER_CAPABILITY",
+  REVOKE_CAPABILITY = "REVOKE_CAPABILITY",
+  WRITE_SECRET = "WRITE_SECRET",
+  DEFINE_SECRET_TARGETS = "DEFINE_SECRET_TARGETS",
+  EXPORT_SECRET = "EXPORT_SECRET",
+  REASSIGN_ALIAS = "REASSIGN_ALIAS",
+  DELETE_SECRET = "DELETE_SECRET",
+  AUTHORIZE_DISPATCH = "AUTHORIZE_DISPATCH",
+  DISPATCH_SECRET = "DISPATCH_SECRET",
+  LIST_AGENTS = "LIST_AGENTS",
+  LIST_CAPABILITIES = "LIST_CAPABILITIES",
+  READ_AUDIT = "READ_AUDIT",
+}
+
+export enum AuditOutcome {
+  ALLOWED = "ALLOWED",
+  DENIED = "DENIED",
+  SUCCEEDED = "SUCCEEDED",
+  FAILED = "FAILED",
+}
+
 export interface AuditEntry {
   entryId: string;
   occurredAt: string;
   vaultId: string;
   actor: VaultPrincipal;
-  action:
-    | "bootstrap_owner_identity"
-    | "register_agent_identity"
-    | "register_custom_flow"
-    | "register_capability"
-    | "revoke_capability"
-    | "write_secret"
-    | "define_secret_targets"
-    | "export_secret"
-    | "reassign_alias"
-    | "delete_secret"
-    | "authorize_dispatch"
-    | "dispatch_secret"
-    | "list_agents"
-    | "list_capabilities"
-    | "read_audit";
+  action: AuditAction;
   requestId?: string;
   capabilityId?: string;
-  operation?: AgentCapability["operation"] | AuditEntry["action"];
+  operation?: AgentCapability["operation"] | AuditAction;
   targetUrl?: string;
   secretAlias?: string;
   secretId?: string;
   agentId?: string;
-  outcome: "allowed" | "denied" | "succeeded" | "failed";
+  outcome: AuditOutcome;
   detail: string;
 }
 

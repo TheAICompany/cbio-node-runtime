@@ -22,6 +22,7 @@ import type {
   VaultId,
 } from "./contracts.js";
 import { VaultCoreError } from "./errors.js";
+import { DispatchStatus } from "./contracts.js";
 import type {
   AgentIdentityRegistry,
   AgentProofVerifier,
@@ -925,7 +926,7 @@ export class HttpDispatchExecutor implements TrustedExecutor {
       return {
         vaultId: instruction.vaultId,
         requestId: instruction.requestId,
-        status: response.ok ? "succeeded" : "failed",
+        status: response.ok ? DispatchStatus.SUCCEEDED : DispatchStatus.FAILED,
         targetUrl: instruction.targetUrl,
         method: instruction.method,
         responseStatus: response.status,
@@ -936,7 +937,7 @@ export class HttpDispatchExecutor implements TrustedExecutor {
       return {
         vaultId: instruction.vaultId,
         requestId: instruction.requestId,
-        status: "failed",
+        status: DispatchStatus.FAILED,
         targetUrl: instruction.targetUrl,
         method: instruction.method,
         error: error instanceof Error ? error.message : String(error),

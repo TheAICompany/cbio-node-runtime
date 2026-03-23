@@ -197,6 +197,8 @@ export {
 } from "../vault-ingress/index.js";
 
 export { LocalVaultTransport } from "../vault-ingress/defaults.js";
+export { AgentDispatchHttpTransport } from "../vault-ingress/remote-transport.js";
+export { handleVaultHttpDispatch } from "../vault-ingress/server-utils.js";
 
 /**
  * Main runtime interface.
@@ -242,6 +244,8 @@ export interface CbioRuntime {
   createStandardAcquireBoundary: typeof import("../vault-ingress/index.js").createStandardAcquireBoundary;
   createStandardDispatchBoundary: typeof import("../vault-ingress/index.js").createStandardDispatchBoundary;
   LocalVaultTransport: typeof import("../vault-ingress/defaults.js").LocalVaultTransport;
+  AgentDispatchHttpTransport: typeof import("../vault-ingress/remote-transport.js").AgentDispatchHttpTransport;
+  handleVaultHttpDispatch: typeof import("../vault-ingress/server-utils.js").handleVaultHttpDispatch;
 }
 
 /**

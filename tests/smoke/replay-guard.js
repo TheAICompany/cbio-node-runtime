@@ -117,7 +117,7 @@ const request = {
 };
 
 const first = await authority.dispatchSecret(request);
-assert.equal(first.status, "succeeded");
+assert.equal(first.status, "SUCCEEDED");
 
 await assert.rejects(
   () => authority.dispatchSecret(request),
@@ -129,6 +129,6 @@ await assert.rejects(
 );
 
 const replayAudit = await client.readAudit({ secretAlias: "replay-token" });
-assert.ok(replayAudit.some((entry) => entry.outcome === "denied" && /replay/.test(entry.detail)));
+assert.ok(replayAudit.some((entry) => entry.outcome === "DENIED" && /replay/.test(entry.detail)));
 
 console.log("replay guard smoke test passed");

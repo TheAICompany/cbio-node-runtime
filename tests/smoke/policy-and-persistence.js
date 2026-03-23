@@ -190,7 +190,7 @@ try {
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
-  assert.equal(storedThenDefinedResult.status, "succeeded");
+  assert.equal(storedThenDefinedResult.status, "SUCCEEDED");
 
   const clearedRecord = await client.defineSecretTargets({
     alias: "stored-then-defined-token",
@@ -217,7 +217,7 @@ try {
 
   const audit = await client.readAudit({ secretAlias: "restricted-token" });
   assert.ok(audit.length >= 1);
-  assert.ok(audit.some((entry) => entry.outcome === "denied" && /target denied|record target denied/.test(entry.detail)));
+  assert.ok(audit.some((entry) => entry.outcome === "DENIED" && /target denied|record target denied/.test(entry.detail)));
   const exportedRestrictedSecret = await client.exportSecret({ alias: "restricted-token" });
   assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
@@ -261,7 +261,7 @@ try {
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
-  assert.equal(firstLimited.status, "succeeded");
+  assert.equal(firstLimited.status, "SUCCEEDED");
   await assert.rejects(
     () => rateLimitedAgent.dispatch({
       secretAlias: "restricted-token",
@@ -422,7 +422,7 @@ try {
     method: "POST",
   };
   const persistedReplayFirst = await reloadedAuthority.dispatchSecret(persistedReplayRequest);
-  assert.equal(persistedReplayFirst.status, "succeeded");
+  assert.equal(persistedReplayFirst.status, "SUCCEEDED");
 
   const restartedAgentIdentities = new InMemoryAgentIdentityRegistry();
   const restartedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
@@ -511,12 +511,12 @@ try {
   );
 
   const reloadedAudit = await client.readAudit({ secretAlias: "restricted-token" });
-  assert.ok(reloadedAudit.some((entry) => entry.action === "reassign_alias" && entry.outcome === "denied"));
-  assert.ok(reloadedAudit.some((entry) => entry.action === "export_secret" && entry.outcome === "succeeded"));
-  assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /capability revoked/.test(entry.detail)));
-  assert.ok(reloadedAudit.some((entry) => entry.outcome === "denied" && /path denied|capability rate limit exceeded/.test(entry.detail)));
+  assert.ok(reloadedAudit.some((entry) => entry.action === "REASSIGN_ALIAS" && entry.outcome === "DENIED"));
+  assert.ok(reloadedAudit.some((entry) => entry.action === "EXPORT_SECRET" && entry.outcome === "SUCCEEDED"));
+  assert.ok(reloadedAudit.some((entry) => entry.outcome === "DENIED" && /capability revoked/.test(entry.detail)));
+  assert.ok(reloadedAudit.some((entry) => entry.outcome === "DENIED" && /path denied|capability rate limit exceeded/.test(entry.detail)));
   const storedThenDefinedAudit = await client.readAudit({ secretAlias: "stored-then-defined-token" });
-  assert.ok(storedThenDefinedAudit.some((entry) => entry.action === "define_secret_targets" && entry.outcome === "succeeded"));
+  assert.ok(storedThenDefinedAudit.some((entry) => entry.action === "DEFINE_SECRET_TARGETS" && entry.outcome === "SUCCEEDED"));
 
   console.log("policy and persistence smoke test passed");
 } finally {

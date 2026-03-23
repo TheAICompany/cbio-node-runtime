@@ -1,3 +1,8 @@
+import {
+  AuditAction,
+  AuditOutcome,
+  DispatchStatus,
+} from "./contracts.js";
 import type {
   AuditEntry,
   AuditQuery,
@@ -27,8 +32,8 @@ import { VaultCoreError } from "./errors.js";
 function toAuditEntry(
   deps: VaultCoreDependencies,
   actor: VaultPrincipal,
-  action: AuditEntry["action"],
-  outcome: AuditEntry["outcome"],
+  action: AuditAction,
+  outcome: AuditOutcome,
   detail: string,
   options?: {
     requestId?: string;
@@ -95,7 +100,7 @@ export class DefaultVaultCore implements VaultCore {
 
   private async appendDecisionAudit(
     request: DispatchRequest,
-    outcome: "allowed" | "denied",
+    outcome: AuditOutcome.ALLOWED | AuditOutcome.DENIED,
     detail: string,
     options?: {
       secretAlias?: string;
@@ -103,7 +108,7 @@ export class DefaultVaultCore implements VaultCore {
     },
   ): Promise<void> {
     await this.appendAudit(
-      toAuditEntry(this._deps, request.agent, "authorize_dispatch", outcome, detail, {
+      toAuditEntry(this._deps, request.agent, AuditAction.AUTHORIZE_DISPATCH, outcome, detail, {
         requestId: request.requestId,
         capabilityId: request.capability.capabilityId,
         operation: request.capability.operation,
@@ -126,8 +131,8 @@ export class DefaultVaultCore implements VaultCore {
       toAuditEntry(
         this._deps,
         { kind: "owner", id: identity.ownerId },
-        "bootstrap_owner_identity",
-        "succeeded",
+        AuditAction.BOOTSTRAP_OWNER_IDENTITY,
+        AuditOutcome.SUCCEEDED,
         "initial owner identity bootstrapped",
       ),
     );
@@ -147,8 +152,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          "register_agent_identity",
-          "succeeded",
+          AuditAction.REGISTER_AGENT_IDENTITY,
+          AuditOutcome.SUCCEEDED,
           `agent identity registered: ${command.agentIdentity.agentId}`,
         ),
       );
@@ -158,8 +163,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          "register_agent_identity",
-          "denied",
+          AuditAction.REGISTER_AGENT_IDENTITY,
+          AuditOutcome.DENIED,
           detail,
         ),
       );
@@ -187,8 +192,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          "register_capability",
-          "succeeded",
+          AuditAction.REGISTER_CAPABILITY,
+          AuditOutcome.SUCCEEDED,
           `capability registered: ${command.capability.capabilityId}`,
           {
             capabilityId: command.capability.capabilityId,
@@ -202,8 +207,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          "register_capability",
-          "denied",
+          AuditAction.REGISTER_CAPABILITY,
+          AuditOutcome.DENIED,
           detail,
           {
             capabilityId: command.capability.capabilityId,
@@ -249,8 +254,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          "register_custom_flow",
-          "succeeded",
+          AuditAction.REGISTER_CUSTOM_FLOW,
+          AuditOutcome.SUCCEEDED,
           `custom http flow registered: ${command.flow.flowId}`,
         ),
       );
@@ -260,8 +265,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          "register_custom_flow",
-          "denied",
+          AuditAction.REGISTER_CUSTOM_FLOW,
+          AuditOutcome.DENIED,
           detail,
         ),
       );
@@ -284,8 +289,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           actor,
-          "reassign_alias",
-          "denied",
+          AuditAction.REASSIGN_ALIAS,
+          AuditOutcome.DENIED,
           "alias already bound to existing secret; explicit alias lifecycle required",
           {
             secretAlias: existing.alias.value,
@@ -315,7 +320,7 @@ export class DefaultVaultCore implements VaultCore {
       await this._deps.custody.store(record.secretId, plaintext);
       await this._deps.secrets.save(record);
       await this.appendAudit(
-        toAuditEntry(this._deps, actor, "write_secret", "succeeded", `custom flow stored secret: ${alias}`, {
+        toAuditEntry(this._deps, actor, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, `custom flow stored secret: ${alias}`, {
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
         }),
@@ -345,8 +350,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.kind === "owner.write_secret" ? command.owner : command.issuer,
-          "write_secret",
-          "denied",
+          AuditAction.WRITE_SECRET,
+          AuditOutcome.DENIED,
           detail,
           {
             secretAlias: command.alias,
@@ -361,8 +366,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.kind === "owner.write_secret" ? command.owner : command.issuer,
-          "reassign_alias",
-          "denied",
+          AuditAction.REASSIGN_ALIAS,
+          AuditOutcome.DENIED,
           "alias already bound to existing secret; explicit alias lifecycle required",
           {
             secretAlias: existing.alias.value,
@@ -377,7 +382,7 @@ export class DefaultVaultCore implements VaultCore {
       await this._deps.custody.store(record.secretId, command.plaintext);
       await this._deps.secrets.save(record);
       await this.appendAudit(
-        toAuditEntry(this._deps, command.kind === "owner.write_secret" ? command.owner : command.issuer, "write_secret", "succeeded", "secret stored", {
+        toAuditEntry(this._deps, command.kind === "owner.write_secret" ? command.owner : command.issuer, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, "secret stored", {
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
         }),
@@ -404,7 +409,7 @@ export class DefaultVaultCore implements VaultCore {
     await this._deps.custody.delete(record.secretId);
     
     await this.appendAudit(
-      toAuditEntry(this._deps, command.owner, "delete_secret", "succeeded", `deleted secret ${command.alias}`, {
+      toAuditEntry(this._deps, command.owner, AuditAction.DELETE_SECRET, AuditOutcome.SUCCEEDED, `deleted secret ${command.alias}`, {
         requestId: command.requestId,
         secretAlias: command.alias,
         secretId: record.secretId.value,
@@ -425,8 +430,8 @@ export class DefaultVaultCore implements VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          "define_secret_targets",
-          "denied",
+          AuditAction.DEFINE_SECRET_TARGETS,
+          AuditOutcome.DENIED,
           detail,
           {
             secretAlias: command.alias,
@@ -440,7 +445,7 @@ export class DefaultVaultCore implements VaultCore {
     if (!existing) {
       const error = new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
       await this.appendAudit(
-        toAuditEntry(this._deps, command.owner, "define_secret_targets", "denied", error.message, {
+        toAuditEntry(this._deps, command.owner, AuditAction.DEFINE_SECRET_TARGETS, AuditOutcome.DENIED, error.message, {
           secretAlias: command.alias,
         }),
       );
@@ -454,7 +459,7 @@ export class DefaultVaultCore implements VaultCore {
     };
     await this._deps.secrets.save(nextRecord);
     await this.appendAudit(
-      toAuditEntry(this._deps, command.owner, "define_secret_targets", "succeeded", "secret targets defined", {
+      toAuditEntry(this._deps, command.owner, AuditAction.DEFINE_SECRET_TARGETS, AuditOutcome.SUCCEEDED, "secret targets defined", {
         requestId: command.requestId,
         secretAlias: nextRecord.alias.value,
         secretId: nextRecord.secretId.value,
@@ -471,7 +476,7 @@ export class DefaultVaultCore implements VaultCore {
       ? await this._deps.secrets.getByAlias({ value: request.secretAlias })
       : null;
     if (request.secretAlias && !record) {
-      await this.appendDecisionAudit(request, "denied", "secret not found");
+      await this.appendDecisionAudit(request, AuditOutcome.DENIED, "secret not found");
       return {
         vaultId: this._deps.vaultId,
         decision: "deny",
@@ -487,7 +492,7 @@ export class DefaultVaultCore implements VaultCore {
       await this._deps.policy.authorizeDispatch(request, record);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendDecisionAudit(request, "denied", detail, {
+      await this.appendDecisionAudit(request, AuditOutcome.DENIED, detail, {
         secretAlias: record?.alias.value ?? request.secretAlias,
         secretId: record?.secretId.value,
       });
@@ -501,7 +506,7 @@ export class DefaultVaultCore implements VaultCore {
       : null;
 
     if (request.capability.auditRequired !== false) {
-      await this.appendDecisionAudit(request, "allowed", "dispatch authorized", {
+      await this.appendDecisionAudit(request, AuditOutcome.ALLOWED, "dispatch authorized", {
         secretAlias: record?.alias.value ?? request.secretAlias,
         secretId: record?.secretId.value,
       });
@@ -548,9 +553,9 @@ export class DefaultVaultCore implements VaultCore {
       toAuditEntry(
         this._deps,
         request.agent,
-        "dispatch_secret",
-        result.status === "succeeded" ? "succeeded" : "failed",
-        result.status === "succeeded" ? "dispatch completed" : (result.error ?? "dispatch failed"),
+        AuditAction.DISPATCH_SECRET,
+        result.status === DispatchStatus.SUCCEEDED ? AuditOutcome.SUCCEEDED : AuditOutcome.FAILED,
+        result.status === DispatchStatus.SUCCEEDED ? "dispatch completed" : (result.error ?? "dispatch failed"),
         {
           requestId: request.requestId,
           capabilityId: request.capability.capabilityId,
@@ -586,7 +591,7 @@ export class DefaultVaultCore implements VaultCore {
     });
     const entries = await this._deps.audit.query(query);
     await this.appendAudit(
-      toAuditEntry(this._deps, actor, "read_audit", "allowed", "audit queried"),
+      toAuditEntry(this._deps, actor, AuditAction.READ_AUDIT, AuditOutcome.ALLOWED, "audit queried"),
     );
     return entries;
   }
@@ -618,7 +623,7 @@ export class DefaultVaultCore implements VaultCore {
       }
       const exportedAt = this._deps.clock.nowIso();
       await this.appendAudit(
-        toAuditEntry(this._deps, actor, "export_secret", "succeeded", "secret exported", {
+        toAuditEntry(this._deps, actor, AuditAction.EXPORT_SECRET, AuditOutcome.SUCCEEDED, "secret exported", {
           requestId: request.requestId,
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
@@ -634,7 +639,7 @@ export class DefaultVaultCore implements VaultCore {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       await this.appendAudit(
-        toAuditEntry(this._deps, actor, "export_secret", "denied", detail, {
+        toAuditEntry(this._deps, actor, AuditAction.EXPORT_SECRET, AuditOutcome.DENIED, detail, {
           requestId: request.requestId,
           secretAlias: alias,
         }),
@@ -659,7 +664,7 @@ export class DefaultVaultCore implements VaultCore {
     });
     const identities = await this._deps.agentIdentities.list(this._deps.vaultId);
     await this.appendAudit(
-      toAuditEntry(this._deps, actor, "list_agents", "allowed", "agent identities listed", {
+      toAuditEntry(this._deps, actor, AuditAction.LIST_AGENTS, AuditOutcome.ALLOWED, "agent identities listed", {
         requestId: request.requestId,
       }),
     );
@@ -684,7 +689,7 @@ export class DefaultVaultCore implements VaultCore {
     });
     const capabilities = await this._deps.capabilities.list(this._deps.vaultId, agentId);
     await this.appendAudit(
-      toAuditEntry(this._deps, actor, "list_capabilities", "allowed", "capabilities listed", {
+      toAuditEntry(this._deps, actor, AuditAction.LIST_CAPABILITIES, AuditOutcome.ALLOWED, "capabilities listed", {
         requestId: request.requestId,
         agentId,
       }),
@@ -696,7 +701,7 @@ export class DefaultVaultCore implements VaultCore {
     await this._deps.ownerProofVerifier.verifyRevokeCapability(command);
     await this._deps.policy.revokeCapability(command.vaultId, command.agentId, command.capabilityId);
     await this.appendAudit(
-      toAuditEntry(this._deps, command.owner, "revoke_capability", "succeeded", "capability revoked", {
+      toAuditEntry(this._deps, command.owner, AuditAction.REVOKE_CAPABILITY, AuditOutcome.SUCCEEDED, "capability revoked", {
         requestId: command.requestId,
         agentId: command.agentId,
         capabilityId: command.capabilityId,

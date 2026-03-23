@@ -21,6 +21,7 @@ import {
   type SecretRecord,
   type AgentIdentityRecord,
   type VaultId,
+  DispatchStatus,
 } from "../vault-core/index.js";
 import {
   createOwnerHttpFlowBoundary,
@@ -386,7 +387,7 @@ class LocalVaultService implements VaultService {
           result: {
             vaultId,
             requestId: request.requestId,
-            status: "succeeded",
+            status: DispatchStatus.SUCCEEDED,
             targetUrl: request.targetUrl,
             method: request.method,
             responseStatus: payload.responseStatus,
@@ -545,3 +546,6 @@ export {
   createStandardDispatchBoundary,
   toOwnerHttpFlowBoundary,
 } from "./flow-factories.js";
+
+export { AgentDispatchHttpTransport } from "./remote-transport.js";
+export { handleVaultHttpDispatch } from "./server-utils.js";

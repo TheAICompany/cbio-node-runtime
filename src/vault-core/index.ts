@@ -82,6 +82,12 @@ export type {
   VaultId,
 } from "./contracts.js";
 
+export {
+  DispatchStatus,
+  AuditAction,
+  AuditOutcome,
+} from "./contracts.js";
+
 export type {
   AgentIdentityRegistry,
   AgentProofVerifier,

@@ -2,6 +2,11 @@
 
 cbio 权限核心运行时。仅库，无 CLI 或 TUI。
 
+## 文档
+
+- [进程隔离 (A/B 架构)](PROCESS_ISOLATION.md)
+- [根目录文档](../../README.md)
+
 主入口现在围绕四个模块：
 - `vault-core`
 - `clients/owner`

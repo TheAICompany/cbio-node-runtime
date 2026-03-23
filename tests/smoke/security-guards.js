@@ -151,7 +151,7 @@ await assert.rejects(
 );
 
 const securityAudit = await client.readAudit({ secretAlias: "guarded-token" });
-assert.ok(securityAudit.some((entry) => entry.outcome === "denied" && /expired|binding mismatch|timestamp out of range|invalid proof signature/.test(entry.detail)));
+assert.ok(securityAudit.some((entry) => entry.outcome === "DENIED" && /expired|binding mismatch|timestamp out of range|invalid proof signature/.test(entry.detail)));
 
 const unauthorizedIdentityRequestId = "unauthorized-agent-registration";
 const unauthorizedIdentityRequestedAt = new Date().toISOString();

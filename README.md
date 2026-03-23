@@ -9,6 +9,7 @@ Node.js vault runtime with a hard-cut architecture: vault core first, explicit c
 - [English](README.md)
 - [Custody Model](docs/CUSTODY_MODEL.md)
 - [Identity Model](docs/IDENTITY_MODEL.md)
+- [Process Isolation (A/B Architecture)](docs/PROCESS_ISOLATION.md)
 - [中文](docs/zh/README.md)
 - [日本語](docs/ja/README.md)
 - [한국어](docs/ko/README.md)

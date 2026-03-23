@@ -221,7 +221,7 @@ const result = await agent.dispatch({
   body: '{"hello":"world"}',
 });
 
-assert.equal(result.status, "succeeded");
+assert.equal(result.status, "SUCCEEDED");
 assert.equal(seenAuthHeader, "Bearer super-secret");
 assert.equal(result.responseBody, "ok");
 
@@ -263,7 +263,7 @@ const customResult = await customAgent.dispatch({
   body: '{"mode":"custom"}',
 });
 
-assert.equal(customResult.status, "succeeded");
+assert.equal(customResult.status, "SUCCEEDED");
 assert.equal(customResult.responseBody, JSON.stringify({ state: null, nested: { code: null } }));
 
 await client.registerFlow({
@@ -306,7 +306,7 @@ const customAcquireResult = await customAcquireAgent.dispatch({
   method: "POST",
 });
 
-assert.equal(customAcquireResult.status, "succeeded");
+assert.equal(customAcquireResult.status, "SUCCEEDED");
 assert.equal(customAcquireResult.responseBody, JSON.stringify({ custom_token: null, scope: null }));
 
 const tempDir = await mkdtemp(join(tmpdir(), "cbio-authority-"));

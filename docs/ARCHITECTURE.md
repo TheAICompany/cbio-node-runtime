@@ -44,6 +44,14 @@ This means:
 
 - `vault-ingress`
   Accepts request-shaped calls, resolves vault-managed capability records inside the vault boundary, performs trusted acquisition flows, and forwards dispatch into vault-core internals.
+
+## Process Isolation (A/B)
+
+The runtime is designed for a secure **A/B Process Architecture**:
+- **Process A (Agent)**: Initiates signed requests via `AgentDispatchHttpTransport`. It never handles master keys or secret plaintext.
+- **Process B (Vault Server)**: Hosts the Vault Core and `VaultService`. It validates agent proofs and performs the actual HTTP dispatch.
+
+See [Process Isolation](PROCESS_ISOLATION.md) for more details.
  
 ## Dual-Area Storage
 
