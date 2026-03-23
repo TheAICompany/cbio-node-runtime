@@ -75,14 +75,18 @@ const profile = await readIdentityPrivateVaultProfile(storage, rootIdentity);
 const children = await readIdentityPrivateVaultChildrenState(storage, rootIdentity.privateKey);
 ```
 
-Vaults also support an optional human-readable nickname:
-
-```ts
-const createdVault = await createVault({
-  ownerIdentity: rootIdentity,
-  nickname: 'main-vault',
-});
-```
+Vaults also support optional public metadata for discovery:
+ 
+ ```ts
+ const createdVault = await createVault({
+   ownerIdentity: rootIdentity,
+   nickname: 'main-vault',
+   publicMetadata: {
+     displayName: 'Primary Vault',
+     tags: ['production', 'main'],
+   },
+ });
+ ```
 
 If you want to override the default workspace directory:
 
@@ -94,14 +98,9 @@ const createdVault = await createVault(storage, {
 });
 ```
 
-The workspace root can contain many vaults. Each vault is isolated under `vaults/<vaultId>/...`.
-
-Each identity now has its own private namespace in storage under `vault/private/identities/<identityId>/...`. That namespace holds identity-level metadata such as:
-
-- `profile.json`
-- `children.json`
-
-Those files are encrypted with a key derived from the identity private key, so they are not stored as plaintext JSON.
+The workspace root can contain many vaults. Each vault is physically divided into `vault/sealed/` (encrypted) and `vault/public/` (plaintext discovery).
+ 
+ Each identity also has its own private namespace under `identities/<identityId>/sealed/...` for encrypted metadata such as `profile.sealed` and `children.sealed`.
 
 ## Architecture
 

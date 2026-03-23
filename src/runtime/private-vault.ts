@@ -3,7 +3,7 @@ import { SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import { restoreIdentity, type CreatedIdentity } from "./identity.js";
 
-const PRIVATE_VAULT_PREFIX = "vault/private/identities";
+const PRIVATE_VAULT_PREFIX = "identities";
 const PRIVATE_VAULT_LOCK_SUFFIX = ".lock";
 
 export interface IdentityPrivateVaultProfile {
@@ -34,15 +34,15 @@ export function identityPrivateVaultPrefix(identityId: string): string {
 }
 
 export function identityPrivateVaultProfileKey(identityId: string): string {
-  return `${identityPrivateVaultPrefix(identityId)}/profile.sealed`;
+  return `${identityPrivateVaultPrefix(identityId)}/sealed/profile.sealed`;
 }
 
 export function identityPrivateVaultChildrenKey(identityId: string): string {
-  return `${identityPrivateVaultPrefix(identityId)}/children.sealed`;
+  return `${identityPrivateVaultPrefix(identityId)}/sealed/children.sealed`;
 }
 
 function lockKey(identityId: string): string {
-  return `${identityPrivateVaultPrefix(identityId)}${PRIVATE_VAULT_LOCK_SUFFIX}`;
+  return `${identityPrivateVaultPrefix(identityId)}/sealed/locks/vault${PRIVATE_VAULT_LOCK_SUFFIX}`;
 }
 
 function normalizeIdentityAccess(identityOrPrivateKey: IdentityPrivateVaultAccess): CreatedIdentity {

@@ -3,27 +3,28 @@ import type { IStorageProvider } from "../storage/provider.js";
 import { SealedJsonRepository } from "../sealed/index.js";
 
 export interface VaultProfile {
-  vaultId: string;
-  nickname?: string;
-  exposeNickname?: boolean;
+  sealed: Record<string, any>; // Encrypted metadata
+  public: Record<string, any>; // Plaintext metadata for discovery
 }
 
-const VAULT_PROFILE_KEY = "vault/profile.sealed";
-const VAULT_NICKNAME_EXPOSED_KEY = "vault/nickname.txt";
+const VAULT_SEALED_PROFILE_KEY = "vault/sealed/profile.sealed";
+const VAULT_PUBLIC_PROFILE_KEY = "vault/public/profile.json";
 
 export async function writeVaultProfile(
   storage: IStorageProvider,
   profile: VaultProfile,
   vaultWorkingKey: string,
 ): Promise<void> {
-  const repo = new SealedJsonRepository<VaultProfile>(storage, VAULT_PROFILE_KEY, vaultWorkingKey);
-  await repo.write(profile, "vault_profile");
+  // 1. Write Sealed Profile
+  const repo = new SealedJsonRepository<Record<string, any>>(storage, VAULT_SEALED_PROFILE_KEY, vaultWorkingKey);
+  await repo.write(profile.sealed, "vault_profile_sealed");
 
-  if (profile.exposeNickname && profile.nickname) {
-    await storage.write(VAULT_NICKNAME_EXPOSED_KEY, Buffer.from(profile.nickname, "utf8"));
+  // 2. Write Public Profile
+  if (profile.public && Object.keys(profile.public).length > 0) {
+    await storage.write(VAULT_PUBLIC_PROFILE_KEY, Buffer.from(JSON.stringify(profile.public, null, 2), "utf8"));
   } else {
-    if (await storage.has(VAULT_NICKNAME_EXPOSED_KEY)) {
-      await storage.delete(VAULT_NICKNAME_EXPOSED_KEY);
+    if (await storage.has(VAULT_PUBLIC_PROFILE_KEY)) {
+      await storage.delete(VAULT_PUBLIC_PROFILE_KEY);
     }
   }
 }
@@ -32,9 +33,17 @@ export async function readVaultProfile(
   storage: IStorageProvider,
   vaultWorkingKey: string,
 ): Promise<VaultProfile | null> {
-  const repo = new SealedJsonRepository<VaultProfile>(storage, VAULT_PROFILE_KEY, vaultWorkingKey);
-  // We use read with null fallback if it doesn't exist.
-  // Actually SealedJsonRepository.read needs a fallback value.
-  const profile = await repo.read(null as any);
-  return profile;
+  const repo = new SealedJsonRepository<Record<string, any>>(storage, VAULT_SEALED_PROFILE_KEY, vaultWorkingKey);
+  const sealed = await repo.read(null as any);
+  if (!sealed) {
+    return null;
+  }
+
+  const publicRaw = await storage.read(VAULT_PUBLIC_PROFILE_KEY);
+  const publicData = publicRaw ? JSON.parse(publicRaw.toString("utf8")) : {};
+
+  return {
+    sealed,
+    public: publicData,
+  };
 }
