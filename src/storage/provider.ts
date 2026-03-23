@@ -12,4 +12,6 @@ export interface IStorageProvider {
     rename?(fromKey: string, toKey: string): Promise<void>;
     /** Optional. If present, used to serialize read-modify-write sequences across writers. */
     withLock?<T>(key: string, task: () => Promise<T>): Promise<T>;
+    /** Optional. Returns sub-keys (names) under a given prefix. */
+    list?(prefix: string): Promise<string[]>;
 }

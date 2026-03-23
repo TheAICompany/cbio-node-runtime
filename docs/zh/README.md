@@ -22,6 +22,8 @@ import {
   createIdentity,
   readIdentityPrivateVaultProfile,
   readIdentityMetadata,
+  listIdentities,
+  listVaults,
   createVault,
   recoverVault,
   LocalVaultTransport,

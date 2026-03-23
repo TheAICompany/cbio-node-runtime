@@ -208,3 +208,24 @@ export async function withIdentityPrivateVaultLock<T>(
   }
   return task();
 }
+
+/**
+ * Lists all identities in the workspace with their public discovery metadata.
+ */
+export async function listIdentities(storage: IStorageProvider): Promise<IdentityPublicProfile[]> {
+  if (!storage.list) {
+    return [];
+  }
+  const ids = await storage.list(PRIVATE_VAULT_PREFIX);
+  const results: IdentityPublicProfile[] = [];
+  for (const id of ids) {
+    // Skip non-identity directories or lock files if any
+    if (id.endsWith(PRIVATE_VAULT_LOCK_SUFFIX)) continue;
+    
+    const profile = await readIdentityMetadata(storage, id);
+    if (profile) {
+      results.push(profile as IdentityPublicProfile);
+    }
+  }
+  return results;
+}

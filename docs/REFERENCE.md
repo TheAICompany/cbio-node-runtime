@@ -97,6 +97,10 @@ Those files are encrypted at rest in the `sealed/` sub-directory and are not rea
 If `privateKey` is provided, it returns the full sealed profile.
 If `privateKey` is missing, it returns the public discovery profile (nickname, publicKey, parentIdentityId).
 
+`listIdentities(storage)` returns all identity discovery profiles in the workspace.
+
+`listVaults(storage)` returns all vault metadata summaries in the workspace.
+
 Typical relationship lookup flow when you already have a private key:
 
 1. `const identity = restoreIdentity(privateKey)`

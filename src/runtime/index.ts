@@ -25,6 +25,7 @@ export {
 export {
   readVaultProfile,
   writeVaultProfile,
+  readVaultPublicMetadata,
   type VaultProfile,
 } from "./vault-metadata.js";
 export {
@@ -36,6 +37,7 @@ export {
   readIdentityPrivateVaultProfile,
   readIdentityPrivateVaultChildrenState,
   readIdentityMetadata,
+  listIdentities,
   identityPrivateVaultPrefix,
   identityPrivateVaultProfileKey,
   identityPrivateVaultChildrenKey,
@@ -47,6 +49,7 @@ export {
 export {
   createVault,
   recoverVault,
+  listVaults,
   type CreateVaultOptions,
   type CreatedVault,
   type RecoverVaultOptions,
@@ -212,6 +215,8 @@ export interface CbioRuntime {
   readIdentityPrivateVaultProfile: typeof import("./private-vault.js").readIdentityPrivateVaultProfile;
   readIdentityPrivateVaultChildrenState: typeof import("./private-vault.js").readIdentityPrivateVaultChildrenState;
   readIdentityMetadata: typeof import("./private-vault.js").readIdentityMetadata;
+  listIdentities: typeof import("./private-vault.js").listIdentities;
+  listVaults: typeof import("./bootstrap.js").listVaults;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
   createVaultClient: typeof import("../clients/owner/index.js").createVaultClient;

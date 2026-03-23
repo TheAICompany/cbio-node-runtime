@@ -93,4 +93,15 @@ export class FsStorageProvider implements IStorageProvider {
             }
         }
     }
+ 
+    async list(prefix: string): Promise<string[]> {
+        const dir = this.resolve(prefix);
+        try {
+            const entries = await fs.readdir(dir, { withFileTypes: true });
+            return entries.map(e => e.name);
+        } catch (e: any) {
+            if (e.code === 'ENOENT') return [];
+            throw e;
+        }
+    }
 }

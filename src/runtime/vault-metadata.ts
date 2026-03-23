@@ -8,7 +8,17 @@ export interface VaultProfile {
 }
 
 const VAULT_SEALED_PROFILE_KEY = "vault/sealed/profile.sealed";
-const VAULT_PUBLIC_PROFILE_KEY = "vault/public/profile.json";
+export const VAULT_PUBLIC_PROFILE_KEY = "vault/public/profile.json";
+ 
+/** 
+ * Reads only the public (plaintext) metadata of a vault. No key required.
+ */
+export async function readVaultPublicMetadata(
+  storage: IStorageProvider,
+): Promise<Record<string, any>> {
+  const publicRaw = await storage.read(VAULT_PUBLIC_PROFILE_KEY);
+  return publicRaw ? JSON.parse(publicRaw.toString("utf8")) : {};
+}
 
 export async function writeVaultProfile(
   storage: IStorageProvider,

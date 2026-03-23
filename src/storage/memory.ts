@@ -42,4 +42,17 @@ export class MemoryStorageProvider implements IStorageProvider {
             }
         }
     }
+ 
+    async list(prefix: string): Promise<string[]> {
+        const results = new Set<string>();
+        const searchPrefix = prefix.endsWith('/') ? prefix : `${prefix}/`;
+        for (const key of this.#store.keys()) {
+            if (key.startsWith(searchPrefix)) {
+                const remaining = key.substring(searchPrefix.length);
+                const segment = remaining.split('/')[0];
+                if (segment) results.add(segment);
+            }
+        }
+        return Array.from(results);
+    }
 }

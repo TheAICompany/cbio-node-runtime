@@ -14,7 +14,7 @@ import {
 import { createPrefixedStorage } from "../storage/prefix.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
-import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
+import { readVaultProfile, writeVaultProfile, readVaultPublicMetadata } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
 
 function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
@@ -150,4 +150,24 @@ export async function recoverVault(
     nickname: profile?.sealed.nickname,
     storage,
   };
+}
+
+/**
+ * Lists all vaults in the workspace with their public discovery metadata.
+ */
+export async function listVaults(storage: IStorageProvider): Promise<{ vaultId: string; public: Record<string, any> }[]> {
+  if (!storage.list) {
+    return [];
+  }
+  const ids = await storage.list("vaults");
+  const results: { vaultId: string; public: Record<string, any> }[] = [];
+  for (const id of ids) {
+    const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(id));
+    const publicData = await readVaultPublicMetadata(vaultStorage).catch(() => ({}));
+    results.push({
+      vaultId: id,
+      public: publicData,
+    });
+  }
+  return results;
 }
