@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import { restoreIdentity, type CreatedIdentity } from "./identity.js";
-import { writeVerifiableMetadata, readVerifiableMetadata } from "./verifiable-metadata.js";
+import { writeVerifiableMetadata, readVerifiableMetadata, type VerifiableMetadata } from "./verifiable-metadata.js";
 
 const PRIVATE_VAULT_PREFIX = "identities";
 const PRIVATE_VAULT_LOCK_SUFFIX = ".lock";
@@ -89,7 +89,7 @@ export async function ensureIdentityPrivateVault(
   // Read current public profile to preserve nickname if needed
   const publicPath = identityPrivateVaultPublicProfileKey(identity.identityId);
   const publicRaw = await storage.read(publicPath);
-  const existingPublic = publicRaw ? JSON.parse(publicRaw.toString()) : {};
+  const existingPublic = publicRaw ? (JSON.parse(publicRaw.toString()) as VerifiableMetadata<IdentityPublicProfile>) : null;
 
   const profile: IdentityPrivateVaultProfile = {
     identityId: identity.identityId,
@@ -105,7 +105,7 @@ export async function ensureIdentityPrivateVault(
   const publicProfile: IdentityPublicProfile = {
     identityId: profile.identityId,
     publicKey: profile.publicKey,
-    nickname: identity.nickname || existingPublic?.nickname,
+    nickname: identity.nickname || existingPublic?.payload.nickname,
     parentIdentityId: profile.parentIdentityId,
   };
   await writeVerifiableMetadata(

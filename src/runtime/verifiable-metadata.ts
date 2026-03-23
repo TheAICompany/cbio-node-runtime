@@ -1,4 +1,4 @@
-import { signPayload, verifySignature } from "../protocol/crypto.js";
+import { signPayload, verifySignature, derivePublicKey } from "../protocol/crypto.js";
 import type { IStorageProvider } from "../storage/provider.js";
 
 /**
@@ -12,6 +12,25 @@ export interface VerifiableMetadata<T> {
 }
 
 /**
+ * Recursively sorts object keys to ensure deterministic JSON stringification.
+ */
+function sortObject(obj: any): any {
+  if (obj === null || typeof obj !== "object" || Array.isArray(obj)) {
+    if (Array.isArray(obj)) {
+      return obj.map(sortObject);
+    }
+    return obj;
+  }
+  const sorted: any = {};
+  Object.keys(obj).sort().forEach(key => {
+    if (obj[key] !== undefined) {
+      sorted[key] = sortObject(obj[key]);
+    }
+  });
+  return sorted;
+}
+
+/**
  * Signs and writes a payload to storage as a verifiable metadata envelope.
  */
 export async function writeVerifiableMetadata<T>(
@@ -20,9 +39,9 @@ export async function writeVerifiableMetadata<T>(
   payload: T,
   privateKey: string,
 ): Promise<void> {
-  const payloadStr = JSON.stringify(payload);
+  const payloadStr = JSON.stringify(sortObject(payload));
   const signature = await signPayload(privateKey, payloadStr);
-  const signer = await import("../protocol/crypto.js").then(m => m.derivePublicKey(privateKey));
+  const signer = derivePublicKey(privateKey);
 
   const envelope: VerifiableMetadata<T> = {
     payload,
@@ -52,7 +71,7 @@ export async function readVerifiableMetadata<T>(
       return null; // Signer mismatch
     }
 
-    const payloadStr = JSON.stringify(envelope.payload);
+    const payloadStr = JSON.stringify(sortObject(envelope.payload));
     const isValid = await verifySignature(envelope.signer, payloadStr, envelope.signature);
     
     if (!isValid) {
