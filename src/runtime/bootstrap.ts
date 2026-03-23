@@ -15,7 +15,6 @@ import { createPrefixedStorage } from "../storage/prefix.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
-import { createWorkspaceStorage } from "./workspace-storage.js";
 import { writeVerifiableMetadata, readVerifiableMetadata } from "./verifiable-metadata.js";
 
 function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
@@ -33,10 +32,15 @@ function vaultStoragePrefix(vaultId: string): string {
   return `vaults/${vaultId}`;
 }
 
+export interface VaultPublicMetadata extends Record<string, any> {
+  nickname?: string;
+  ownerId?: string;
+}
+
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
   nickname?: string;
-  publicMetadata?: Record<string, any>;
+  publicMetadata?: VaultPublicMetadata;
   ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
@@ -69,36 +73,20 @@ export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDepen
 
 export interface RecoveredVault extends VaultObject {}
 
-function resolveStorage(
-  storageOrOptions: IStorageProvider | CreateVaultOptions | RecoverVaultOptions,
-  maybeOptions?: CreateVaultOptions | RecoverVaultOptions,
-): { storage: IStorageProvider; options: CreateVaultOptions | RecoverVaultOptions } {
-  if (maybeOptions) {
-    return {
-      storage: storageOrOptions as IStorageProvider,
-      options: maybeOptions,
-    };
-  }
-  return {
-    storage: createWorkspaceStorage(),
-    options: storageOrOptions as CreateVaultOptions | RecoverVaultOptions,
-  };
-}
-
-export async function createVault(options: CreateVaultOptions): Promise<CreatedVault>;
-export async function createVault(storage: IStorageProvider, options: CreateVaultOptions): Promise<CreatedVault>;
+/**
+ * Creates a new vault.
+ * 
+ * @param storage The storage provider to use.
+ * @param options Configuration for the new vault.
+ */
 export async function createVault(
-  storageOrOptions: IStorageProvider | CreateVaultOptions,
-  maybeOptions?: CreateVaultOptions,
+  storage: IStorageProvider,
+  options: CreateVaultOptions,
 ): Promise<CreatedVault> {
-  const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
-    storage: IStorageProvider;
-    options: CreateVaultOptions;
-  };
   const vaultId = options.vaultId ?? `vault_${crypto.randomUUID()}`;
-  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
+  const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(vaultId));
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
-  const deps = createPersistentVaultCoreDependencies(storage, {
+  const deps = createPersistentVaultCoreDependencies(vaultStorage, {
     ...options,
     vaultId,
     vaultWorkingKey,
@@ -142,26 +130,26 @@ export async function createVault(
   };
 }
 
-export async function recoverVault(options: RecoverVaultOptions): Promise<RecoveredVault>;
-export async function recoverVault(storage: IStorageProvider, options: RecoverVaultOptions): Promise<RecoveredVault>;
+/**
+ * Recovers an existing vault.
+ * 
+ * @param storage The storage provider where the vault is located.
+ * @param options Recovery options including vaultId and owner identity.
+ */
 export async function recoverVault(
-  storageOrOptions: IStorageProvider | RecoverVaultOptions,
-  maybeOptions?: RecoverVaultOptions,
+  storage: IStorageProvider,
+  options: RecoverVaultOptions,
 ): Promise<RecoveredVault> {
-  const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
-    storage: IStorageProvider;
-    options: RecoverVaultOptions;
-  };
-  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(options.vaultId));
+  const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(options.vaultId));
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, options.vaultId);
-  const deps = createPersistentVaultCoreDependencies(storage, {
+  const deps = createPersistentVaultCoreDependencies(vaultStorage, {
     ...options,
     vaultId: options.vaultId,
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
   const profile = await readVaultProfile(storage, vaultWorkingKey);
-  const publicMeta = await readVerifiableMetadata<any>(
+  const publicMeta = await readVerifiableMetadata<VaultPublicMetadata>(
     storage,
     "vault/public/profile.json",
     options.ownerIdentity.publicKey
@@ -178,22 +166,22 @@ export async function recoverVault(
 /**
  * Lists all vaults in the workspace with their public discovery metadata.
  */
-export async function listVaults(storage: IStorageProvider): Promise<{ vaultId: string; public: Record<string, any> }[]> {
+export async function listVaults(storage: IStorageProvider): Promise<Array<{ vaultId: string; public: VaultPublicMetadata }>> {
   if (!storage.list) {
     return [];
   }
   const ids = await storage.list("vaults");
-  const results: { vaultId: string; public: Record<string, any> }[] = [];
+  const results: Array<{ vaultId: string; public: VaultPublicMetadata }> = [];
   for (const id of ids) {
     const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(id));
-    const publicData = await readVerifiableMetadata<Record<string, any>>(
+    const publicData = await readVerifiableMetadata<VaultPublicMetadata>(
       vaultStorage, 
       "vault/public/profile.json"
     ).catch(() => ({}));
     
     results.push({
       vaultId: id,
-      public: publicData || {},
+      public: (publicData || {}) as VaultPublicMetadata,
     });
   }
   return results;

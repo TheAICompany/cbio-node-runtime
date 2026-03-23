@@ -55,6 +55,7 @@ export {
   type RecoverVaultOptions,
   type RecoveredVault,
   type VaultObject,
+  type VaultPublicMetadata,
 } from "./bootstrap.js";
 
 export {
@@ -195,9 +196,9 @@ export {
 
 export { LocalVaultTransport } from "../vault-ingress/defaults.js";
 
-export type Identity = import("./identity.js").CreatedIdentity;
-export type VaultMetadata = import("./vault-metadata.js").VaultProfile;
-
+/**
+ * Main runtime interface.
+ */
 export interface CbioRuntime {
   IdentityError: typeof import("../errors.js").IdentityError;
   IdentityErrorCode: typeof import("../errors.js").IdentityErrorCode;
@@ -215,7 +216,13 @@ export interface CbioRuntime {
   readIdentityPrivateVaultProfile: typeof import("./private-vault.js").readIdentityPrivateVaultProfile;
   readIdentityPrivateVaultChildrenState: typeof import("./private-vault.js").readIdentityPrivateVaultChildrenState;
   readIdentityMetadata: typeof import("./private-vault.js").readIdentityMetadata;
+  /**
+   * Lists all identities in the workspace.
+   */
   listIdentities: typeof import("./private-vault.js").listIdentities;
+  /**
+   * Lists all vaults in the workspace.
+   */
   listVaults: typeof import("./bootstrap.js").listVaults;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
