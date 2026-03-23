@@ -45,6 +45,9 @@ import {
 - 通过 `createVault(...)` 创建持久化 vault (支持 `publicMetadata` 用于公开发现)
 - 通过 `recoverVault(...)` 用 owner 身份恢复持久化 vault
 - 分区存储：`vaults/` (具名保险箱) 与 `identities/` (身份私有空间)
+- **可验证发现 (Verifiable Discovery)**:
+    - 公开区 (`public/`) 采用 **“匿名读、所有者写”** 模式。
+    - 所有公开元数据（如昵称）均附带**数字签名**，SDK 会自动验证其真实性，防止匿名篡改。
 
 ## 构建
 

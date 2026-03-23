@@ -40,7 +40,7 @@ Recommended persistent-vault entrypoints:
 
 `createVault(storage, { ownerIdentity, nickname, publicMetadata })` overrides the workspace storage explicitly.
 
-`recoverVault({ vaultId, ownerIdentity })` reopens a vault and returns the `nickname` from the sealed profile.
+`recoverVault({ vaultId, ownerIdentity })` reopens a vault and returns metadata (including `nickname`) from the **public signed profile**.
 
 `recoverVault(storage, { vaultId, ownerIdentity })` overrides the workspace storage explicitly.
 
@@ -87,6 +87,8 @@ Role rules:
 
 Those files are encrypted at rest in the `sealed/` sub-directory and are not readable as plain JSON on disk.
 
+Identities also maintain a **public discovery area** at `public/profile.json`. This file is readable without authentication but is **digitally signed** by the identity's private key to prevent anonymous tampering.
+
 `restoreIdentity(privateKey)` returns the same shape for an existing private key.
 
 `readIdentityPrivateVaultProfile(storage, identityOrPrivateKey)` decrypts and returns the current identity profile for the supplied identity or private key.
@@ -97,9 +99,9 @@ Those files are encrypted at rest in the `sealed/` sub-directory and are not rea
 If `privateKey` is provided, it returns the full sealed profile.
 If `privateKey` is missing, it returns the public discovery profile (nickname, publicKey, parentIdentityId).
 
-`listIdentities(storage)` returns all identity discovery profiles in the workspace.
+`listIdentities(storage)` returns all identity discovery profiles. These profiles are automatically verified for signature integrity.
 
-`listVaults(storage)` returns all vault metadata summaries in the workspace.
+`listVaults(storage)` returns all vault metadata summaries. These summaries are pulled from the public signed profiles and verified.
 
 Typical relationship lookup flow when you already have a private key:
 
@@ -359,6 +361,21 @@ If the custom flow mode includes secret acquisition, the owner also defines a re
   storeAlias: 'new-token',
 }
 ```
+
+## Verifiable Discovery (Signed Content)
+
+The CBIO Node Runtime implements a **Public-Read, Owner-Write (Signed)** protection for discovery metadata.
+
+- **Storage**: `vault/public/profile.json` and `identities/{id}/public/profile.json`.
+- **Integrity**: These files are wrapped in a verifiable envelope:
+    ```json
+    {
+      "payload": { "nickname": "...", ... },
+      "signature": "...",
+      "signer": "publicKey"
+    }
+    ```
+- **Verification**: The SDK automatically verifies signatures during `listVaults`, `listIdentities`, and retrieval. Corrupted or tampered files are ignored to prevent phishing or metadata poisoning.
 
 ## Persistent Dependencies
 

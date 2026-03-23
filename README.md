@@ -103,9 +103,9 @@ const createdVault = await createVault(storage, {
 });
 ```
 
-The workspace root can contain many vaults. Each vault is physically divided into `vault/sealed/` (encrypted) and `vault/public/` (plaintext discovery).
+The workspace root can contain many vaults. Each vault is physically divided into `vault/sealed/` (encrypted) and `vault/public/` (signed discovery).
  
- Each identity also has its own private namespace under `identities/<identityId>/sealed/...` for encrypted metadata such as `profile.sealed` and `children.sealed`.
+ Every identity also has its own private namespace under `identities/<identityId>/sealed/...` for encrypted metadata, and a companion `public/profile.json` for verified discovery.
 
 ## Architecture
 

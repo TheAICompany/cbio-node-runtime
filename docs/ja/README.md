@@ -23,8 +23,8 @@ import {
   readIdentityMetadata,
    createVault,
   listIdentities,
-+  listVaults,
-   recoverVault,
+  listVaults,
+  recoverVault,
   LocalVaultTransport,
   createVaultClient,
   createAgentClient,
@@ -44,6 +44,9 @@ import {
 - `createVault(...)` で persistent vault を作成する (`publicMetadata` による公開情報のディスカバリをサポート)
 - `recoverVault(...)` で owner identity を使って persistent vault を復旧する
 - 分離されたストレージ層: `vaults/` (具名 Vault) と `identities/` (個人 ID スペース)
+- **検証可能なディスカバリ (Verifiable Discovery)**:
+    - 公開エリア (`public/`) は **「匿名読み取り、所有者書き込み」** モデルを採用しています。
+    - ニックネームなどのすべての公開メタデータには **電子署名** が付与されており、SDK がその正当性を自動的に検証することで、匿名による改ざんを防止します。
 
 旧 `CbioIdentity` 中心 API は、もはや主要な公開面ではありません。
 

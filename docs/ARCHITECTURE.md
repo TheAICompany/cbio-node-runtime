@@ -55,9 +55,10 @@ The vault is physically divided into two partitions to balance security and disc
   - **Auditing**: Every access is tracked and logged in the append-only audit trail.
 
 - **Public Area (`vault/public/`)**
-  - **Security**: Plaintext JSON (`.json`).
-  - **Access**: Identity is required for **writing** (authorized update), but **reading is open**.
-  - **Auditing**: Reading from the public area is **untracked**, reducing audit noise for discovery / identity resolution.
+  - **Security**: Verifiable JSON Envelopes (`.json`).
+  - **Integrity**: Every public file is **digitally signed** by the vault owner's private key.
+  - **Access**: Reading is open and anonymous; however, the SDK automatically verifies signatures to prevent unauthorized tampering.
+  - **Auditing**: Anonymous reading is untracked to reduce noise. Writing requires proving identity through a valid signature.
 
 ## Core Rules
 
@@ -65,7 +66,7 @@ The vault is physically divided into two partitions to balance security and disc
 2. Only owner and trusted issuer paths may write secrets.
 3. Agent can only request dispatch through capability + proof.
 4. Vault validates and audits every dispatch.
-5. Public data (e.g., nicknames, public keys) is explicitly mirrored to the Public Area for discovery.
+5. Public metadata (e.g., nicknames, discovery profile) is stored **exclusively** in the Public Area and is digitally signed.
 6. Identity-specific private data is stored in `identities/`, separate from named `vaults/`.
 
 ## Current HTTP Secret Flows

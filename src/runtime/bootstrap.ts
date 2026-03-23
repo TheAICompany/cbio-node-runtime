@@ -14,8 +14,9 @@ import {
 import { createPrefixedStorage } from "../storage/prefix.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
-import { readVaultProfile, writeVaultProfile, readVaultPublicMetadata } from "./vault-metadata.js";
+import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
+import { writeVerifiableMetadata, readVerifiableMetadata } from "./verifiable-metadata.js";
 
 function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
   return crypto
@@ -35,7 +36,6 @@ function vaultStoragePrefix(vaultId: string): string {
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
   nickname?: string;
-  exposeNickname?: boolean;
   publicMetadata?: Record<string, any>;
   ownerIdentity: CreatedIdentity;
   vault?: {
@@ -110,18 +110,30 @@ export async function createVault(
     publicKey: options.ownerIdentity.publicKey,
   };
   await core.bootstrapOwnerIdentity(bootstrapOwner);
+  
   const nickname = options.nickname?.trim() ? options.nickname.trim() : undefined;
-  const publicMetadata = { ...(options.publicMetadata || {}) };
-  if (options.exposeNickname && nickname) {
-    publicMetadata.nickname = nickname;
-  }
+  
+  // Nickname is public-by-design for discovery
+  const publicMetadata = { 
+    ...(options.publicMetadata || {}),
+    ...(nickname ? { nickname } : {})
+  };
+
   await writeVaultProfile(storage, {
     sealed: {
       vaultId,
-      nickname,
+      // nickname removed from sealed area
     },
-    public: publicMetadata,
+    public: {}, // Sealed profile no longer carries public mirror
   }, vaultWorkingKey);
+
+  // Write Signed Public Profile for Discovery
+  await writeVerifiableMetadata(
+    storage,
+    "vault/public/profile.json",
+    publicMetadata,
+    options.ownerIdentity.privateKey
+  );
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
@@ -149,10 +161,16 @@ export async function recoverVault(
   });
   const core = createVaultCore(deps);
   const profile = await readVaultProfile(storage, vaultWorkingKey);
+  const publicMeta = await readVerifiableMetadata<any>(
+    storage,
+    "vault/public/profile.json",
+    options.ownerIdentity.publicKey
+  ).catch(() => null);
+
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
-    nickname: profile?.sealed.nickname,
+    nickname: publicMeta?.nickname,
     storage,
   };
 }
@@ -168,10 +186,14 @@ export async function listVaults(storage: IStorageProvider): Promise<{ vaultId: 
   const results: { vaultId: string; public: Record<string, any> }[] = [];
   for (const id of ids) {
     const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(id));
-    const publicData = await readVaultPublicMetadata(vaultStorage).catch(() => ({}));
+    const publicData = await readVerifiableMetadata<Record<string, any>>(
+      vaultStorage, 
+      "vault/public/profile.json"
+    ).catch(() => ({}));
+    
     results.push({
       vaultId: id,
-      public: publicData,
+      public: publicData || {},
     });
   }
   return results;

@@ -2,13 +2,13 @@ import { createHash } from "node:crypto";
 import { SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import { restoreIdentity, type CreatedIdentity } from "./identity.js";
+import { writeVerifiableMetadata, readVerifiableMetadata } from "./verifiable-metadata.js";
 
 const PRIVATE_VAULT_PREFIX = "identities";
 const PRIVATE_VAULT_LOCK_SUFFIX = ".lock";
 
 export interface IdentityPrivateVaultProfile {
   identityId: string;
-  nickname?: string;
   publicKey: string;
   parentIdentityId?: string;
   childIndex?: number;
@@ -85,34 +85,35 @@ export async function ensureIdentityPrivateVault(
   );
 
   const existingProfile = await profileRepo.read(null as any);
+  
+  // Read current public profile to preserve nickname if needed
+  const publicPath = identityPrivateVaultPublicProfileKey(identity.identityId);
+  const publicRaw = await storage.read(publicPath);
+  const existingPublic = publicRaw ? JSON.parse(publicRaw.toString()) : {};
+
   const profile: IdentityPrivateVaultProfile = {
     identityId: identity.identityId,
-    nickname: identity.nickname || existingProfile?.nickname,
     publicKey: identity.publicKey,
     parentIdentityId: identity.parentIdentityId || existingProfile?.parentIdentityId,
     childIndex: identity.childIndex ?? existingProfile?.childIndex,
   };
 
-  // Only write if new profile differs or doesn't exist
-  if (
-    !existingProfile ||
-    profile.nickname !== existingProfile.nickname ||
-    profile.parentIdentityId !== existingProfile.parentIdentityId
-  ) {
-    await profileRepo.write(profile, "identity_private_vault_profile");
+  // Profile data in sealed area (excluding nickname)
+  await profileRepo.write(profile, "identity_private_vault_profile");
 
-    // Sync public profile mirror (Plaintext)
-    const publicProfile: IdentityPublicProfile = {
-      identityId: profile.identityId,
-      publicKey: profile.publicKey,
-      nickname: profile.nickname,
-      parentIdentityId: profile.parentIdentityId,
-    };
-    await storage.write(
-      identityPrivateVaultPublicProfileKey(identity.identityId),
-      Buffer.from(JSON.stringify(publicProfile, null, 2)),
-    );
-  }
+  // Write Signed Public Profile for Discovery
+  const publicProfile: IdentityPublicProfile = {
+    identityId: profile.identityId,
+    publicKey: profile.publicKey,
+    nickname: identity.nickname || existingPublic?.nickname,
+    parentIdentityId: profile.parentIdentityId,
+  };
+  await writeVerifiableMetadata(
+    storage,
+    publicPath,
+    publicProfile,
+    identity.privateKey
+  );
 
   const childrenKey = identityPrivateVaultChildrenKey(identity.identityId);
   if (!(await storage.has(childrenKey))) {
@@ -151,30 +152,33 @@ export async function readIdentityMetadata(
   identityId: string,
   privateKey?: string,
 ): Promise<IdentityPrivateVaultProfile | IdentityPublicProfile | null> {
-  // If private key is provided, we prefer the full sealed profile
+  const publicPath = identityPrivateVaultPublicProfileKey(identityId);
+  const publicProfile = await readVerifiableMetadata<IdentityPublicProfile>(
+    storage,
+    publicPath
+  ).catch(() => null);
+
+  // If private key is provided, try to read and merge the full sealed profile
   if (privateKey) {
     try {
       const identity = restoreIdentity(privateKey);
       if (identity.identityId !== identityId) {
         throw new Error("identityId mismatch");
       }
-      return await readIdentityPrivateVaultProfile(storage, identity);
-    } catch {
-      // Fallback to public if privateKey is invalid or decryption fails
+      const sealed = await readIdentityPrivateVaultProfile(storage, identity);
+      if (sealed) {
+        return {
+          ...publicProfile, // Spread public profile (contains nickname)
+          ...sealed,        // Spread sealed profile (contains keys/metadata)
+        } as any;
+      }
+    } catch (e) {
+      // Fallback to public if decryption fails
+      console.warn(`[IdentityMetadata] Decryption failed for ${identityId}:`, e);
     }
   }
 
-  // Otherwise, read the public discovery profile
-  const publicPath = identityPrivateVaultPublicProfileKey(identityId);
-  const publicData = await storage.read(publicPath);
-  if (publicData) {
-    try {
-      return JSON.parse(publicData.toString()) as IdentityPublicProfile;
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return publicProfile;
 }
 
 export async function readIdentityPrivateVaultChildrenState(
