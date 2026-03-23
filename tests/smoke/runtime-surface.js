@@ -107,6 +107,14 @@ assert.equal(derivedAgentIdentity.nickname, "worker-1");
 assert.equal(derivedAgentIdentityAgain.nickname, "worker-2");
 assert.equal(derivedAgentIdentitySibling.childIndex, 1);
 
+  // Verifiable Metadata Smoke Test
+  const { readIdentityMetadata } = await import("../../dist/runtime/private-vault.js");
+  const publicProfile = await readIdentityMetadata(identityTreeStorage, ownerIdentity.identityId);
+  assert.ok(publicProfile, "Public profile should be readable");
+  assert.equal(publicProfile.identityId, ownerIdentity.identityId, "Identity ID mismatch");
+  assert.equal(publicProfile.nickname, "owner-1", "Nickname mismatch");
+  assert.equal(publicProfile.publicKey, ownerIdentity.publicKey, "Public key mismatch");
+
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {
   seenAuthHeader = new Headers(init?.headers).get("Authorization");

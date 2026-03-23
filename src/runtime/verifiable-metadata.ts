@@ -12,22 +12,27 @@ export interface VerifiableMetadata<T> {
 }
 
 /**
- * Recursively sorts object keys to ensure deterministic JSON stringification.
+ * Hardcoded field order for canonical JSON stringification.
+ * This ensures that even if different environments parse/stringify, 
+ * the signature check string is always identical.
  */
-function sortObject(obj: any): any {
-  if (obj === null || typeof obj !== "object" || Array.isArray(obj)) {
-    if (Array.isArray(obj)) {
-      return obj.map(sortObject);
-    }
-    return obj;
+function canonicalStringify(obj: any): string {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+    return JSON.stringify(obj);
   }
-  const sorted: any = {};
-  Object.keys(obj).sort().forEach(key => {
-    if (obj[key] !== undefined) {
-      sorted[key] = sortObject(obj[key]);
-    }
-  });
-  return sorted;
+
+  const keys = Object.keys(obj).sort();
+  const parts: string[] = [];
+
+  for (const key of keys) {
+    const value = obj[key];
+    if (value === undefined) continue;
+    
+    // Recursive canonical for nested objects if any (mostly for publicMetadata)
+    parts.push(`${JSON.stringify(key)}:${canonicalStringify(value)}`);
+  }
+
+  return `{${parts.join(",")}}`;
 }
 
 /**
@@ -39,9 +44,18 @@ export async function writeVerifiableMetadata<T>(
   payload: T,
   privateKey: string,
 ): Promise<void> {
-  const payloadStr = JSON.stringify(sortObject(payload));
+  const payloadStr = canonicalStringify(payload);
   const signature = await signPayload(privateKey, payloadStr);
   const signer = derivePublicKey(privateKey);
+
+  // Self-verify check
+  const isCorrect = await verifySignature(signer, payloadStr, signature);
+  if (!isCorrect) {
+    throw new Error(`[VerifiableMetadata] SDK Integrity Failure: Generated signature is invalid for the payload. 
+Payload: ${payloadStr}
+Signer: ${signer}
+Signature: ${signature}`);
+  }
 
   const envelope: VerifiableMetadata<T> = {
     payload,
@@ -71,11 +85,14 @@ export async function readVerifiableMetadata<T>(
       return null; // Signer mismatch
     }
 
-    const payloadStr = JSON.stringify(sortObject(envelope.payload));
+    const payloadStr = canonicalStringify(envelope.payload);
     const isValid = await verifySignature(envelope.signer, payloadStr, envelope.signature);
     
     if (!isValid) {
       console.warn(`[VerifiableMetadata] Invalid signature at ${path}`);
+      console.warn(`[VerifiableMetadata] Signer: ${envelope.signer}`);
+      console.warn(`[VerifiableMetadata] Payload String: ${payloadStr}`);
+      console.warn(`[VerifiableMetadata] Signature: ${envelope.signature}`);
       return null;
     }
 
