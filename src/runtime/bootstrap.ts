@@ -211,3 +211,27 @@ export async function listVaults(storage: IStorageProvider): Promise<Array<{ vau
   }
   return results;
 }
+
+/**
+ * Updates the metadata (like nickname) of an existing vault.
+ */
+export async function updateVaultMetadata(
+  vault: CreatedVault | RecoveredVault,
+  options: { nickname?: string; ownerIdentity: CreatedIdentity },
+): Promise<void> {
+  const vaultId = vault.core.vaultId.value;
+  const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
+  
+  // Read current profile to preserve secret part
+  const current = await readVaultProfile(vault.storage, vaultWorkingKey, vaultId);
+  
+  await writeVaultProfile(vault.storage, {
+    sealedPrivate: current?.sealedPrivate || { vaultId, ownerId: options.ownerIdentity.identityId },
+    sealedPublic: {
+      vaultId,
+      nickname: options.nickname ?? current?.sealedPublic.nickname,
+    }
+  }, vaultWorkingKey, vaultId);
+}
+
+

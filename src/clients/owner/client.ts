@@ -11,6 +11,7 @@ import type {
   VaultRegisterAgentInput,
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
+  VaultDeleteSecretInput,
 } from "./contracts.js";
 
 export interface VaultIdentity {
@@ -30,6 +31,7 @@ export interface VaultClient {
   readAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   registerAgent(input: VaultRegisterAgentInput): Promise<void>;
   registerFlow(input: VaultRegisterFlowInput): Promise<void>;
+  deleteSecret(input: VaultDeleteSecretInput): Promise<void>;
 }
 
 export interface CreateVaultClientOptions {
@@ -284,6 +286,33 @@ class DefaultVaultClient implements VaultClient {
         id: this._identity.identityId,
       },
       flow,
+      requestedAt,
+      proof: {
+        ownerId: this._identity.identityId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async deleteSecret(input: VaultDeleteSecretInput): Promise<void> {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.identityId}:${requestedAt}:${input.alias}:delete_secret`;
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.identityId,
+      alias: input.alias,
+    }));
+    await this._vault.deleteSecret({
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: {
+        kind: "owner",
+        id: this._identity.identityId,
+      },
+      alias: input.alias,
       requestedAt,
       proof: {
         ownerId: this._identity.identityId,

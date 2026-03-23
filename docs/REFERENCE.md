@@ -44,6 +44,13 @@ Recommended persistent-vault entrypoints:
 
 `recoverVault(storage, { vaultId, ownerIdentity })` overrides the workspace storage explicitly.
 
+### Storage Anchoring
+
+When you call `createVault` or `recoverVault`, the returned `storage` object is **anchored** to the vault's specific sub-directory (e.g., `/vaults/<vault-id>/`).
+- **Workspace Storage**: The initial storage passed to the SDK (or the default one) points to the root of all vaults.
+- **Vault Storage**: The storage returned by `createVault` / `recoverVault` is already scoped. You should pass this scoped storage to subsequent calls like `listIdentities` or `updateVaultMetadata`.
+- **Warning**: Do not manually attempt to read files like `working-key.sealed` relative to the workspace root if you are using high-level SDK methods. The SDK handles these paths relative to the anchored storage.
+
 ### Discovery Metadata
 
 New in v1.28.0, the SDK exports the `VaultPublicMetadata` interface to standardize vault discovery:
@@ -98,7 +105,7 @@ Role rules:
 
 Those files are encrypted at rest in the `sealed/` sub-directory and are not readable as plain JSON on disk.
 
-Identities also maintain a **public discovery area** at `public/profile.json`. This file is readable without authentication but is **digitally signed** by the identity's private key to prevent anonymous tampering.
+Identities also maintain a **public discovery area**. This region is encrypted with a key derived from the identity ID, making it accessible via the API without the owner's private key, while ensuring all data on disk remains fully encrypted and tamper-resistant.
 
 `restoreIdentity(privateKey)` returns the same shape for an existing private key.
 
@@ -156,6 +163,7 @@ Current management operations:
 - `storeSecret(...)`
 - `defineSecretTargets(...)`
 - `writeSecret(...)`
+- `deleteSecret(...)`
 - `exportSecret(...)`
 - `readAudit(...)`
 - `registerAgent(...)`
@@ -212,6 +220,10 @@ await client.writeSecret({
 
 const exportedSecret = await client.exportSecret({
   alias: 'api-token',
+});
+
+await client.deleteSecret({
+  alias: 'secondary-token',
 });
 ```
 
@@ -373,20 +385,13 @@ If the custom flow mode includes secret acquisition, the owner also defines a re
 }
 ```
 
-## Verifiable Discovery (Signed Content)
+## Public-Ready Discovery (Encrypted)
 
-The CBIO Node Runtime implements a **Public-Read, Owner-Write (Signed)** protection for discovery metadata.
+The CBIO Node Runtime implements a **Public-Ready Encryption** model for discovery metadata. This allows public information (like nicknames) to be accessible via the API without requiring a private key, while ensuring all data on disk is encrypted.
 
-- **Storage**: `vault/public/profile.json` and `identities/{id}/public/profile.json`.
-- **Integrity**: These files are wrapped in a verifiable envelope:
-    ```json
-    {
-      "payload": { "nickname": "...", ... },
-      "signature": "...",
-      "signer": "publicKey"
-    }
-    ```
-- **Verification**: The SDK automatically verifies signatures during `listVaults`, `listIdentities`, and retrieval. Corrupted or tampered files are ignored to prevent phishing or metadata poisoning.
+- **Storage**: Managed internally within the `sealed/` directory.
+- **Integrity**: These files are encrypted using a key derived from the Vault or Identity ID (`sha256(cbio:vault-public-metadata:v1 + id)`). This provides tamper-resistance and ensures that the file content remains a black box on disk.
+- **Verification**: The SDK automatically derives the required discovery keys during `listVaults`, `listIdentities`, and retrieval. Corrupted or tampered files are identified by the cryptographic layer and safely ignored.
 
 ## Persistent Dependencies
 

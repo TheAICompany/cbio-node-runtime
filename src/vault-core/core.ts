@@ -6,6 +6,7 @@ import type {
   DispatchRequest,
   DispatchResult,
   OwnerDefineSecretTargetsCommand,
+  OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
@@ -382,6 +383,26 @@ export class DefaultVaultCore implements VaultCore {
       throw error;
     }
     return record;
+  }
+
+  async deleteSecret(command: OwnerDeleteSecretCommand): Promise<void> {
+    await this._deps.ownerProofVerifier.verifyDeleteSecret?.(command);
+    
+    const record = await this._deps.secrets.getByAlias({ value: command.alias });
+    if (!record) {
+      throw new VaultCoreError(`secret not found: ${command.alias}`, "VAULT_SECRET_NOT_FOUND");
+    }
+
+    await this._deps.secrets.delete(record.secretId);
+    await this._deps.custody.delete(record.secretId);
+    
+    await this.appendAudit(
+      toAuditEntry(this._deps, command.owner, "delete_secret", "succeeded", `deleted secret ${command.alias}`, {
+        requestId: command.requestId,
+        secretAlias: command.alias,
+        secretId: record.secretId.value,
+      }),
+    );
   }
 
   async defineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<SecretRecord> {

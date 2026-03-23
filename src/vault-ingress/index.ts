@@ -108,6 +108,7 @@ export interface VaultService {
   handleAgentDispatch(request: VaultAgentDispatchRequest): Promise<VaultAgentDispatchResponse | VaultAgentDispatchErrorResponse>;
   readAudit(request: OwnerAuditRequest): Promise<readonly import("../vault-core/index.js").AuditEntry[]>;
   exportSecret(request: OwnerExportSecretRequest): Promise<OwnerSecretExport>;
+  deleteSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void>;
 }
 
 class LocalVaultService implements VaultService {
@@ -456,6 +457,10 @@ class LocalVaultService implements VaultService {
       requestedAt: request.requestedAt,
       proof: request.proof,
     });
+  }
+
+  deleteSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void> {
+    return this._authority.deleteSecret(request);
   }
 
   private async resolveCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability> {

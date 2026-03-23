@@ -159,6 +159,15 @@ function createOwnerExportBinding(request: OwnerExportSecretRequest): string {
   });
 }
 
+function createOwnerDeleteSecretBinding(command: import("./contracts.js").OwnerDeleteSecretCommand): string {
+  return JSON.stringify({
+    requestId: command.requestId,
+    requestedAt: command.requestedAt,
+    ownerId: command.owner.id,
+    alias: command.alias,
+  });
+}
+
 function createOwnerRegisterAgentBinding(command: OwnerRegisterAgentIdentityCommand): string {
   return JSON.stringify({
     requestId: command.requestId,
@@ -669,6 +678,29 @@ export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
       request.proof.signature,
       createOwnerExportBinding(request),
     );
+  }
+
+  async verifyDeleteSecret(command: import("./contracts.js").OwnerDeleteSecretCommand): Promise<void> {
+    if (command.proof.ownerId !== command.owner.id) {
+      throw new VaultCoreError("owner proof identity mismatch", "VAULT_WRITE_DENIED");
+    }
+    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
+      throw new VaultCoreError("owner proof binding mismatch", "VAULT_WRITE_DENIED");
+    }
+    try {
+      await this.verifyBinding(
+        command.owner.id,
+        command.vaultId,
+        command.requestedAt,
+        command.proof.signature,
+        createOwnerDeleteSecretBinding(command),
+      );
+    } catch (error) {
+      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
+        throw new VaultCoreError(error.message, "VAULT_WRITE_DENIED");
+      }
+      throw error;
+    }
   }
 
   async verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void> {

@@ -54,3 +54,8 @@ export interface VaultGrantCapabilityInput {
   capability: import("../../vault-core/index.js").AgentCapability;
   requestedAt?: string;
 }
+
+export interface VaultDeleteSecretInput {
+  alias: string;
+  requestedAt?: string;
+}

@@ -107,9 +107,22 @@ const createdVault = await createVault(storage, {
 });
 ```
 
-The workspace root can contain many vaults. Each vault is physically divided into `vault/sealed/` (encrypted) and `vault/public/` (signed discovery).
+The workspace root can contain many vaults. Each vault is physically divided into `vault/sealed/` (encrypted)### Storage Management
+
+By default, the SDK uses a local directory (e.g., `~/cbio/`) as the **Workspace Root**.
+- `createVault({ ... })`: Automatically creates a sub-directory `vaults/<vault-id>/` and returns a **Prefixed Storage** anchored to that sub-directory.
+- **Important**: When you receive a `storage` object from `createVault`, it is already pointing *inside* the vault's own space. Subsequent calls to `recoverVault` or other high-level APIs using this storage will resolve paths correctly relative to this anchor.
+
+### CRUD & Metadata
+The SDK provides a complete lifecycle for vaults and secrets:
+1. **Creation**: `createVault`
+2. **Discovery/Read**: `listVaults`, `recoverVault`
+3. **Update**: `updateVaultMetadata` (e.g., for nicknames)
+4. **Deletion**: `deleteSecret` (via Client) or manual storage cleanup for entire vaults.
+
+ and `vault/public/` (signed discovery).
  
- Every identity also has its own private namespace under `identities/<identityId>/sealed/...` for encrypted metadata, and a companion `public/profile.json` for verified discovery.
+ Every identity also has its own private namespace for encrypted metadata, and a companion discovery area for public information.
 
 ## Architecture
 

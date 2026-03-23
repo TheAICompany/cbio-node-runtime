@@ -50,6 +50,7 @@ export type {
   AgentIdentityRecord,
   AgentProof,
   OwnerAuditRequest,
+  OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerDefineSecretTargetsCommand,
   OwnerRegisterCapabilityCommand,

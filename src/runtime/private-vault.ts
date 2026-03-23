@@ -67,10 +67,7 @@ function deriveIdentityPrivateVaultKey(identity: CreatedIdentity): string {
     .digest("base64url");
 }
 
-/**
- * Derives a key that is publicly available to anyone who knows the identityId.
- */
-export function deriveIdentityPrivateVaultPublicWorkingKey(identityId: string): string {
+function deriveIdentityPrivateVaultPublicWorkingKey(identityId: string): string {
   return createHash("sha256")
     .update("cbio:identity-public-metadata:v1")
     .update("\n")

@@ -1,6 +1,6 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "1.36.0",
+  "version": "1.38.0",
   "description": "Node.js runtime for cbio identity and credential vault. Library only, no CLI or TUI.",
   "type": "module",
   "main": "./dist/runtime/index.js",
@@ -23,7 +23,7 @@
     "@the-ai-company/cbio-protocol": "^1.0.3"
   },
   "scripts": {
-    "build": "node ./scripts/clean-dist.mjs && tsc",
+    "build": "tsc",
     "prepare": "npm run build",
     "test": "npm run build && npm run test:acceptance",
     "test:acceptance": "node tests/smoke/runtime-surface.js && node tests/smoke/policy-and-persistence.js && node tests/smoke/replay-guard.js && node tests/smoke/security-guards.js"

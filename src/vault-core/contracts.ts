@@ -77,6 +77,15 @@ export interface IssuerWriteSecretCommand {
   requestedAt: string;
 }
 
+export interface OwnerDeleteSecretCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal & { kind: "owner" };
+  alias: string;
+  requestedAt: string;
+  proof: OwnerProof;
+}
+
 export type VaultWriteSecretCommand =
   | OwnerWriteSecretCommand
   | IssuerWriteSecretCommand;
@@ -234,6 +243,7 @@ export interface AuditEntry {
     | "define_secret_targets"
     | "export_secret"
     | "reassign_alias"
+    | "delete_secret"
     | "authorize_dispatch"
     | "dispatch_secret"
     | "read_audit";
