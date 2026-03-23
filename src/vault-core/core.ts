@@ -8,13 +8,18 @@ import type {
   OwnerDefineSecretTargetsCommand,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
-  OwnerRegisterCapabilityCommand,
   OwnerRegisterAgentIdentityCommand,
+  OwnerRegisterCapabilityCommand,
   OwnerRegisterCustomHttpFlowCommand,
+  OwnerRevokeCapabilityCommand,
+  OwnerListAgentsRequest,
+  OwnerListCapabilitiesRequest,
   OwnerSecretExport,
   SecretRecord,
   VaultPrincipal,
   VaultWriteSecretCommand,
+  AgentIdentityRecord,
+  AgentCapability,
 } from "./contracts.js";
 import type { VaultCore, VaultCoreDependencies } from "./ports.js";
 import { VaultCoreError } from "./errors.js";
@@ -32,6 +37,7 @@ function toAuditEntry(
     targetUrl?: string;
     secretAlias?: string;
     secretId?: string;
+    agentId?: string;
   },
 ): AuditEntry {
   return {
@@ -48,6 +54,7 @@ function toAuditEntry(
     targetUrl: options?.targetUrl,
     secretAlias: options?.secretAlias,
     secretId: options?.secretId,
+    agentId: options?.agentId,
   };
 }
 
@@ -634,6 +641,67 @@ export class DefaultVaultCore implements VaultCore {
       );
       throw error;
     }
+  }
+
+  async listAgents(
+    actor: VaultPrincipal & { kind: "owner" },
+    request?: Omit<OwnerListAgentsRequest, "actor" | "vaultId">,
+  ): Promise<readonly AgentIdentityRecord[]> {
+    if (!request) {
+      throw new VaultCoreError("owner list agents proof required", "VAULT_AUDIT_DENIED");
+    }
+    await this._deps.ownerProofVerifier.verifyListAgents({
+      vaultId: this._deps.vaultId,
+      actor,
+      requestId: request.requestId,
+      requestedAt: request.requestedAt,
+      proof: request.proof,
+    });
+    const identities = await this._deps.agentIdentities.list(this._deps.vaultId);
+    await this.appendAudit(
+      toAuditEntry(this._deps, actor, "list_agents", "allowed", "agent identities listed", {
+        requestId: request.requestId,
+      }),
+    );
+    return identities;
+  }
+
+  async listCapabilities(
+    actor: VaultPrincipal & { kind: "owner" },
+    agentId?: string,
+    request?: Omit<OwnerListCapabilitiesRequest, "actor" | "agentId" | "vaultId">,
+  ): Promise<readonly AgentCapability[]> {
+    if (!request) {
+      throw new VaultCoreError("owner list capabilities proof required", "VAULT_AUDIT_DENIED");
+    }
+    await this._deps.ownerProofVerifier.verifyListCapabilities({
+      vaultId: this._deps.vaultId,
+      actor,
+      agentId,
+      requestId: request.requestId,
+      requestedAt: request.requestedAt,
+      proof: request.proof,
+    });
+    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, agentId);
+    await this.appendAudit(
+      toAuditEntry(this._deps, actor, "list_capabilities", "allowed", "capabilities listed", {
+        requestId: request.requestId,
+        agentId,
+      }),
+    );
+    return capabilities;
+  }
+
+  async revokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {
+    await this._deps.ownerProofVerifier.verifyRevokeCapability(command);
+    await this._deps.policy.revokeCapability(command.vaultId, command.agentId, command.capabilityId);
+    await this.appendAudit(
+      toAuditEntry(this._deps, command.owner, "revoke_capability", "succeeded", "capability revoked", {
+        requestId: command.requestId,
+        agentId: command.agentId,
+        capabilityId: command.capabilityId,
+      }),
+    );
   }
 }
 

@@ -9,6 +9,9 @@ import type {
   OwnerExportSecretRequest,
   OwnerDefineSecretTargetsCommand,
   OwnerRegisterCapabilityCommand,
+  OwnerRevokeCapabilityCommand,
+  OwnerListAgentsRequest,
+  OwnerListCapabilitiesRequest,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerSecretExport,
@@ -41,6 +44,7 @@ export interface PolicyEngine {
   authorizeWrite(command: VaultWriteSecretCommand): Promise<void>;
   authorizeDefineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<void>;
   authorizeDispatch(request: DispatchRequest, record?: SecretRecord | null): Promise<void>;
+  revokeCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number>;
 }
 
 export interface AuditLog {
@@ -69,6 +73,7 @@ export interface AgentProofVerifier {
 export interface AgentIdentityRegistry {
   register(identity: AgentIdentityRecord): Promise<void>;
   get(vaultId: VaultId, agentId: string): Promise<AgentIdentityRecord | null>;
+  list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]>;
 }
 
 export interface OwnerIdentityRegistry {
@@ -99,6 +104,9 @@ export interface OwnerProofVerifier {
   verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
   verifyRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
   verifyRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
+  verifyRevokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void>;
+  verifyListAgents(request: OwnerListAgentsRequest): Promise<void>;
+  verifyListCapabilities(request: OwnerListCapabilitiesRequest): Promise<void>;
 }
 
 export interface CustomHttpFlowRegistry {
@@ -109,6 +117,7 @@ export interface CustomHttpFlowRegistry {
 export interface CapabilityRegistry {
   register(capability: AgentCapability): Promise<void>;
   get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null>;
+  list(vaultId: VaultId, agentId?: string): Promise<readonly AgentCapability[]>;
 }
 
 export interface VaultCoreDependencies {
@@ -152,4 +161,17 @@ export interface VaultCore {
     alias: string,
     request?: Omit<OwnerExportSecretRequest, "actor" | "alias" | "vaultId">,
   ): Promise<OwnerSecretExport>;
+
+  listAgents(
+    actor: VaultPrincipal & { kind: "owner" },
+    request?: Omit<OwnerListAgentsRequest, "actor" | "vaultId">,
+  ): Promise<readonly AgentIdentityRecord[]>;
+
+  listCapabilities(
+    actor: VaultPrincipal & { kind: "owner" },
+    agentId?: string,
+    request?: Omit<OwnerListCapabilitiesRequest, "actor" | "agentId" | "vaultId">,
+  ): Promise<readonly AgentCapability[]>;
+
+  revokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void>;
 }

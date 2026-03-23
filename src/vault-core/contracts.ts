@@ -144,6 +144,16 @@ export interface OwnerRegisterCapabilityCommand {
   proof: OwnerProof;
 }
 
+export interface OwnerRevokeCapabilityCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal & { kind: "owner" };
+  agentId: string;
+  capabilityId: string;
+  requestedAt: string;
+  proof: OwnerProof;
+}
+
 export interface AgentCapability {
   vaultId: VaultId;
   capabilityId: string;
@@ -239,6 +249,7 @@ export interface AuditEntry {
     | "register_agent_identity"
     | "register_custom_flow"
     | "register_capability"
+    | "revoke_capability"
     | "write_secret"
     | "define_secret_targets"
     | "export_secret"
@@ -246,6 +257,8 @@ export interface AuditEntry {
     | "delete_secret"
     | "authorize_dispatch"
     | "dispatch_secret"
+    | "list_agents"
+    | "list_capabilities"
     | "read_audit";
   requestId?: string;
   capabilityId?: string;
@@ -253,6 +266,7 @@ export interface AuditEntry {
   targetUrl?: string;
   secretAlias?: string;
   secretId?: string;
+  agentId?: string;
   outcome: "allowed" | "denied" | "succeeded" | "failed";
   detail: string;
 }
@@ -293,4 +307,21 @@ export interface OwnerSecretExport {
   alias: SecretAlias;
   plaintext: string;
   exportedAt: string;
+}
+
+export interface OwnerListAgentsRequest {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  requestedAt: string;
+  proof: OwnerProof;
+}
+
+export interface OwnerListCapabilitiesRequest {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  agentId?: string;
+  requestedAt: string;
+  proof: OwnerProof;
 }

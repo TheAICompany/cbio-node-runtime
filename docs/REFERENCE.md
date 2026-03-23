@@ -167,7 +167,10 @@ Current management operations:
 - `exportSecret(...)`
 - `readAudit(...)`
 - `registerAgent(...)`
+- `listAgents()`
 - `grantCapability(...)`
+- `listCapabilities(...)`
+- `revokeCapability(...)`
 - `registerFlow(...)`
 
 Example:

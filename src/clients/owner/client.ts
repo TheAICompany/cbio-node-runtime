@@ -12,6 +12,9 @@ import type {
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
   VaultDeleteSecretInput,
+  VaultListAgentsInput,
+  VaultListCapabilitiesInput,
+  VaultRevokeCapabilityInput,
 } from "./contracts.js";
 
 export interface VaultIdentity {
@@ -32,6 +35,9 @@ export interface VaultClient {
   registerAgent(input: VaultRegisterAgentInput): Promise<void>;
   registerFlow(input: VaultRegisterFlowInput): Promise<void>;
   deleteSecret(input: VaultDeleteSecretInput): Promise<void>;
+  listAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
+  listCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  revokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
 }
 
 export interface CreateVaultClientOptions {
@@ -314,6 +320,87 @@ class DefaultVaultClient implements VaultClient {
       },
       alias: input.alias,
       requestedAt,
+      proof: {
+        ownerId: this._identity.identityId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async listAgents(input: VaultListAgentsInput = {}) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.identityId}:${requestedAt}:list_agents`;
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.identityId,
+    }));
+    return this._vault.listAgents({
+      vaultId: this._vault.vaultId,
+      requestId,
+      requestedAt,
+      actor: {
+        kind: "owner",
+        id: this._identity.identityId,
+      },
+      proof: {
+        ownerId: this._identity.identityId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async listCapabilities(input: VaultListCapabilitiesInput = {}) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.identityId}:${requestedAt}:list_capabilities`;
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.identityId,
+      agentId: input.agentId ?? null,
+    }));
+    return this._vault.listCapabilities({
+      vaultId: this._vault.vaultId,
+      requestId,
+      requestedAt,
+      actor: {
+        kind: "owner",
+        id: this._identity.identityId,
+      },
+      agentId: input.agentId,
+      proof: {
+        ownerId: this._identity.identityId,
+        signature,
+        requestId,
+        requestedAt,
+      },
+    });
+  }
+
+  async revokeCapability(input: VaultRevokeCapabilityInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.identityId}:${requestedAt}:revoke_capability`;
+    const signature = await this._signer.sign(JSON.stringify({
+      requestId,
+      requestedAt,
+      ownerId: this._identity.identityId,
+      agentId: input.agentId,
+      capabilityId: input.capabilityId,
+    }));
+    return this._vault.revokeCapability({
+      vaultId: this._vault.vaultId,
+      requestId,
+      requestedAt,
+      owner: {
+        kind: "owner",
+        id: this._identity.identityId,
+      },
+      agentId: input.agentId,
+      capabilityId: input.capabilityId,
       proof: {
         ownerId: this._identity.identityId,
         signature,

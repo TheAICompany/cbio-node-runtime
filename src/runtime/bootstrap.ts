@@ -12,6 +12,7 @@ import {
   type VaultCustomFlowResolver,
 } from "../vault-ingress/index.js";
 import { createPrefixedStorage } from "../storage/prefix.js";
+import { FsStorageProvider } from "../storage/fs.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile, readVaultPublicMetadata } from "./vault-metadata.js";
@@ -73,12 +74,15 @@ export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDepen
 export interface RecoveredVault extends VaultObject {}
 
 function resolveStorage(
-  storageOrOptions: IStorageProvider | CreateVaultOptions | RecoverVaultOptions,
+  storageOrOptions: IStorageProvider | string | CreateVaultOptions | RecoverVaultOptions,
   maybeOptions?: CreateVaultOptions | RecoverVaultOptions,
 ): { storage: IStorageProvider; options: CreateVaultOptions | RecoverVaultOptions } {
   if (maybeOptions) {
+    const storage = typeof storageOrOptions === "string" 
+      ? new FsStorageProvider(storageOrOptions)
+      : storageOrOptions as IStorageProvider;
     return {
-      storage: storageOrOptions as IStorageProvider,
+      storage,
       options: maybeOptions,
     };
   }
@@ -95,7 +99,7 @@ function resolveStorage(
  * @param storage The storage provider to use.
  * @param options Configuration for the new vault.
  */
-export async function createVault(storage: IStorageProvider, options: CreateVaultOptions): Promise<CreatedVault>;
+export async function createVault(storage: IStorageProvider | string, options: CreateVaultOptions): Promise<CreatedVault>;
 /**
  * Creates a new vault using the default workspace storage.
  * 
@@ -103,7 +107,7 @@ export async function createVault(storage: IStorageProvider, options: CreateVaul
  */
 export async function createVault(options: CreateVaultOptions): Promise<CreatedVault>;
 export async function createVault(
-  storageOrOptions: IStorageProvider | CreateVaultOptions,
+  storageOrOptions: IStorageProvider | string | CreateVaultOptions,
   maybeOptions?: CreateVaultOptions,
 ): Promise<CreatedVault> {
   const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {
@@ -113,6 +117,7 @@ export async function createVault(
   const vaultId = options.vaultId ?? `vault_${crypto.randomUUID()}`;
   const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
   const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
+
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
     vaultId,
@@ -155,7 +160,7 @@ export async function createVault(
  * @param storage The storage provider where the vault is located.
  * @param options Recovery options including vaultId and owner identity.
  */
-export async function recoverVault(storage: IStorageProvider, options: RecoverVaultOptions): Promise<RecoveredVault>;
+export async function recoverVault(storage: IStorageProvider | string, options: RecoverVaultOptions): Promise<RecoveredVault>;
 /**
  * Recovers an existing vault using the default workspace storage.
  * 
@@ -163,7 +168,7 @@ export async function recoverVault(storage: IStorageProvider, options: RecoverVa
  */
 export async function recoverVault(options: RecoverVaultOptions): Promise<RecoveredVault>;
 export async function recoverVault(
-  storageOrOptions: IStorageProvider | RecoverVaultOptions,
+  storageOrOptions: IStorageProvider | string | RecoverVaultOptions,
   maybeOptions?: RecoverVaultOptions,
 ): Promise<RecoveredVault> {
   const { storage: workspaceStorage, options } = resolveStorage(storageOrOptions, maybeOptions) as {

@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { sealBlob, unsealBlob, SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type {
@@ -11,6 +12,7 @@ import type {
   SecretAlias,
   SecretId,
   SecretRecord,
+  DispatchRequest,
 } from "./contracts.js";
 import type {
   AgentIdentityRegistry,
@@ -31,9 +33,7 @@ import {
   createDefaultVaultCoreDependencies,
   type CreateDefaultVaultCoreDependenciesOptions,
 } from "./defaults.js";
-import { createHash, randomBytes } from "node:crypto";
 import { VaultCoreError } from "./errors.js";
-import type { DispatchRequest } from "./contracts.js";
 
 interface PersistedSecretsState {
   records: SecretRecord[];
@@ -108,6 +108,10 @@ export async function initializeVaultCustody(
   }
   const vaultWorkingKey = options.vaultWorkingKey ?? newBase64UrlKey();
   const vaultRecoveryKey = options.vaultRecoveryKey ?? newBase64UrlKey();
+  
+  // Ensure the KDK is exactly 32 bytes for sealBlob (AES-256-GCM)
+  const kdk = createHash("sha256").update(vaultRecoveryKey).digest("base64url");
+  
   const sealed = sealBlob(
     {
       version: "v1.0",
@@ -137,7 +141,11 @@ export async function recoverVaultWorkingKey(
   if (!payload) {
     throw new Error("vault custody not initialized");
   }
-  const unsealed = unsealBlob(payload.toString("utf8"), vaultRecoveryKey);
+
+  // Ensure the KDK is exactly 32 bytes for unsealBlob (AES-256-GCM)
+  const kdk = createHash("sha256").update(vaultRecoveryKey).digest("base64url");
+
+  const unsealed = unsealBlob(payload.toString("utf8"), kdk);
   const vaultWorkingKey = unsealed.secrets.vaultWorkingKey;
   if (typeof vaultWorkingKey !== "string" || !vaultWorkingKey) {
     throw new Error("vault working key missing from custody blob");
@@ -219,6 +227,11 @@ export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
   async get(vaultId: VaultId, agentId: string): Promise<AgentIdentityRecord | null> {
     const state = await this.loadState();
     return state.identities.find((identity) => identity.vaultId.value === vaultId.value && identity.agentId === agentId) ?? null;
+  }
+
+  async list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]> {
+    const state = await this.loadState();
+    return state.identities.filter((identity) => identity.vaultId.value === vaultId.value);
   }
 }
 
@@ -448,6 +461,15 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
       && capability.agentId === agentId
       && capability.capabilityId === capabilityId
     ) ?? null;
+  }
+
+  async list(vaultId: VaultId, agentId?: string): Promise<readonly AgentCapability[]> {
+    const state = await this.loadState();
+    return state.capabilities.filter((capability) => {
+      if (capability.vaultId.value !== vaultId.value) return false;
+      if (agentId && capability.agentId !== agentId) return false;
+      return true;
+    });
   }
 }
 

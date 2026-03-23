@@ -118,7 +118,8 @@ The SDK provides a complete lifecycle for vaults and secrets:
 1. **Creation**: `createVault`
 2. **Discovery/Read**: `listVaults`, `recoverVault`
 3. **Update**: `updateVaultMetadata` (e.g., for nicknames)
-4. **Deletion**: `deleteSecret` (via Client) or manual storage cleanup for entire vaults.
+4. **Management**: `listAgents`, `listCapabilities`, `revokeCapability` (via Client)
+5. **Deletion**: `deleteSecret` (via Client) or manual storage cleanup for entire vaults.
 
  and `vault/public/` (signed discovery).
  

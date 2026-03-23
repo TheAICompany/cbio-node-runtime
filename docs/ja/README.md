@@ -35,7 +35,7 @@ import {
 ## アーキテクチャ
 
 1. secret の平文は `vault-core` の内部にのみ存在します
-2. `clients/owner` は単一の vault admin として secret 書き込み、平文 export、agent/capability 管理、audit 読み取りを行います
+2. `clients/owner` は、オーナーによる書き込み、平文エクスポート、監査の読み取り、および **Agent/権限管理** (`listAgents`, `listCapabilities`, `revokeCapability`) を担当します。
 3. `clients/agent` は agent の signed dispatch request を作ります
 4. `vault-ingress` は vault 境界の内側で capability 解決と dispatch ingress を扱います
 

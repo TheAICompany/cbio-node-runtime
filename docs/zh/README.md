@@ -36,7 +36,7 @@ import {
 ## 架构
 
 1. secret 明文只存在于 `vault-core`
-2. `clients/owner` 负责 owner 写入、明文导出与审计读取
+2. `clients/owner` 负责 owner 写入、明文导出、审计读取、以及 **Agent/权限管理**（`listAgents`, `listCapabilities`, `revokeCapability`）
 3. `clients/agent` 负责 agent 签名 dispatch 请求
 4. `vault-ingress` 负责在 vault 边界内部处理 capability 解析与 dispatch ingress
 

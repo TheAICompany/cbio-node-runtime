@@ -195,6 +195,33 @@ function createOwnerRegisterCapabilityBinding(command: OwnerRegisterCapabilityCo
   });
 }
 
+function createOwnerRevokeCapabilityBinding(command: import("./contracts.js").OwnerRevokeCapabilityCommand): string {
+  return JSON.stringify({
+    requestId: command.requestId,
+    requestedAt: command.requestedAt,
+    ownerId: command.owner.id,
+    agentId: command.agentId,
+    capabilityId: command.capabilityId,
+  });
+}
+
+function createOwnerListAgentsBinding(request: import("./contracts.js").OwnerListAgentsRequest): string {
+  return JSON.stringify({
+    requestId: request.requestId,
+    requestedAt: request.requestedAt,
+    ownerId: request.actor.id,
+  });
+}
+
+function createOwnerListCapabilitiesBinding(request: import("./contracts.js").OwnerListCapabilitiesRequest): string {
+  return JSON.stringify({
+    requestId: request.requestId,
+    requestedAt: request.requestedAt,
+    ownerId: request.actor.id,
+    agentId: request.agentId ?? null,
+  });
+}
+
 export class SystemClock implements Clock {
   nowIso(): string {
     return new Date().toISOString();
@@ -286,6 +313,13 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   async get(vaultId: VaultId, agentId: string): Promise<AgentIdentityRecord | null> {
     return this._identities.get(`${vaultId.value}:${agentId}`) ?? null;
   }
+
+  async list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]> {
+    const prefix = `${vaultId.value}:`;
+    return Array.from(this._identities.entries())
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([, identity]) => identity);
+  }
 }
 
 export class InMemoryOwnerIdentityRegistry implements OwnerIdentityRegistry {
@@ -344,6 +378,14 @@ export class InMemoryCapabilityRegistry implements CapabilityRegistry {
 
   async get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null> {
     return this._capabilities.get(`${vaultId.value}:${agentId}:${capabilityId}`) ?? null;
+  }
+
+  async list(vaultId: VaultId, agentId?: string): Promise<readonly AgentCapability[]> {
+    const prefix = `${vaultId.value}:`;
+    const agentPrefix = agentId ? `${prefix}${agentId}:` : prefix;
+    return Array.from(this._capabilities.entries())
+      .filter(([key]) => key.startsWith(agentPrefix))
+      .map(([, capability]) => capability);
   }
 }
 
@@ -546,6 +588,13 @@ export class DefaultPolicyEngine implements PolicyEngine {
       }
     }
     await this.assertCapabilityRateLimit(request);
+  }
+
+  async revokeCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> {
+    if (!this._options.capabilityRevocationRegistry) {
+      throw new VaultCoreError("revocation not supported", "VAULT_DISPATCH_DENIED");
+    }
+    return await this._options.capabilityRevocationRegistry.revoke(vaultId, agentId, capabilityId);
   }
 }
 
@@ -770,6 +819,61 @@ export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
       }
       throw error;
     }
+  }
+
+  async verifyRevokeCapability(command: import("./contracts.js").OwnerRevokeCapabilityCommand): Promise<void> {
+    if (command.proof.ownerId !== command.owner.id) {
+      throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
+      throw new VaultCoreError("owner proof binding mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    try {
+      await this.verifyBinding(
+        command.owner.id,
+        command.vaultId,
+        command.requestedAt,
+        command.proof.signature,
+        createOwnerRevokeCapabilityBinding(command),
+      );
+    } catch (error) {
+      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
+        throw new VaultCoreError(error.message, "VAULT_IDENTITY_DENIED");
+      }
+      throw error;
+    }
+  }
+
+  async verifyListAgents(request: import("./contracts.js").OwnerListAgentsRequest): Promise<void> {
+    if (request.proof.ownerId !== request.actor.id) {
+      throw new VaultCoreError("owner proof identity mismatch", "VAULT_AUDIT_DENIED");
+    }
+    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
+      throw new VaultCoreError("owner proof binding mismatch", "VAULT_AUDIT_DENIED");
+    }
+    await this.verifyBinding(
+      request.actor.id,
+      request.vaultId,
+      request.requestedAt,
+      request.proof.signature,
+      createOwnerListAgentsBinding(request),
+    );
+  }
+
+  async verifyListCapabilities(request: import("./contracts.js").OwnerListCapabilitiesRequest): Promise<void> {
+    if (request.proof.ownerId !== request.actor.id) {
+      throw new VaultCoreError("owner proof identity mismatch", "VAULT_AUDIT_DENIED");
+    }
+    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
+      throw new VaultCoreError("owner proof binding mismatch", "VAULT_AUDIT_DENIED");
+    }
+    await this.verifyBinding(
+      request.actor.id,
+      request.vaultId,
+      request.requestedAt,
+      request.proof.signature,
+      createOwnerListCapabilitiesBinding(request),
+    );
   }
 }
 

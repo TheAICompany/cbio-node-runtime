@@ -59,3 +59,18 @@ export interface VaultDeleteSecretInput {
   alias: string;
   requestedAt?: string;
 }
+
+export interface VaultListAgentsInput {
+  requestedAt?: string;
+}
+
+export interface VaultListCapabilitiesInput {
+  agentId?: string;
+  requestedAt?: string;
+}
+
+export interface VaultRevokeCapabilityInput {
+  agentId: string;
+  capabilityId: string;
+  requestedAt?: string;
+}

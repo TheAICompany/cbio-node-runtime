@@ -10,12 +10,16 @@ import {
   type OwnerAuditRequest,
   type OwnerExportSecretRequest,
   type OwnerRegisterCapabilityCommand,
+  type OwnerRevokeCapabilityCommand,
+  type OwnerListAgentsRequest,
+  type OwnerListCapabilitiesRequest,
   type OwnerRegisterAgentIdentityCommand,
   type OwnerRegisterCustomHttpFlowCommand,
   type CustomHttpFlowDefinition,
   type OwnerIdentityRecord,
   type OwnerSecretExport,
   type SecretRecord,
+  type AgentIdentityRecord,
   type VaultId,
 } from "../vault-core/index.js";
 import {
@@ -109,6 +113,9 @@ export interface VaultService {
   readAudit(request: OwnerAuditRequest): Promise<readonly import("../vault-core/index.js").AuditEntry[]>;
   exportSecret(request: OwnerExportSecretRequest): Promise<OwnerSecretExport>;
   deleteSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void>;
+  listAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]>;
+  listCapabilities(request: OwnerListCapabilitiesRequest): Promise<readonly AgentCapability[]>;
+  revokeCapability(request: OwnerRevokeCapabilityCommand): Promise<void>;
 }
 
 class LocalVaultService implements VaultService {
@@ -461,6 +468,18 @@ class LocalVaultService implements VaultService {
 
   deleteSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void> {
     return this._authority.deleteSecret(request);
+  }
+
+  async listAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]> {
+    return await this._authority.listAgents(request.actor, request);
+  }
+
+  async listCapabilities(request: OwnerListCapabilitiesRequest): Promise<readonly AgentCapability[]> {
+    return await this._authority.listCapabilities(request.actor, request.agentId, request);
+  }
+
+  async revokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {
+    return await this._authority.revokeCapability(command);
   }
 
   private async resolveCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability> {
