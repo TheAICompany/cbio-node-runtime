@@ -44,7 +44,6 @@ export {
   type IdentityPrivateVaultProfile,
   type IdentityPrivateVaultChildRecord,
   type IdentityPrivateVaultChildrenState,
-  type IdentityPublicProfile,
 } from "./private-vault.js";
 export {
   createVault,
@@ -55,7 +54,7 @@ export {
   type RecoverVaultOptions,
   type RecoveredVault,
   type VaultObject,
-  type VaultPublicMetadata,
+  type VaultMetadata as VaultPublicMetadata,
 } from "./bootstrap.js";
 
 export {

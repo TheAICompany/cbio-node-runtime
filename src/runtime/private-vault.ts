@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import { restoreIdentity, type CreatedIdentity } from "./identity.js";
-import { writeVerifiableMetadata, readVerifiableMetadata, type VerifiableMetadata } from "./verifiable-metadata.js";
 
 const PRIVATE_VAULT_PREFIX = "identities";
 const PRIVATE_VAULT_LOCK_SUFFIX = ".lock";
@@ -10,6 +9,7 @@ const PRIVATE_VAULT_LOCK_SUFFIX = ".lock";
 export interface IdentityPrivateVaultProfile {
   identityId: string;
   publicKey: string;
+  nickname?: string;
   parentIdentityId?: string;
   childIndex?: number;
 }
@@ -27,12 +27,6 @@ export interface IdentityPrivateVaultChildrenState {
   children: IdentityPrivateVaultChildRecord[];
 }
 
-export interface IdentityPublicProfile {
-  identityId: string;
-  publicKey: string;
-  nickname?: string;
-  parentIdentityId?: string;
-}
 
 type IdentityPrivateVaultAccess = CreatedIdentity | string;
 
@@ -44,12 +38,12 @@ export function identityPrivateVaultProfileKey(identityId: string): string {
   return `${identityPrivateVaultPrefix(identityId)}/sealed/profile.sealed`;
 }
 
-export function identityPrivateVaultChildrenKey(identityId: string): string {
-  return `${identityPrivateVaultPrefix(identityId)}/sealed/children.sealed`;
+export function identityPrivateVaultPublicSealedKey(identityId: string): string {
+  return `${identityPrivateVaultPrefix(identityId)}/sealed/public.sealed`;
 }
 
-export function identityPrivateVaultPublicProfileKey(identityId: string): string {
-  return `${identityPrivateVaultPrefix(identityId)}/public/profile.json`;
+export function identityPrivateVaultChildrenKey(identityId: string): string {
+  return `${identityPrivateVaultPrefix(identityId)}/sealed/children.sealed`;
 }
 
 function lockKey(identityId: string): string {
@@ -73,6 +67,17 @@ function deriveIdentityPrivateVaultKey(identity: CreatedIdentity): string {
     .digest("base64url");
 }
 
+/**
+ * Derives a key that is publicly available to anyone who knows the identityId.
+ */
+export function deriveIdentityPrivateVaultPublicWorkingKey(identityId: string): string {
+  return createHash("sha256")
+    .update("cbio:identity-public-metadata:v1")
+    .update("\n")
+    .update(identityId)
+    .digest("base64url");
+}
+
 export async function ensureIdentityPrivateVault(
   storage: IStorageProvider,
   identity: CreatedIdentity,
@@ -86,34 +91,30 @@ export async function ensureIdentityPrivateVault(
 
   const existingProfile = await profileRepo.read(null as any);
   
-  // Read current public profile to preserve nickname if needed
-  const publicPath = identityPrivateVaultPublicProfileKey(identity.identityId);
-  const publicRaw = await storage.read(publicPath);
-  const existingPublic = publicRaw ? (JSON.parse(publicRaw.toString()) as VerifiableMetadata<IdentityPublicProfile>) : null;
-
   const profile: IdentityPrivateVaultProfile = {
     identityId: identity.identityId,
     publicKey: identity.publicKey,
+    nickname: identity.nickname || existingProfile?.nickname,
     parentIdentityId: identity.parentIdentityId || existingProfile?.parentIdentityId,
     childIndex: identity.childIndex ?? existingProfile?.childIndex,
   };
 
-  // Profile data in sealed area (excluding nickname)
+  // 1. Write Private Sealed Profile
   await profileRepo.write(profile, "identity_private_vault_profile");
 
-  // Write Signed Public Profile for Discovery
-  const publicProfile: IdentityPublicProfile = {
+  // 2. Write Public Sealed Metadata for Discovery (Encrypted for integrity, but publicly readable)
+  const publicSealedKey = identityPrivateVaultPublicSealedKey(identity.identityId);
+  const publicRepo = new SealedJsonRepository<any>(
+    storage,
+    publicSealedKey,
+    deriveIdentityPrivateVaultPublicWorkingKey(identity.identityId)
+  );
+  await publicRepo.write({
     identityId: profile.identityId,
     publicKey: profile.publicKey,
-    nickname: identity.nickname || existingPublic?.payload.nickname,
+    nickname: profile.nickname,
     parentIdentityId: profile.parentIdentityId,
-  };
-  await writeVerifiableMetadata(
-    storage,
-    publicPath,
-    publicProfile,
-    identity.privateKey
-  );
+  }, "identity_public_metadata");
 
   const childrenKey = identityPrivateVaultChildrenKey(identity.identityId);
   if (!(await storage.has(childrenKey))) {
@@ -144,21 +145,23 @@ export async function readIdentityPrivateVaultProfile(
 }
 
 /**
- * Unified metadata reader for identities.
- * Handles both open discovery (identityId only) and authorized read (privateKey).
+ * Metadata reader for identities.
+ * Discovery info (nickname) can be read with just identityId.
+ * Full profile requires privateKey.
  */
 export async function readIdentityMetadata(
   storage: IStorageProvider,
   identityId: string,
   privateKey?: string,
-): Promise<IdentityPrivateVaultProfile | IdentityPublicProfile | null> {
-  const publicPath = identityPrivateVaultPublicProfileKey(identityId);
-  const publicProfile = await readVerifiableMetadata<IdentityPublicProfile>(
+): Promise<IdentityPrivateVaultProfile | any | null> {
+  const publicSealedKey = identityPrivateVaultPublicSealedKey(identityId);
+  const publicRepo = new SealedJsonRepository<any>(
     storage,
-    publicPath
-  ).catch(() => null);
+    publicSealedKey,
+    deriveIdentityPrivateVaultPublicWorkingKey(identityId)
+  );
+  const publicMetadata = await publicRepo.read(null as any).catch(() => null);
 
-  // If private key is provided, try to read and merge the full sealed profile
   if (privateKey) {
     try {
       const identity = restoreIdentity(privateKey);
@@ -166,19 +169,16 @@ export async function readIdentityMetadata(
         throw new Error("identityId mismatch");
       }
       const sealed = await readIdentityPrivateVaultProfile(storage, identity);
-      if (sealed) {
-        return {
-          ...publicProfile, // Spread public profile (contains nickname)
-          ...sealed,        // Spread sealed profile (contains keys/metadata)
-        } as any;
-      }
+      return {
+        ...(publicMetadata || {}),
+        ...(sealed || {}),
+      };
     } catch (e) {
-      // Fallback to public if decryption fails
       console.warn(`[IdentityMetadata] Decryption failed for ${identityId}:`, e);
     }
   }
 
-  return publicProfile;
+  return publicMetadata;
 }
 
 export async function readIdentityPrivateVaultChildrenState(
@@ -225,21 +225,20 @@ export async function withIdentityPrivateVaultLock<T>(
 }
 
 /**
- * Lists all identities in the workspace with their public discovery metadata.
+ * Lists all identities in the workspace with their discovery metadata.
  */
-export async function listIdentities(storage: IStorageProvider): Promise<IdentityPublicProfile[]> {
+export async function listIdentities(storage: IStorageProvider): Promise<any[]> {
   if (!storage.list) {
     return [];
   }
   const ids = await storage.list(PRIVATE_VAULT_PREFIX);
-  const results: IdentityPublicProfile[] = [];
+  const results: any[] = [];
   for (const id of ids) {
-    // Skip non-identity directories or lock files if any
     if (id.endsWith(PRIVATE_VAULT_LOCK_SUFFIX)) continue;
     
     const profile = await readIdentityMetadata(storage, id);
     if (profile) {
-      results.push(profile as IdentityPublicProfile);
+      results.push(profile);
     }
   }
   return results;

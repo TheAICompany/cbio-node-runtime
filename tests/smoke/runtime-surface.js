@@ -77,8 +77,8 @@ const childPrivateVaultProfileBlob = (await identityTreeStorage.read(identityPri
 const ownerPrivateVaultProfile = await readIdentityPrivateVaultProfile(identityTreeStorage, ownerIdentity.privateKey);
 const ownerPrivateVaultChildren = await readIdentityPrivateVaultChildrenState(identityTreeStorage, ownerIdentity);
 const childPrivateVaultProfile = await readIdentityPrivateVaultProfile(identityTreeStorage, derivedAgentIdentity.privateKey);
-assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/profile.json`), false);
-assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/children.json`), false);
+assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/sealed/profile.sealed`), true);
+assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/public/profile.json`), false);
 assert.equal(ownerPrivateVaultProfileBlob.includes(ownerIdentity.identityId), false);
 assert.equal(ownerPrivateVaultChildrenBlob.includes("\"children\""), false);
 assert.equal(childPrivateVaultProfileBlob.includes(derivedAgentIdentity.identityId), false);
@@ -107,13 +107,13 @@ assert.equal(derivedAgentIdentity.nickname, "worker-1");
 assert.equal(derivedAgentIdentityAgain.nickname, "worker-2");
 assert.equal(derivedAgentIdentitySibling.childIndex, 1);
 
-  // Verifiable Metadata Smoke Test
-  const { readIdentityMetadata } = await import("../../dist/runtime/private-vault.js");
-  const publicProfile = await readIdentityMetadata(identityTreeStorage, ownerIdentity.identityId);
-  assert.ok(publicProfile, "Public profile should be readable");
-  assert.equal(publicProfile.identityId, ownerIdentity.identityId, "Identity ID mismatch");
-  assert.equal(publicProfile.nickname, "owner-1", "Nickname mismatch");
-  assert.equal(publicProfile.publicKey, ownerIdentity.publicKey, "Public key mismatch");
+  // Metadata Smoke Test (Encrypted but Publicly Readable)
+  const { readIdentityMetadata } = await import("../../src/runtime/private-vault.js");
+  const profile = await readIdentityMetadata(identityTreeStorage, ownerIdentity.identityId);
+  assert.ok(profile, "Profile should be readable without private key (Public Encryption)");
+  assert.equal(profile.identityId, ownerIdentity.identityId, "Identity ID mismatch");
+  assert.equal(profile.nickname, "owner-1", "Nickname mismatch");
+  assert.equal(profile.publicKey, ownerIdentity.publicKey, "Public key mismatch");
 
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {
@@ -327,7 +327,12 @@ try {
       }), { status: 200 }),
     },
   });
-  const createdVaultProfile = await readVaultProfile(createdVault.storage);
+  const derivedKey = createdVault.core.vaultId.value; 
+  // In this test, vaultWorkingKey calculation might differ, but deriveVaultWorkingKey is what's used.
+  // We need to use the actual derivation logic from bootstrap.js
+  const { deriveVaultWorkingKey } = await import("../../src/runtime/bootstrap.js");
+  const workingKey = deriveVaultWorkingKey(ownerIdentity.privateKey, "vault-runtime-persistent");
+  const createdVaultProfile = await readVaultProfile(createdVault.storage, workingKey);
   assert.equal(createdVault.nickname, "persistent-main");
   assert.equal(createdVaultProfile?.nickname, "persistent-main");
   const persistentVault = wrapVaultCoreAsVaultService(createdVault.core, {
@@ -369,8 +374,9 @@ try {
     ownerIdentity,
   });
   assert.equal(autoCreatedVault.nickname, "default-storage-vault");
-  assert.equal(await autoCreatedVault.storage.has("vault/profile.json"), true);
-  assert.equal(await autoCreatedVault.storage.has("vault/secrets.json"), false);
+  assert.equal(await autoCreatedVault.storage.has("vault/sealed/profile.sealed"), true);
+  assert.equal(await autoCreatedVault.storage.has("vault/sealed/public.sealed"), true);
+  assert.equal(await autoCreatedVault.storage.has("vault/public/profile.json"), false);
   const autoRecoveredVault = await recoverVault({
     vaultId: "vault-runtime-default-storage",
     ownerIdentity,
@@ -381,12 +387,14 @@ try {
     nickname: "sibling-vault",
     ownerIdentity,
   });
-  const siblingProfile = await readVaultProfile(siblingVault.storage);
-  assert.equal(siblingProfile?.nickname, "sibling-vault");
-  assert.equal(await storage.has("vaults/vault-runtime-persistent/vault/profile.json"), true);
-  assert.equal(await storage.has("vaults/vault-runtime-sibling/vault/profile.json"), true);
-  assert.equal(await siblingVault.storage.has("vault/profile.json"), true);
-  assert.equal(await siblingVault.storage.has("vaults/vault-runtime-sibling/vault/profile.json"), false);
+  const siblingWorkingKey = deriveVaultWorkingKey(ownerIdentity.privateKey, "vault-runtime-sibling");
+  const siblingProfile = await readVaultProfile(siblingVault.storage, siblingWorkingKey, "vault-runtime-sibling");
+  assert.equal(siblingProfile?.sealedPublic.nickname, "sibling-vault");
+  assert.equal(await storage.has("vaults/vault-runtime-persistent/vault/sealed/profile.sealed"), true);
+  assert.equal(await storage.has("vaults/vault-runtime-sibling/vault/sealed/profile.sealed"), true);
+  assert.equal(await siblingVault.storage.has("vault/sealed/profile.sealed"), true);
+  assert.equal(await siblingVault.storage.has("vault/sealed/public.sealed"), true);
+  assert.equal(await siblingVault.storage.has("vaults/vault-runtime-sibling/vault/sealed/profile.sealed"), false);
   delete process.env.C_BIO_WORKSPACE_DIR;
   const acquiredAgentIdentity = createIdentity();
   await auditClient.registerAgent({ agentId: "agent-acquired", publicKey: acquiredAgentIdentity.publicKey });

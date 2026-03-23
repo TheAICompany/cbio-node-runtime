@@ -14,9 +14,8 @@ import {
 import { createPrefixedStorage } from "../storage/prefix.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
-import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
+import { readVaultProfile, writeVaultProfile, readVaultPublicMetadata } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
-import { writeVerifiableMetadata, readVerifiableMetadata } from "./verifiable-metadata.js";
 
 function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
   return crypto
@@ -33,7 +32,7 @@ function vaultStoragePrefix(vaultId: string): string {
   return `vaults/${vaultId}`;
 }
 
-export interface VaultPublicMetadata extends Record<string, any> {
+export interface VaultMetadata extends Record<string, any> {
   nickname?: string;
   ownerId?: string;
 }
@@ -41,7 +40,6 @@ export interface VaultPublicMetadata extends Record<string, any> {
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
   nickname?: string;
-  publicMetadata?: VaultPublicMetadata;
   ownerIdentity: CreatedIdentity;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
@@ -130,27 +128,19 @@ export async function createVault(
   
   const nickname = options.nickname?.trim() ? options.nickname.trim() : undefined;
   
-  // Nickname is public-by-design for discovery
-  const publicMetadata = { 
-    ...(options.publicMetadata || {}),
-    ...(nickname ? { nickname } : {})
-  };
-
+  // 1. All sensitive metadata is in the private sealed profile (requires owner PK)
+  // 2. Discovery metadata (nickname) is in the public sealed profile (requires only vaultId)
   await writeVaultProfile(storage, {
-    sealed: {
+    sealedPrivate: {
       vaultId,
-      // nickname removed from sealed area
+      ownerId: options.ownerIdentity.identityId,
     },
-    public: {}, // Sealed profile no longer carries public mirror
-  }, vaultWorkingKey);
+    sealedPublic: {
+      vaultId,
+      nickname,
+    }
+  }, vaultWorkingKey, vaultId);
 
-  // Write Signed Public Profile for Discovery
-  await writeVerifiableMetadata(
-    storage,
-    "vault/public/profile.json",
-    publicMetadata,
-    options.ownerIdentity.privateKey
-  );
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
@@ -188,40 +178,35 @@ export async function recoverVault(
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
-  const profile = await readVaultProfile(storage, vaultWorkingKey);
-  const publicMeta = await readVerifiableMetadata<VaultPublicMetadata>(
-    storage,
-    "vault/public/profile.json",
-    options.ownerIdentity.publicKey
-  ).catch(() => null);
+  const profile = await readVaultProfile(storage, vaultWorkingKey, options.vaultId);
+  if (!profile) {
+    throw new Error("vault profile not found or decryption failed");
+  }
 
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
-    nickname: publicMeta?.nickname,
+    nickname: profile.sealedPublic.nickname,
     storage,
   };
 }
 
 /**
- * Lists all vaults in the workspace with their public discovery metadata.
+ * Lists all vaults in the workspace with their discovery metadata.
  */
-export async function listVaults(storage: IStorageProvider): Promise<Array<{ vaultId: string; public: VaultPublicMetadata }>> {
+export async function listVaults(storage: IStorageProvider): Promise<Array<{ vaultId: string; public: any }>> {
   if (!storage.list) {
     return [];
   }
   const ids = await storage.list("vaults");
-  const results: Array<{ vaultId: string; public: VaultPublicMetadata }> = [];
+  const results: Array<{ vaultId: string; public: any }> = [];
   for (const id of ids) {
     const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(id));
-    const publicData = await readVerifiableMetadata<VaultPublicMetadata>(
-      vaultStorage, 
-      "vault/public/profile.json"
-    ).catch(() => ({}));
+    const publicData = await readVaultPublicMetadata(vaultStorage, id);
     
     results.push({
       vaultId: id,
-      public: (publicData || {}) as VaultPublicMetadata,
+      public: publicData || {},
     });
   }
   return results;
