@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.47.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.46.0...v1.47.0) (2026-03-24)
+
+
+### Features
+
+* Refactor Vault Core API, consolidating interfaces and introducing a `VaultCore` class with new dependency creation functions. ([d2d7af2](https://github.com/TheAICompany/cbio-node-runtime/commit/d2d7af2bca9fe07fd28f6500969e8dbaa47a8d55))
+
 ## [1.46.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.45.2...v1.46.0) (2026-03-24)
 
 
