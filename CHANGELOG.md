@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.46.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.45.2...v1.46.0) (2026-03-24)
+
+
+### Features
+
+* Add API documentation and types for vault, identity, and agent management features. ([0623adc](https://github.com/TheAICompany/cbio-node-runtime/commit/0623adcacf54b29370859b8f9bcb97273b9b3167))
+
 ### [1.45.2](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.45.1...v1.45.2) (2026-03-24)
 
 ### [1.45.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.45.0...v1.45.1) (2026-03-24)
