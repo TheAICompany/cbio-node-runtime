@@ -1,128 +1,50 @@
-# Identity Model
+# Identity Model (v1.47.0)
 
-This document defines the runtime's current identity model.
+This document defines the identity model for the **Sovereign Vault**. 
 
-Its purpose is to separate three things that are easy to confuse:
+## Principle: Authority, Not Identity
 
-- cryptographic identity
-- human-readable naming
-- vault-local role assignment
+The Sovereign Vault model simplifies the relationship between actors and the vault:
 
-## Core Rule
+1. **Administrator (Owner)**: Authority is rooted in **knowledge of the master password**. There is no pre-registered `OwnerIdentity`. If you can unlock the vault, you are the master.
+2. **Delegates (Agents)**: Identities authorized by the master to perform specific tasks.
 
-Outside the vault, there are only identities.
+## Identity Types
 
-Inside a specific vault, identities may be bound to roles such as `owner` or `agent`.
+### 1. External Identity
+A principal represented by a public/private keypair managed *outside* the vault. These are registered by providing a public key.
 
-This means:
+### 2. Managed Identity (New in v1.47.0)
+An identity whose public/private keypair is generated and stored **inside** the vault. 
+- The vault acts as the custodian of the private key.
+- This is the preferred model for preventing lost keys in isolated agent processes.
 
-- `owner` is not a different species of identity
-- `agent` is not a different species of identity
-- role comes from vault-local authorization state, not from the keypair itself
+## Identifying Principals
 
-## Identity
+### Identity ID
+A stable, public-key-derived identifier (via `deriveIdentityId(...)`). 
+- Used for internal registries, capability assignment, and audit logs.
+- Decoupled from human-readable labels.
 
-An `identity` is an external principal represented by a public/private keypair.
+### Nicknames
+Human-friendly labels (e.g., "Main Worker", "Auth Service"). 
+- Stored as metadata within the registry.
+- Purely for display and audit traceability.
 
-Properties:
+## Vault Role: "vault-master"
 
-- root identities are independent
-- child identities may be deterministically derived from a parent identity private key plus a path
-- no built-in inheritance
-- no built-in "owner creates agent identity" relationship
+All administrative operations performed by the password-holder are recorded under the special principal **`vault-master`**. 
 
-An identity may participate in multiple vaults, and may hold different roles in different vaults.
+## What was Removed
 
-Example:
+To achieve the Sovereign Vault's simplicity, the following legacy concepts were removed:
+- **Child Identities**: Deterministic derivation of keys from a parent identity is no longer supported. Use **Managed Identities** instead.
+- **Identity-Private Vaults**: Every identity used to have its own encrypted "mini-vault". This has been replaced by the unified storage of the Sovereign Vault.
 
-- the same identity may be `owner` in vault A
-- and `agent` in vault B
+## Relationship Summary
 
-## Identity Material
-
-The runtime treats public/private keys as the cryptographic identity material.
-
-- `publicKey`
-  used for verification and binding
-- `privateKey`
-  held outside the vault by the identity holder
-
-The vault should not treat a display label as the root identity truth.
-
-## Stable Identity ID
-
-The runtime already has a stable public-key-derived identity primitive available through `deriveIdentityId(...)`.
-
-That derived value is useful for:
-
-- stable machine identity
-- local naming
-- deterministic display-independent references
-
-It should not, by itself, determine vault-local role.
-
-## Labels And Human-Readable Names
-
-Human-friendly names are still useful.
-
-Examples:
-
-- `owner-1`
-- `agent-prod`
-- `crawler`
-- `alice`
-
-These should be treated as labels, aliases, or local names rather than the deepest identity truth.
-
-The runtime now exposes this concept directly as optional `nickname` on `createIdentity(...)`.
-
-For existing private keys, the runtime exposes `restoreIdentity(...)`, which reconstructs the same identity shape from the private key alone.
-
-For child identities, the runtime exposes `createChildIdentity(storage, parentIdentity, { nickname })` for user-facing creation, and `deriveChildIdentity(parentIdentity, childIndex, { nickname })` for deterministic reconstruction when the stored `childIndex` is known. `nickname` remains display-only.
-
-Identity-private state is stored under `vault/private/identities/<identityId>/...` and encrypted with a key derived from that identity's private key. To inspect those records, callers use `readIdentityPrivateVaultProfile(...)` and `readIdentityPrivateVaultChildrenState(...)` with the identity object or private key.
-
-In other words:
-
-- public key or a stable derived id answers "who is this cryptographically"
-- label answers "what do humans call this identity here"
-
-## Vault Roles
-
-Vault roles are authorization bindings applied to identities inside a specific vault.
-
-Current role model:
-
-- `owner`
-  the single admin role for one vault
-- `agent`
-  a delegated role registered and authorized by the owner
-
-These roles are vault-local.
-
-So:
-
-- an identity does not become globally `owner`
-- an identity does not become globally `agent`
-- the same identity may appear with different roles in different vaults
-
-## Current Runtime Reality
-
-Today the runtime API still uses fields such as:
-
-- `ownerId`
-- `agentId`
-
-In practice, these currently behave closer to role-bound local identifiers or labels than to the deepest cryptographic identity root.
-
-The long-term intended direction is:
-
-1. keep cryptographic identity separate from labels
-2. keep vault-local role separate from both
-3. avoid treating naming conventions such as prefixes as identity truth
-
-## Non-Goals
-
-This model does not require every current API field to be renamed immediately.
-
-Its purpose is to define the correct semantics first, so later API changes can converge on one stable interpretation.
+| Actor | Source of Authority | Registry |
+| :--- | :--- | :--- |
+| **Owner** | Master Password | Implicit (via Unlock) |
+| **Managed Agent** | Vault Registry (Internal Key) | `agentIdentities` registry |
+| **External Agent** | External Signer (Public Key) | `agentIdentities` registry |

@@ -14,6 +14,7 @@ export type {
   VaultGrantCapabilityInput,
   VaultRegisterFlowInput,
   VaultRegisterAgentInput,
+  VaultCreateAgentInput,
   OwnerSecretTargetBinding,
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,

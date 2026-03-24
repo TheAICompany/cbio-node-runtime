@@ -1,32 +1,18 @@
 # cbio Vault Runtime
 
-Node.js vault runtime with a hard-cut architecture: vault core first, explicit clients second.
+Node.js vault runtime with a **Sovereign Vault** architecture: authority is rooted in a master password, and agent identities are fully managed within the vault's encrypted storage.
 
 **Source:** [https://github.com/TheAICompany/cbio-node-runtime](https://github.com/TheAICompany/cbio-node-runtime)
 
-## Documentation / 文档 / ドキュメント / 문서 / Docs
-
-- [English](README.md)
-- [Custody Model](docs/CUSTODY_MODEL.md)
-- [Identity Model](docs/IDENTITY_MODEL.md)
-- [Process Isolation (A/B Architecture)](docs/PROCESS_ISOLATION.md)
-- [中文](docs/zh/README.md)
-- [日本語](docs/ja/README.md)
-- [한국어](docs/ko/README.md)
-- [Español](docs/es/README.md)
-- [Português](docs/pt/README.md)
-- [Français](docs/fr/README.md)
-
 ---
 
-- No CLI
-- No TUI
+## Key Features
 
-Main export now centers on:
-- identity creation and recovery
-- persistent vault bootstrap and recovery
-- owner and agent clients
-- owner flow-boundary helpers
+- **No CLI / No TUI**: Pure library for integration into Node.js applications.
+- **Authority-centric**: Administrative control is tied to the vault's master password, not an external identity.
+- **Managed Agent Custody**: Generate and store agent private keys securely inside the vault.
+- **Process Isolation**: Hard separation between the Security Process (Master) and Agent Processes (Consumers).
+- **Zero-Leak Discovery**: Vault metadata is fully encrypted and hidden until unlocked.
 
 ## Install
 
@@ -38,267 +24,127 @@ npm install @the-ai-company/cbio-node-runtime
 
 ## Usage
 
+### 1. Bootstrap a New Vault
+
+The Sovereign Vault requires only a storage provider and a master password.
+
 ```ts
-import {
-  createChildIdentity,
-  createIdentity,
-  createWorkspaceStorage,
-  ensureIdentityPrivateVault,
-  readIdentityPrivateVaultProfile,
-  readIdentityPrivateVaultChildrenState,
-  restoreIdentity,
-  createVault,
-  recoverVault,
-  createOwnerHttpFlowBoundary,
-  createStandardAcquireBoundary,
-  createVaultClient,
-  createAgentClient,
-  FsStorageProvider,
+import { 
+  createVault, 
+  FsStorageProvider, 
+  createWorkspaceStorage 
 } from '@the-ai-company/cbio-node-runtime';
-```
 
-Identity restore example:
+const storage = new FsStorageProvider('./my-vaults');
 
-```ts
-const identity = restoreIdentity(existingPrivateKey);
-```
-
-Child identity example:
-
-```ts
-const rootIdentity = createIdentity({ nickname: 'root' });
-await ensureIdentityPrivateVault(storage, rootIdentity);
-const childIdentity = await createChildIdentity(storage, rootIdentity, {
-  nickname: 'worker-1',
+const myVault = await createVault(storage, {
+  vaultId: 'main-vault',
+  password: 'your-secure-password',
+  nickname: 'Production Vault'
 });
 
-// Enumerate Discovery
-const identities = await listIdentities(storage);
-const vaults = await listVaults(storage);
-
-const profile = await readIdentityMetadata(storage, identities[0].identityId); // Public Discovery
-const fullProfile = await readIdentityMetadata(storage, rootIdentity.identityId, rootIdentity.privateKey); // Full Authorized Profile
-const children = await readIdentityPrivateVaultChildrenState(storage, rootIdentity.privateKey);
+console.log(`Vault created: ${myVault.nickname}`);
 ```
 
-Vaults also support standardized public metadata for discovery:
- 
- ```ts
- import { type VaultPublicMetadata } from '@the-ai-company/cbio-node-runtime';
-
- const publicMetadata: VaultPublicMetadata = {
-   displayName: 'Primary Vault',
-   tags: ['production', 'main'],
- };
-
- const createdVault = await createVault({
-   ownerIdentity: rootIdentity,
-   nickname: 'main-vault',
-   publicMetadata,
- });
- ```
-
-If you want to override the default workspace directory:
+### 2. Recover an Existing Vault
 
 ```ts
-const storage = createWorkspaceStorage('/tmp/cbio');
-const createdVault = await createVault(storage, {
-  ownerIdentity: rootIdentity,
-  nickname: 'main-vault',
+import { recoverVault, FsStorageProvider } from '@the-ai-company/cbio-node-runtime';
+
+const vault = await recoverVault(storage, {
+  vaultId: 'main-vault',
+  password: 'your-secure-password'
 });
 ```
 
-The workspace root can contain many vaults. Each vault is physically divided into `vault/sealed/` (encrypted)### Storage Management
+### 3. Managed Agent Identities
 
-By default, the SDK uses a local directory (e.g., `~/cbio/`) as the **Workspace Root**.
-- `createVault({ ... })`: Automatically creates a sub-directory `vaults/<vault-id>/` and returns a **Prefixed Storage** anchored to that sub-directory.
-- **Important**: When you receive a `storage` object from `createVault`, it is already pointing *inside* the vault's own space. Subsequent calls to `recoverVault` or other high-level APIs using this storage will resolve paths correctly relative to this anchor.
-
-### CRUD & Metadata
-The SDK provides a complete lifecycle for vaults and secrets:
-1. **Creation**: `createVault`
-2. **Discovery/Read**: `listVaults`, `recoverVault`
-3. **Update**: `updateVaultMetadata` (e.g., for nicknames)
-4. **Management**: `listAgents`, `listCapabilities`, `revokeCapability` (via Client)
-5. **Deletion**: `deleteSecret` (via Client) or manual storage cleanup for entire vaults.
-
- and `vault/public/` (signed discovery).
- 
- Every identity also has its own private namespace for encrypted metadata, and a companion discovery area for public information.
-
-## Architecture
-
-Core terms:
-
-- `identity`
-  An external principal represented by a public/private keypair.
-- `owner`
-  The single admin role that a vault binds to one identity.
-- `agent`
-  A delegated role that a vault binds to an identity registered by the owner.
-
-Important role rule:
-
-- outside the vault there are only identities
-- inside a specific vault, those identities may be bound to roles such as `owner` or `agent`
-- root identities are independent
-- child identities may be deterministically derived from a parent identity
-
-The public runtime surface follows four hard rules:
-
-1. Secret plaintext lives only in vault core.
-2. Only owner and vault-trusted acquisition paths may write secrets.
-3. Secrets are dispatched only to owner-approved or issuer-bound targets.
-4. Vault validates and audits everything.
-
-The current HTTP-facing interface distinguishes two supported secret-flow classes:
-
-- `A` / `acquire_secret`
-  No secret leaves the vault. A secret is extracted from the response and stored into the vault. Agent-visible output includes only protocol metadata plus a redacted response shape.
-- `B` / `send_secret`
-  A stored secret is sent to an owner-approved target. The response is treated as normal business output and may be returned to the agent.
-
-This is an intentional boundary choice:
-
-- acquisition responses are treated as sensitive because they may contain newly issued secret material
-- dispatch responses are treated as ordinary protocol results because the operation itself is a standard secret-backed HTTP call to an owner-approved target
-
-The vault does not attempt to second-guess every remote protocol. If a target returns sensitive data during a normal dispatch flow, that is part of the target contract and the owner's authorization decision.
-
-The runtime does not claim to understand arbitrary remote protocols. The API boundary makes clear what is supported:
-
-- acquisition is explicit and redacted
-- secret-backed dispatch is explicit and capability-gated
-- unsupported `C` / `D` style flows are not part of the current surface
-
-Owner-defined HTTP boundaries share one factory layer:
-
-- `createOwnerHttpFlowBoundary(...)`
-- `createStandardAcquireBoundary(...)`
-- `createStandardDispatchBoundary(...)`
-
-An owner-defined exception path also exists for non-standard but intentional integrations:
-
-- owner may register a `custom_http` flow
-- the flow fixes mode, target, method, and response visibility inside the vault
-- agent may only invoke the registered `customFlowId`
-- this is an explicit escape hatch, not the default path
-
-## Status
-
-The old identity-centric runtime is no longer the intended public architecture.
-This package now exposes the production local vault runtime surface as the primary API.
-
-## Example Shape
+You can generate and register agents directly within the vault. The vault holds the private keys for full custody.
 
 ```ts
-const ownerIdentity = createIdentity({ nickname: 'owner-main' });
-const agentIdentity = createIdentity({ nickname: 'agent-worker' });
-const createdVault = await createVault({ ownerIdentity });
-const client = createVaultClient({ ownerIdentity, vault: createdVault.vault });
-const agent = createAgentClient({ agentIdentity, capability, vault: createdVault.vault });
+import { createVaultClient } from '@the-ai-company/cbio-node-runtime';
+
+const client = createVaultClient({ vault: vault.vault });
+
+// Generate and register a new agent in one step
+const [agentRecord, agentPrivateKey] = await client.createAgent({
+  agentId: 'worker-1',
+  nickname: 'Background Worker'
+});
+
+console.log(`Agent public key: ${agentRecord.publicKey}`);
+// Private key is returned during creation and stored securely in the vault.
 ```
 
-Owner API example:
+### 4. Secret Management (Owner)
 
 ```ts
-const storedSecret = await client.storeSecret({
+// Write a secret and bind it to a target site
+const record = await client.writeSecret({
   alias: 'api-token',
-  plaintext: 'secret-value',
+  plaintext: 'super-secret-value',
+  targetBindings: [{
+    kind: 'site',
+    targetId: 'my-api',
+    targetUrl: 'https://api.example.com/endpoint',
+    methods: ['POST']
+  }]
 });
 
-await client.defineSecretTargets({
-  alias: storedSecret.alias.value,
-  targetBindings: [
-    {
-      kind: 'site',
-      targetId: 'api.example.com',
-      targetUrl: 'https://api.example.com/endpoint',
-      methods: ['POST'],
-    },
-  ],
+// Grant the agent capability to use this secret
+await client.grantCapability({
+  capability: {
+    vaultId: vault.vaultId,
+    capabilityId: 'cap-1',
+    agentId: 'worker-1',
+    secretAliases: ['api-token'],
+    operation: 'dispatch_http',
+    allowedTargets: ['https://api.example.com/endpoint'],
+    allowedMethods: ['POST'],
+    issuedAt: new Date().toISOString()
+  }
 });
 ```
 
-`writeSecret(...)` is the one-step variant and requires `targetBindings`.
+### 5. Consuming Secrets (Agent)
 
-Capability example:
+Agents run in isolated processes and communicate with the vault via a transport.
 
 ```ts
-const capability = {
-  vaultId: vault.vaultId,
-  capabilityId: 'cap-1',
-  agentId: agentIdentity.identityId,
-  secretAliases: ['api-token'],
-  operation: 'dispatch_http',
-  allowedTargets: ['https://api.example.com/endpoint'],
-  allowedMethods: ['POST'],
-  issuedAt: new Date().toISOString(),
-};
+import { createAgentClient, LocalSigner } from '@the-ai-company/cbio-node-runtime';
 
-await client.grantCapability({ capability });
-```
+const agent = createAgentClient({
+  agentIdentity: { agentId: 'worker-1' },
+  capability: myCapability, // Shared with the agent
+  vault: vault.vault,       // Remote or local transport
+  signer: new LocalSigner({ privateKey: agentPrivateKey })
+});
 
-Custom flow example:
-
-```ts
-await client.registerFlow({
-  flowId: 'custom-status-read',
-  ...createOwnerHttpFlowBoundary({
-    mode: 'send_secret',
-    targetUrl: 'https://api.example.com/custom-status',
-    method: 'POST',
-    responseVisibility: 'shape_only',
-  }),
+const result = await agent.dispatch({
+  secretAlias: 'api-token',
+  targetUrl: 'https://api.example.com/endpoint',
+  method: 'POST',
+  body: '{"data": "..."}'
 });
 ```
 
-Acquisition example:
+---
 
-```ts
-const acquireBoundary = createStandardAcquireBoundary({
-  targetUrl: 'https://issuer.example.com/token',
-  responseField: 'access_token',
-  storeAlias: 'issuer-token',
-});
+## Documentation
 
-const acquired = await vault.acquireSecret({
-  alias: acquireBoundary.responseSecret.storeAlias,
-  issuerId: 'issuer-1',
-  url: acquireBoundary.targetUrl,
-  flow: 'oauth_token_response.access_token',
-  method: acquireBoundary.method,
-});
+- [Custody Model](docs/CUSTODY_MODEL.md) - Understanding managed agency and key storage.
+- [Process Isolation](docs/PROCESS_ISOLATION.md) - Guidelines for A/B architecture.
 
-console.log(acquired.responseShape);
-// { token_type: 'Bearer', expires_in: 3600, scope: 'read write' }
+## Architecture Rules
 
-const exported = await client.exportSecret({
-  alias: 'issuer-token',
-});
+1. **Secret Isolation**: Plane-text secrets never leave the Security Process.
+2. **Authority Root**: The master password is the only source of administrative authority.
+3. **Auditability**: Every administrative and agent action is recorded in the vault's audit log under the `vault-master` or agent principal.
+4. **Binary Discovery**: Either the vault is unlocked and visible, or it is a silent directory of encrypted shards.
 
-console.log(exported.plaintext);
-```
-
-Persistent custody bootstrap example:
-
-```ts
-const ownerIdentity = createIdentity({ nickname: 'owner-main' });
-const storage = new FsStorageProvider('/tmp/cbio-vault');
-const createdVault = await createVault(storage, {
-  vaultId: 'vault-persistent',
-  ownerIdentity,
-});
-
-const recoveredVault = await recoverVault(storage, {
-  vaultId: 'vault-persistent',
-  ownerIdentity,
-});
-```
-
-## Build
+## Build & Test
 
 ```bash
 npm run build
-npm run test
+npm test
 ```

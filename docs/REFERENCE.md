@@ -1,428 +1,81 @@
-# CBIO Vault Runtime Reference
+# CBIO Vault Runtime Reference (v1.47.0)
 
-This document describes the current implemented runtime surface.
+This document describes the current implemented runtime surface for the **Sovereign Vault**. 
 
-This file is intentionally narrower: it documents what the shipped API does today.
+## Primary API Surface
 
-## Public Surface
+The v1.47.0 runtime centers on a simplified, authority-centric model.
 
-The current top-level surface centers on:
+### Main Constructors and Entrypoints
 
-- identity creation and recovery
-- persistent vault bootstrap and recovery
-- owner and agent clients
-- owner flow-boundary helpers
+- `createVault(...)` - Initialize a new vault using a master password.
+- `recoverVault(...)` - Reopen an existing vault using its master password.
+- `listVaults(...)` - Scan the workspace for available vault IDs.
+- `updateVaultMetadata(...)` - Update the nickname or other metadata of an unlocked vault.
+- `createVaultClient(...)` - Create an administrative client for an unlocked vault.
+- `createAgentClient(...)` - Create a delegated client for an agent.
+- `createIdentity(...)` - Generate a standalone cryptographic identity keypair.
+- `restoreIdentity(...)` - Restore an identity from a private key.
 
-The main constructors are:
+### Vault Lifecycle
 
-- `createIdentity(...)`
-- `createChildIdentity(...)`
-- `deriveChildIdentity(...)`
-- `ensureIdentityPrivateVault(...)`
-- `readIdentityPrivateVaultProfile(...)`
-- `readIdentityPrivateVaultChildrenState(...)`
-- `restoreIdentity(...)`
-- `createVault(...)`
-- `recoverVault(...)`
-- `createVaultClient(...)`
-- `createAgentClient(...)`
+#### `createVault(storage, { vaultId, password, nickname, metadata })`
+Creates a secure vault. 
+- **Authority**: Rooted in the `password`.
+- **Storage**: All data is encrypted using a key derived from the password via `scrypt`.
 
-Related design note:
+#### `recoverVault(storage, { vaultId, password })`
+Unlocks and reopens a vault. 
+- Returns a `RecoveredVault` object containing the `VaultService` and metadata.
 
-- [Custody Model](CUSTODY_MODEL.md)
+#### `listVaults(storage)`
+Returns a `string[]` of vault IDs found in the storage. 
+- **Privacy**: No metadata (like nicknames) is leaked during listing. You must recover a vault to see its details.
 
-Recommended persistent-vault entrypoints:
+## Identity Models
 
-- `createVault(...)`
-- `recoverVault(...)`
+### 1. Managed Identity (Recommended)
+Identity material (private keys) generated and stored securely within the vault's own registry. 
+- Use `client.createAgent(...)` to manage these.
 
-`createVault({ ownerIdentity, nickname, publicMetadata })` creates a vault in the default workspace. `publicMetadata` follows the `VaultPublicMetadata` interface.
+### 2. External Identity
+Identity material managed by the user outside the vault. Registered via `client.registerAgent({ publicKey, ... })`.
 
-`createVault(storage, { ownerIdentity, nickname, publicMetadata })` overrides the workspace storage explicitly.
+## Vault Client (Owner/Admin)
 
-`recoverVault({ vaultId, ownerIdentity })` reopens a vault and returns metadata (including `nickname`) from the **public signed profile**.
+The `VaultClient` provides the administrative interface for the vault.
 
-`recoverVault(storage, { vaultId, ownerIdentity })` overrides the workspace storage explicitly.
+### Core Operations
+- `writeSecret(...)`: Store a secret and bind it to specific targets in one step.
+- `createAgent(...)`: Generate and host a new agent identity.
+- `listAgents()`: Enumerate authorized agents and retrieve managed private keys.
+- `grantCapability(...)`: Assign specific secret-use permissions to an agent.
+- `exportSecret(...)`: Reveal a secret's plaintext (requires active authority).
+- `readAudit(...)`: Access the append-only record of all vault actions.
 
-### Storage Anchoring
+## Agent Client (Consumer)
 
-When you call `createVault` or `recoverVault`, the returned `storage` object is **anchored** to the vault's specific sub-directory (e.g., `/vaults/<vault-id>/`).
-- **Workspace Storage**: The initial storage passed to the SDK (or the default one) points to the root of all vaults.
-- **Vault Storage**: The storage returned by `createVault` / `recoverVault` is already scoped. You should pass this scoped storage to subsequent calls like `listIdentities` or `updateVaultMetadata`.
-- **Warning**: Do not manually attempt to read files like `working-key.sealed` relative to the workspace root if you are using high-level SDK methods. The SDK handles these paths relative to the anchored storage.
+The `AgentClient` is used by delegated processes (e.g., LLMs or background workers) to perform authorized actions.
 
-### Discovery Metadata
+### Core Operations
+- `dispatch(...)`: Use a granted capability to send a secret to an authorized target.
+- **Security**: The agent never handles the vault's master password or the secret's plaintext.
 
-New in v1.28.0, the SDK exports the `VaultPublicMetadata` interface to standardize vault discovery:
+## Storage Layout
 
-```ts
-export interface VaultPublicMetadata extends Record<string, any> {
-  nickname?: string;
-  ownerId?: string;
-}
+The vault uses a unified encrypted partition:
+- `vault/sealed/profile.sealed`: Unified vault profile.
+- `vault/sealed/secrets.sealed`: Secret registry.
+- `vault/sealed/custody/`: Encrypted secret material.
+- `vault/sealed/identities/`: Agent and capability registries.
+
+## Build & Integration
+
+Ensure you are using the latest distribution:
+- `dist/runtime/index.js`
+- `dist/runtime/index.d.ts`
+
+For a full generated API reference, run:
+```bash
+npm run build:docs
 ```
-
-## Terms
-
-- `identity`
-  An external principal represented by a public/private keypair.
-- `owner`
-  The single admin role that a vault binds to one identity.
-- `agent`
-  A delegated role that a vault binds to an identity registered by the owner.
-
-Role rules:
-
-- outside the vault there are only identities
-- inside a vault, identities are bound to roles such as `owner` or `agent`
-- root identities are independent
-- child identities may be deterministically derived from a parent identity
-- the same identity may be `owner` in one vault and `agent` in another
-
-## Identity Creation
-
-`createIdentity(...)` returns:
-
-- `identityId`
-- `publicKey`
-- `privateKey`
-- optional `nickname`
-- optional `parentIdentityId` for child identities
-- optional `childIndex` for child identities
-
-`nickname` is human-readable only. It does not affect the derived `identityId`, cryptographic verification, or vault-local role binding.
-
-`createChildIdentity(storage, parentIdentity, { nickname })` allocates the next `childIndex` from storage and creates a child identity.
-
-`deriveChildIdentity(parentIdentity, childIndex, { nickname })` deterministically reconstructs a child identity for a known `childIndex`.
-
-`ensureIdentityPrivateVault(storage, identity)` creates or refreshes the identity's fixed namespace under `identities/<identityId>/...`.
- 
- That namespace stores identity-level files such as:
-
-- `sealed/profile.sealed`
-- `sealed/children.sealed`
-
-Those files are encrypted at rest in the `sealed/` sub-directory and are not readable as plain JSON on disk.
-
-Identities also maintain a **public discovery area**. This region is encrypted with a key derived from the identity ID, making it accessible via the API without the owner's private key, while ensuring all data on disk remains fully encrypted and tamper-resistant.
-
-`restoreIdentity(privateKey)` returns the same shape for an existing private key.
-
-`readIdentityPrivateVaultProfile(storage, identityOrPrivateKey)` decrypts and returns the current identity profile for the supplied identity or private key.
-
-`readIdentityPrivateVaultChildrenState(storage, identityOrPrivateKey)` decrypts and returns the child index state for the supplied identity or private key.
- 
-`readIdentityMetadata(storage, identityId, [privateKey])` is the unified metadata reader.
-If `privateKey` is provided, it returns the full sealed profile.
-If `privateKey` is missing, it returns the public discovery profile (`IdentityPublicProfile`).
-
-`listIdentities(storage)` returns `Promise<IdentityPublicProfile[]>`. These profiles are automatically verified for signature integrity.
-
-`listVaults(storage)` returns `Promise<Array<{ vaultId: string; public: VaultPublicMetadata }>>`. These summaries are pulled from the public signed profiles and verified.
-
-Typical relationship lookup flow when you already have a private key:
-
-1. `const identity = restoreIdentity(privateKey)`
-2. `const profile = await readIdentityPrivateVaultProfile(storage, identity)`
-3. `const children = await readIdentityPrivateVaultChildrenState(storage, identity)`
-
-`profile.parentIdentityId` tells you whether the identity is a child. `children.children` tells you which child identities were created beneath that identity.
-
-## Secret-Flow Model
-
-The current HTTP-facing API supports two explicit secret-flow classes:
-
-- `acquire_secret`
-  No secret leaves the vault. A response-derived secret is stored into the vault. Agent-visible output is limited to protocol metadata and a redacted response shape.
-
-- `send_secret`
-  A stored secret is sent to an owner-approved target. The remote response is treated as normal business output and may be returned to the agent.
-
-This is a deliberate protocol boundary:
-
-- acquisition responses are assumed sensitive and are therefore redacted on the way back to the agent
-- dispatch responses are treated as ordinary HTTP results once the owner has authorized sending the secret to that target
-
-The runtime does not try to reinterpret every remote protocol. If an approved target returns sensitive values during a normal dispatch call, that is part of the target contract and owner authorization scope rather than a vault-side parsing obligation.
-
-The runtime does not claim to understand arbitrary network protocols. The API communicates only the currently supported boundary:
-
-- supported: explicit acquisition into vault through built-in standard flows
-- supported: explicit secret-backed outbound dispatch
-- supported: owner-defined `custom_http` flows for explicit exception cases
-- unsupported: mixed bidirectional-secret flows as a first-class surface
-- unsupported: no-secret operations as a first-class vault primitive
-
-## Vault Client
-
-`clients/owner` implements the public vault-management client surface for the identity currently bound to the vault's single admin role.
-
-Current management operations:
-
-- `storeSecret(...)`
-- `defineSecretTargets(...)`
-- `writeSecret(...)`
-- `deleteSecret(...)`
-- `exportSecret(...)`
-- `readAudit(...)`
-- `registerAgent(...)`
-- `listAgents()`
-- `grantCapability(...)`
-- `listCapabilities(...)`
-- `revokeCapability(...)`
-- `registerFlow(...)`
-
-Example:
-
-```ts
-const client = createVaultClient({ ownerIdentity, vault });
-
-const storedSecret = await client.storeSecret({
-  alias: 'api-token',
-  plaintext: 'secret-value',
-});
-
-await client.defineSecretTargets({
-  alias: storedSecret.alias.value,
-  targetBindings: [
-    {
-      kind: 'site',
-      targetId: 'api.example.com',
-      targetUrl: 'https://api.example.com/endpoint',
-      methods: ['POST'],
-    },
-  ],
-});
-
-await client.registerAgent({
-  agentId: 'agent-1',
-  publicKey: agentPublicKey,
-});
-
-await client.registerFlow({
-  flowId: 'custom-status-read',
-  mode: 'send_secret',
-  targetUrl: 'https://api.example.com/custom-status',
-  method: 'POST',
-  responseVisibility: 'shape_only',
-});
-
-await client.writeSecret({
-  alias: 'secondary-token',
-  plaintext: 'secret-value',
-  targetBindings: [
-    {
-      kind: 'site',
-      targetId: 'api.example.com',
-      targetUrl: 'https://api.example.com/endpoint',
-      methods: ['POST'],
-    },
-  ],
-});
-
-const exportedSecret = await client.exportSecret({
-  alias: 'api-token',
-});
-
-await client.deleteSecret({
-  alias: 'secondary-token',
-});
-```
-
-`writeSecret(...)` is the one-step variant and requires `targetBindings`.
-
-## Agent Client
-
-`clients/agent` creates signed dispatch requests for an identity currently bound to an agent role in that vault. It never receives plaintext secrets.
-
-Current dispatch capabilities use `dispatch_http` as the explicit secret-send operation.
-It is intended for standard secret-backed resource access, not for token mint / refresh / exchange / registration-finalize style acquisition flows.
-
-The runtime also supports `custom_http` as an owner-defined exception path. A `custom_http` capability must reference a registered `customFlowId`.
-Owner-defined HTTP boundaries share one factory layer:
-
-- `createOwnerHttpFlowBoundary(...)`
-- `createStandardAcquireBoundary(...)`
-- `createStandardDispatchBoundary(...)`
-
-The owner-defined flow may use one of three modes:
-
-- `acquire_secret`
-- `send_secret`
-- `bidirectional_secret`
-
-Example:
-
-```ts
-const capability = {
-  vaultId: vault.vaultId,
-  capabilityId: 'cap-1',
-  agentId: agentIdentity.identityId,
-  secretAliases: ['api-token'],
-  operation: 'dispatch_http',
-  allowedTargets: ['https://api.example.com/endpoint'],
-  allowedMethods: ['POST'],
-  issuedAt: new Date().toISOString(),
-};
-
-await client.grantCapability({ capability });
-```
-
-The public agent capability type is the same shape as core `AgentCapability`, so `custom_http` capabilities are valid here too.
-
-Custom capability example:
-
-```ts
-const customCapability = {
-  vaultId: vault.vaultId,
-  capabilityId: 'cap-custom',
-  agentId: agentIdentity.identityId,
-  customFlowId: 'custom-status-read',
-  secretAliases: ['api-token'],
-  operation: 'custom_http',
-  allowedTargets: ['https://api.example.com/custom-status'],
-  allowedMethods: ['POST'],
-  issuedAt: new Date().toISOString(),
-};
-
-await client.grantCapability({ capability: customCapability });
-```
-
-Recommended agent client shape:
-
-```ts
-const agent = createAgentClient({
-  agentIdentity,
-  capability,
-  vault,
-});
-```
-
-## Acquisition Result Shape
-
-`acquireSecret(...)` is the explicit acquisition operation.
-
-It no longer accepts an open-ended extractor callback. The current surface only supports built-in protocol flows:
-
-- `oauth_token_response.access_token`
-- `oauth_token_response.refresh_token`
-- `openid_token_response.id_token`
-
-Input:
-
-```ts
-const acquireBoundary = createStandardAcquireBoundary({
-  targetUrl: 'https://issuer.example.com/token',
-  responseField: 'access_token',
-  storeAlias: 'issuer-token',
-});
-
-const acquired = await vault.acquireSecret({
-  alias: acquireBoundary.responseSecret.storeAlias,
-  issuerId: 'issuer-1',
-  url: acquireBoundary.targetUrl,
-  flow: 'oauth_token_response.access_token',
-  method: acquireBoundary.method,
-});
-```
-
-Output:
-
-```ts
-type VaultAcquireSecretResult = {
-  vaultId: VaultId;
-  alias: string;
-  status: 'stored';
-  responseStatus: number;
-  contentType: string | null;
-  responseShape: RedactedResponseShape;
-};
-```
-
-`responseShape` is flow-specific. It preserves only the protocol-defined non-sensitive fields that the runtime explicitly allows for that built-in flow.
-
-Example:
-
-```ts
-{
-  token_type: 'Bearer',
-  expires_in: 3600,
-  scope: 'read write',
-}
-```
-
-## Dispatch Result Shape
-
-`dispatch_http` returns normal remote output:
-
-```ts
-type DispatchResult = {
-  vaultId: VaultId;
-  requestId: string;
-  status: 'succeeded' | 'denied' | 'failed';
-  targetUrl: string;
-  method: string;
-  responseStatus?: number;
-  responseBody?: string;
-  error?: string;
-};
-```
-
-This is an intentional current-surface choice: `dispatch_http` is treated as secret-out / non-secret-in.
-
-In other words, the vault respects the standard HTTP response surface for normal dispatch. It does not attempt to retroactively sanitize every downstream response body, because doing so would shift responsibility away from the target protocol and the owner's authorization decision.
-
-For `custom_http`, response visibility is chosen by the owner at flow registration time:
-
-- `passthrough`: return the remote body
-- `shape_only`: return a redacted shape-only body
-
-If the custom flow mode includes secret acquisition, the owner also defines a response secret rule. The current built-in rule shape is:
-
-```ts
-{
-  kind: 'json_field',
-  field: 'access_token',
-  storeAlias: 'new-token',
-}
-```
-
-## Public-Ready Discovery (Encrypted)
-
-The CBIO Node Runtime implements a **Public-Ready Encryption** model for discovery metadata. This allows public information (like nicknames) to be accessible via the API without requiring a private key, while ensuring all data on disk is encrypted.
-
-- **Storage**: Managed internally within the `sealed/` directory.
-- **Integrity**: These files are encrypted using a key derived from the Vault or Identity ID (`sha256(cbio:vault-public-metadata:v1 + id)`). This provides tamper-resistance and ensures that the file content remains a black box on disk.
-- **Verification**: The SDK automatically derives the required discovery keys during `listVaults`, `listIdentities`, and retrieval. Corrupted or tampered files are identified by the cryptographic layer and safely ignored.
-
-## Persistent Dependencies
-
-`createPersistentVaultCoreDependencies(...)` builds a file-backed single-node profile under `vault/sealed/` with:
-
-- persistent secret metadata
-- sealed secret custody blobs
-- append-only tamper-evident audit
-- persistent replay guard
-- persistent rate-limit state
-- persistent capability revocation state
-- persistent owner identity record
-- persistent agent identity registry
-- persistent capability registry
-
-## Storage Provider
-
-Any backend can be used by implementing `IStorageProvider`:
-
-```ts
-export interface IStorageProvider {
-  read(key: string): Promise<Buffer | null>;
-  write(key: string, data: Buffer): Promise<void>;
-  delete(key: string): Promise<void>;
-  has(key: string): Promise<boolean>;
-  rename?(fromKey: string, toKey: string): Promise<void>;
-  withLock?<T>(key: string, task: () => Promise<T>): Promise<T>;
-}
-```
-
-`withLock(...)` is used when present to serialize read-modify-write persistence sequences.

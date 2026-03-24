@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.47.0**](../README.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 > **listVaults**(`storage`): `Promise`\<`string`[]\>
 
-Lists all available vaults in the workspace by scanning for signed profiles.
+Lists all available vaults in the workspace.
 
 ## Parameters
 
@@ -20,4 +20,4 @@ The root workspace storage provider.
 
 `Promise`\<`string`[]\>
 
-A list of vault IDs and their public discovery metadata.
+A list of vault IDs.

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.47.0**](../README.md)
 
 ***
 
@@ -22,7 +22,7 @@ Workspace storage (or path string) where vaults are stored.
 
 [`CreateVaultOptions`](../interfaces/CreateVaultOptions.md)
 
-Configuration including owner identity and metadata.
+Configuration including password and metadata.
 
 ### Returns
 
@@ -34,7 +34,7 @@ A [CreatedVault](../interfaces/CreatedVault.md) instance.
 
 ```ts
 const vault = await createVault({
-  ownerIdentity,
+  password: 'my-strong-password',
   nickname: 'production-secrets'
 });
 ```

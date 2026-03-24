@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: VaultRegisterAgentInput
+# Interface: VaultCreateAgentInput
 
 ## Properties
 
@@ -21,18 +21,6 @@
 ### nickname?
 
 > `optional` **nickname?**: `string`
-
-***
-
-### privateKey?
-
-> `optional` **privateKey?**: `string`
-
-***
-
-### publicKey
-
-> **publicKey**: `string`
 
 ***
 

@@ -7,7 +7,7 @@ export interface VaultProfile extends Record<string, any> {
   nickname?: string;
 }
 
-const VAULT_SEALED_PROFILE_KEY = "vault/profile.sealed";
+const VAULT_SEALED_PROFILE_KEY = "vault/sealed/profile.sealed";
 
 export async function writeVaultProfile(
   storage: IStorageProvider,

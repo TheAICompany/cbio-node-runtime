@@ -1,6 +1,6 @@
 /**
  * Runtime export.
- * Public surface: typed high-level runtime plus supported low-level building blocks.
+ * Main API: typed high-level runtime plus supported low-level building blocks.
  */
 
 export { IdentityError, IdentityErrorCode } from "../errors.js";
@@ -35,7 +35,7 @@ export {
   type RecoverVaultOptions,
   type RecoveredVault,
   type VaultObject,
-  type VaultMetadata as VaultPublicMetadata,
+  type VaultMetadata,
 } from "./bootstrap.js";
 
 export {
@@ -76,6 +76,7 @@ export {
   type VaultGrantCapabilityInput,
   type VaultRegisterFlowInput,
   type VaultRegisterAgentInput,
+  type VaultCreateAgentInput,
   type OwnerSecretTargetBinding,
   type OwnerStoreSecretInput,
   type OwnerWriteSecretInput,

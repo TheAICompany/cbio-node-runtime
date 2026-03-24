@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.47.0**](../README.md)
 
 ***
 
@@ -165,7 +165,7 @@ Workspace storage (or path string) where vaults are stored.
 
 [`CreateVaultOptions`](CreateVaultOptions.md)
 
-Configuration including owner identity and metadata.
+Configuration including password and metadata.
 
 ##### Returns
 
@@ -177,7 +177,7 @@ A [CreatedVault](CreatedVault.md) instance.
 
 ```ts
 const vault = await createVault({
-  ownerIdentity,
+  password: 'my-strong-password',
   nickname: 'production-secrets'
 });
 ```
@@ -369,7 +369,7 @@ A JSON-serializable response object.
 
 > **listVaults**: (`storage`) => `Promise`\<`string`[]\>
 
-Lists all available vaults in the workspace by scanning for signed profiles.
+Lists all available vaults in the workspace.
 
 #### Parameters
 
@@ -383,7 +383,7 @@ The root workspace storage provider.
 
 `Promise`\<`string`[]\>
 
-A list of vault IDs and their public discovery metadata.
+A list of vault IDs.
 
 ***
 
@@ -433,7 +433,7 @@ Workspace storage where the vault was created.
 
 [`RecoverVaultOptions`](RecoverVaultOptions.md)
 
-Recovery options (must include `vaultId` and `ownerIdentity`).
+Recovery options (must include `vaultId` and `password`).
 
 ##### Returns
 
@@ -446,7 +446,7 @@ A [RecoveredVault](RecoveredVault.md) instance.
 ```ts
 const vault = await recoverVault({
   vaultId: 'vault_123',
-  ownerIdentity
+  password: 'my-strong-password'
 });
 ```
 
@@ -462,7 +462,7 @@ Recovers an existing vault using the default workspace storage.
 
 [`RecoverVaultOptions`](RecoverVaultOptions.md)
 
-Recovery options including vaultId and owner identity.
+Recovery options including vaultId and password.
 
 ##### Returns
 

@@ -7,7 +7,26 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* Refactor Vault Core API, consolidating interfaces and introducing a `VaultCore` class with new dependency creation functions. ([d2d7af2](https://github.com/TheAICompany/cbio-node-runtime/commit/d2d7af2bca9fe07fd28f6500969e8dbaa47a8d55))
+### Breaking Changes
+
+* **Sovereign Vault Architecture**: The administrative model has transitioned from "Identity-centric" to "Authority-centric".
+    * Removed `OwnerIdentityRegistry` and `OwnerProofVerifier`.
+    * Authority is now granted implicitly via vault unlocking with the master password.
+    * Removed `ownerIdentity` parameter from `createVault`, `recoverVault`, and `VaultClient` constructor.
+* **Storage Unification**: Consolidated all vault metadata into a single encrypted storage file.
+    * Removed `public.sealed`; all discovery metadata (including nicknames) is now stored in `vault/sealed/profile.sealed`.
+    * Discovery via `listVaults` now only returns IDs to prevent metadata leaks.
+* **Identity Model Simplification**:
+    * Removed `ChildIdentity` and deterministic key derivation logic.
+    * Deleted `deriveChildIdentity`, `ensureIdentityPrivateVault`, and associated modules.
+* **Managed Identity Custody**:
+    * Updated `AgentIdentityRecord` to support optional `privateKey` storage for full identity custody within the vault.
+
+### Features
+
+* **Password-based Bootstrap**: Simplified vault creation/recovery using only a master password and storage provider.
+* **Managed Custody API**: Added `VaultClient.createAgent()` to generate, register, and store agent identities in one atomic operation.
+* **Telemetry & Traceability**: Refactored audit logs to use the `vault-master` principal for all administrative actions.
 
 ## [1.46.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.45.2...v1.46.0) (2026-03-24)
 

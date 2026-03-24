@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.47.0**](../README.md)
 
 ***
 
@@ -8,6 +8,25 @@ A client for vault owners to manage secrets, agents, and capabilities.
 In Sovereign Vault model, administrative actions are implicitly authorized by the working key.
 
 ## Methods
+
+### createAgent()
+
+> **createAgent**(`input`): `Promise`\<readonly \[`AgentIdentityRecord`, `string`\]\>
+
+Generates a new identity and registers it as an agent in one step.
+The private key is stored in the vault for managed custody.
+
+#### Parameters
+
+##### input
+
+[`VaultCreateAgentInput`](VaultCreateAgentInput.md)
+
+#### Returns
+
+`Promise`\<readonly \[`AgentIdentityRecord`, `string`\]\>
+
+***
 
 ### defineSecretTargets()
 
@@ -138,8 +157,6 @@ Reads the tamper-evident audit log for the vault.
 ### registerAgent()
 
 > **registerAgent**(`input`): `Promise`\<`void`\>
-
-Registers a new agent identity within the vault.
 
 #### Parameters
 

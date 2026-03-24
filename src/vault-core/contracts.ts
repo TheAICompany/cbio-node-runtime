@@ -277,6 +277,9 @@ export interface AgentIdentityRecord {
   vaultId: VaultId;
   agentId: string;
   publicKey: string;
+  privateKey?: string;
+  metadata?: Record<string, any>;
+  nickname?: string;
 }
 
 

@@ -1,122 +1,49 @@
-# Architecture
+# Architecture (v1.47.0)
 
-Current product architecture is vault-first.
+The cbio runtime follows a **Sovereign Vault** architecture: a unified, authority-centric model where security is grounded in proof-of-knowledge (passwords) rather than external identity hierarchies.
 
-Related design note:
+## Core Principles
 
-- [Custody Model](CUSTODY_MODEL.md)
-- [Identity Model](IDENTITY_MODEL.md)
+1. **Authority via Password**: Administrative control is granted by unlocking the vault with its master password.
+2. **Unified Storage**: All vault state (secrets, metadata, registries) is stored in a single encrypted partition.
+3. **Managed Agency**: The vault can act as a custodian for its agents, managing their identity material internally.
+4. **Process Isolation**: Sensitive cryptographic operations are physically separated from agent execution environments.
 
-Recommended persistent-vault lifecycle:
+## Identity and Roles
 
-- create through `createVault(...)`
-- recover through `recoverVault(...)` using the owner's identity
+The runtime distinguishes between administrative authority and delegated agency:
 
-## Identity And Roles
+- **`vault-master` (Role)**: The implicit administrative role held by anyone who successfully unlocks the vault.
+- **`agent` (Role)**: A delegated principal with specific capabilities.
+- **Managed Identity**: An identity whose private keys are stored within the vault.
+- **External Identity**: An identity represented by a public key, with private keys managed externally.
 
-The runtime distinguishes external identities from vault-local roles.
+## Components
 
-- `identity`
-  An external principal represented by a public/private keypair.
-- `owner`
-  The single admin role that a vault binds to one identity.
-- `agent`
-  A delegated role that a vault binds to an identity registered by the owner.
+- **`vault-core`**: The secure engine. Stores secret plaintext, validates transactions, and maintains the audit log.
+- **`clients/owner`**: The administrative interface. Used for writing secrets, managing agents, and exporting material.
+- **`clients/agent`**: The consumer interface. Used by agents to request signed dispatches without ever seeing secret plaintext.
+- **`vault-ingress`**: The protocol layer that resolves capabilities and handles incoming requests.
 
-This means:
+## Unified Storage Layout
 
-- outside the vault there are only identities
-- inside a specific vault, identities are bound to roles such as `owner` or `agent`
-- root identities are independent
-- child identities may be deterministically derived from a parent identity private key plus a path
-- an identity may be the `owner` of one vault and an `agent` in another vault
+All vault data is stored under a single prefix: `vaults/<vault-id>/`.
+- **`vault/sealed/profile.sealed`**: Contains all vault metadata (nickname, owner ID, etc.).
+- **`vault/sealed/secrets.sealed`**: Contains the encrypted secret registry.
+- **`vault/sealed/custody/`**: Contains the physical secret shards.
+- **`vault/sealed/identities/`**: Contains the agent identity registry (including managed private keys).
 
-## Public Modules
+Everything in the `vault/sealed/` path is encrypted using the `vaultWorkingKey`, which is derived from the master password.
 
-- `vault-core`
-  Stores secret plaintext, validates writes, validates dispatch, appends audit, invokes trusted executors.
+## Process Isolation (A/B Architecture)
 
-- `clients/owner`
-  Owner-facing client for the single vault admin. It performs secret writes, agent/capability administration, explicit plaintext export, and audit reads.
+To prevent secret leakage even in the case of agent compromise, the runtime is designed for process-level isolation:
+- **Process A (Agent)**: Runs business logic/LLM. Holders a **Managed Identity** signer but has no access to the vault's working key.
+- **Process B (Vault Server)**: Unlocks the vault and processes dispatch requests from Process A.
 
-- `clients/agent`
-  Agent-facing client for signed dispatch requests. It never receives secret plaintext.
+## Implementation Rules
 
-- `vault-ingress`
-  Accepts request-shaped calls, resolves vault-managed capability records inside the vault boundary, performs trusted acquisition flows, and forwards dispatch into vault-core internals.
-
-## Process Isolation (A/B)
-
-The runtime is designed for a secure **A/B Process Architecture**:
-- **Process A (Agent)**: Initiates signed requests via `AgentDispatchHttpTransport`. It never handles master keys or secret plaintext.
-- **Process B (Vault Server)**: Hosts the Vault Core and `VaultService`. It validates agent proofs and performs the actual HTTP dispatch.
-
-See [Process Isolation](PROCESS_ISOLATION.md) for more details.
- 
-## Dual-Area Storage
-
-The vault is physically divided into two partitions to balance security and discoverability:
-
-- **Sealed Area (`vault/sealed/`)**
-  - **Security**: AES-256-GCM encrypted blobs (`.sealed`).
-  - **Access**: Requires the Vault Working Key (identity-derived) for both read and write.
-  - **Auditing**: Every access is tracked and logged in the append-only audit trail.
-
-- **Public Area (`vault/public/`)**
-  - **Security**: Verifiable JSON Envelopes (`.json`).
-  - **Integrity**: Every public file is **digitally signed** by the vault owner's private key.
-  - **Access**: Reading is open and anonymous; however, the SDK automatically verifies signatures to prevent unauthorized tampering.
-  - **Auditing**: Anonymous reading is untracked to reduce noise. Writing requires proving identity through a valid signature.
-
-## Core Rules
-
-1. Secret plaintext exists only inside vault-core.
-2. Only owner and trusted issuer paths may write secrets.
-3. Agent can only request dispatch through capability + proof.
-4. Vault validates and audits every dispatch.
-5. Public metadata (e.g., nicknames, discovery profile) is stored **exclusively** in the Public Area and is digitally signed.
-6. Identity-specific private data is stored in `identities/`, separate from named `vaults/`.
-
-## Current HTTP Secret Flows
-
-The current runtime surface supports two explicit flow classes:
-
-- `acquire_secret`
-  Vault performs an acquisition flow, stores the extracted secret, and returns only protocol metadata plus a flow-specific redacted response shape.
-
-- `send_secret`
-  Vault sends a stored secret to an approved target and returns the remote response as normal agent-visible output.
-  This is the standard secret-use path, not the acquisition path.
-
-The runtime does not attempt to enumerate or understand arbitrary remote protocols. Acquisition is limited to built-in standard flows rather than caller-defined extraction logic. Unsupported mixed or non-secret flows are outside the current production surface.
-
-This is deliberate rather than accidental:
-
-- acquisition flows are treated as sensitive on the response path because they may mint or return new secret material
-- built-in acquisition flows may still expose protocol-defined non-sensitive fields such as expiry or token type
-- normal secret-backed dispatch is treated as a standard protocol call to an owner-approved target
-
-If a target returns sensitive values during a normal dispatch flow, the vault does not try to reinterpret the remote protocol and redact it retroactively. That responsibility belongs to the remote protocol contract and the owner's authorization boundary.
-
-## Owner-Defined Custom HTTP Flows
-
-The current runtime also exposes a narrow exception path for non-standard integrations:
-
-- owner registers a `custom_http` flow
-- the flow fixes `mode`, `targetUrl`, `method`, and `responseVisibility`
-- agent capabilities reference `customFlowId`
-- agent may trigger the flow, but may not redefine it
-
-The owner HTTP boundary itself is modeled as a factory surface:
-
-- `createOwnerHttpFlowBoundary(...)`
-- `createStandardAcquireBoundary(...)`
-- `createStandardDispatchBoundary(...)`
-
-This keeps the escape hatch inside the vault boundary rather than reopening caller-defined open extraction or open response policies.
-
-Current custom modes are:
-
-- `acquire_secret`
-- `send_secret`
-- `bidirectional_secret`
+1. **Locked by Default**: Before unlocking with a password, the vault reveals nothing but its ID.
+2. **Secret Separation**: Plaintext secrets never leave the memory space of `vault-core`.
+3. **Auditability**: Every action is bound to a principal (`vault-master` or `agent-id`) and recorded.
+4. **Capability Gating**: Agents can only act on secrets for which they have an explicit, valid capability.

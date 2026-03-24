@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.46.0**
+**CBIO Node Runtime Agent API v1.47.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.46.0
+# CBIO Node Runtime Agent API v1.47.0
 
 ## Enumerations
 
@@ -43,15 +43,16 @@
 - [VaultAuditQueryInput](interfaces/VaultAuditQueryInput.md)
 - [VaultClient](interfaces/VaultClient.md)
 - [VaultCoreDependenciesOptions](interfaces/VaultCoreDependenciesOptions.md)
+- [VaultCreateAgentInput](interfaces/VaultCreateAgentInput.md)
 - [VaultDeleteSecretInput](interfaces/VaultDeleteSecretInput.md)
 - [VaultExportSecretInput](interfaces/VaultExportSecretInput.md)
 - [VaultGrantCapabilityInput](interfaces/VaultGrantCapabilityInput.md)
 - [VaultIdentity](interfaces/VaultIdentity.md)
 - [VaultListAgentsInput](interfaces/VaultListAgentsInput.md)
 - [VaultListCapabilitiesInput](interfaces/VaultListCapabilitiesInput.md)
+- [VaultMetadata](interfaces/VaultMetadata.md)
 - [VaultObject](interfaces/VaultObject.md)
 - [VaultProfile](interfaces/VaultProfile.md)
-- [VaultPublicMetadata](interfaces/VaultPublicMetadata.md)
 - [VaultRegisterAgentInput](interfaces/VaultRegisterAgentInput.md)
 - [VaultRegisterFlowInput](interfaces/VaultRegisterFlowInput.md)
 - [VaultRevokeCapabilityInput](interfaces/VaultRevokeCapabilityInput.md)

@@ -96,13 +96,13 @@ function resolveStorage(
  * Creates and bootstraps a new persistent vault.
  *
  * @param storage - Workspace storage (or path string) where vaults are stored.
- * @param options - Configuration including owner identity and metadata.
+ * @param options - Configuration including password and metadata.
  * @returns A {@link CreatedVault} instance.
  *
  * @example
  * ```ts
  * const vault = await createVault({
- *   ownerIdentity,
+ *   password: 'my-strong-password',
  *   nickname: 'production-secrets'
  * });
  * ```
@@ -155,14 +155,14 @@ export async function createVault(
  * Reopens an existing vault from storage.
  *
  * @param storage - Workspace storage where the vault was created.
- * @param options - Recovery options (must include `vaultId` and `ownerIdentity`).
+ * @param options - Recovery options (must include `vaultId` and `password`).
  * @returns A {@link RecoveredVault} instance.
  *
  * @example
  * ```ts
  * const vault = await recoverVault({
  *   vaultId: 'vault_123',
- *   ownerIdentity
+ *   password: 'my-strong-password'
  * });
  * ```
  */
@@ -170,7 +170,7 @@ export async function recoverVault(storage: IStorageProvider | string, options: 
 /**
  * Recovers an existing vault using the default workspace storage.
  * 
- * @param options Recovery options including vaultId and owner identity.
+ * @param options Recovery options including vaultId and password.
  */
 export async function recoverVault(options: RecoverVaultOptions): Promise<RecoveredVault>;
 export async function recoverVault(
@@ -203,10 +203,10 @@ export async function recoverVault(
 }
 
 /**
- * Lists all available vaults in the workspace by scanning for signed profiles.
+ * Lists all available vaults in the workspace.
  *
  * @param storage - The root workspace storage provider.
- * @returns A list of vault IDs and their public discovery metadata.
+ * @returns A list of vault IDs.
  */
 export async function listVaults(storage: IStorageProvider): Promise<string[]> {
   if (!storage.list) {

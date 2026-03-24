@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.47.0**](../README.md)
 
 ***
 
@@ -22,7 +22,7 @@ Workspace storage where the vault was created.
 
 [`RecoverVaultOptions`](../interfaces/RecoverVaultOptions.md)
 
-Recovery options (must include `vaultId` and `ownerIdentity`).
+Recovery options (must include `vaultId` and `password`).
 
 ### Returns
 
@@ -35,7 +35,7 @@ A [RecoveredVault](../interfaces/RecoveredVault.md) instance.
 ```ts
 const vault = await recoverVault({
   vaultId: 'vault_123',
-  ownerIdentity
+  password: 'my-strong-password'
 });
 ```
 
@@ -51,7 +51,7 @@ Recovers an existing vault using the default workspace storage.
 
 [`RecoverVaultOptions`](../interfaces/RecoverVaultOptions.md)
 
-Recovery options including vaultId and owner identity.
+Recovery options including vaultId and password.
 
 ### Returns
 

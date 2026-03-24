@@ -1,5 +1,5 @@
 import { LocalSigner } from "../../protocol/crypto.js";
-import type { CreatedIdentity } from "../../runtime/identity.js";
+import { createIdentity, type CreatedIdentity } from "../../runtime/identity.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
@@ -9,6 +9,7 @@ import type {
   VaultGrantCapabilityInput,
   VaultRegisterFlowInput,
   VaultRegisterAgentInput,
+  VaultCreateAgentInput,
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
   VaultDeleteSecretInput,
@@ -60,10 +61,13 @@ export interface VaultClient {
    */
   readAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
 
-  /**
-   * Registers a new agent identity within the vault.
-   */
   registerAgent(input: VaultRegisterAgentInput): Promise<void>;
+
+  /**
+   * Generates a new identity and registers it as an agent in one step.
+   * The private key is stored in the vault for managed custody.
+   */
+  createAgent(input: VaultCreateAgentInput): Promise<readonly [import("../../vault-core/index.js").AgentIdentityRecord, string]>;
 
   /**
    * Registers a custom HTTP flow for complex secret usage.
@@ -208,6 +212,9 @@ class DefaultVaultClient implements VaultClient {
       vaultId: this._vault.vaultId,
       agentId: input.agentId,
       publicKey: input.publicKey,
+      privateKey: input.privateKey,
+      metadata: input.metadata,
+      nickname: input.nickname,
     };
     
     await this._vault.registerAgentIdentity({
@@ -220,6 +227,21 @@ class DefaultVaultClient implements VaultClient {
       agentIdentity,
       requestedAt,
     });
+  }
+
+  async createAgent(input: VaultCreateAgentInput) {
+    const identity = createIdentity();
+    const record = {
+      vaultId: this._vault.vaultId,
+      agentId: input.agentId,
+      publicKey: identity.publicKey,
+      privateKey: identity.privateKey,
+      metadata: input.metadata,
+      nickname: input.nickname,
+    };
+    
+    await this.registerAgent(record);
+    return [record, identity.privateKey] as const;
   }
 
   async grantCapability(input: VaultGrantCapabilityInput): Promise<void> {

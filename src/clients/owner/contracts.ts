@@ -42,6 +42,16 @@ export interface VaultExportSecretInput {
 export interface VaultRegisterAgentInput {
   agentId: string;
   publicKey: string;
+  privateKey?: string;
+  metadata?: Record<string, any>;
+  nickname?: string;
+  requestedAt?: string;
+}
+
+export interface VaultCreateAgentInput {
+  agentId: string;
+  metadata?: Record<string, any>;
+  nickname?: string;
   requestedAt?: string;
 }
 
