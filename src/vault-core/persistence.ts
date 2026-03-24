@@ -153,6 +153,9 @@ export async function recoverVaultWorkingKey(
   return vaultWorkingKey;
 }
 
+/**
+ * @internal
+ */
 export class FileSecretRepository implements SecretRepository {
   private readonly _repo: SealedJsonRepository<PersistedSecretsState>;
 
@@ -197,6 +200,9 @@ export class FileSecretRepository implements SecretRepository {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
   private readonly _repo: SealedJsonRepository<AgentIdentityState>;
 
@@ -235,6 +241,9 @@ export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileOwnerIdentityRegistry implements OwnerIdentityRegistry {
   private readonly _repo: SealedJsonRepository<OwnerIdentityState>;
 
@@ -273,6 +282,9 @@ export class FileOwnerIdentityRegistry implements OwnerIdentityRegistry {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileAuditLog implements AuditLog {
   constructor(
     private readonly _storage: IStorageProvider,
@@ -345,6 +357,9 @@ export class FileAuditLog implements AuditLog {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileSecretCustody implements SecretCustody {
   constructor(
     private readonly _storage: IStorageProvider,
@@ -390,6 +405,9 @@ export class FileSecretCustody implements SecretCustody {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileReplayGuard implements ReplayGuard {
   private readonly _repo: SealedJsonRepository<ReplayState>;
 
@@ -423,6 +441,9 @@ export class FileReplayGuard implements ReplayGuard {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileCapabilityRegistry implements CapabilityRegistry {
   private readonly _repo: SealedJsonRepository<CapabilityState>;
 
@@ -473,6 +494,9 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileRateLimitStore implements RateLimitStore {
   private readonly _repo: SealedJsonRepository<RateLimitState>;
 
@@ -511,6 +535,9 @@ export class FileRateLimitStore implements RateLimitStore {
   }
 }
 
+/**
+ * @internal
+ */
 export class FileCapabilityRevocationRegistry implements CapabilityRevocationRegistry {
   private readonly _repo: SealedJsonRepository<RevocationState>;
 
@@ -544,6 +571,9 @@ export class FileCapabilityRevocationRegistry implements CapabilityRevocationReg
   }
 }
 
+/**
+ * @internal
+ */
 export class FileCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
   private readonly _repo: SealedJsonRepository<CustomFlowState>;
 

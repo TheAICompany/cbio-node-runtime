@@ -10,6 +10,9 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * @internal
+ */
 export class FsStorageProvider implements IStorageProvider {
     constructor(private baseDir?: string) {}
 

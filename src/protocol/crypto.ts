@@ -21,6 +21,9 @@ export interface Signer {
     sign(nonce: string): Promise<string>;
 }
 
+/**
+ * @internal
+ */
 export class LocalSigner implements Signer {
     #privateKey: string;
     #publicKey: string;

@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.45.1**
+**CBIO Node Runtime Agent API v1.45.5**
 
 ***
 
-# CBIO Node Runtime Agent API v1.45.1
+# CBIO Node Runtime Agent API v1.45.5
 
 ## Enumerations
 
@@ -13,39 +13,8 @@
 
 ## Classes
 
-- [AgentDispatchHttpTransport](classes/AgentDispatchHttpTransport.md)
-- [DefaultPolicyEngine](classes/DefaultPolicyEngine.md)
-- [DefaultVaultCore](classes/DefaultVaultCore.md)
-- [FsStorageProvider](classes/FsStorageProvider.md)
-- [HttpDispatchExecutor](classes/HttpDispatchExecutor.md)
 - [IdentityError](classes/IdentityError.md)
-- [InMemoryAgentIdentityRegistry](classes/InMemoryAgentIdentityRegistry.md)
-- [InMemoryAuditLog](classes/InMemoryAuditLog.md)
-- [InMemoryCapabilityRegistry](classes/InMemoryCapabilityRegistry.md)
-- [InMemoryCapabilityRevocationRegistry](classes/InMemoryCapabilityRevocationRegistry.md)
-- [InMemoryCustomHttpFlowRegistry](classes/InMemoryCustomHttpFlowRegistry.md)
-- [InMemoryOwnerIdentityRegistry](classes/InMemoryOwnerIdentityRegistry.md)
-- [InMemoryRateLimitStore](classes/InMemoryRateLimitStore.md)
 - [InMemoryReplayGuard](classes/InMemoryReplayGuard.md)
-- [InMemorySecretCustody](classes/InMemorySecretCustody.md)
-- [InMemorySecretRepository](classes/InMemorySecretRepository.md)
-- [LocalSigner](classes/LocalSigner.md)
-- [LocalVaultTransport](classes/LocalVaultTransport.md)
-- [MemoryStorageProvider](classes/MemoryStorageProvider.md)
-- [PersistentVaultAgentIdentityRegistry](classes/PersistentVaultAgentIdentityRegistry.md)
-- [PersistentVaultAuditLog](classes/PersistentVaultAuditLog.md)
-- [PersistentVaultCapabilityRegistry](classes/PersistentVaultCapabilityRegistry.md)
-- [PersistentVaultCapabilityRevocationRegistry](classes/PersistentVaultCapabilityRevocationRegistry.md)
-- [PersistentVaultCustomHttpFlowRegistry](classes/PersistentVaultCustomHttpFlowRegistry.md)
-- [PersistentVaultOwnerIdentityRegistry](classes/PersistentVaultOwnerIdentityRegistry.md)
-- [PersistentVaultRateLimitStore](classes/PersistentVaultRateLimitStore.md)
-- [PersistentVaultReplayGuard](classes/PersistentVaultReplayGuard.md)
-- [PersistentVaultSecretCustody](classes/PersistentVaultSecretCustody.md)
-- [PersistentVaultSecretRepository](classes/PersistentVaultSecretRepository.md)
-- [RandomIdGenerator](classes/RandomIdGenerator.md)
-- [SignatureAgentProofVerifier](classes/SignatureAgentProofVerifier.md)
-- [SignatureOwnerProofVerifier](classes/SignatureOwnerProofVerifier.md)
-- [SystemClock](classes/SystemClock.md)
 - [VaultCoreError](classes/VaultCoreError.md)
 
 ## Interfaces

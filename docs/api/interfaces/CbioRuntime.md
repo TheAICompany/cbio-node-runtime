@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
 
 ***
 
@@ -10,7 +10,7 @@ Main runtime interface.
 
 ### AgentDispatchHttpTransport
 
-> **AgentDispatchHttpTransport**: *typeof* [`AgentDispatchHttpTransport`](../classes/AgentDispatchHttpTransport.md)
+> **AgentDispatchHttpTransport**: *typeof* `AgentDispatchHttpTransport`
 
 ***
 
@@ -86,51 +86,51 @@ const agent = createAgentClient({
 
 ##### agentIdentities
 
-> **agentIdentities**: [`InMemoryAgentIdentityRegistry`](../classes/InMemoryAgentIdentityRegistry.md)
+> **agentIdentities**: `InMemoryAgentIdentityRegistry`
 
 ##### audit
 
-> **audit**: [`InMemoryAuditLog`](../classes/InMemoryAuditLog.md)
+> **audit**: `InMemoryAuditLog`
 
 ##### capabilities
 
-> **capabilities**: [`InMemoryCapabilityRegistry`](../classes/InMemoryCapabilityRegistry.md)
+> **capabilities**: `InMemoryCapabilityRegistry`
 
 ##### clock
 
-> **clock**: [`SystemClock`](../classes/SystemClock.md)
+> **clock**: `SystemClock`
 
 ##### custody
 
-> **custody**: [`InMemorySecretCustody`](../classes/InMemorySecretCustody.md)
+> **custody**: `InMemorySecretCustody`
 
 ##### customFlows
 
-> **customFlows**: [`InMemoryCustomHttpFlowRegistry`](../classes/InMemoryCustomHttpFlowRegistry.md)
+> **customFlows**: `InMemoryCustomHttpFlowRegistry`
 
 ##### executor
 
-> **executor**: [`HttpDispatchExecutor`](../classes/HttpDispatchExecutor.md)
+> **executor**: `HttpDispatchExecutor`
 
 ##### ids
 
-> **ids**: [`RandomIdGenerator`](../classes/RandomIdGenerator.md)
+> **ids**: `RandomIdGenerator`
 
 ##### ownerIdentities
 
-> **ownerIdentities**: [`InMemoryOwnerIdentityRegistry`](../classes/InMemoryOwnerIdentityRegistry.md)
+> **ownerIdentities**: `InMemoryOwnerIdentityRegistry`
 
 ##### ownerProofVerifier
 
-> **ownerProofVerifier**: [`SignatureOwnerProofVerifier`](../classes/SignatureOwnerProofVerifier.md)
+> **ownerProofVerifier**: `SignatureOwnerProofVerifier`
 
 ##### policy
 
-> **policy**: [`DefaultPolicyEngine`](../classes/DefaultPolicyEngine.md)
+> **policy**: `DefaultPolicyEngine`
 
 ##### proofVerifier
 
-> **proofVerifier**: [`SignatureAgentProofVerifier`](../classes/SignatureAgentProofVerifier.md)
+> **proofVerifier**: `SignatureAgentProofVerifier`
 
 ##### replayGuard
 
@@ -138,7 +138,7 @@ const agent = createAgentClient({
 
 ##### secrets
 
-> **secrets**: [`InMemorySecretRepository`](../classes/InMemorySecretRepository.md)
+> **secrets**: `InMemorySecretRepository`
 
 ##### vaultId
 
@@ -211,15 +211,15 @@ console.log(identity.identityId);
 
 ##### agentIdentities
 
-> **agentIdentities**: [`PersistentVaultAgentIdentityRegistry`](../classes/PersistentVaultAgentIdentityRegistry.md)
+> **agentIdentities**: `FileAgentIdentityRegistry`
 
 ##### audit
 
-> **audit**: [`PersistentVaultAuditLog`](../classes/PersistentVaultAuditLog.md)
+> **audit**: `FileAuditLog`
 
 ##### capabilities
 
-> **capabilities**: [`PersistentVaultCapabilityRegistry`](../classes/PersistentVaultCapabilityRegistry.md)
+> **capabilities**: `FileCapabilityRegistry`
 
 ##### capabilityRevocations
 
@@ -227,11 +227,11 @@ console.log(identity.identityId);
 
 ##### clock
 
-> **clock**: [`SystemClock`](../classes/SystemClock.md)
+> **clock**: `SystemClock`
 
 ##### custody
 
-> **custody**: [`PersistentVaultSecretCustody`](../classes/PersistentVaultSecretCustody.md)
+> **custody**: `FileSecretCustody`
 
 ##### customFlows
 
@@ -239,27 +239,27 @@ console.log(identity.identityId);
 
 ##### executor
 
-> **executor**: [`HttpDispatchExecutor`](../classes/HttpDispatchExecutor.md)
+> **executor**: `HttpDispatchExecutor`
 
 ##### ids
 
-> **ids**: [`RandomIdGenerator`](../classes/RandomIdGenerator.md)
+> **ids**: `RandomIdGenerator`
 
 ##### ownerIdentities
 
-> **ownerIdentities**: [`PersistentVaultOwnerIdentityRegistry`](../classes/PersistentVaultOwnerIdentityRegistry.md)
+> **ownerIdentities**: `FileOwnerIdentityRegistry`
 
 ##### ownerProofVerifier
 
-> **ownerProofVerifier**: [`SignatureOwnerProofVerifier`](../classes/SignatureOwnerProofVerifier.md)
+> **ownerProofVerifier**: `SignatureOwnerProofVerifier`
 
 ##### policy
 
-> **policy**: [`DefaultPolicyEngine`](../classes/DefaultPolicyEngine.md)
+> **policy**: `DefaultPolicyEngine`
 
 ##### proofVerifier
 
-> **proofVerifier**: [`SignatureAgentProofVerifier`](../classes/SignatureAgentProofVerifier.md)
+> **proofVerifier**: `SignatureAgentProofVerifier`
 
 ##### replayGuard
 
@@ -267,7 +267,7 @@ console.log(identity.identityId);
 
 ##### secrets
 
-> **secrets**: [`PersistentVaultSecretRepository`](../classes/PersistentVaultSecretRepository.md)
+> **secrets**: `FileSecretRepository`
 
 ##### vaultId
 
@@ -531,7 +531,7 @@ const child = deriveChildIdentity(parentIdentity, 0, { nickname: 'sub-agent-0' }
 
 ### FsStorageProvider
 
-> **FsStorageProvider**: *typeof* [`FsStorageProvider`](../classes/FsStorageProvider.md)
+> **FsStorageProvider**: *typeof* `FsStorageProvider`
 
 ***
 
@@ -638,25 +638,25 @@ A list of vault IDs and their public discovery metadata.
 
 ### LocalSigner
 
-> **LocalSigner**: *typeof* [`LocalSigner`](../classes/LocalSigner.md)
+> **LocalSigner**: *typeof* `LocalSigner`
 
 ***
 
 ### LocalVaultTransport
 
-> **LocalVaultTransport**: *typeof* [`LocalVaultTransport`](../classes/LocalVaultTransport.md)
+> **LocalVaultTransport**: *typeof* `LocalVaultTransport`
 
 ***
 
 ### MemoryStorageProvider
 
-> **MemoryStorageProvider**: *typeof* [`MemoryStorageProvider`](../classes/MemoryStorageProvider.md)
+> **MemoryStorageProvider**: *typeof* `MemoryStorageProvider`
 
 ***
 
 ### PersistentVaultCapabilityRevocationRegistry
 
-> **PersistentVaultCapabilityRevocationRegistry**: *typeof* [`PersistentVaultCapabilityRevocationRegistry`](../classes/PersistentVaultCapabilityRevocationRegistry.md)
+> **PersistentVaultCapabilityRevocationRegistry**: *typeof* `FileCapabilityRevocationRegistry`
 
 ***
 
@@ -847,7 +847,7 @@ const identity = restoreIdentity('MIIB...');
 
 ### SystemClock
 
-> **SystemClock**: *typeof* [`SystemClock`](../classes/SystemClock.md)
+> **SystemClock**: *typeof* `SystemClock`
 
 ***
 

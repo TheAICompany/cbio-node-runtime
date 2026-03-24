@@ -82,6 +82,9 @@ function buildSecretRecord(
   };
 }
 
+/**
+ * @internal
+ */
 export class DefaultVaultCore implements VaultCore {
   constructor(private readonly _deps: VaultCoreDependencies) {}
 

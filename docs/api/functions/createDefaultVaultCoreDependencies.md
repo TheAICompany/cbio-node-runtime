@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
 
 ***
 
@@ -18,51 +18,51 @@
 
 ### agentIdentities
 
-> **agentIdentities**: [`InMemoryAgentIdentityRegistry`](../classes/InMemoryAgentIdentityRegistry.md)
+> **agentIdentities**: `InMemoryAgentIdentityRegistry`
 
 ### audit
 
-> **audit**: [`InMemoryAuditLog`](../classes/InMemoryAuditLog.md)
+> **audit**: `InMemoryAuditLog`
 
 ### capabilities
 
-> **capabilities**: [`InMemoryCapabilityRegistry`](../classes/InMemoryCapabilityRegistry.md)
+> **capabilities**: `InMemoryCapabilityRegistry`
 
 ### clock
 
-> **clock**: [`SystemClock`](../classes/SystemClock.md)
+> **clock**: `SystemClock`
 
 ### custody
 
-> **custody**: [`InMemorySecretCustody`](../classes/InMemorySecretCustody.md)
+> **custody**: `InMemorySecretCustody`
 
 ### customFlows
 
-> **customFlows**: [`InMemoryCustomHttpFlowRegistry`](../classes/InMemoryCustomHttpFlowRegistry.md)
+> **customFlows**: `InMemoryCustomHttpFlowRegistry`
 
 ### executor
 
-> **executor**: [`HttpDispatchExecutor`](../classes/HttpDispatchExecutor.md)
+> **executor**: `HttpDispatchExecutor`
 
 ### ids
 
-> **ids**: [`RandomIdGenerator`](../classes/RandomIdGenerator.md)
+> **ids**: `RandomIdGenerator`
 
 ### ownerIdentities
 
-> **ownerIdentities**: [`InMemoryOwnerIdentityRegistry`](../classes/InMemoryOwnerIdentityRegistry.md)
+> **ownerIdentities**: `InMemoryOwnerIdentityRegistry`
 
 ### ownerProofVerifier
 
-> **ownerProofVerifier**: [`SignatureOwnerProofVerifier`](../classes/SignatureOwnerProofVerifier.md)
+> **ownerProofVerifier**: `SignatureOwnerProofVerifier`
 
 ### policy
 
-> **policy**: [`DefaultPolicyEngine`](../classes/DefaultPolicyEngine.md)
+> **policy**: `DefaultPolicyEngine`
 
 ### proofVerifier
 
-> **proofVerifier**: [`SignatureAgentProofVerifier`](../classes/SignatureAgentProofVerifier.md)
+> **proofVerifier**: `SignatureAgentProofVerifier`
 
 ### replayGuard
 
@@ -70,7 +70,7 @@
 
 ### secrets
 
-> **secrets**: [`InMemorySecretRepository`](../classes/InMemorySecretRepository.md)
+> **secrets**: `InMemorySecretRepository`
 
 ### vaultId
 

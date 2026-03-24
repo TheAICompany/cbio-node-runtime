@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
 
 ***
 
@@ -22,15 +22,15 @@
 
 ### agentIdentities
 
-> **agentIdentities**: [`PersistentVaultAgentIdentityRegistry`](../classes/PersistentVaultAgentIdentityRegistry.md)
+> **agentIdentities**: `FileAgentIdentityRegistry`
 
 ### audit
 
-> **audit**: [`PersistentVaultAuditLog`](../classes/PersistentVaultAuditLog.md)
+> **audit**: `FileAuditLog`
 
 ### capabilities
 
-> **capabilities**: [`PersistentVaultCapabilityRegistry`](../classes/PersistentVaultCapabilityRegistry.md)
+> **capabilities**: `FileCapabilityRegistry`
 
 ### capabilityRevocations
 
@@ -38,11 +38,11 @@
 
 ### clock
 
-> **clock**: [`SystemClock`](../classes/SystemClock.md)
+> **clock**: `SystemClock`
 
 ### custody
 
-> **custody**: [`PersistentVaultSecretCustody`](../classes/PersistentVaultSecretCustody.md)
+> **custody**: `FileSecretCustody`
 
 ### customFlows
 
@@ -50,27 +50,27 @@
 
 ### executor
 
-> **executor**: [`HttpDispatchExecutor`](../classes/HttpDispatchExecutor.md)
+> **executor**: `HttpDispatchExecutor`
 
 ### ids
 
-> **ids**: [`RandomIdGenerator`](../classes/RandomIdGenerator.md)
+> **ids**: `RandomIdGenerator`
 
 ### ownerIdentities
 
-> **ownerIdentities**: [`PersistentVaultOwnerIdentityRegistry`](../classes/PersistentVaultOwnerIdentityRegistry.md)
+> **ownerIdentities**: `FileOwnerIdentityRegistry`
 
 ### ownerProofVerifier
 
-> **ownerProofVerifier**: [`SignatureOwnerProofVerifier`](../classes/SignatureOwnerProofVerifier.md)
+> **ownerProofVerifier**: `SignatureOwnerProofVerifier`
 
 ### policy
 
-> **policy**: [`DefaultPolicyEngine`](../classes/DefaultPolicyEngine.md)
+> **policy**: `DefaultPolicyEngine`
 
 ### proofVerifier
 
-> **proofVerifier**: [`SignatureAgentProofVerifier`](../classes/SignatureAgentProofVerifier.md)
+> **proofVerifier**: `SignatureAgentProofVerifier`
 
 ### replayGuard
 
@@ -78,7 +78,7 @@
 
 ### secrets
 
-> **secrets**: [`PersistentVaultSecretRepository`](../classes/PersistentVaultSecretRepository.md)
+> **secrets**: `FileSecretRepository`
 
 ### vaultId
 

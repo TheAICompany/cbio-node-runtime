@@ -6,6 +6,9 @@ import type { VaultAgentDispatchRequest, VaultAgentDispatchResponse, VaultAgentD
  * Remote transport for AgentClient that communicates over HTTP.
  * This allows the Agent (LLM) to reside in a separate process from the Vault Core.
  */
+/**
+ * @internal
+ */
 export class AgentDispatchHttpTransport implements AgentDispatchTransport {
   constructor(
     private readonly _url: string,

@@ -223,12 +223,18 @@ function createOwnerListCapabilitiesBinding(request: import("./contracts.js").Ow
   });
 }
 
+/**
+ * @internal
+ */
 export class SystemClock implements Clock {
   nowIso(): string {
     return new Date().toISOString();
   }
 }
 
+/**
+ * @internal
+ */
 export class RandomIdGenerator implements IdGenerator {
   newSecretId(): SecretId {
     return { value: `secret_${crypto.randomUUID()}` };
@@ -243,6 +249,9 @@ export class RandomIdGenerator implements IdGenerator {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemorySecretRepository implements SecretRepository {
   private readonly _byAlias = new Map<string, SecretRecord>();
   private readonly _byId = new Map<string, SecretRecord>();
@@ -270,6 +279,9 @@ export class InMemorySecretRepository implements SecretRepository {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemoryAuditLog implements AuditLog {
   private readonly _entries: AuditEntry[] = [];
 
@@ -288,6 +300,9 @@ export class InMemoryAuditLog implements AuditLog {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemorySecretCustody implements SecretCustody {
   private readonly _plaintextById = new Map<string, string>();
 
@@ -304,6 +319,9 @@ export class InMemorySecretCustody implements SecretCustody {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   private readonly _identities = new Map<string, AgentIdentityRecord>();
 
@@ -323,6 +341,9 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemoryOwnerIdentityRegistry implements OwnerIdentityRegistry {
   private readonly _identities = new Map<string, OwnerIdentityRecord>();
 
@@ -340,6 +361,9 @@ export class InMemoryOwnerIdentityRegistry implements OwnerIdentityRegistry {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemoryCapabilityRevocationRegistry implements CapabilityRevocationRegistry {
   private readonly _versions = new Map<string, number>();
 
@@ -355,6 +379,9 @@ export class InMemoryCapabilityRevocationRegistry implements CapabilityRevocatio
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemoryCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
   private readonly _flows = new Map<string, CustomHttpFlowDefinition>();
 
@@ -367,6 +394,9 @@ export class InMemoryCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemoryCapabilityRegistry implements CapabilityRegistry {
   private readonly _capabilities = new Map<string, AgentCapability>();
 
@@ -390,6 +420,9 @@ export class InMemoryCapabilityRegistry implements CapabilityRegistry {
   }
 }
 
+/**
+ * @internal
+ */
 export class InMemoryRateLimitStore implements RateLimitStore {
   private readonly _buckets = new Map<string, RateLimitBucket>();
 
@@ -409,6 +442,9 @@ export class InMemoryRateLimitStore implements RateLimitStore {
   }
 }
 
+/**
+ * @internal
+ */
 export class DefaultPolicyEngine implements PolicyEngine {
   private readonly _rateLimitStore: RateLimitStore;
 
@@ -599,6 +635,9 @@ export class DefaultPolicyEngine implements PolicyEngine {
   }
 }
 
+/**
+ * @internal
+ */
 export class SignatureAgentProofVerifier implements AgentProofVerifier {
   private readonly _maxSkewMs: number;
   private readonly _now: () => Date;
@@ -632,6 +671,9 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
   }
 }
 
+/**
+ * @internal
+ */
 export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
   private readonly _maxSkewMs: number;
   private readonly _now: () => Date;
@@ -903,6 +945,9 @@ export class InMemoryReplayGuard implements ReplayGuard {
   }
 }
 
+/**
+ * @internal
+ */
 export class HttpDispatchExecutor implements TrustedExecutor {
   constructor(
     private readonly _fetchImpl: typeof fetch = fetch,

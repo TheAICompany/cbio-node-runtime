@@ -1,6 +1,9 @@
 import type { AgentDispatchTransport } from "../clients/agent/index.js";
 import type { VaultService } from "./index.js";
 
+/**
+ * @internal
+ */
 export class LocalVaultTransport implements AgentDispatchTransport {
   constructor(private readonly _vault: VaultService) {}
 

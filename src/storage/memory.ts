@@ -4,6 +4,9 @@
 
 import type { IStorageProvider } from './provider.js';
 
+/**
+ * @internal
+ */
 export class MemoryStorageProvider implements IStorageProvider {
     #store = new Map<string, Buffer>();
     #locks = new Map<string, Promise<void>>();

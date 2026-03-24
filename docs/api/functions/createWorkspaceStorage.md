@@ -1,10 +1,10 @@
-[**CBIO Node Runtime Agent API v1.45.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
 
 ***
 
 # Function: createWorkspaceStorage()
 
-> **createWorkspaceStorage**(`baseDir?`): [`FsStorageProvider`](../classes/FsStorageProvider.md)
+> **createWorkspaceStorage**(`baseDir?`): `FsStorageProvider`
 
 ## Parameters
 
@@ -14,4 +14,4 @@
 
 ## Returns
 
-[`FsStorageProvider`](../classes/FsStorageProvider.md)
+`FsStorageProvider`
