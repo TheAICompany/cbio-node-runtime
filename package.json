@@ -1,6 +1,6 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "1.45.1",
+  "version": "1.45.2",
   "publishConfig": {
     "access": "public"
   },
@@ -23,7 +23,7 @@
     }
   },
   "dependencies": {
-    "@the-ai-company/cbio-protocol": "1.0.3"
+    "@the-ai-company/cbio-protocol": "^1.0.3"
   },
   "scripts": {
     "build": "tsc",
