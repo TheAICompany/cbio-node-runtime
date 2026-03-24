@@ -28,7 +28,7 @@ export interface IdentityPrivateVaultChildrenState {
 }
 
 
-type IdentityPrivateVaultAccess = CreatedIdentity | string;
+export type IdentityPrivateVaultAccess = CreatedIdentity | string;
 
 export function identityPrivateVaultPrefix(identityId: string): string {
   return `${PRIVATE_VAULT_PREFIX}/${identityId}`;

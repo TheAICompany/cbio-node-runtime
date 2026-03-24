@@ -1,0 +1,62 @@
+[**CBIO Node Runtime Agent API v1.45.1**](../README.md)
+
+***
+
+# Class: IdentityError
+
+Runtime export.
+Public surface: typed high-level runtime plus supported low-level building blocks.
+
+## Extends
+
+- `Error`
+
+## Constructors
+
+### Constructor
+
+> **new IdentityError**(`code`, `message`, `options?`): `IdentityError`
+
+#### Parameters
+
+##### code
+
+[`IdentityErrorCode`](../enumerations/IdentityErrorCode.md)
+
+##### message
+
+`string`
+
+##### options?
+
+`ErrorOptions`
+
+#### Returns
+
+`IdentityError`
+
+#### Overrides
+
+`Error.constructor`
+
+## Properties
+
+### code
+
+> `readonly` **code**: [`IdentityErrorCode`](../enumerations/IdentityErrorCode.md)
+
+## Methods
+
+### isIdentityError()
+
+> `static` **isIdentityError**(`e`): `e is IdentityError`
+
+#### Parameters
+
+##### e
+
+`unknown`
+
+#### Returns
+
+`e is IdentityError`

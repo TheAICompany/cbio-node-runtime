@@ -14,7 +14,27 @@ export interface AgentIdentity {
   agentId: string;
 }
 
+/**
+ * A client for agents to perform authorized operations (e.g., dispatch HTTP requests with secrets).
+ * This client uses a delegated capability granted by the owner.
+ */
 export interface AgentClient {
+  /**
+   * Dispatches a signed request to a target using a vault secret.
+   *
+   * @param intent - The destination, method, and secret alias to use.
+   * @returns The result of the remote operation.
+   *
+   * @example
+   * ```ts
+   * const result = await agent.dispatch({
+   *   targetUrl: 'https://api.example.com/data',
+   *   method: 'POST',
+   *   secretAlias: 'api-token',
+   *   body: JSON.stringify({ key: 'value' })
+   * });
+   * ```
+   */
   dispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
 }
 
@@ -149,6 +169,21 @@ function resolveAgentTransport(
   throw new Error("createAgentClient() requires transport or vault");
 }
 
+/**
+ * Creates an {@link AgentClient} for a delegated identity.
+ *
+ * @param options - Configuration including agent identity, capability, and transport.
+ * @returns An initialized {@link AgentClient}.
+ *
+ * @example
+ * ```ts
+ * const agent = createAgentClient({
+ *   agentIdentity,
+ *   capability,
+ *   vault
+ * });
+ * ```
+ */
 export function createAgentClient(options: CreateAgentClientOptions): AgentClient {
   if (!isCreateAgentClientOptions(options)) {
     throw new Error("createAgentClient() requires a single options object");

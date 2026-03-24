@@ -17,4 +17,8 @@ export type {
   OwnerSecretTargetBinding,
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
+  VaultDeleteSecretInput,
+  VaultListAgentsInput,
+  VaultListCapabilitiesInput,
+  VaultRevokeCapabilityInput,
 } from "./contracts.js";

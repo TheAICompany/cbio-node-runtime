@@ -18,6 +18,14 @@ import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile, readVaultPublicMetadata } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
 
+/**
+ * Derives the deterministic working key for a vault.
+ * 
+ * @param privateKey - The owner's private key.
+ * @param vaultId - The unique ID of the vault.
+ * @returns A base64url-encoded 256-bit key.
+ * @internal Used by `createVault` and `recoverVault`.
+ */
 export function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
   return crypto
     .createHash("sha256")
@@ -49,10 +57,17 @@ export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDepend
   };
 }
 
+/**
+ * Represents a vault instance with its core logic and service layer.
+ */
 export interface CreatedVault {
+  /** The low-level vault core. */
   core: VaultCore;
+  /** The high-level service interface for dispatch and acquisition. */
   vault: VaultService;
+  /** Human-readable nickname. */
   nickname?: string;
+  /** The anchored storage provider for this vault. */
   storage: IStorageProvider;
 }
 
@@ -95,10 +110,19 @@ function resolveStorage(
 }
 
 /**
- * Creates a new vault.
- * 
- * @param storage The storage provider to use.
- * @param options Configuration for the new vault.
+ * Creates and bootstraps a new persistent vault.
+ *
+ * @param storage - Workspace storage (or path string) where vaults are stored.
+ * @param options - Configuration including owner identity and metadata.
+ * @returns A {@link CreatedVault} instance.
+ *
+ * @example
+ * ```ts
+ * const vault = await createVault({
+ *   ownerIdentity,
+ *   nickname: 'production-secrets'
+ * });
+ * ```
  */
 export async function createVault(storage: IStorageProvider | string, options: CreateVaultOptions): Promise<CreatedVault>;
 /**
@@ -158,10 +182,19 @@ export async function createVault(
 }
 
 /**
- * Recovers an existing vault.
- * 
- * @param storage The storage provider where the vault is located.
- * @param options Recovery options including vaultId and owner identity.
+ * Reopens an existing vault from storage.
+ *
+ * @param storage - Workspace storage where the vault was created.
+ * @param options - Recovery options (must include `vaultId` and `ownerIdentity`).
+ * @returns A {@link RecoveredVault} instance.
+ *
+ * @example
+ * ```ts
+ * const vault = await recoverVault({
+ *   vaultId: 'vault_123',
+ *   ownerIdentity
+ * });
+ * ```
  */
 export async function recoverVault(storage: IStorageProvider | string, options: RecoverVaultOptions): Promise<RecoveredVault>;
 /**
@@ -200,7 +233,10 @@ export async function recoverVault(
 }
 
 /**
- * Lists all vaults in the workspace with their discovery metadata.
+ * Lists all available vaults in the workspace by scanning for signed profiles.
+ *
+ * @param storage - The root workspace storage provider.
+ * @returns A list of vault IDs and their public discovery metadata.
  */
 export async function listVaults(storage: IStorageProvider): Promise<Array<{ vaultId: string; public: any }>> {
   if (!storage.list) {

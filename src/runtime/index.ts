@@ -4,7 +4,7 @@
  */
 
 export { IdentityError, IdentityErrorCode } from "../errors.js";
-export { derivePublicKey, LocalSigner } from "../protocol/crypto.js";
+export { derivePublicKey, LocalSigner, type Signer } from "../protocol/crypto.js";
 export { deriveIdentityId } from "../protocol/identity.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
@@ -17,6 +17,7 @@ export {
   type RestoreIdentityOptions,
   type ChildIdentity,
   type CreatedIdentity,
+  type DeriveIdentityOptions,
 } from "./identity.js";
 export {
   createChildIdentity,
@@ -38,6 +39,7 @@ export {
   readIdentityPrivateVaultChildrenState,
   readIdentityMetadata,
   listIdentities,
+  type IdentityPrivateVaultAccess,
   identityPrivateVaultPrefix,
   identityPrivateVaultProfileKey,
   identityPrivateVaultPublicSealedKey,
@@ -147,6 +149,15 @@ export {
   type AgentProofVerifier,
   type CapabilityRevocationRegistry,
   type CapabilityRegistry,
+  type AuditAction,
+  type AuditOutcome,
+  type DispatchStatus,
+  type OwnerWriteSecretCommand,
+  type IssuerWriteSecretCommand,
+  type OwnerDeleteSecretCommand,
+  type OwnerListAgentsRequest,
+  type OwnerListCapabilitiesRequest,
+  type OwnerRevokeCapabilityCommand,
 } from "../vault-core/index.js";
 
 export {
@@ -164,6 +175,10 @@ export {
   type OwnerSecretTargetBinding,
   type OwnerStoreSecretInput,
   type OwnerWriteSecretInput,
+  type VaultDeleteSecretInput,
+  type VaultListAgentsInput,
+  type VaultListCapabilitiesInput,
+  type VaultRevokeCapabilityInput,
 } from "../clients/owner/index.js";
 
 export {
@@ -220,13 +235,7 @@ export interface CbioRuntime {
   readIdentityPrivateVaultProfile: typeof import("./private-vault.js").readIdentityPrivateVaultProfile;
   readIdentityPrivateVaultChildrenState: typeof import("./private-vault.js").readIdentityPrivateVaultChildrenState;
   readIdentityMetadata: typeof import("./private-vault.js").readIdentityMetadata;
-  /**
-   * Lists all identities in the workspace.
-   */
   listIdentities: typeof import("./private-vault.js").listIdentities;
-  /**
-   * Lists all vaults in the workspace.
-   */
   listVaults: typeof import("./bootstrap.js").listVaults;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;

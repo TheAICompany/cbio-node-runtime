@@ -25,18 +25,75 @@ export interface VaultSigner {
   sign(input: string): Promise<string>;
 }
 
+/**
+ * A client for vault owners to manage secrets, agents, and capabilities.
+ * This client requires an owner signature for every operation.
+ */
 export interface VaultClient {
+  /**
+   * Securely stores a new secret in the vault.
+   * @param input - The secret alias and plaintext.
+   * @returns The record of the stored secret.
+   * @example
+   * ```ts
+   * await client.storeSecret({ alias: 'db-pass', plaintext: 's3cret' });
+   * ```
+   */
   storeSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+
+  /**
+   * Refines the allowed targets for an existing secret.
+   */
   defineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+
+  /**
+   * Atomic operation to store a secret and define its targets in one step.
+   */
   writeSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+
+  /**
+   * Exports a secret's plaintext (requires owner permission).
+   */
   exportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+
+  /**
+   * Grants a specific capability to an agent.
+   */
   grantCapability(input: VaultGrantCapabilityInput): Promise<void>;
+
+  /**
+   * Reads the tamper-evident audit log for the vault.
+   */
   readAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
+
+  /**
+   * Registers a new agent identity within the vault.
+   */
   registerAgent(input: VaultRegisterAgentInput): Promise<void>;
+
+  /**
+   * Registers a custom HTTP flow for complex secret usage.
+   */
   registerFlow(input: VaultRegisterFlowInput): Promise<void>;
+
+  /**
+   * Permanently deletes a secret from the vault.
+   */
   deleteSecret(input: VaultDeleteSecretInput): Promise<void>;
+
+  /**
+   * Lists all agents registered in the vault.
+   */
   listAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
+
+  /**
+   * Lists all active capabilities granted to agents.
+   */
   listCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+
+  /**
+   * Revokes a previously granted capability.
+   */
   revokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
 }
 
@@ -435,6 +492,20 @@ function resolveVaultIdentity(options: CreateVaultClientOptions): VaultIdentity 
   };
 }
 
+/**
+ * Creates a {@link VaultClient} instance for a specific vault owner.
+ *
+ * @param options - Configuration including owner identity and the vault service.
+ * @returns An initialized {@link VaultClient}.
+ *
+ * @example
+ * ```ts
+ * const client = createVaultClient({
+ *   ownerIdentity,
+ *   vault
+ * });
+ * ```
+ */
 export function createVaultClient(options: CreateVaultClientOptions): VaultClient {
   if (!isCreateVaultClientOptions(options)) {
     throw new Error("createVaultClient() requires a single options object");

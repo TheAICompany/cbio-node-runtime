@@ -1,0 +1,39 @@
+[**CBIO Node Runtime Agent API v1.45.1**](../README.md)
+
+***
+
+# Class: VaultCoreError
+
+## Extends
+
+- `Error`
+
+## Constructors
+
+### Constructor
+
+> **new VaultCoreError**(`message`, `code`): `VaultCoreError`
+
+#### Parameters
+
+##### message
+
+`string`
+
+##### code
+
+`"VAULT_SECRET_NOT_FOUND"` \| `"VAULT_WRITE_DENIED"` \| `"VAULT_IDENTITY_DENIED"` \| `"VAULT_DISPATCH_DENIED"` \| `"VAULT_AUDIT_DENIED"` \| `"VAULT_AUDIT_FAILED"`
+
+#### Returns
+
+`VaultCoreError`
+
+#### Overrides
+
+`Error.constructor`
+
+## Properties
+
+### code
+
+> `readonly` **code**: `"VAULT_SECRET_NOT_FOUND"` \| `"VAULT_WRITE_DENIED"` \| `"VAULT_IDENTITY_DENIED"` \| `"VAULT_DISPATCH_DENIED"` \| `"VAULT_AUDIT_DENIED"` \| `"VAULT_AUDIT_FAILED"`

@@ -1,0 +1,14 @@
+{
+  "entryPoints": ["src/runtime/index.ts"],
+  "out": "docs/api",
+  "plugin": ["typedoc-plugin-markdown"],
+  "hideBreadcrumbs": true,
+  "readme": "none",
+  "disableSources": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "name": "CBIO Node Runtime Agent API",
+  "includeVersion": true,
+  "githubPages": false,
+  "outputFileStrategy": "members"
+}
