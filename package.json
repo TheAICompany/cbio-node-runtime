@@ -1,6 +1,9 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "1.45.0",
+  "version": "1.45.1",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Node.js runtime for cbio identity and credential vault. Library only, no CLI or TUI.",
   "type": "module",
   "main": "./dist/runtime/index.js",
@@ -20,11 +23,11 @@
     }
   },
   "dependencies": {
-    "@the-ai-company/cbio-protocol": "^1.0.3"
+    "@the-ai-company/cbio-protocol": "1.0.3"
   },
   "scripts": {
     "build": "tsc",
-    "build:docs": "typedoc --options typedoc.json",
+    "build:docs": "npx typedoc --options typedoc.json",
     "release": "npx standard-version && npm publish",
     "prepare": "npm run build && npm run build:docs",
     "test": "npm run build && npm run test:acceptance",
