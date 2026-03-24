@@ -1,8 +1,8 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
-# Interface: CreateDefaultVaultCoreDependenciesOptions
+# Interface: VaultCoreDependenciesOptions
 
 ## Extended by
 
@@ -76,7 +76,7 @@
 
 ### proofVerifier?
 
-> `optional` **proofVerifier?**: [`SignatureAgentProofVerifierOptions`](SignatureAgentProofVerifierOptions.md)
+> `optional` **proofVerifier?**: `SignatureAgentProofVerifierOptions`
 
 ***
 

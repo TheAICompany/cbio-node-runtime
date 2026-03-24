@@ -26,7 +26,7 @@ import type {
   AgentIdentityRecord,
   AgentCapability,
 } from "./contracts.js";
-import type { VaultCore, VaultCoreDependencies } from "./ports.js";
+import type { VaultCoreDependencies } from "./ports.js";
 import { VaultCoreError } from "./errors.js";
 
 function toAuditEntry(
@@ -83,9 +83,10 @@ function buildSecretRecord(
 }
 
 /**
- * @internal
+ * The Sovereign Vault Core.
+ * This is the primary implementation of the Vault logic.
  */
-export class DefaultVaultCore implements VaultCore {
+export class VaultCore {
   constructor(private readonly _deps: VaultCoreDependencies) {}
 
   get vaultId() {
@@ -122,24 +123,6 @@ export class DefaultVaultCore implements VaultCore {
     );
   }
 
-  async bootstrapOwnerIdentity(identity: import("./contracts.js").OwnerIdentityRecord): Promise<void> {
-    if (identity.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("owner identity vault mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    if (await this._deps.ownerIdentities.hasAny(this._deps.vaultId)) {
-      throw new VaultCoreError("owner bootstrap already completed", "VAULT_IDENTITY_DENIED");
-    }
-    await this._deps.ownerIdentities.register(identity);
-    await this.appendAudit(
-      toAuditEntry(
-        this._deps,
-        { kind: "owner", id: identity.ownerId },
-        AuditAction.BOOTSTRAP_OWNER_IDENTITY,
-        AuditOutcome.SUCCEEDED,
-        "initial owner identity bootstrapped",
-      ),
-    );
-  }
 
   async registerAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
@@ -149,7 +132,7 @@ export class DefaultVaultCore implements VaultCore {
       throw new VaultCoreError("agent identity vault mismatch", "VAULT_IDENTITY_DENIED");
     }
     try {
-      await this._deps.ownerProofVerifier.verifyRegisterAgentIdentity(command);
+      // Sovereign Vault: Owner has full privileges. No signature required for unlocked vault.
       await this._deps.agentIdentities.register(command.agentIdentity);
       await this.appendAudit(
         toAuditEntry(
@@ -189,7 +172,6 @@ export class DefaultVaultCore implements VaultCore {
       throw new VaultCoreError("capability id required", "VAULT_IDENTITY_DENIED");
     }
     try {
-      await this._deps.ownerProofVerifier.verifyRegisterCapability(command);
       await this._deps.capabilities.register(command.capability);
       await this.appendAudit(
         toAuditEntry(
@@ -241,7 +223,6 @@ export class DefaultVaultCore implements VaultCore {
       throw new VaultCoreError("custom flow response secret rule required", "VAULT_IDENTITY_DENIED");
     }
     try {
-      await this._deps.ownerProofVerifier.verifyRegisterCustomFlow(command);
       await this._deps.customFlows.register({
         vaultId: this._deps.vaultId,
         flowId: command.flow.flowId,
@@ -312,12 +293,6 @@ export class DefaultVaultCore implements VaultCore {
       plaintext,
       targetBindings,
       requestedAt: this._deps.clock.nowIso(),
-      proof: {
-        ownerId: actor.id,
-        requestId: `${flow.flowId}:${alias}:custom_flow_store`,
-        requestedAt: this._deps.clock.nowIso(),
-        signature: "vault-internal",
-      },
     });
     try {
       await this._deps.custody.store(record.secretId, plaintext);
@@ -343,9 +318,6 @@ export class DefaultVaultCore implements VaultCore {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
     try {
-      if (command.kind === "owner.write_secret") {
-        await this._deps.ownerProofVerifier.verifyWrite(command);
-      }
       await this._deps.policy.authorizeWrite(command);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
@@ -401,8 +373,6 @@ export class DefaultVaultCore implements VaultCore {
   }
 
   async deleteSecret(command: OwnerDeleteSecretCommand): Promise<void> {
-    await this._deps.ownerProofVerifier.verifyDeleteSecret?.(command);
-    
     const record = await this._deps.secrets.getByAlias({ value: command.alias });
     if (!record) {
       throw new VaultCoreError(`secret not found: ${command.alias}`, "VAULT_SECRET_NOT_FOUND");
@@ -425,7 +395,6 @@ export class DefaultVaultCore implements VaultCore {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
     try {
-      await this._deps.ownerProofVerifier.verifyDefineSecretTargets(command);
       await this._deps.policy.authorizeDefineSecretTargets(command);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
@@ -491,7 +460,7 @@ export class DefaultVaultCore implements VaultCore {
 
     try {
       await this._deps.replayGuard.assertNotReplayed(request);
-      await this._deps.proofVerifier.verify(request);
+      await this._deps.agentProofVerifier.verify(request);
       await this._deps.policy.authorizeDispatch(request, record);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
@@ -581,17 +550,6 @@ export class DefaultVaultCore implements VaultCore {
     query: AuditQuery,
     request?: Omit<import("./contracts.js").OwnerAuditRequest, "actor" | "query" | "vaultId">,
   ): Promise<readonly AuditEntry[]> {
-    if (!request) {
-      throw new VaultCoreError("owner audit proof required", "VAULT_AUDIT_DENIED");
-    }
-    await this._deps.ownerProofVerifier.verifyAudit({
-      vaultId: this._deps.vaultId,
-      actor,
-      query,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      proof: request.proof,
-    });
     const entries = await this._deps.audit.query(query);
     await this.appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.READ_AUDIT, AuditOutcome.ALLOWED, "audit queried"),
@@ -604,18 +562,7 @@ export class DefaultVaultCore implements VaultCore {
     alias: string,
     request?: Omit<OwnerExportSecretRequest, "actor" | "alias" | "vaultId">,
   ): Promise<OwnerSecretExport> {
-    if (!request) {
-      throw new VaultCoreError("owner export proof required", "VAULT_AUDIT_DENIED");
-    }
     try {
-      await this._deps.ownerProofVerifier.verifyExport({
-        vaultId: this._deps.vaultId,
-        actor,
-        alias,
-        requestId: request.requestId,
-        requestedAt: request.requestedAt,
-        proof: request.proof,
-      });
       const record = await this._deps.secrets.getByAlias({ value: alias });
       if (!record) {
         throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
@@ -627,7 +574,7 @@ export class DefaultVaultCore implements VaultCore {
       const exportedAt = this._deps.clock.nowIso();
       await this.appendAudit(
         toAuditEntry(this._deps, actor, AuditAction.EXPORT_SECRET, AuditOutcome.SUCCEEDED, "secret exported", {
-          requestId: request.requestId,
+          requestId: request?.requestId,
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
         }),
@@ -643,7 +590,7 @@ export class DefaultVaultCore implements VaultCore {
       const detail = error instanceof Error ? error.message : String(error);
       await this.appendAudit(
         toAuditEntry(this._deps, actor, AuditAction.EXPORT_SECRET, AuditOutcome.DENIED, detail, {
-          requestId: request.requestId,
+          requestId: request?.requestId,
           secretAlias: alias,
         }),
       );
@@ -655,20 +602,10 @@ export class DefaultVaultCore implements VaultCore {
     actor: VaultPrincipal & { kind: "owner" },
     request?: Omit<OwnerListAgentsRequest, "actor" | "vaultId">,
   ): Promise<readonly AgentIdentityRecord[]> {
-    if (!request) {
-      throw new VaultCoreError("owner list agents proof required", "VAULT_AUDIT_DENIED");
-    }
-    await this._deps.ownerProofVerifier.verifyListAgents({
-      vaultId: this._deps.vaultId,
-      actor,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      proof: request.proof,
-    });
     const identities = await this._deps.agentIdentities.list(this._deps.vaultId);
     await this.appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_AGENTS, AuditOutcome.ALLOWED, "agent identities listed", {
-        requestId: request.requestId,
+        requestId: request?.requestId,
       }),
     );
     return identities;
@@ -679,21 +616,10 @@ export class DefaultVaultCore implements VaultCore {
     agentId?: string,
     request?: Omit<OwnerListCapabilitiesRequest, "actor" | "agentId" | "vaultId">,
   ): Promise<readonly AgentCapability[]> {
-    if (!request) {
-      throw new VaultCoreError("owner list capabilities proof required", "VAULT_AUDIT_DENIED");
-    }
-    await this._deps.ownerProofVerifier.verifyListCapabilities({
-      vaultId: this._deps.vaultId,
-      actor,
-      agentId,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      proof: request.proof,
-    });
     const capabilities = await this._deps.capabilities.list(this._deps.vaultId, agentId);
     await this.appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_CAPABILITIES, AuditOutcome.ALLOWED, "capabilities listed", {
-        requestId: request.requestId,
+        requestId: request?.requestId,
         agentId,
       }),
     );
@@ -701,7 +627,6 @@ export class DefaultVaultCore implements VaultCore {
   }
 
   async revokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {
-    await this._deps.ownerProofVerifier.verifyRevokeCapability(command);
     await this._deps.policy.revokeCapability(command.vaultId, command.agentId, command.capabilityId);
     await this.appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.REVOKE_CAPABILITY, AuditOutcome.SUCCEEDED, "capability revoked", {
@@ -714,5 +639,5 @@ export class DefaultVaultCore implements VaultCore {
 }
 
 export function createVaultCore(deps: VaultCoreDependencies): VaultCore {
-  return new DefaultVaultCore(deps);
+  return new VaultCore(deps);
 }

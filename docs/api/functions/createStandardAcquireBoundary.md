@@ -1,10 +1,10 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
 # Function: createStandardAcquireBoundary()
 
-> **createStandardAcquireBoundary**(`input`): [`OwnerHttpFlowBoundary`](../interfaces/OwnerHttpFlowBoundary.md)
+> **createStandardAcquireBoundary**(`input`): `OwnerHttpFlowBoundary`
 
 ## Parameters
 
@@ -28,4 +28,4 @@
 
 ## Returns
 
-[`OwnerHttpFlowBoundary`](../interfaces/OwnerHttpFlowBoundary.md)
+`OwnerHttpFlowBoundary`

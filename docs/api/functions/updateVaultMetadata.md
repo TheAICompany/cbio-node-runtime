@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -16,17 +16,17 @@ Updates the metadata (like nickname) of an existing vault.
 
 ### options
 
+#### metadata?
+
+`Record`\<`string`, `any`\>
+
 #### nickname?
 
 `string`
 
-#### ownerIdentity
+#### password
 
-`CreatedIdentity`
-
-#### publicMetadata?
-
-`Record`\<`string`, `any`\>
+`string`
 
 ## Returns
 

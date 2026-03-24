@@ -4,29 +4,21 @@
  */
 
 export { IdentityError, IdentityErrorCode } from "../errors.js";
-export { derivePublicKey, LocalSigner, type Signer } from "../protocol/crypto.js";
+export { derivePublicKey, LocalSigner, type Signer, deriveVaultWorkingKeyFromPassword } from "../protocol/crypto.js";
 export { deriveIdentityId } from "../protocol/identity.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";
 export {
   createIdentity,
-  deriveChildIdentity,
   restoreIdentity,
   type CreateIdentityOptions,
   type RestoreIdentityOptions,
-  type ChildIdentity,
   type CreatedIdentity,
-  type DeriveIdentityOptions,
 } from "./identity.js";
-export {
-  createChildIdentity,
-  type CreateChildIdentityOptions,
-} from "./child-identity.js";
 export {
   readVaultProfile,
   writeVaultProfile,
-  readVaultPublicMetadata,
   type VaultProfile,
 } from "./vault-metadata.js";
 export {
@@ -34,24 +26,8 @@ export {
   getDefaultWorkspaceDir,
 } from "./workspace-storage.js";
 export {
-  ensureIdentityPrivateVault,
-  readIdentityPrivateVaultProfile,
-  readIdentityPrivateVaultChildrenState,
-  readIdentityMetadata,
-  listIdentities,
-  type IdentityPrivateVaultAccess,
-  identityPrivateVaultPrefix,
-  identityPrivateVaultProfileKey,
-  identityPrivateVaultPublicSealedKey,
-  identityPrivateVaultChildrenKey,
-  type IdentityPrivateVaultProfile,
-  type IdentityPrivateVaultChildRecord,
-  type IdentityPrivateVaultChildrenState,
-} from "./private-vault.js";
-export {
   createVault,
   recoverVault,
-  deriveVaultWorkingKey,
   listVaults,
   updateVaultMetadata,
   type CreateVaultOptions,
@@ -64,10 +40,10 @@ export {
 
 export {
   createVaultCore,
-  DefaultVaultCore,
+  VaultCore,
   VaultCoreError,
-  createDefaultVaultCoreDependencies,
-  type CreateDefaultVaultCoreDependenciesOptions,
+  createVaultCoreDependencies,
+  type VaultCoreDependenciesOptions,
   type DefaultPolicyEngineOptions,
   DefaultPolicyEngine,
   createPersistentVaultCoreDependencies,
@@ -79,7 +55,6 @@ export {
   type CreatePersistentVaultCoreDependenciesOptions,
   PersistentVaultAgentIdentityRegistry,
   PersistentVaultAuditLog,
-  PersistentVaultOwnerIdentityRegistry,
   PersistentVaultCapabilityRegistry,
   PersistentVaultCapabilityRevocationRegistry,
   PersistentVaultCustomHttpFlowRegistry,
@@ -87,77 +62,6 @@ export {
   PersistentVaultReplayGuard,
   PersistentVaultSecretCustody,
   PersistentVaultSecretRepository,
-  HttpDispatchExecutor,
-  InMemoryAgentIdentityRegistry,
-  InMemoryCapabilityRegistry,
-  InMemoryCapabilityRevocationRegistry,
-  InMemoryCustomHttpFlowRegistry,
-  InMemoryRateLimitStore,
-  InMemoryReplayGuard,
-  InMemoryAuditLog,
-  InMemoryOwnerIdentityRegistry,
-  InMemorySecretCustody,
-  InMemorySecretRepository,
-  RandomIdGenerator,
-  SignatureOwnerProofVerifier,
-  type SignatureAgentProofVerifierOptions,
-  SignatureAgentProofVerifier,
-  SystemClock,
-  type AgentCapability,
-  type AgentIdentityRecord,
-  type AgentProof,
-  type OwnerAuditRequest,
-  type OwnerExportSecretRequest,
-  type OwnerDefineSecretTargetsCommand,
-  type OwnerRegisterCapabilityCommand,
-  type OwnerRegisterAgentIdentityCommand,
-  type OwnerRegisterCustomHttpFlowCommand,
-  type OwnerSecretExport,
-  type OwnerIdentityRecord,
-  type CustomHttpFlowDefinition,
-  type OwnerProof,
-  type AuditEntry,
-  type AuditLog,
-  type AuditQuery,
-  type Clock,
-  type DispatchAuthorization,
-  type DispatchInstruction,
-  type DispatchRequest,
-  type DispatchResult,
-  type IdGenerator,
-  type OwnerIdentityRegistry,
-  type OwnerProofVerifier,
-  type PolicyEngine,
-  type RateLimitStore,
-  type ReplayGuard,
-  type CustomHttpFlowRegistry,
-  type SecretAlias,
-  type SecretCustody,
-  type SecretId,
-  type SecretRecord,
-  type SecretRepository,
-  type SecretVersion,
-  type TrustedExecutor,
-  type VaultCore,
-  type VaultCoreDependencies,
-  type VaultPrincipal,
-  type VaultPrincipalKind,
-  type VaultTargetBinding,
-  type VaultWriteSecretCommand,
-  type VaultId,
-  type AgentIdentityRegistry,
-  type AgentProofVerifier,
-  type CapabilityRevocationRegistry,
-  type CapabilityRegistry,
-  type AuditAction,
-  type AuditOutcome,
-  type DispatchStatus,
-  type OwnerWriteSecretCommand,
-  type IssuerWriteSecretCommand,
-  type OwnerDeleteSecretCommand,
-  type OwnerListAgentsRequest,
-  type OwnerListCapabilitiesRequest,
-  type OwnerRevokeCapabilityCommand,
 } from "../vault-core/index.js";
 
 export {
@@ -198,22 +102,11 @@ export {
   createOwnerHttpFlowBoundary,
   createStandardAcquireBoundary,
   createStandardDispatchBoundary,
-  toOwnerHttpFlowBoundary,
-  type VaultService,
-  type VaultAcquireSecretInput,
-  type VaultAcquireSecretResult,
-  type VaultAcquireSecretFlow,
-  type VaultCustomFlowResolver,
-  type VaultAgentDispatchRequest,
-  type VaultAgentDispatchResponse,
-  type VaultAgentDispatchErrorResponse,
-  type RedactedResponseShape,
-  type OwnerHttpFlowBoundary,
+  AgentDispatchHttpTransport,
+  handleVaultHttpDispatch,
 } from "../vault-ingress/index.js";
 
 export { LocalVaultTransport } from "../vault-ingress/defaults.js";
-export { AgentDispatchHttpTransport } from "../vault-ingress/remote-transport.js";
-export { handleVaultHttpDispatch } from "../vault-ingress/server-utils.js";
 
 /**
  * Main runtime interface.
@@ -229,24 +122,14 @@ export interface CbioRuntime {
   PersistentVaultCapabilityRevocationRegistry: typeof import("../vault-core/index.js").PersistentVaultCapabilityRevocationRegistry;
   createIdentity: typeof import("./identity.js").createIdentity;
   restoreIdentity: typeof import("./identity.js").restoreIdentity;
-  createChildIdentity: typeof import("./child-identity.js").createChildIdentity;
-  deriveChildIdentity: typeof import("./identity.js").deriveChildIdentity;
-  ensureIdentityPrivateVault: typeof import("./private-vault.js").ensureIdentityPrivateVault;
-  readIdentityPrivateVaultProfile: typeof import("./private-vault.js").readIdentityPrivateVaultProfile;
-  readIdentityPrivateVaultChildrenState: typeof import("./private-vault.js").readIdentityPrivateVaultChildrenState;
-  readIdentityMetadata: typeof import("./private-vault.js").readIdentityMetadata;
-  listIdentities: typeof import("./private-vault.js").listIdentities;
   listVaults: typeof import("./bootstrap.js").listVaults;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
-  deriveVaultWorkingKey: typeof import("./bootstrap.js").deriveVaultWorkingKey;
+  deriveVaultWorkingKeyFromPassword: typeof import("../protocol/crypto.js").deriveVaultWorkingKeyFromPassword;
   createVaultClient: typeof import("../clients/owner/index.js").createVaultClient;
   createAgentClient: typeof import("../clients/agent/index.js").createAgentClient;
   createVaultCore: typeof import("../vault-core/index.js").createVaultCore;
-  createDefaultVaultCoreDependencies: typeof import("../vault-core/index.js").createDefaultVaultCoreDependencies;
-  createPersistentVaultCoreDependencies: typeof import("../vault-core/index.js").createPersistentVaultCoreDependencies;
-  initializeVaultCustody: typeof import("../vault-core/index.js").initializeVaultCustody;
-  recoverVaultWorkingKey: typeof import("../vault-core/index.js").recoverVaultWorkingKey;
+  createVaultCoreDependencies: typeof import("../vault-core/index.js").createVaultCoreDependencies;
   createVaultService: typeof import("../vault-ingress/index.js").createVaultService;
   wrapVaultCoreAsVaultService: typeof import("../vault-ingress/index.js").wrapVaultCoreAsVaultService;
   createOwnerHttpFlowBoundary: typeof import("../vault-ingress/index.js").createOwnerHttpFlowBoundary;

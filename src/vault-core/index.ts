@@ -1,8 +1,8 @@
-export { createVaultCore, DefaultVaultCore } from "./core.js";
+export { createVaultCore, VaultCore } from "./core.js";
 export { VaultCoreError } from "./errors.js";
 export {
-  createDefaultVaultCoreDependencies,
-  type CreateDefaultVaultCoreDependenciesOptions,
+  createVaultCoreDependencies,
+  type VaultCoreDependenciesOptions,
   type DefaultPolicyEngineOptions,
   DefaultPolicyEngine,
   HttpDispatchExecutor,
@@ -13,11 +13,9 @@ export {
   InMemoryRateLimitStore,
   InMemoryReplayGuard,
   InMemoryAuditLog,
-  InMemoryOwnerIdentityRegistry,
   InMemorySecretCustody,
   InMemorySecretRepository,
   RandomIdGenerator,
-  SignatureOwnerProofVerifier,
   type SignatureAgentProofVerifierOptions,
   SignatureAgentProofVerifier,
   SystemClock,
@@ -29,7 +27,6 @@ export {
   DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY,
   FileAgentIdentityRegistry as PersistentVaultAgentIdentityRegistry,
   FileAuditLog as PersistentVaultAuditLog,
-  FileOwnerIdentityRegistry as PersistentVaultOwnerIdentityRegistry,
   FileCapabilityRegistry as PersistentVaultCapabilityRegistry,
   FileCapabilityRevocationRegistry as PersistentVaultCapabilityRevocationRegistry,
   FileCustomHttpFlowRegistry as PersistentVaultCustomHttpFlowRegistry,
@@ -60,9 +57,7 @@ export type {
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerSecretExport,
-  OwnerIdentityRecord,
   CustomHttpFlowDefinition,
-  OwnerProof,
   AuditEntry,
   AuditQuery,
   DispatchAuthorization,
@@ -95,8 +90,6 @@ export type {
   CapabilityRegistry,
   Clock,
   IdGenerator,
-  OwnerIdentityRegistry,
-  OwnerProofVerifier,
   PolicyEngine,
   RateLimitStore,
   ReplayGuard,
@@ -104,7 +97,6 @@ export type {
   SecretRepository,
   SecretCustody,
   TrustedExecutor,
-  VaultCore,
   VaultCoreDependencies,
   CapabilityRevocationRegistry,
 } from "./ports.js";

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -12,7 +12,7 @@
 
 ### core
 
-> **core**: [`VaultCore`](VaultCore.md)
+> **core**: [`VaultCore`](../classes/VaultCore.md)
 
 #### Inherited from
 
@@ -42,7 +42,7 @@
 
 ### vault
 
-> **vault**: [`VaultService`](VaultService.md)
+> **vault**: `VaultService`
 
 #### Inherited from
 

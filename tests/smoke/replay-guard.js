@@ -9,14 +9,13 @@ import {
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryAuditLog,
+  InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
-  InMemoryOwnerIdentityRegistry,
   InMemoryReplayGuard,
   InMemorySecretCustody,
   InMemorySecretRepository,
   RandomIdGenerator,
   SignatureAgentProofVerifier,
-  SignatureOwnerProofVerifier,
   SystemClock,
 } from "../../dist/vault-core/index.js";
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
@@ -24,9 +23,7 @@ import { LocalSigner } from "../../dist/protocol/crypto.js";
 
 const agentIdentity = createIdentity();
 const signer = new LocalSigner(agentIdentity);
-const ownerIdentity = createIdentity();
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
-const replayOwnerIdentities = new InMemoryOwnerIdentityRegistry();
 const authority = createVaultCore({
   vaultId: { value: "vault-replay" },
   secrets: new InMemorySecretRepository(),
@@ -35,26 +32,17 @@ const authority = createVaultCore({
   audit: new InMemoryAuditLog(),
   executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
   agentIdentities: replayAgentIdentities,
-  ownerIdentities: replayOwnerIdentities,
-  proofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities),
-  ownerProofVerifier: new SignatureOwnerProofVerifier(replayOwnerIdentities),
+  agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities),
+  capabilities: new InMemoryCapabilityRegistry(),
   customFlows: new InMemoryCustomHttpFlowRegistry(),
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
   ids: new RandomIdGenerator(),
 });
 const vault = wrapVaultCoreAsVaultService(authority);
-await authority.bootstrapOwnerIdentity({
-  vaultId: authority.vaultId,
-  ownerId: "owner-replay",
-  publicKey: ownerIdentity.publicKey,
-});
 
 const client = createVaultClient({
-  ownerIdentity: { identityId: "owner-replay" },
   vault,
-  signer: new LocalSigner(ownerIdentity),
-  clock: new SystemClock(),
 });
 await client.registerAgent({
   agentId: "agent-replay",

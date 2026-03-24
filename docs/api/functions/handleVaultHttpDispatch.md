@@ -1,10 +1,10 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
 # Function: handleVaultHttpDispatch()
 
-> **handleVaultHttpDispatch**(`service`, `body`): `Promise`\<[`VaultAgentDispatchResponse`](../interfaces/VaultAgentDispatchResponse.md) \| [`VaultAgentDispatchErrorResponse`](../interfaces/VaultAgentDispatchErrorResponse.md)\>
+> **handleVaultHttpDispatch**(`service`, `body`): `Promise`\<`VaultAgentDispatchResponse` \| `VaultAgentDispatchErrorResponse`\>
 
 Standard server-side helper to handle a vault agent dispatch request from an HTTP body.
 This can be used in any HTTP server framework (Express, Fastify, etc.).
@@ -13,7 +13,7 @@ This can be used in any HTTP server framework (Express, Fastify, etc.).
 
 ### service
 
-[`VaultService`](../interfaces/VaultService.md)
+`VaultService`
 
 The VaultService instance to handle the request.
 
@@ -25,6 +25,6 @@ The parsed JSON body of the incoming HTTP request.
 
 ## Returns
 
-`Promise`\<[`VaultAgentDispatchResponse`](../interfaces/VaultAgentDispatchResponse.md) \| [`VaultAgentDispatchErrorResponse`](../interfaces/VaultAgentDispatchErrorResponse.md)\>
+`Promise`\<`VaultAgentDispatchResponse` \| `VaultAgentDispatchErrorResponse`\>
 
 A JSON-serializable response object.

@@ -6,7 +6,6 @@ import type {
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
-  OwnerIdentityRecord,
   VaultId,
   CustomHttpFlowDefinition,
   SecretAlias,
@@ -20,18 +19,17 @@ import type {
   CapabilityRegistry,
   CapabilityRevocationRegistry,
   CustomHttpFlowRegistry,
-  OwnerIdentityRegistry,
   RateLimitStore,
   ReplayGuard,
   SecretCustody,
   SecretRepository,
+  VaultCoreDependencies,
 } from "./ports.js";
 import {
   DefaultPolicyEngine,
   SignatureAgentProofVerifier,
-  SignatureOwnerProofVerifier,
-  createDefaultVaultCoreDependencies,
-  type CreateDefaultVaultCoreDependenciesOptions,
+  createVaultCoreDependencies,
+  type VaultCoreDependenciesOptions,
 } from "./defaults.js";
 import { VaultCoreError } from "./errors.js";
 
@@ -63,9 +61,6 @@ interface AgentIdentityState {
   identities: AgentIdentityRecord[];
 }
 
-interface OwnerIdentityState {
-  identities: OwnerIdentityRecord[];
-}
 
 export const DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY = "vault/sealed/custody/working-key.sealed";
 
@@ -82,7 +77,7 @@ export interface InitializedVaultCustody {
   storageKey: string;
 }
 
-export interface CreatePersistentVaultCoreDependenciesOptions extends CreateDefaultVaultCoreDependenciesOptions {
+export interface CreatePersistentVaultCoreDependenciesOptions extends VaultCoreDependenciesOptions {
   vaultWorkingKey: string;
 }
 
@@ -241,46 +236,6 @@ export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
   }
 }
 
-/**
- * @internal
- */
-export class FileOwnerIdentityRegistry implements OwnerIdentityRegistry {
-  private readonly _repo: SealedJsonRepository<OwnerIdentityState>;
-
-  constructor(
-    storage: IStorageProvider,
-    vaultWorkingKey: string,
-    key = "vault/sealed/identities/owners.sealed",
-    private readonly _lockKey = "vault/sealed/locks/owner-identities",
-  ) {
-    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
-  }
-
-  private async loadState(): Promise<OwnerIdentityState> {
-    return this._repo.read({ identities: [] });
-  }
-
-  async register(identity: OwnerIdentityRecord): Promise<void> {
-    await withStorageLock(this._repo.storage, this._lockKey, async () => {
-      const state = await this.loadState();
-      const next = state.identities.filter((candidate) =>
-        !(candidate.vaultId.value === identity.vaultId.value && candidate.ownerId === identity.ownerId)
-      );
-      next.push(identity);
-      await this._repo.write({ identities: next }, "owner_identity_state");
-    });
-  }
-
-  async get(vaultId: VaultId, ownerId: string): Promise<OwnerIdentityRecord | null> {
-    const state = await this.loadState();
-    return state.identities.find((identity) => identity.vaultId.value === vaultId.value && identity.ownerId === ownerId) ?? null;
-  }
-
-  async hasAny(vaultId: VaultId): Promise<boolean> {
-    const state = await this.loadState();
-    return state.identities.some((identity) => identity.vaultId.value === vaultId.value);
-  }
-}
 
 /**
  * @internal
@@ -608,37 +563,19 @@ export class FileCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
 export function createPersistentVaultCoreDependencies(
   storage: IStorageProvider,
   options: CreatePersistentVaultCoreDependenciesOptions,
-): {
-  vaultId: ReturnType<typeof createDefaultVaultCoreDependencies>["vaultId"];
-  secrets: FileSecretRepository;
-  custody: FileSecretCustody;
-  policy: ReturnType<typeof createDefaultVaultCoreDependencies>["policy"];
-  audit: FileAuditLog;
-  executor: ReturnType<typeof createDefaultVaultCoreDependencies>["executor"];
-  agentIdentities: FileAgentIdentityRegistry;
-  ownerIdentities: FileOwnerIdentityRegistry;
-  proofVerifier: ReturnType<typeof createDefaultVaultCoreDependencies>["proofVerifier"];
-  ownerProofVerifier: ReturnType<typeof createDefaultVaultCoreDependencies>["ownerProofVerifier"];
-  replayGuard: ReplayGuard;
-  capabilities: FileCapabilityRegistry;
-  capabilityRevocations: CapabilityRevocationRegistry;
-  customFlows: CustomHttpFlowRegistry;
-  clock: ReturnType<typeof createDefaultVaultCoreDependencies>["clock"];
-  ids: ReturnType<typeof createDefaultVaultCoreDependencies>["ids"];
-} {
-  const defaults = createDefaultVaultCoreDependencies(options);
+): VaultCoreDependencies {
+  const defaults = createVaultCoreDependencies(options);
   const agentIdentities = new FileAgentIdentityRegistry(storage, options.vaultWorkingKey);
-  const ownerIdentities = new FileOwnerIdentityRegistry(storage, options.vaultWorkingKey);
   const capabilityRevocations = new FileCapabilityRevocationRegistry(storage, options.vaultWorkingKey);
   const capabilities = new FileCapabilityRegistry(storage, options.vaultWorkingKey);
   const customFlows = new FileCustomHttpFlowRegistry(storage, options.vaultWorkingKey);
+
   return {
-    ...defaults,
+    vaultId: defaults.vaultId,
     secrets: new FileSecretRepository(storage, options.vaultWorkingKey),
     custody: new FileSecretCustody(storage, options.vaultWorkingKey),
     audit: new FileAuditLog(storage),
     agentIdentities,
-    ownerIdentities,
     policy: new DefaultPolicyEngine({
       ...(options.policy ?? {}),
       capabilityRevocationRegistry: capabilityRevocations,
@@ -651,10 +588,12 @@ export function createPersistentVaultCoreDependencies(
       "vault/sealed/locks/replay",
       options.proofVerifier?.maxSkewMs ?? (5 * 60 * 1000),
     ),
-    proofVerifier: new SignatureAgentProofVerifier(agentIdentities, options.proofVerifier),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(ownerIdentities, options.proofVerifier),
+    agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, options.proofVerifier),
     capabilities,
-    capabilityRevocations,
     customFlows,
-  };
+    clock: defaults.clock,
+    ids: defaults.ids,
+    executor: defaults.executor,
+    capabilityRevocations, // Added for parity with legacy behavior/testing
+  } as VaultCoreDependencies & { capabilityRevocations: CapabilityRevocationRegistry };
 }

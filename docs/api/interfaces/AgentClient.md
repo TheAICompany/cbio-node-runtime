@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -11,7 +11,7 @@ This client uses a delegated capability granted by the owner.
 
 ### dispatch()
 
-> **dispatch**(`intent`): `Promise`\<[`DispatchResult`](DispatchResult.md)\>
+> **dispatch**(`intent`): `Promise`\<`DispatchResult`\>
 
 Dispatches a signed request to a target using a vault secret.
 
@@ -25,7 +25,7 @@ The destination, method, and secret alias to use.
 
 #### Returns
 
-`Promise`\<[`DispatchResult`](DispatchResult.md)\>
+`Promise`\<`DispatchResult`\>
 
 The result of the remote operation.
 

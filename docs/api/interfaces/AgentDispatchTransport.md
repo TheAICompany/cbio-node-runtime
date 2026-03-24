@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -8,14 +8,14 @@
 
 ### dispatch()
 
-> **dispatch**(`request`): `Promise`\<[`DispatchResult`](DispatchResult.md)\>
+> **dispatch**(`request`): `Promise`\<`DispatchResult`\>
 
 #### Parameters
 
 ##### request
 
-[`DispatchRequest`](DispatchRequest.md)
+`DispatchRequest`
 
 #### Returns
 
-`Promise`\<[`DispatchResult`](DispatchResult.md)\>
+`Promise`\<`DispatchResult`\>

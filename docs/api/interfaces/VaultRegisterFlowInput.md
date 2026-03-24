@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 ## Extends
 
-- [`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
+- `OwnerHttpFlowBoundary`
 
 ## Properties
 
@@ -22,7 +22,7 @@
 
 #### Inherited from
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md).[`method`](OwnerHttpFlowBoundary.md#method)
+`OwnerHttpFlowBoundary.method`
 
 ***
 
@@ -32,7 +32,7 @@
 
 #### Inherited from
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md).[`mode`](OwnerHttpFlowBoundary.md#mode)
+`OwnerHttpFlowBoundary.mode`
 
 ***
 
@@ -60,7 +60,7 @@
 
 #### Inherited from
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md).[`responseSecret`](OwnerHttpFlowBoundary.md#responsesecret)
+`OwnerHttpFlowBoundary.responseSecret`
 
 ***
 
@@ -70,7 +70,7 @@
 
 #### Inherited from
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md).[`responseVisibility`](OwnerHttpFlowBoundary.md#responsevisibility)
+`OwnerHttpFlowBoundary.responseVisibility`
 
 ***
 
@@ -80,4 +80,4 @@
 
 #### Inherited from
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md).[`targetUrl`](OwnerHttpFlowBoundary.md#targeturl)
+`OwnerHttpFlowBoundary.targetUrl`

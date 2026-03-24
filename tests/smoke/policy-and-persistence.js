@@ -17,13 +17,11 @@ import {
   DefaultPolicyEngine,
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
-  InMemoryOwnerIdentityRegistry,
   PersistentVaultSecretCustody,
   PersistentVaultAuditLog,
   PersistentVaultSecretRepository,
   RandomIdGenerator,
   SignatureAgentProofVerifier,
-  SignatureOwnerProofVerifier,
   SystemClock,
 } from "../../dist/vault-core/index.js";
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
@@ -38,7 +36,6 @@ try {
   const vaultWorkingKey = initializedCustody.vaultWorkingKey;
   assert.equal(await recoverVaultWorkingKey(storage, initializedCustody.vaultRecoveryKey), vaultWorkingKey);
   const policyAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const policyOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const persistentDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: "vault-policy",
     vaultWorkingKey,
@@ -48,23 +45,12 @@ try {
     ...persistentDeps,
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: policyAgentIdentities,
-    ownerIdentities: policyOwnerIdentities,
-    proofVerifier: new SignatureAgentProofVerifier(policyAgentIdentities, { maxSkewMs: 60_000 }),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(policyOwnerIdentities, { maxSkewMs: 60_000 }),
+    agentProofVerifier: new SignatureAgentProofVerifier(policyAgentIdentities, { maxSkewMs: 60_000 }),
   });
   const vault = wrapVaultCoreAsVaultService(authority);
 
-  const ownerIdentity = createIdentity();
-  await authority.bootstrapOwnerIdentity({
-    vaultId: authority.vaultId,
-    ownerId: "owner-2",
-    publicKey: ownerIdentity.publicKey,
-  });
   const client = createVaultClient({
-    ownerIdentity: { identityId: "owner-2" },
     vault,
-    signer: new LocalSigner(ownerIdentity),
-    clock: new SystemClock(),
   });
   const unscopedRecord = await client.storeSecret({
     alias: "unscoped-token",
@@ -299,7 +285,6 @@ try {
   );
 
   const reloadedAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const reloadedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const reloadedDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: authority.vaultId.value,
     vaultWorkingKey,
@@ -309,21 +294,11 @@ try {
     ...reloadedDeps,
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: reloadedAgentIdentities,
-    ownerIdentities: reloadedOwnerIdentities,
-    proofVerifier: new SignatureAgentProofVerifier(reloadedAgentIdentities, { maxSkewMs: 60_000 }),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(reloadedOwnerIdentities, { maxSkewMs: 60_000 }),
-  });
-  await reloadedAuthority.bootstrapOwnerIdentity({
-    vaultId: reloadedAuthority.vaultId,
-    ownerId: "owner-2",
-    publicKey: ownerIdentity.publicKey,
+    agentProofVerifier: new SignatureAgentProofVerifier(reloadedAgentIdentities, { maxSkewMs: 60_000 }),
   });
   const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
   const reloadedClient = createVaultClient({
-    ownerIdentity: { identityId: "owner-2" },
     vault: reloadedVault,
-    signer: new LocalSigner(ownerIdentity),
-    clock: new SystemClock(),
   });
   await reloadedClient.registerAgent({
     agentId: "agent-restricted",
@@ -425,7 +400,6 @@ try {
   assert.equal(persistedReplayFirst.status, "SUCCEEDED");
 
   const restartedAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const restartedOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const restartedDeps = createPersistentVaultCoreDependencies(storage, {
     vaultId: authority.vaultId.value,
     vaultWorkingKey,
@@ -435,21 +409,11 @@ try {
     ...restartedDeps,
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: restartedAgentIdentities,
-    ownerIdentities: restartedOwnerIdentities,
-    proofVerifier: new SignatureAgentProofVerifier(restartedAgentIdentities, { maxSkewMs: 60_000 }),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(restartedOwnerIdentities, { maxSkewMs: 60_000 }),
-  });
-  await restartedAuthority.bootstrapOwnerIdentity({
-    vaultId: restartedAuthority.vaultId,
-    ownerId: "owner-2",
-    publicKey: ownerIdentity.publicKey,
+    agentProofVerifier: new SignatureAgentProofVerifier(restartedAgentIdentities, { maxSkewMs: 60_000 }),
   });
   const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
   const restartedClient = createVaultClient({
-    ownerIdentity: { identityId: "owner-2" },
     vault: restartedVault,
-    signer: new LocalSigner(ownerIdentity),
-    clock: new SystemClock(),
   });
   await restartedClient.registerAgent({
     agentId: "agent-restricted",

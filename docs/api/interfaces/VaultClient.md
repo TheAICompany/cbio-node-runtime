@@ -1,17 +1,17 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
 # Interface: VaultClient
 
 A client for vault owners to manage secrets, agents, and capabilities.
-This client requires an owner signature for every operation.
+In Sovereign Vault model, administrative actions are implicitly authorized by the working key.
 
 ## Methods
 
 ### defineSecretTargets()
 
-> **defineSecretTargets**(`input`): `Promise`\<[`SecretRecord`](SecretRecord.md)\>
+> **defineSecretTargets**(`input`): `Promise`\<`SecretRecord`\>
 
 Refines the allowed targets for an existing secret.
 
@@ -23,7 +23,7 @@ Refines the allowed targets for an existing secret.
 
 #### Returns
 
-`Promise`\<[`SecretRecord`](SecretRecord.md)\>
+`Promise`\<`SecretRecord`\>
 
 ***
 
@@ -47,9 +47,9 @@ Permanently deletes a secret from the vault.
 
 ### exportSecret()
 
-> **exportSecret**(`input`): `Promise`\<[`OwnerSecretExport`](OwnerSecretExport.md)\>
+> **exportSecret**(`input`): `Promise`\<`OwnerSecretExport`\>
 
-Exports a secret's plaintext (requires owner permission).
+Exports a secret's plaintext.
 
 #### Parameters
 
@@ -59,7 +59,7 @@ Exports a secret's plaintext (requires owner permission).
 
 #### Returns
 
-`Promise`\<[`OwnerSecretExport`](OwnerSecretExport.md)\>
+`Promise`\<`OwnerSecretExport`\>
 
 ***
 
@@ -83,7 +83,7 @@ Grants a specific capability to an agent.
 
 ### listAgents()
 
-> **listAgents**(`input?`): `Promise`\<readonly [`AgentIdentityRecord`](AgentIdentityRecord.md)[]\>
+> **listAgents**(`input?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
 
 Lists all agents registered in the vault.
 
@@ -95,13 +95,13 @@ Lists all agents registered in the vault.
 
 #### Returns
 
-`Promise`\<readonly [`AgentIdentityRecord`](AgentIdentityRecord.md)[]\>
+`Promise`\<readonly `AgentIdentityRecord`[]\>
 
 ***
 
 ### listCapabilities()
 
-> **listCapabilities**(`input?`): `Promise`\<readonly [`AgentCapability`](AgentCapability.md)[]\>
+> **listCapabilities**(`input?`): `Promise`\<readonly `AgentCapability`[]\>
 
 Lists all active capabilities granted to agents.
 
@@ -113,13 +113,13 @@ Lists all active capabilities granted to agents.
 
 #### Returns
 
-`Promise`\<readonly [`AgentCapability`](AgentCapability.md)[]\>
+`Promise`\<readonly `AgentCapability`[]\>
 
 ***
 
 ### readAudit()
 
-> **readAudit**(`query?`): `Promise`\<readonly [`AuditEntry`](AuditEntry.md)[]\>
+> **readAudit**(`query?`): `Promise`\<readonly `AuditEntry`[]\>
 
 Reads the tamper-evident audit log for the vault.
 
@@ -131,7 +131,7 @@ Reads the tamper-evident audit log for the vault.
 
 #### Returns
 
-`Promise`\<readonly [`AuditEntry`](AuditEntry.md)[]\>
+`Promise`\<readonly `AuditEntry`[]\>
 
 ***
 
@@ -191,7 +191,7 @@ Revokes a previously granted capability.
 
 ### storeSecret()
 
-> **storeSecret**(`input`): `Promise`\<[`SecretRecord`](SecretRecord.md)\>
+> **storeSecret**(`input`): `Promise`\<`SecretRecord`\>
 
 Securely stores a new secret in the vault.
 
@@ -201,25 +201,15 @@ Securely stores a new secret in the vault.
 
 [`OwnerStoreSecretInput`](OwnerStoreSecretInput.md)
 
-The secret alias and plaintext.
-
 #### Returns
 
-`Promise`\<[`SecretRecord`](SecretRecord.md)\>
-
-The record of the stored secret.
-
-#### Example
-
-```ts
-await client.storeSecret({ alias: 'db-pass', plaintext: 's3cret' });
-```
+`Promise`\<`SecretRecord`\>
 
 ***
 
 ### writeSecret()
 
-> **writeSecret**(`input`): `Promise`\<[`SecretRecord`](SecretRecord.md)\>
+> **writeSecret**(`input`): `Promise`\<`SecretRecord`\>
 
 Atomic operation to store a secret and define its targets in one step.
 
@@ -231,4 +221,4 @@ Atomic operation to store a secret and define its targets in one step.
 
 #### Returns
 
-`Promise`\<[`SecretRecord`](SecretRecord.md)\>
+`Promise`\<`SecretRecord`\>

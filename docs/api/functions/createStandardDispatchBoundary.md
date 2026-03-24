@@ -1,10 +1,10 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
 # Function: createStandardDispatchBoundary()
 
-> **createStandardDispatchBoundary**(`input`): [`OwnerHttpFlowBoundary`](../interfaces/OwnerHttpFlowBoundary.md)
+> **createStandardDispatchBoundary**(`input`): `OwnerHttpFlowBoundary`
 
 ## Parameters
 
@@ -20,4 +20,4 @@
 
 ## Returns
 
-[`OwnerHttpFlowBoundary`](../interfaces/OwnerHttpFlowBoundary.md)
+`OwnerHttpFlowBoundary`

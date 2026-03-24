@@ -11,19 +11,10 @@ export interface CreatedIdentity {
   identityId: string;
   /** A human-readable label (local only, not part of the crypto identity). */
   nickname?: string;
-  /** The identity ID of the parent, if this is a child identity. */
-  parentIdentityId?: string;
-  /** The derivation index, if this is a child identity. */
-  childIndex?: number;
   /** The base64url-encoded public key. */
   publicKey: string;
   /** The base64url-encoded Ed25519 PKCS#8 private key. */
   privateKey: string;
-}
-
-export interface ChildIdentity extends CreatedIdentity {
-  parentIdentityId: string;
-  childIndex: number;
 }
 
 export interface CreateIdentityOptions {
@@ -60,13 +51,6 @@ function encodeEd25519PrivateKey(seed: Buffer): string {
   return Buffer.concat([ED25519_PKCS8_PREFIX, seed]).toString("base64url");
 }
 
-function toParentPrivateKey(parent?: CreatedIdentity | string): string | undefined {
-  if (!parent) {
-    return undefined;
-  }
-  return typeof parent === "string" ? parent.trim() : parent.privateKey.trim();
-}
-
 function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentity {
   const keyPair = generateIdentityKeys();
   if (!keyPair.publicKey || !keyPair.privateKey) {
@@ -82,7 +66,7 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
 }
 
 /**
- * Creates a new root identity with a fresh Ed25519 keypair.
+ * Creates a new identity with a fresh Ed25519 keypair.
  *
  * @param options - Configuration for the new identity.
  * @returns A {@link CreatedIdentity} containing the ID and keys.
@@ -95,20 +79,9 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
  */
 export function createIdentity(options?: CreateIdentityOptions): CreatedIdentity;
 export function createIdentity(
-  parentOrOptions?: CreatedIdentity | string | CreateIdentityOptions,
-  childIndexOrOptions?: number | CreateIdentityOptions,
-  maybeOptions: CreateIdentityOptions = {},
+  optionsOrParams?: CreateIdentityOptions,
 ): CreatedIdentity {
-  const hasParent =
-    typeof parentOrOptions === "string" ||
-    (typeof parentOrOptions === "object" &&
-      parentOrOptions !== null &&
-      "privateKey" in parentOrOptions);
-
-  if (hasParent) {
-    throw new Error("createIdentity() only creates root identities; use createChildIdentity() or deriveChildIdentity()");
-  }
-  return createRootIdentity((parentOrOptions as CreateIdentityOptions | undefined) ?? {});
+  return createRootIdentity(optionsOrParams ?? {});
 }
 
 /**
@@ -135,78 +108,5 @@ export function restoreIdentity(privateKey: string, options: RestoreIdentityOpti
     nickname,
     publicKey,
     privateKey: normalizedPrivateKey,
-  };
-}
-
-function deriveIdentity(
-  parentPrivateKey: string,
-  childIndex: number,
-  options: DeriveIdentityOptions = {},
-): CreatedIdentity {
-  const normalizedParentPrivateKey = parentPrivateKey.trim();
-  if (!normalizedParentPrivateKey) {
-    throw new Error("parent private key is required");
-  }
-  if (!Number.isInteger(childIndex) || childIndex < 0) {
-    throw new Error("childIndex must be a non-negative integer");
-  }
-
-  const parentSeed = decodeEd25519Seed(normalizedParentPrivateKey);
-  const childSeed = createHmac("sha256", parentSeed)
-    .update("cbio:identity:child:v1")
-    .update("\0")
-    .update(String(childIndex))
-    .digest();
-
-  const privateKey = encodeEd25519PrivateKey(childSeed);
-  const privateKeyObject = createPrivateKey({
-    key: Buffer.from(privateKey, "base64url"),
-    format: "der",
-    type: "pkcs8",
-  });
-  const publicKey = Buffer.from(
-    createPublicKey(privateKeyObject).export({
-      type: "spki",
-      format: "der",
-    }),
-  ).toString("base64url");
-
-  return {
-    identityId: deriveIdentityId(publicKey),
-    nickname: normalizeNickname(options.nickname),
-    publicKey,
-    privateKey,
-  };
-}
-
-/**
- * Deterministically derives a child identity from a parent's private key and an index.
- *
- * @param parent - The parent identity object or its private key string.
- * @param childIndex - A non-negative integer for derivation.
- * @param options - Optional nickname for the child.
- * @returns A {@link ChildIdentity} with derivation metadata.
- *
- * @example
- * ```ts
- * const child = deriveChildIdentity(parentIdentity, 0, { nickname: 'sub-agent-0' });
- * ```
- */
-export function deriveChildIdentity(
-  parent: CreatedIdentity | string,
-  childIndex: number,
-  options: DeriveIdentityOptions = {},
-): ChildIdentity {
-  const parentPrivateKey = toParentPrivateKey(parent);
-  if (!parentPrivateKey) {
-    throw new Error("parent private key is required");
-  }
-  const parentIdentity = typeof parent === "string"
-    ? restoreIdentity(parentPrivateKey)
-    : parent;
-  return {
-    ...deriveIdentity(parentPrivateKey, childIndex, options),
-    parentIdentityId: parentIdentity.identityId,
-    childIndex,
   };
 }

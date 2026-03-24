@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -8,13 +8,13 @@
 
 ### clock?
 
-> `optional` **clock?**: [`Clock`](Clock.md)
+> `optional` **clock?**: `Clock`
 
 ***
 
-### ownerIdentity
+### ownerIdentity?
 
-> **ownerIdentity**: `CreatedIdentity` \| [`VaultIdentity`](VaultIdentity.md)
+> `optional` **ownerIdentity?**: `CreatedIdentity` \| [`VaultIdentity`](VaultIdentity.md)
 
 ***
 
@@ -26,4 +26,4 @@
 
 ### vault
 
-> **vault**: [`VaultService`](VaultService.md)
+> **vault**: `VaultService`

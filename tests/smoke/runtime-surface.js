@@ -3,14 +3,9 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
-  createChildIdentity,
   createVault,
   createWorkspaceStorage,
-  deriveChildIdentity,
-  ensureIdentityPrivateVault,
   getDefaultWorkspaceDir,
-  readIdentityPrivateVaultChildrenState,
-  readIdentityPrivateVaultProfile,
   recoverVault,
   listVaults,
   updateVaultMetadata,
@@ -34,7 +29,6 @@ import {
   InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
   InMemoryReplayGuard,
-  InMemoryOwnerIdentityRegistry,
   InMemorySecretCustody,
   InMemorySecretRepository,
   PersistentVaultAuditLog,
@@ -42,17 +36,12 @@ import {
   PersistentVaultSecretRepository,
   RandomIdGenerator,
   SignatureAgentProofVerifier,
-  SignatureOwnerProofVerifier,
   SystemClock,
   initializeVaultCustody,
 } from "../../dist/vault-core/index.js";
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 import { LocalSigner } from "../../dist/protocol/crypto.js";
 import { MemoryStorageProvider } from "../../dist/storage/memory.js";
-import {
-  identityPrivateVaultChildrenKey,
-  identityPrivateVaultProfileKey,
-} from "../../dist/runtime/private-vault.js";
 
 assert.equal(typeof createVaultCore, "function");
 assert.equal(typeof createStandardAcquireBoundary, "function");
@@ -65,24 +54,8 @@ assert.equal(typeof createWorkspaceStorage, "function");
 assert.equal(typeof getDefaultWorkspaceDir, "function");
 
 const agentIdentity = createIdentity({ nickname: "agent-1" });
-const ownerIdentity = createIdentity({ nickname: "owner-1" });
 const restoredAgentIdentity = restoreIdentity(agentIdentity.privateKey, { nickname: "agent-1-restored" });
-const identityTreeStorage = new MemoryStorageProvider();
-await ensureIdentityPrivateVault(identityTreeStorage, ownerIdentity);
-const derivedAgentIdentity = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-1" });
-const derivedAgentIdentityAgain = deriveChildIdentity(ownerIdentity, 0, { nickname: "worker-2" });
-const derivedAgentIdentitySibling = await createChildIdentity(identityTreeStorage, ownerIdentity, { nickname: "worker-3" });
-const ownerPrivateVaultProfileBlob = (await identityTreeStorage.read(identityPrivateVaultProfileKey(ownerIdentity.identityId))).toString("utf8");
-const ownerPrivateVaultChildrenBlob = (await identityTreeStorage.read(identityPrivateVaultChildrenKey(ownerIdentity.identityId))).toString("utf8");
-const childPrivateVaultProfileBlob = (await identityTreeStorage.read(identityPrivateVaultProfileKey(derivedAgentIdentity.identityId))).toString("utf8");
-const ownerPrivateVaultProfile = await readIdentityPrivateVaultProfile(identityTreeStorage, ownerIdentity.privateKey);
-const ownerPrivateVaultChildren = await readIdentityPrivateVaultChildrenState(identityTreeStorage, ownerIdentity);
-const childPrivateVaultProfile = await readIdentityPrivateVaultProfile(identityTreeStorage, derivedAgentIdentity.privateKey);
-assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/sealed/profile.sealed`), true);
-assert.equal(await identityTreeStorage.has(`identities/${ownerIdentity.identityId}/public/profile.json`), false);
-assert.equal(ownerPrivateVaultProfileBlob.includes(ownerIdentity.identityId), false);
-assert.equal(ownerPrivateVaultChildrenBlob.includes("\"children\""), false);
-assert.equal(childPrivateVaultProfileBlob.includes(derivedAgentIdentity.identityId), false);
+
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
 assert.equal(typeof agentIdentity.identityId, "string");
@@ -91,30 +64,6 @@ assert.equal(restoredAgentIdentity.privateKey, agentIdentity.privateKey);
 assert.equal(restoredAgentIdentity.publicKey, agentIdentity.publicKey);
 assert.equal(restoredAgentIdentity.identityId, agentIdentity.identityId);
 assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
-assert.ok(ownerPrivateVaultProfile);
-assert.ok(childPrivateVaultProfile);
-assert.equal(ownerPrivateVaultProfile.identityId, ownerIdentity.identityId);
-assert.equal(ownerPrivateVaultChildren.nextChildIndex, 2);
-assert.equal(ownerPrivateVaultChildren.children.length, 2);
-assert.equal(childPrivateVaultProfile.parentIdentityId, ownerIdentity.identityId);
-assert.equal(derivedAgentIdentity.parentIdentityId, ownerIdentity.identityId);
-assert.equal(derivedAgentIdentity.childIndex, 0);
-assert.equal(derivedAgentIdentity.privateKey, derivedAgentIdentityAgain.privateKey);
-assert.equal(derivedAgentIdentity.publicKey, derivedAgentIdentityAgain.publicKey);
-assert.equal(derivedAgentIdentity.identityId, derivedAgentIdentityAgain.identityId);
-assert.notEqual(derivedAgentIdentity.privateKey, derivedAgentIdentitySibling.privateKey);
-assert.notEqual(derivedAgentIdentity.identityId, derivedAgentIdentitySibling.identityId);
-assert.equal(derivedAgentIdentity.nickname, "worker-1");
-assert.equal(derivedAgentIdentityAgain.nickname, "worker-2");
-assert.equal(derivedAgentIdentitySibling.childIndex, 1);
-
-  // Metadata Smoke Test (Encrypted but Publicly Readable)
-  // Metadata Smoke Test (Encrypted but Publicly Readable)
-  const { readIdentityMetadata } = await import("../../dist/runtime/private-vault.js");
-  const profile = await readIdentityMetadata(identityTreeStorage, ownerIdentity.identityId);
-  assert.ok(profile, "Profile should be readable (Public Encryption)");
-  assert.equal(profile.nickname, "owner-1", "Nickname mismatch");
-  console.log(`-> 身份发现验证 OK: 已通过加密层获取昵称 "${profile.nickname}"`);
 
 let seenAuthHeader = null;
 const runtimeSurfaceFetch = async (url, init) => {
@@ -128,7 +77,6 @@ const runtimeSurfaceFetch = async (url, init) => {
   return new Response("ok", { status: 200 });
 };
 const runtimeSurfaceAgentIdentities = new InMemoryAgentIdentityRegistry();
-const runtimeSurfaceOwnerIdentities = new InMemoryOwnerIdentityRegistry();
 const runtimeSurfaceCustomFlows = new InMemoryCustomHttpFlowRegistry();
 const authority = createVaultCore({
   vaultId: { value: "vault-runtime-surface" },
@@ -138,10 +86,8 @@ const authority = createVaultCore({
   audit: new InMemoryAuditLog(),
   executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
   agentIdentities: runtimeSurfaceAgentIdentities,
-  ownerIdentities: runtimeSurfaceOwnerIdentities,
   capabilities: new InMemoryCapabilityRegistry(),
-  proofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities),
-  ownerProofVerifier: new SignatureOwnerProofVerifier(runtimeSurfaceOwnerIdentities),
+  agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities),
   customFlows: runtimeSurfaceCustomFlows,
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
@@ -151,17 +97,9 @@ const vault = wrapVaultCoreAsVaultService(authority, {
   customFlows: runtimeSurfaceCustomFlows,
   fetchImpl: runtimeSurfaceFetch,
 });
-await authority.bootstrapOwnerIdentity({
-  vaultId: authority.vaultId,
-  ownerId: "owner-1",
-  publicKey: ownerIdentity.publicKey,
-});
 
 const client = createVaultClient({
-  ownerIdentity: { identityId: "owner-1" },
   vault,
-  signer: new LocalSigner(ownerIdentity),
-  clock: new SystemClock(),
 });
 assert.equal(typeof client.storeSecret, "function");
 assert.equal(typeof client.defineSecretTargets, "function");
@@ -318,7 +256,7 @@ try {
     policy: {
       trustedIssuerIds: ["issuer-1"],
     },
-    ownerIdentity,
+    password: "password-1",
     vault: {
       fetchImpl: async () => new Response(JSON.stringify({
         access_token: "issuer-secret",
@@ -349,14 +287,14 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  const auditClient = createVaultClient({ ownerIdentity, vault: persistentVault });
+  const auditClient = createVaultClient({ vault: persistentVault });
   const audit = await auditClient.readAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
   const persistentExport = await auditClient.exportSecret({ alias: "issuer-token" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
   const recoveredVaultInstance = await recoverVault(storage, {
     vaultId: "vault-runtime-persistent",
-    ownerIdentity,
+    password: "password-1",
   });
   assert.equal(recoveredVaultInstance.nickname, "persistent-main");
 
@@ -365,7 +303,7 @@ try {
   const autoCreatedVault = await createVault({
     vaultId: "vault-runtime-default-storage",
     nickname: "default-storage-vault",
-    ownerIdentity,
+    password: "password-1",
   });
   assert.equal(autoCreatedVault.nickname, "default-storage-vault");
   assert.equal(await autoCreatedVault.storage.has("vault/sealed/profile.sealed"), true, "Missing profile.sealed");
@@ -375,14 +313,14 @@ try {
   console.log("-> 验证保险箱发现 API...");
   const autoRecoveredVault = await recoverVault({
     vaultId: "vault-runtime-default-storage",
-    ownerIdentity,
+    password: "password-1",
   });
   assert.equal(autoRecoveredVault.nickname, "default-storage-vault");
   
   const siblingVault = await createVault(storage, {
     vaultId: "vault-runtime-sibling",
     nickname: "sibling-vault",
-    ownerIdentity,
+    password: "password-1",
   });
 
   const allVaults = await listVaults(storage);
@@ -393,7 +331,7 @@ try {
   console.log("-> 验证元数据更新 (Update)...");
   await updateVaultMetadata(siblingVault, {
     nickname: "updated-sibling-vault",
-    ownerIdentity,
+    password: "password-1",
   });
   
   const updatedVaults = await listVaults(storage);
@@ -448,11 +386,11 @@ try {
 
   console.log("-> 验证机密物理删除 (Secret Delete)...");
   // 使用 ownerClient 直接进行删除操作，验证高层 API 闭环
-  await ownerClient.deleteSecret({ alias: "issuer-token" });
+  await auditClient.deleteSecret({ alias: "issuer-token" });
   
   // 验证删除后无法再次获取
   await assert.rejects(
-    () => ownerClient.exportSecret({ alias: "issuer-token" }),
+    () => auditClient.exportSecret({ alias: "issuer-token" }),
     /SECRET_NOT_FOUND/
   );
   console.log("   [OK] 机密逻辑删除与权限核查成功");
@@ -463,7 +401,6 @@ try {
   const rollbackCustody = await initializeVaultCustody(failingAuditStorage);
   const vaultWorkingKey = rollbackCustody.vaultWorkingKey;
   const rollbackAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const rollbackOwnerIdentities = new InMemoryOwnerIdentityRegistry();
   const bootstrapRollbackAuthority = createVaultCore({
     vaultId: { value: "vault-rollback" },
     secrets: new PersistentVaultSecretRepository(failingAuditStorage),
@@ -472,18 +409,12 @@ try {
     audit: new InMemoryAuditLog(),
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: rollbackAgentIdentities,
-    ownerIdentities: rollbackOwnerIdentities,
-    proofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(rollbackOwnerIdentities),
+    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities),
+    capabilities: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),
-  });
-  await bootstrapRollbackAuthority.bootstrapOwnerIdentity({
-    vaultId: bootstrapRollbackAuthority.vaultId,
-    ownerId: "owner-rollback",
-    publicKey: ownerIdentity.publicKey,
   });
   const rollbackAuthority = createVaultCore({
     vaultId: { value: "vault-rollback" },
@@ -500,9 +431,8 @@ try {
     },
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: rollbackAgentIdentities,
-    ownerIdentities: rollbackOwnerIdentities,
-    proofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(rollbackOwnerIdentities),
+    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities),
+    capabilities: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
@@ -510,9 +440,7 @@ try {
   });
   const rollbackVault = wrapVaultCoreAsVaultService(rollbackAuthority);
   const rollbackClient = createVaultClient({
-    ownerIdentity: { identityId: "owner-rollback" },
     vault: rollbackVault,
-    signer: new LocalSigner(ownerIdentity),
   });
   const custodyDir = join(tempDir, "vaults/vault-runtime-persistent/vault/sealed/custody");
   const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);

@@ -3,9 +3,9 @@ import { createVaultCore } from "../vault-core/core.js";
 import {
   createPersistentVaultCoreDependencies,
   type CreatePersistentVaultCoreDependenciesOptions,
-  type OwnerIdentityRecord,
-  type VaultCore,
+  VaultCore,
 } from "../vault-core/index.js";
+import { deriveVaultWorkingKeyFromPassword } from "../protocol/crypto.js";
 import {
   wrapVaultCoreAsVaultService,
   type VaultService,
@@ -15,27 +15,10 @@ import { createPrefixedStorage } from "../storage/prefix.js";
 import { FsStorageProvider } from "../storage/fs.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
-import { readVaultProfile, writeVaultProfile, readVaultPublicMetadata } from "./vault-metadata.js";
+import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
 
-/**
- * Derives the deterministic working key for a vault.
- * 
- * @param privateKey - The owner's private key.
- * @param vaultId - The unique ID of the vault.
- * @returns A base64url-encoded 256-bit key.
- * @internal Used by `createVault` and `recoverVault`.
- */
-export function deriveVaultWorkingKey(privateKey: string, vaultId: string): string {
-  return crypto
-    .createHash("sha256")
-    .update("cbio:vault-working-key:v1")
-    .update("\n")
-    .update(vaultId)
-    .update("\n")
-    .update(privateKey)
-    .digest("base64url");
-}
+
 
 function vaultStoragePrefix(vaultId: string): string {
   return `vaults/${vaultId}`;
@@ -49,8 +32,8 @@ export interface VaultMetadata extends Record<string, any> {
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId?: string;
   nickname?: string;
-  publicMetadata?: Record<string, any>;
-  ownerIdentity: CreatedIdentity;
+  metadata?: Record<string, any>;
+  password: string;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
     fetchImpl?: typeof fetch;
@@ -80,7 +63,7 @@ export interface VaultObject {
 
 export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
   vaultId: string;
-  ownerIdentity: CreatedIdentity;
+  password: string;
   vault?: {
     customFlows?: VaultCustomFlowResolver;
     fetchImpl?: typeof fetch;
@@ -141,7 +124,7 @@ export async function createVault(
   };
   const vaultId = options.vaultId ?? `vault_${crypto.randomUUID()}`;
   const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
-  const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vaultId);
 
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
@@ -149,29 +132,16 @@ export async function createVault(
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
-  const bootstrapOwner: OwnerIdentityRecord = {
-    vaultId: core.vaultId,
-    ownerId: options.ownerIdentity.identityId,
-    publicKey: options.ownerIdentity.publicKey,
-  };
-  await core.bootstrapOwnerIdentity(bootstrapOwner);
   
   const nickname = options.nickname?.trim() ? options.nickname.trim() : undefined;
   
-  // 1. Critical configuration (e.g. key materials, sensitive bounds) remains in private
-  // 2. Discovery metadata (ownerId, nickname, custom tags) is stored in the public sealed profile for easy UI retrieval
+  // Single encrypted profile block. Hold the password to see everything.
   await writeVaultProfile(storage, {
-    sealedPrivate: {
-      vaultId,
-      ownerId: options.ownerIdentity.identityId,
-    },
-    sealedPublic: {
-      vaultId,
-      ownerId: options.ownerIdentity.identityId,
-      ...options.publicMetadata,
-      nickname, // Nickname override takes precedence
-    }
+    vaultId,
+    nickname,
+    ...options.metadata,
   }, vaultWorkingKey, vaultId);
+
 
   return {
     core,
@@ -212,7 +182,7 @@ export async function recoverVault(
     options: RecoverVaultOptions;
   };
   const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(options.vaultId));
-  const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, options.vaultId);
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, options.vaultId);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
     vaultId: options.vaultId,
@@ -227,7 +197,7 @@ export async function recoverVault(
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
-    nickname: profile.sealedPublic.nickname,
+    nickname: profile.nickname,
     storage,
   };
 }
@@ -238,22 +208,11 @@ export async function recoverVault(
  * @param storage - The root workspace storage provider.
  * @returns A list of vault IDs and their public discovery metadata.
  */
-export async function listVaults(storage: IStorageProvider): Promise<Array<{ vaultId: string; public: any }>> {
+export async function listVaults(storage: IStorageProvider): Promise<string[]> {
   if (!storage.list) {
     return [];
   }
-  const ids = await storage.list("vaults");
-  const results: Array<{ vaultId: string; public: any }> = [];
-  for (const id of ids) {
-    const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(id));
-    const publicData = await readVaultPublicMetadata(vaultStorage, id);
-    
-    results.push({
-      vaultId: id,
-      public: publicData || {},
-    });
-  }
-  return results;
+  return await storage.list("vaults");
 }
 
 /**
@@ -261,23 +220,18 @@ export async function listVaults(storage: IStorageProvider): Promise<Array<{ vau
  */
 export async function updateVaultMetadata(
   vault: CreatedVault | RecoveredVault,
-  options: { nickname?: string; publicMetadata?: Record<string, any>; ownerIdentity: CreatedIdentity },
+  options: { nickname?: string; metadata?: Record<string, any>; password: string },
 ): Promise<void> {
   const vaultId = vault.core.vaultId.value;
-  const vaultWorkingKey = deriveVaultWorkingKey(options.ownerIdentity.privateKey, vaultId);
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vaultId);
   
-  // Read current profile to preserve secret part
+  // Read current profile to preserve other fields
   const current = await readVaultProfile(vault.storage, vaultWorkingKey, vaultId);
   
   await writeVaultProfile(vault.storage, {
-    sealedPrivate: current?.sealedPrivate || { vaultId, ownerId: options.ownerIdentity.identityId },
-    sealedPublic: {
-      ...current?.sealedPublic, // Preserve existing public metadata
-      vaultId,
-      ownerId: options.ownerIdentity.identityId, // Ensure ownerId is always populated for discovery
-      ...(options.publicMetadata ?? {}), // Merge new custom fields if any
-      nickname: options.nickname ?? current?.sealedPublic.nickname,
-    }
+    ...(current || {}),
+    nickname: options.nickname ?? current?.nickname,
+    ...(options.metadata ?? {}),
   }, vaultWorkingKey, vaultId);
 }
 

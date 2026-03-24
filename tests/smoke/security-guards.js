@@ -13,26 +13,15 @@ import { LocalSigner } from "../../dist/protocol/crypto.js";
 
 const agentIdentity = createIdentity();
 const signer = new LocalSigner(agentIdentity);
-const ownerIdentity = createIdentity();
 
 const authority = createVaultCore(createDefaultVaultCoreDependencies({
   vaultId: "vault-security",
   fetchImpl: async () => new Response("ok", { status: 200 }),
 }));
 const vault = wrapVaultCoreAsVaultService(authority);
-await authority.bootstrapOwnerIdentity({
-  vaultId: authority.vaultId,
-  ownerId: "owner-security",
-  publicKey: ownerIdentity.publicKey,
-});
 
 const client = createVaultClient({
-  ownerIdentity: { identityId: "owner-security" },
   vault,
-  signer: new LocalSigner(ownerIdentity),
-  clock: {
-    nowIso: () => new Date().toISOString(),
-  },
 });
 await client.registerAgent({
   agentId: "agent-security",
@@ -153,25 +142,21 @@ await assert.rejects(
 const securityAudit = await client.readAudit({ secretAlias: "guarded-token" });
 assert.ok(securityAudit.some((entry) => entry.outcome === "DENIED" && /expired|binding mismatch|timestamp out of range|invalid proof signature/.test(entry.detail)));
 
+// Sovereign Vault: identity registration for unlocked vault is implicitly authorized.
+// We only check for vault ID mismatch.
 const unauthorizedIdentityRequestId = "unauthorized-agent-registration";
 const unauthorizedIdentityRequestedAt = new Date().toISOString();
 await assert.rejects(
   () => authority.registerAgentIdentity({
-    vaultId: authority.vaultId,
+    vaultId: { value: "mismatch-vault" },
     requestId: unauthorizedIdentityRequestId,
-    owner: { kind: "owner", id: "owner-security" },
+    owner: { kind: "owner", id: "vault-master" },
     agentIdentity: {
       vaultId: authority.vaultId,
       agentId: "agent-forged",
       publicKey: agentIdentity.publicKey,
     },
     requestedAt: unauthorizedIdentityRequestedAt,
-    proof: {
-      ownerId: "owner-security",
-      requestId: unauthorizedIdentityRequestId,
-      requestedAt: unauthorizedIdentityRequestedAt,
-      signature: "forged-signature",
-    },
   }),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);

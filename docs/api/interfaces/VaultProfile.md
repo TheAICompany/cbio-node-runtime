@@ -1,23 +1,19 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
 # Interface: VaultProfile
 
+## Extends
+
+- `Record`\<`string`, `any`\>
+
+## Indexable
+
+> \[`key`: `string`\]: `any`
+
 ## Properties
 
-### sealedPrivate
-
-> **sealedPrivate**: `Record`\<`string`, `any`\>
-
-***
-
-### sealedPublic
-
-> **sealedPublic**: `Record`\<`string`, `any`\> & `object`
-
-#### Type Declaration
-
-##### nickname?
+### nickname?
 
 > `optional` **nickname?**: `string`

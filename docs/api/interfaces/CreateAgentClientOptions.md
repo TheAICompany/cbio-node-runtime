@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -14,13 +14,13 @@
 
 ### capability
 
-> **capability**: [`AgentCapability`](AgentCapability.md)
+> **capability**: `AgentCapability`
 
 ***
 
 ### clock?
 
-> `optional` **clock?**: [`Clock`](Clock.md)
+> `optional` **clock?**: `Clock`
 
 ***
 
@@ -38,4 +38,4 @@
 
 ### vault?
 
-> `optional` **vault?**: [`VaultService`](VaultService.md)
+> `optional` **vault?**: `VaultService`

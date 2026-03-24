@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -8,7 +8,7 @@
 
 ### capabilityRevocationRegistry?
 
-> `optional` **capabilityRevocationRegistry?**: [`CapabilityRevocationRegistry`](CapabilityRevocationRegistry.md)
+> `optional` **capabilityRevocationRegistry?**: `CapabilityRevocationRegistry`
 
 ***
 
@@ -24,7 +24,7 @@
 
 ### rateLimitStore?
 
-> `optional` **rateLimitStore?**: [`RateLimitStore`](RateLimitStore.md)
+> `optional` **rateLimitStore?**: `RateLimitStore`
 
 ***
 

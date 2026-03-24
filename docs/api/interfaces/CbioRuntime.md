@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -46,111 +46,11 @@ const agent = createAgentClient({
 
 ***
 
-### createChildIdentity
-
-> **createChildIdentity**: (`storage`, `parentIdentity`, `options`) => `Promise`\<[`ChildIdentity`](ChildIdentity.md)\>
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### parentIdentity
-
-`string` \| `CreatedIdentity`
-
-##### options?
-
-[`CreateChildIdentityOptions`](CreateChildIdentityOptions.md) = `{}`
-
-#### Returns
-
-`Promise`\<[`ChildIdentity`](ChildIdentity.md)\>
-
-***
-
-### createDefaultVaultCoreDependencies
-
-> **createDefaultVaultCoreDependencies**: (`options`) => `object`
-
-#### Parameters
-
-##### options?
-
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md) = `{}`
-
-#### Returns
-
-`object`
-
-##### agentIdentities
-
-> **agentIdentities**: `InMemoryAgentIdentityRegistry`
-
-##### audit
-
-> **audit**: `InMemoryAuditLog`
-
-##### capabilities
-
-> **capabilities**: `InMemoryCapabilityRegistry`
-
-##### clock
-
-> **clock**: `SystemClock`
-
-##### custody
-
-> **custody**: `InMemorySecretCustody`
-
-##### customFlows
-
-> **customFlows**: `InMemoryCustomHttpFlowRegistry`
-
-##### executor
-
-> **executor**: `HttpDispatchExecutor`
-
-##### ids
-
-> **ids**: `RandomIdGenerator`
-
-##### ownerIdentities
-
-> **ownerIdentities**: `InMemoryOwnerIdentityRegistry`
-
-##### ownerProofVerifier
-
-> **ownerProofVerifier**: `SignatureOwnerProofVerifier`
-
-##### policy
-
-> **policy**: `DefaultPolicyEngine`
-
-##### proofVerifier
-
-> **proofVerifier**: `SignatureAgentProofVerifier`
-
-##### replayGuard
-
-> **replayGuard**: [`InMemoryReplayGuard`](../classes/InMemoryReplayGuard.md)
-
-##### secrets
-
-> **secrets**: `InMemorySecretRepository`
-
-##### vaultId
-
-> **vaultId**: [`VaultId`](VaultId.md)
-
-***
-
 ### createIdentity
 
 > **createIdentity**: (`options?`) => `CreatedIdentity`
 
-Creates a new root identity with a fresh Ed25519 keypair.
+Creates a new identity with a fresh Ed25519 keypair.
 
 #### Parameters
 
@@ -177,107 +77,23 @@ console.log(identity.identityId);
 
 ### createOwnerHttpFlowBoundary
 
-> **createOwnerHttpFlowBoundary**: (`boundary`) => [`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
+> **createOwnerHttpFlowBoundary**: (`boundary`) => `OwnerHttpFlowBoundary`
 
 #### Parameters
 
 ##### boundary
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
+`OwnerHttpFlowBoundary`
 
 #### Returns
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
-
-***
-
-### createPersistentVaultCoreDependencies
-
-> **createPersistentVaultCoreDependencies**: (`storage`, `options`) => `object`
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### options
-
-[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md)
-
-#### Returns
-
-`object`
-
-##### agentIdentities
-
-> **agentIdentities**: `FileAgentIdentityRegistry`
-
-##### audit
-
-> **audit**: `FileAuditLog`
-
-##### capabilities
-
-> **capabilities**: `FileCapabilityRegistry`
-
-##### capabilityRevocations
-
-> **capabilityRevocations**: [`CapabilityRevocationRegistry`](CapabilityRevocationRegistry.md)
-
-##### clock
-
-> **clock**: `SystemClock`
-
-##### custody
-
-> **custody**: `FileSecretCustody`
-
-##### customFlows
-
-> **customFlows**: [`CustomHttpFlowRegistry`](CustomHttpFlowRegistry.md)
-
-##### executor
-
-> **executor**: `HttpDispatchExecutor`
-
-##### ids
-
-> **ids**: `RandomIdGenerator`
-
-##### ownerIdentities
-
-> **ownerIdentities**: `FileOwnerIdentityRegistry`
-
-##### ownerProofVerifier
-
-> **ownerProofVerifier**: `SignatureOwnerProofVerifier`
-
-##### policy
-
-> **policy**: `DefaultPolicyEngine`
-
-##### proofVerifier
-
-> **proofVerifier**: `SignatureAgentProofVerifier`
-
-##### replayGuard
-
-> **replayGuard**: [`ReplayGuard`](ReplayGuard.md)
-
-##### secrets
-
-> **secrets**: `FileSecretRepository`
-
-##### vaultId
-
-> **vaultId**: [`VaultId`](VaultId.md)
+`OwnerHttpFlowBoundary`
 
 ***
 
 ### createStandardAcquireBoundary
 
-> **createStandardAcquireBoundary**: (`input`) => [`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
+> **createStandardAcquireBoundary**: (`input`) => `OwnerHttpFlowBoundary`
 
 #### Parameters
 
@@ -301,13 +117,13 @@ console.log(identity.identityId);
 
 #### Returns
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
+`OwnerHttpFlowBoundary`
 
 ***
 
 ### createStandardDispatchBoundary
 
-> **createStandardDispatchBoundary**: (`input`) => [`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
+> **createStandardDispatchBoundary**: (`input`) => `OwnerHttpFlowBoundary`
 
 #### Parameters
 
@@ -323,7 +139,7 @@ console.log(identity.identityId);
 
 #### Returns
 
-[`OwnerHttpFlowBoundary`](OwnerHttpFlowBoundary.md)
+`OwnerHttpFlowBoundary`
 
 ***
 
@@ -398,7 +214,7 @@ Creates a [VaultClient](VaultClient.md) instance for a specific vault owner.
 
 [`CreateVaultClientOptions`](CreateVaultClientOptions.md)
 
-Configuration including owner identity and the vault service.
+Configuration including optional owner identity and the vault service.
 
 #### Returns
 
@@ -419,39 +235,55 @@ const client = createVaultClient({
 
 ### createVaultCore
 
-> **createVaultCore**: (`deps`) => [`VaultCore`](VaultCore.md)
+> **createVaultCore**: (`deps`) => [`VaultCore`](../classes/VaultCore.md)
 
 #### Parameters
 
 ##### deps
 
-[`VaultCoreDependencies`](VaultCoreDependencies.md)
+`VaultCoreDependencies`
 
 #### Returns
 
-[`VaultCore`](VaultCore.md)
+[`VaultCore`](../classes/VaultCore.md)
+
+***
+
+### createVaultCoreDependencies
+
+> **createVaultCoreDependencies**: (`options`) => `VaultCoreDependencies`
+
+#### Parameters
+
+##### options?
+
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md) = `{}`
+
+#### Returns
+
+`VaultCoreDependencies`
 
 ***
 
 ### createVaultService
 
-> **createVaultService**: (`deps`, `options`) => [`VaultService`](VaultService.md)
+> **createVaultService**: (`deps`, `options`) => `VaultService`
 
 #### Parameters
 
 ##### deps
 
-[`VaultCoreDependencies`](VaultCoreDependencies.md)
+`VaultCoreDependencies`
 
 ##### options?
 
 ###### clock?
 
-[`Clock`](Clock.md)
+`Clock`
 
 ###### customFlows?
 
-[`VaultCustomFlowResolver`](VaultCustomFlowResolver.md)
+`VaultCustomFlowResolver`
 
 ###### fetchImpl?
 
@@ -459,73 +291,30 @@ const client = createVaultClient({
 
 #### Returns
 
-[`VaultService`](VaultService.md)
+`VaultService`
 
 ***
 
-### deriveChildIdentity
+### deriveVaultWorkingKeyFromPassword
 
-> **deriveChildIdentity**: (`parent`, `childIndex`, `options`) => [`ChildIdentity`](ChildIdentity.md)
+> **deriveVaultWorkingKeyFromPassword**: (`password`, `vaultId`) => `string`
 
-Deterministically derives a child identity from a parent's private key and an index.
+Derives a 256-bit working key from a user password and salt (vaultId).
+Using scrypt for memory-hard key derivation to resist brute-force attacks.
 
 #### Parameters
 
-##### parent
+##### password
 
-`string` \| `CreatedIdentity`
+`string`
 
-The parent identity object or its private key string.
+##### vaultId
 
-##### childIndex
-
-`number`
-
-A non-negative integer for derivation.
-
-##### options?
-
-[`DeriveIdentityOptions`](DeriveIdentityOptions.md) = `{}`
-
-Optional nickname for the child.
+`string`
 
 #### Returns
 
-[`ChildIdentity`](ChildIdentity.md)
-
-A [ChildIdentity](ChildIdentity.md) with derivation metadata.
-
-#### Example
-
-```ts
-const child = deriveChildIdentity(parentIdentity, 0, { nickname: 'sub-agent-0' });
-```
-
-***
-
-### deriveVaultWorkingKey
-
-> **deriveVaultWorkingKey**: `object`
-
-***
-
-### ensureIdentityPrivateVault
-
-> **ensureIdentityPrivateVault**: (`storage`, `identity`) => `Promise`\<`void`\>
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### identity
-
-`CreatedIdentity`
-
-#### Returns
-
-`Promise`\<`void`\>
+`string`
 
 ***
 
@@ -537,7 +326,7 @@ const child = deriveChildIdentity(parentIdentity, 0, { nickname: 'sub-agent-0' }
 
 ### handleVaultHttpDispatch
 
-> **handleVaultHttpDispatch**: (`service`, `body`) => `Promise`\<[`VaultAgentDispatchResponse`](VaultAgentDispatchResponse.md) \| [`VaultAgentDispatchErrorResponse`](VaultAgentDispatchErrorResponse.md)\>
+> **handleVaultHttpDispatch**: (`service`, `body`) => `Promise`\<`VaultAgentDispatchResponse` \| `VaultAgentDispatchErrorResponse`\>
 
 Standard server-side helper to handle a vault agent dispatch request from an HTTP body.
 This can be used in any HTTP server framework (Express, Fastify, etc.).
@@ -546,7 +335,7 @@ This can be used in any HTTP server framework (Express, Fastify, etc.).
 
 ##### service
 
-[`VaultService`](VaultService.md)
+`VaultService`
 
 The VaultService instance to handle the request.
 
@@ -558,7 +347,7 @@ The parsed JSON body of the incoming HTTP request.
 
 #### Returns
 
-`Promise`\<[`VaultAgentDispatchResponse`](VaultAgentDispatchResponse.md) \| [`VaultAgentDispatchErrorResponse`](VaultAgentDispatchErrorResponse.md)\>
+`Promise`\<`VaultAgentDispatchResponse` \| `VaultAgentDispatchErrorResponse`\>
 
 A JSON-serializable response object.
 
@@ -576,47 +365,9 @@ A JSON-serializable response object.
 
 ***
 
-### initializeVaultCustody
-
-> **initializeVaultCustody**: (`storage`, `options`) => `Promise`\<[`InitializedVaultCustody`](InitializedVaultCustody.md)\>
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### options?
-
-[`InitializeVaultCustodyOptions`](InitializeVaultCustodyOptions.md) = `{}`
-
-#### Returns
-
-`Promise`\<[`InitializedVaultCustody`](InitializedVaultCustody.md)\>
-
-***
-
-### listIdentities
-
-> **listIdentities**: (`storage`) => `Promise`\<`any`[]\>
-
-Lists all identities in the workspace with their discovery metadata.
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-#### Returns
-
-`Promise`\<`any`[]\>
-
-***
-
 ### listVaults
 
-> **listVaults**: (`storage`) => `Promise`\<`object`[]\>
+> **listVaults**: (`storage`) => `Promise`\<`string`[]\>
 
 Lists all available vaults in the workspace by scanning for signed profiles.
 
@@ -630,7 +381,7 @@ The root workspace storage provider.
 
 #### Returns
 
-`Promise`\<`object`[]\>
+`Promise`\<`string`[]\>
 
 A list of vault IDs and their public discovery metadata.
 
@@ -657,74 +408,6 @@ A list of vault IDs and their public discovery metadata.
 ### PersistentVaultCapabilityRevocationRegistry
 
 > **PersistentVaultCapabilityRevocationRegistry**: *typeof* `FileCapabilityRevocationRegistry`
-
-***
-
-### readIdentityMetadata
-
-> **readIdentityMetadata**: (`storage`, `identityId`, `privateKey?`) => `Promise`\<`any`\>
-
-Metadata reader for identities.
-Discovery info (nickname) can be read with just identityId.
-Full profile requires privateKey.
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### identityId
-
-`string`
-
-##### privateKey?
-
-`string`
-
-#### Returns
-
-`Promise`\<`any`\>
-
-***
-
-### readIdentityPrivateVaultChildrenState
-
-> **readIdentityPrivateVaultChildrenState**: (`storage`, `identityOrPrivateKey`) => `Promise`\<[`IdentityPrivateVaultChildrenState`](IdentityPrivateVaultChildrenState.md)\>
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### identityOrPrivateKey
-
-[`IdentityPrivateVaultAccess`](../type-aliases/IdentityPrivateVaultAccess.md)
-
-#### Returns
-
-`Promise`\<[`IdentityPrivateVaultChildrenState`](IdentityPrivateVaultChildrenState.md)\>
-
-***
-
-### readIdentityPrivateVaultProfile
-
-> **readIdentityPrivateVaultProfile**: (`storage`, `identityOrPrivateKey`) => `Promise`\<[`IdentityPrivateVaultProfile`](IdentityPrivateVaultProfile.md) \| `null`\>
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### identityOrPrivateKey
-
-[`IdentityPrivateVaultAccess`](../type-aliases/IdentityPrivateVaultAccess.md)
-
-#### Returns
-
-`Promise`\<[`IdentityPrivateVaultProfile`](IdentityPrivateVaultProfile.md) \| `null`\>
 
 ***
 
@@ -787,30 +470,6 @@ Recovery options including vaultId and owner identity.
 
 ***
 
-### recoverVaultWorkingKey
-
-> **recoverVaultWorkingKey**: (`storage`, `vaultRecoveryKey`, `storageKey`) => `Promise`\<`string`\>
-
-#### Parameters
-
-##### storage
-
-[`IStorageProvider`](IStorageProvider.md)
-
-##### vaultRecoveryKey
-
-`string`
-
-##### storageKey?
-
-`string` = `DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY`
-
-#### Returns
-
-`Promise`\<`string`\>
-
-***
-
 ### restoreIdentity
 
 > **restoreIdentity**: (`privateKey`, `options`) => `CreatedIdentity`
@@ -859,23 +518,23 @@ const identity = restoreIdentity('MIIB...');
 
 ### wrapVaultCoreAsVaultService
 
-> **wrapVaultCoreAsVaultService**: (`core`, `options`) => [`VaultService`](VaultService.md)
+> **wrapVaultCoreAsVaultService**: (`core`, `options`) => `VaultService`
 
 #### Parameters
 
 ##### core
 
-[`VaultCore`](VaultCore.md)
+[`VaultCore`](../classes/VaultCore.md)
 
 ##### options?
 
 ###### clock?
 
-[`Clock`](Clock.md)
+`Clock`
 
 ###### customFlows?
 
-[`VaultCustomFlowResolver`](VaultCustomFlowResolver.md)
+`VaultCustomFlowResolver`
 
 ###### fetchImpl?
 
@@ -883,4 +542,4 @@ const identity = restoreIdentity('MIIB...');
 
 #### Returns
 
-[`VaultService`](VaultService.md)
+`VaultService`

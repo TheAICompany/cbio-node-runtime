@@ -53,7 +53,6 @@ export interface OwnerWriteSecretCommand {
   plaintext: string;
   targetBindings?: readonly VaultTargetBinding[];
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface OwnerDefineSecretTargetsCommand {
@@ -63,7 +62,6 @@ export interface OwnerDefineSecretTargetsCommand {
   alias: string;
   targetBindings: readonly VaultTargetBinding[];
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface IssuerWriteSecretCommand {
@@ -83,7 +81,6 @@ export interface OwnerDeleteSecretCommand {
   owner: VaultPrincipal & { kind: "owner" };
   alias: string;
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export type VaultWriteSecretCommand =
@@ -96,7 +93,6 @@ export interface OwnerRegisterAgentIdentityCommand {
   owner: VaultPrincipal & { kind: "owner" };
   agentIdentity: AgentIdentityRecord;
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface CustomHttpFlowDefinition {
@@ -132,7 +128,6 @@ export interface OwnerRegisterCustomHttpFlowCommand {
     };
   };
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface OwnerRegisterCapabilityCommand {
@@ -141,7 +136,6 @@ export interface OwnerRegisterCapabilityCommand {
   owner: VaultPrincipal & { kind: "owner" };
   capability: AgentCapability;
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface OwnerRevokeCapabilityCommand {
@@ -151,7 +145,6 @@ export interface OwnerRevokeCapabilityCommand {
   agentId: string;
   capabilityId: string;
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface AgentCapability {
@@ -182,12 +175,6 @@ export interface AgentProof {
   requestedAt: string;
 }
 
-export interface OwnerProof {
-  ownerId: string;
-  signature: string;
-  requestId: string;
-  requestedAt: string;
-}
 
 export interface DispatchRequest {
   vaultId: VaultId;
@@ -246,7 +233,6 @@ export interface AuditQuery {
 }
 
 export enum AuditAction {
-  BOOTSTRAP_OWNER_IDENTITY = "BOOTSTRAP_OWNER_IDENTITY",
   REGISTER_AGENT_IDENTITY = "REGISTER_AGENT_IDENTITY",
   REGISTER_CUSTOM_FLOW = "REGISTER_CUSTOM_FLOW",
   REGISTER_CAPABILITY = "REGISTER_CAPABILITY",
@@ -293,11 +279,6 @@ export interface AgentIdentityRecord {
   publicKey: string;
 }
 
-export interface OwnerIdentityRecord {
-  vaultId: VaultId;
-  ownerId: string;
-  publicKey: string;
-}
 
 export interface OwnerAuditRequest {
   vaultId: VaultId;
@@ -305,7 +286,6 @@ export interface OwnerAuditRequest {
   query: AuditQuery;
   requestId: string;
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface OwnerExportSecretRequest {
@@ -314,7 +294,6 @@ export interface OwnerExportSecretRequest {
   alias: string;
   requestId: string;
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface OwnerSecretExport {
@@ -330,7 +309,6 @@ export interface OwnerListAgentsRequest {
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
   requestedAt: string;
-  proof: OwnerProof;
 }
 
 export interface OwnerListCapabilitiesRequest {
@@ -339,5 +317,4 @@ export interface OwnerListCapabilitiesRequest {
   actor: VaultPrincipal & { kind: "owner" };
   agentId?: string;
   requestedAt: string;
-  proof: OwnerProof;
 }

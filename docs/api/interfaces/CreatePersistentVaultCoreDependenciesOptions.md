@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 ## Extends
 
-- [`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md)
+- [`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md)
 
 ## Properties
 
@@ -16,7 +16,7 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`authHeaderName`](CreateDefaultVaultCoreDependenciesOptions.md#authheadername)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`authHeaderName`](VaultCoreDependenciesOptions.md#authheadername)
 
 ***
 
@@ -26,7 +26,7 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`authPrefix`](CreateDefaultVaultCoreDependenciesOptions.md#authprefix)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`authPrefix`](VaultCoreDependenciesOptions.md#authprefix)
 
 ***
 
@@ -76,7 +76,7 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`fetchImpl`](CreateDefaultVaultCoreDependenciesOptions.md#fetchimpl)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`fetchImpl`](VaultCoreDependenciesOptions.md#fetchimpl)
 
 ***
 
@@ -86,17 +86,17 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`policy`](CreateDefaultVaultCoreDependenciesOptions.md#policy)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`policy`](VaultCoreDependenciesOptions.md#policy)
 
 ***
 
 ### proofVerifier?
 
-> `optional` **proofVerifier?**: [`SignatureAgentProofVerifierOptions`](SignatureAgentProofVerifierOptions.md)
+> `optional` **proofVerifier?**: `SignatureAgentProofVerifierOptions`
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`proofVerifier`](CreateDefaultVaultCoreDependenciesOptions.md#proofverifier)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`proofVerifier`](VaultCoreDependenciesOptions.md#proofverifier)
 
 ***
 
@@ -106,7 +106,7 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`vaultId`](CreateDefaultVaultCoreDependenciesOptions.md#vaultid)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`vaultId`](VaultCoreDependenciesOptions.md#vaultid)
 
 ***
 

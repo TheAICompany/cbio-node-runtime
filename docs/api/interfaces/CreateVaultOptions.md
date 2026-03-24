@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -16,7 +16,7 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`authHeaderName`](CreateDefaultVaultCoreDependenciesOptions.md#authheadername)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`authHeaderName`](VaultCoreDependenciesOptions.md#authheadername)
 
 ***
 
@@ -26,7 +26,7 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`authPrefix`](CreateDefaultVaultCoreDependenciesOptions.md#authprefix)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`authPrefix`](VaultCoreDependenciesOptions.md#authprefix)
 
 ***
 
@@ -76,7 +76,13 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`fetchImpl`](CreateDefaultVaultCoreDependenciesOptions.md#fetchimpl)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`fetchImpl`](VaultCoreDependenciesOptions.md#fetchimpl)
+
+***
+
+### metadata?
+
+> `optional` **metadata?**: `Record`\<`string`, `any`\>
 
 ***
 
@@ -86,9 +92,9 @@
 
 ***
 
-### ownerIdentity
+### password
 
-> **ownerIdentity**: `CreatedIdentity`
+> **password**: `string`
 
 ***
 
@@ -98,23 +104,17 @@
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`policy`](CreateDefaultVaultCoreDependenciesOptions.md#policy)
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`policy`](VaultCoreDependenciesOptions.md#policy)
 
 ***
 
 ### proofVerifier?
 
-> `optional` **proofVerifier?**: [`SignatureAgentProofVerifierOptions`](SignatureAgentProofVerifierOptions.md)
+> `optional` **proofVerifier?**: `SignatureAgentProofVerifierOptions`
 
 #### Inherited from
 
-[`CreateDefaultVaultCoreDependenciesOptions`](CreateDefaultVaultCoreDependenciesOptions.md).[`proofVerifier`](CreateDefaultVaultCoreDependenciesOptions.md#proofverifier)
-
-***
-
-### publicMetadata?
-
-> `optional` **publicMetadata?**: `Record`\<`string`, `any`\>
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`proofVerifier`](VaultCoreDependenciesOptions.md#proofverifier)
 
 ***
 
@@ -124,7 +124,7 @@
 
 #### customFlows?
 
-> `optional` **customFlows?**: [`VaultCustomFlowResolver`](VaultCustomFlowResolver.md)
+> `optional` **customFlows?**: `VaultCustomFlowResolver`
 
 #### fetchImpl?
 

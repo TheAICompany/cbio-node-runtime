@@ -16,7 +16,6 @@ import {
   type OwnerRegisterAgentIdentityCommand,
   type OwnerRegisterCustomHttpFlowCommand,
   type CustomHttpFlowDefinition,
-  type OwnerIdentityRecord,
   type OwnerSecretExport,
   type SecretRecord,
   type AgentIdentityRecord,
@@ -102,7 +101,6 @@ export interface VaultCustomFlowResolver {
 
 export interface VaultService {
   readonly vaultId: VaultCore["vaultId"];
-  bootstrapOwnerIdentity(request: OwnerIdentityRecord): Promise<void>;
   registerCapability(request: OwnerRegisterCapabilityCommand): Promise<void>;
   registerAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void>;
   registerCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
@@ -131,9 +129,6 @@ class LocalVaultService implements VaultService {
     return this._authority.vaultId;
   }
 
-  bootstrapOwnerIdentity(request: OwnerIdentityRecord): Promise<void> {
-    return this._authority.bootstrapOwnerIdentity(request);
-  }
 
   registerCapability(request: OwnerRegisterCapabilityCommand): Promise<void> {
     return this._authority.registerCapability(request);
@@ -455,7 +450,6 @@ class LocalVaultService implements VaultService {
     return this._authority.getAudit(request.actor, request.query, {
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      proof: request.proof,
     });
   }
 
@@ -463,7 +457,6 @@ class LocalVaultService implements VaultService {
     return this._authority.exportSecret(request.actor, request.alias, {
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      proof: request.proof,
     });
   }
 

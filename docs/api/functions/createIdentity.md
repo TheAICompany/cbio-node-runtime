@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 > **createIdentity**(`options?`): `CreatedIdentity`
 
-Creates a new root identity with a fresh Ed25519 keypair.
+Creates a new identity with a fresh Ed25519 keypair.
 
 ## Parameters
 

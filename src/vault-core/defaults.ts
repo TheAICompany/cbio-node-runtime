@@ -3,12 +3,6 @@ import { verifySignature } from "../protocol/crypto.js";
 import type {
   AgentCapability,
   AgentIdentityRecord,
-  OwnerAuditRequest,
-  OwnerExportSecretRequest,
-  OwnerRegisterCapabilityCommand,
-  OwnerRegisterAgentIdentityCommand,
-  OwnerRegisterCustomHttpFlowCommand,
-  OwnerIdentityRecord,
   AuditEntry,
   AuditQuery,
   CustomHttpFlowDefinition,
@@ -32,14 +26,13 @@ import type {
   CapabilityRevocationRegistry,
   Clock,
   IdGenerator,
-  OwnerIdentityRegistry,
-  OwnerProofVerifier,
   PolicyEngine,
   RateLimitStore,
   ReplayGuard,
   SecretCustody,
   SecretRepository,
   TrustedExecutor,
+  VaultCoreDependencies,
 } from "./ports.js";
 
 export interface DefaultPolicyEngineOptions {
@@ -117,111 +110,6 @@ function createDispatchBinding(request: DispatchRequest): string {
   });
 }
 
-function createOwnerWriteBinding(
-  command: Extract<import("./contracts.js").VaultWriteSecretCommand, { kind: "owner.write_secret" }>,
-): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    alias: command.alias,
-    plaintext: command.plaintext,
-    targetBindings: command.targetBindings,
-  });
-}
-
-function createOwnerDefineSecretTargetsBinding(
-  command: import("./contracts.js").OwnerDefineSecretTargetsCommand,
-): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    alias: command.alias,
-    targetBindings: command.targetBindings,
-  });
-}
-
-function createOwnerAuditBinding(request: OwnerAuditRequest): string {
-  return JSON.stringify({
-    requestId: request.requestId,
-    requestedAt: request.requestedAt,
-    ownerId: request.actor.id,
-    query: request.query,
-  });
-}
-
-function createOwnerExportBinding(request: OwnerExportSecretRequest): string {
-  return JSON.stringify({
-    requestId: request.requestId,
-    requestedAt: request.requestedAt,
-    ownerId: request.actor.id,
-    alias: request.alias,
-  });
-}
-
-function createOwnerDeleteSecretBinding(command: import("./contracts.js").OwnerDeleteSecretCommand): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    alias: command.alias,
-  });
-}
-
-function createOwnerRegisterAgentBinding(command: OwnerRegisterAgentIdentityCommand): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    agentIdentity: command.agentIdentity,
-  });
-}
-
-function createOwnerRegisterCustomFlowBinding(command: OwnerRegisterCustomHttpFlowCommand): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    flow: command.flow,
-  });
-}
-
-function createOwnerRegisterCapabilityBinding(command: OwnerRegisterCapabilityCommand): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    capability: command.capability,
-  });
-}
-
-function createOwnerRevokeCapabilityBinding(command: import("./contracts.js").OwnerRevokeCapabilityCommand): string {
-  return JSON.stringify({
-    requestId: command.requestId,
-    requestedAt: command.requestedAt,
-    ownerId: command.owner.id,
-    agentId: command.agentId,
-    capabilityId: command.capabilityId,
-  });
-}
-
-function createOwnerListAgentsBinding(request: import("./contracts.js").OwnerListAgentsRequest): string {
-  return JSON.stringify({
-    requestId: request.requestId,
-    requestedAt: request.requestedAt,
-    ownerId: request.actor.id,
-  });
-}
-
-function createOwnerListCapabilitiesBinding(request: import("./contracts.js").OwnerListCapabilitiesRequest): string {
-  return JSON.stringify({
-    requestId: request.requestId,
-    requestedAt: request.requestedAt,
-    ownerId: request.actor.id,
-    agentId: request.agentId ?? null,
-  });
-}
 
 /**
  * @internal
@@ -341,25 +229,6 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   }
 }
 
-/**
- * @internal
- */
-export class InMemoryOwnerIdentityRegistry implements OwnerIdentityRegistry {
-  private readonly _identities = new Map<string, OwnerIdentityRecord>();
-
-  async register(identity: OwnerIdentityRecord): Promise<void> {
-    this._identities.set(`${identity.vaultId.value}:${identity.ownerId}`, identity);
-  }
-
-  async get(vaultId: VaultId, ownerId: string): Promise<OwnerIdentityRecord | null> {
-    return this._identities.get(`${vaultId.value}:${ownerId}`) ?? null;
-  }
-
-  async hasAny(vaultId: VaultId): Promise<boolean> {
-    const prefix = `${vaultId.value}:`;
-    return Array.from(this._identities.keys()).some((key) => key.startsWith(prefix));
-  }
-}
 
 /**
  * @internal
@@ -517,9 +386,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
     }
     this.validateRequestedAt(command.requestedAt, "requestedAt");
     if (command.kind === "owner.write_secret") {
-      if (!command.owner.id.trim()) {
-        throw new VaultCoreError("owner id required", "VAULT_WRITE_DENIED");
-      }
       if (command.targetBindings?.length) {
         this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
       }
@@ -538,9 +404,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
   }
 
   async authorizeDefineSecretTargets(command: import("./contracts.js").OwnerDefineSecretTargetsCommand): Promise<void> {
-    if (!command.owner.id.trim()) {
-      throw new VaultCoreError("owner id required", "VAULT_WRITE_DENIED");
-    }
     if (!command.alias.trim()) {
       throw new VaultCoreError("secret alias required", "VAULT_WRITE_DENIED");
     }
@@ -671,255 +534,6 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
   }
 }
 
-/**
- * @internal
- */
-export class SignatureOwnerProofVerifier implements OwnerProofVerifier {
-  private readonly _maxSkewMs: number;
-  private readonly _now: () => Date;
-  private readonly _ownerIdentities: OwnerIdentityRegistry;
-
-  constructor(ownerIdentities: OwnerIdentityRegistry, options: SignatureAgentProofVerifierOptions = {}) {
-    this._ownerIdentities = ownerIdentities;
-    this._maxSkewMs = options.maxSkewMs ?? (5 * 60 * 1000);
-    this._now = options.now ?? (() => new Date());
-  }
-
-  private async verifyBinding(ownerId: string, vaultId: VaultId, requestedAt: string, signature: string, binding: string): Promise<void> {
-    const parsedRequestedAt = Date.parse(requestedAt);
-    if (Number.isNaN(parsedRequestedAt) || Math.abs(this._now().getTime() - parsedRequestedAt) > this._maxSkewMs) {
-      throw new VaultCoreError("owner proof timestamp out of range", "VAULT_AUDIT_DENIED");
-    }
-    const registeredIdentity = await this._ownerIdentities.get(vaultId, ownerId);
-    if (!registeredIdentity) {
-      throw new VaultCoreError("owner identity not registered", "VAULT_AUDIT_DENIED");
-    }
-    if (!verifySignature(registeredIdentity.publicKey, signature, binding)) {
-      throw new VaultCoreError("invalid owner proof signature", "VAULT_AUDIT_DENIED");
-    }
-  }
-
-  async verifyWrite(command: Extract<import("./contracts.js").VaultWriteSecretCommand, { kind: "owner.write_secret" }>): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_WRITE_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_WRITE_DENIED");
-    }
-    const binding = createOwnerWriteBinding(command);
-    try {
-      await this.verifyBinding(command.owner.id, command.vaultId, command.requestedAt, command.proof.signature, binding);
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_WRITE_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyDefineSecretTargets(command: import("./contracts.js").OwnerDefineSecretTargetsCommand): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_WRITE_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_WRITE_DENIED");
-    }
-    try {
-      await this.verifyBinding(
-        command.owner.id,
-        command.vaultId,
-        command.requestedAt,
-        command.proof.signature,
-        createOwnerDefineSecretTargetsBinding(command),
-      );
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_WRITE_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyAudit(request: OwnerAuditRequest): Promise<void> {
-    if (request.proof.ownerId !== request.actor.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_AUDIT_DENIED");
-    }
-    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_AUDIT_DENIED");
-    }
-    await this.verifyBinding(
-      request.actor.id,
-      request.vaultId,
-      request.requestedAt,
-      request.proof.signature,
-      createOwnerAuditBinding(request),
-    );
-  }
-
-  async verifyExport(request: OwnerExportSecretRequest): Promise<void> {
-    if (request.proof.ownerId !== request.actor.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_AUDIT_DENIED");
-    }
-    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_AUDIT_DENIED");
-    }
-    await this.verifyBinding(
-      request.actor.id,
-      request.vaultId,
-      request.requestedAt,
-      request.proof.signature,
-      createOwnerExportBinding(request),
-    );
-  }
-
-  async verifyDeleteSecret(command: import("./contracts.js").OwnerDeleteSecretCommand): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_WRITE_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_WRITE_DENIED");
-    }
-    try {
-      await this.verifyBinding(
-        command.owner.id,
-        command.vaultId,
-        command.requestedAt,
-        command.proof.signature,
-        createOwnerDeleteSecretBinding(command),
-      );
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_WRITE_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    try {
-      await this.verifyBinding(
-        command.owner.id,
-        command.vaultId,
-        command.requestedAt,
-        command.proof.signature,
-        createOwnerRegisterCapabilityBinding(command),
-      );
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_IDENTITY_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    try {
-      await this.verifyBinding(
-        command.owner.id,
-        command.vaultId,
-        command.requestedAt,
-        command.proof.signature,
-        createOwnerRegisterAgentBinding(command),
-      );
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_IDENTITY_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    try {
-      await this.verifyBinding(
-        command.owner.id,
-        command.vaultId,
-        command.requestedAt,
-        command.proof.signature,
-        createOwnerRegisterCustomFlowBinding(command),
-      );
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_IDENTITY_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyRevokeCapability(command: import("./contracts.js").OwnerRevokeCapabilityCommand): Promise<void> {
-    if (command.proof.ownerId !== command.owner.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    if (command.proof.requestId !== command.requestId || command.proof.requestedAt !== command.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_IDENTITY_DENIED");
-    }
-    try {
-      await this.verifyBinding(
-        command.owner.id,
-        command.vaultId,
-        command.requestedAt,
-        command.proof.signature,
-        createOwnerRevokeCapabilityBinding(command),
-      );
-    } catch (error) {
-      if (error instanceof VaultCoreError && error.code === "VAULT_AUDIT_DENIED") {
-        throw new VaultCoreError(error.message, "VAULT_IDENTITY_DENIED");
-      }
-      throw error;
-    }
-  }
-
-  async verifyListAgents(request: import("./contracts.js").OwnerListAgentsRequest): Promise<void> {
-    if (request.proof.ownerId !== request.actor.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_AUDIT_DENIED");
-    }
-    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_AUDIT_DENIED");
-    }
-    await this.verifyBinding(
-      request.actor.id,
-      request.vaultId,
-      request.requestedAt,
-      request.proof.signature,
-      createOwnerListAgentsBinding(request),
-    );
-  }
-
-  async verifyListCapabilities(request: import("./contracts.js").OwnerListCapabilitiesRequest): Promise<void> {
-    if (request.proof.ownerId !== request.actor.id) {
-      throw new VaultCoreError("owner proof identity mismatch", "VAULT_AUDIT_DENIED");
-    }
-    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
-      throw new VaultCoreError("owner proof binding mismatch", "VAULT_AUDIT_DENIED");
-    }
-    await this.verifyBinding(
-      request.actor.id,
-      request.vaultId,
-      request.requestedAt,
-      request.proof.signature,
-      createOwnerListCapabilitiesBinding(request),
-    );
-  }
-}
-
 export class InMemoryReplayGuard implements ReplayGuard {
   private readonly _seen = new Map<string, number>();
   private readonly _ttlMs: number;
@@ -991,7 +605,7 @@ export class HttpDispatchExecutor implements TrustedExecutor {
   }
 }
 
-export interface CreateDefaultVaultCoreDependenciesOptions {
+export interface VaultCoreDependenciesOptions {
   vaultId?: string;
   fetchImpl?: typeof fetch;
   authHeaderName?: string;
@@ -1000,27 +614,10 @@ export interface CreateDefaultVaultCoreDependenciesOptions {
   proofVerifier?: SignatureAgentProofVerifierOptions;
 }
 
-export function createDefaultVaultCoreDependencies(
-  options: CreateDefaultVaultCoreDependenciesOptions = {},
-): {
-  vaultId: VaultId;
-  secrets: InMemorySecretRepository;
-  custody: InMemorySecretCustody;
-  policy: DefaultPolicyEngine;
-  audit: InMemoryAuditLog;
-  executor: HttpDispatchExecutor;
-  agentIdentities: InMemoryAgentIdentityRegistry;
-  ownerIdentities: InMemoryOwnerIdentityRegistry;
-  proofVerifier: SignatureAgentProofVerifier;
-  ownerProofVerifier: SignatureOwnerProofVerifier;
-  customFlows: InMemoryCustomHttpFlowRegistry;
-  capabilities: InMemoryCapabilityRegistry;
-  replayGuard: InMemoryReplayGuard;
-  clock: SystemClock;
-  ids: RandomIdGenerator;
-} {
+export function createVaultCoreDependencies(
+  options: VaultCoreDependenciesOptions = {},
+): VaultCoreDependencies {
   const agentIdentities = new InMemoryAgentIdentityRegistry();
-  const ownerIdentities = new InMemoryOwnerIdentityRegistry();
   const vaultId = { value: options.vaultId ?? `vault_${crypto.randomUUID()}` };
   return {
     vaultId,
@@ -1034,9 +631,7 @@ export function createDefaultVaultCoreDependencies(
       options.authPrefix,
     ),
     agentIdentities,
-    ownerIdentities,
-    proofVerifier: new SignatureAgentProofVerifier(agentIdentities, options.proofVerifier),
-    ownerProofVerifier: new SignatureOwnerProofVerifier(ownerIdentities, options.proofVerifier),
+    agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, options.proofVerifier),
     capabilities: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: new InMemoryReplayGuard(options.proofVerifier),

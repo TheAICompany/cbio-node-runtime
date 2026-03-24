@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -10,7 +10,7 @@ Represents a vault instance with its core logic and service layer.
 
 ### core
 
-> **core**: [`VaultCore`](VaultCore.md)
+> **core**: [`VaultCore`](../classes/VaultCore.md)
 
 The low-level vault core.
 
@@ -34,6 +34,6 @@ The anchored storage provider for this vault.
 
 ### vault
 
-> **vault**: [`VaultService`](VaultService.md)
+> **vault**: `VaultService`
 
 The high-level service interface for dispatch and acquisition.

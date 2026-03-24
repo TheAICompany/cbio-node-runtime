@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
@@ -14,7 +14,7 @@ Creates a [VaultClient](../interfaces/VaultClient.md) instance for a specific va
 
 [`CreateVaultClientOptions`](../interfaces/CreateVaultClientOptions.md)
 
-Configuration including owner identity and the vault service.
+Configuration including optional owner identity and the vault service.
 
 ## Returns
 

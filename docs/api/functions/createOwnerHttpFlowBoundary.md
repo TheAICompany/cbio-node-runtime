@@ -1,17 +1,17 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
 # Function: createOwnerHttpFlowBoundary()
 
-> **createOwnerHttpFlowBoundary**(`boundary`): [`OwnerHttpFlowBoundary`](../interfaces/OwnerHttpFlowBoundary.md)
+> **createOwnerHttpFlowBoundary**(`boundary`): `OwnerHttpFlowBoundary`
 
 ## Parameters
 
 ### boundary
 
-[`OwnerHttpFlowBoundary`](../interfaces/OwnerHttpFlowBoundary.md)
+`OwnerHttpFlowBoundary`
 
 ## Returns
 
-[`OwnerHttpFlowBoundary`](../interfaces/OwnerHttpFlowBoundary.md)
+`OwnerHttpFlowBoundary`

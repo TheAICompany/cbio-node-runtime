@@ -1,17 +1,17 @@
-[**CBIO Node Runtime Agent API v1.45.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.46.0**](../README.md)
 
 ***
 
 # Function: createVaultCore()
 
-> **createVaultCore**(`deps`): [`VaultCore`](../interfaces/VaultCore.md)
+> **createVaultCore**(`deps`): [`VaultCore`](../classes/VaultCore.md)
 
 ## Parameters
 
 ### deps
 
-[`VaultCoreDependencies`](../interfaces/VaultCoreDependencies.md)
+`VaultCoreDependencies`
 
 ## Returns
 
-[`VaultCore`](../interfaces/VaultCore.md)
+[`VaultCore`](../classes/VaultCore.md)

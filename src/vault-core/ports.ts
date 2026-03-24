@@ -3,17 +3,13 @@ import type {
   AuditQuery,
   AgentCapability,
   AgentIdentityRecord,
-  OwnerIdentityRecord,
-  OwnerAuditRequest,
+  OwnerDefineSecretTargetsCommand,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
-  OwnerDefineSecretTargetsCommand,
-  OwnerRegisterCapabilityCommand,
-  OwnerRevokeCapabilityCommand,
-  OwnerListAgentsRequest,
-  OwnerListCapabilitiesRequest,
   OwnerRegisterAgentIdentityCommand,
+  OwnerRegisterCapabilityCommand,
   OwnerRegisterCustomHttpFlowCommand,
+  OwnerRevokeCapabilityCommand,
   OwnerSecretExport,
   CustomHttpFlowDefinition,
   DispatchInstruction,
@@ -76,11 +72,6 @@ export interface AgentIdentityRegistry {
   list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]>;
 }
 
-export interface OwnerIdentityRegistry {
-  register(identity: OwnerIdentityRecord): Promise<void>;
-  get(vaultId: VaultId, ownerId: string): Promise<OwnerIdentityRecord | null>;
-  hasAny(vaultId: VaultId): Promise<boolean>;
-}
 
 export interface ReplayGuard {
   assertNotReplayed(request: DispatchRequest): Promise<void>;
@@ -93,20 +84,6 @@ export interface RateLimitStore {
 export interface CapabilityRevocationRegistry {
   get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> | number;
   revoke(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> | number;
-}
-
-export interface OwnerProofVerifier {
-  verifyWrite(command: Extract<VaultWriteSecretCommand, { kind: "owner.write_secret" }>): Promise<void>;
-  verifyDefineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<void>;
-  verifyAudit(request: OwnerAuditRequest): Promise<void>;
-  verifyExport(request: OwnerExportSecretRequest): Promise<void>;
-  verifyDeleteSecret(command: OwnerDeleteSecretCommand): Promise<void>;
-  verifyRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
-  verifyRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
-  verifyRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
-  verifyRevokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void>;
-  verifyListAgents(request: OwnerListAgentsRequest): Promise<void>;
-  verifyListCapabilities(request: OwnerListCapabilitiesRequest): Promise<void>;
 }
 
 export interface CustomHttpFlowRegistry {
@@ -127,51 +104,13 @@ export interface VaultCoreDependencies {
   policy: PolicyEngine;
   audit: AuditLog;
   executor: TrustedExecutor;
-  proofVerifier: AgentProofVerifier;
   agentIdentities: AgentIdentityRegistry;
-  ownerProofVerifier: OwnerProofVerifier;
-  ownerIdentities: OwnerIdentityRegistry;
   capabilities: CapabilityRegistry;
   customFlows: CustomHttpFlowRegistry;
+  agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;
   clock: Clock;
   ids: IdGenerator;
 }
 
-export interface VaultCore {
-  readonly vaultId: VaultId;
-  writeSecret(command: VaultWriteSecretCommand): Promise<SecretRecord>;
-  deleteSecret(command: OwnerDeleteSecretCommand): Promise<void>;
-  defineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<SecretRecord>;
-  authorizeDispatch(request: DispatchRequest): Promise<import("./contracts.js").DispatchAuthorization>;
-  dispatchSecret(request: DispatchRequest): Promise<DispatchResult>;
-  bootstrapOwnerIdentity(identity: OwnerIdentityRecord): Promise<void>;
-  registerAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void>;
-  registerCapability(command: OwnerRegisterCapabilityCommand): Promise<void>;
-  registerCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
-  getCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null>;
-  storeCustomFlowSecret(flow: CustomHttpFlowDefinition, alias: string, plaintext: string): Promise<SecretRecord>;
-  getAudit(
-    actor: VaultPrincipal & { kind: "owner" },
-    query: AuditQuery,
-    request?: Omit<OwnerAuditRequest, "actor" | "query" | "vaultId">,
-  ): Promise<readonly AuditEntry[]>;
-  exportSecret(
-    actor: VaultPrincipal & { kind: "owner" },
-    alias: string,
-    request?: Omit<OwnerExportSecretRequest, "actor" | "alias" | "vaultId">,
-  ): Promise<OwnerSecretExport>;
 
-  listAgents(
-    actor: VaultPrincipal & { kind: "owner" },
-    request?: Omit<OwnerListAgentsRequest, "actor" | "vaultId">,
-  ): Promise<readonly AgentIdentityRecord[]>;
-
-  listCapabilities(
-    actor: VaultPrincipal & { kind: "owner" },
-    agentId?: string,
-    request?: Omit<OwnerListCapabilitiesRequest, "actor" | "agentId" | "vaultId">,
-  ): Promise<readonly AgentCapability[]>;
-
-  revokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void>;
-}

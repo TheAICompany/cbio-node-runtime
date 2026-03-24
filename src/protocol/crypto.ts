@@ -55,7 +55,20 @@ export function signPayload(privateKey: string, payload: string): string {
     return protocolSignPayload(privateKey, payload);
 }
 
+import { scryptSync } from 'node:crypto';
+
 /** @internal Use signPayload for protocol-level signing. */
 export function signChallenge(privateKey: string, nonce: string): string {
     return protocolSignPayload(privateKey, nonce);
+}
+
+/**
+ * Derives a 256-bit working key from a user password and salt (vaultId).
+ * Using scrypt for memory-hard key derivation to resist brute-force attacks.
+ */
+export function deriveVaultWorkingKeyFromPassword(password: string, vaultId: string): string {
+    // N: CPU/memory cost parameter (must be a power of 2)
+    // r: Block size parameter
+    // p: Parallelization parameter
+    return scryptSync(password, vaultId, 32, { N: 16384, r: 8, p: 1 }).toString('base64url');
 }
