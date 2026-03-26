@@ -1,7 +1,7 @@
-[**CBIO Node Runtime Agent API v1.53.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.54.0**](../README.md)
 
 ***
 
 # Variable: DEFAULT\_VAULT\_KEY\_CUSTODY\_BLOB\_KEY
 
-> `const` **DEFAULT\_VAULT\_KEY\_CUSTODY\_BLOB\_KEY**: `"vault/sealed/custody/working-key.sealed"` = `"vault/sealed/custody/working-key.sealed"`
+> `const` **DEFAULT\_VAULT\_KEY\_CUSTODY\_BLOB\_KEY**: `"working-key.sealed"` = `"working-key.sealed"`

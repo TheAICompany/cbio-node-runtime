@@ -1,4 +1,5 @@
 import type { CreatedIdentity } from "../../runtime/identity.js";
+import { createRequestIdValue } from "../../internal/id-factory.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import { LocalVaultTransport } from "../../vault-ingress/defaults.js";
 import type { VaultService } from "../../vault-ingress/index.js";
@@ -61,7 +62,7 @@ class DefaultAgentClient implements AgentClient {
 
   async agentDispatch(intent: AgentDispatchIntent) {
     const requestedAt = intent.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identity.agentId}:${requestedAt}:${intent.secretAlias ?? "no-secret"}:${intent.method}`;
+    const requestId = createRequestIdValue("dispatch");
 
     return this._transport.agentDispatch({
       vaultId: this._capability.vaultId,
@@ -116,7 +117,7 @@ class DefaultAgentClient implements AgentClient {
 
   async agentListCapabilities() {
     const requestedAt = this._clock.nowIso();
-    const requestId = `${this._identity.agentId}:${requestedAt}:list_capabilities`;
+    const requestId = createRequestIdValue("list_capabilities");
     return this._transport.agentListCapabilities({
       vaultId: this._capability.vaultId,
       requestId,
@@ -128,7 +129,7 @@ class DefaultAgentClient implements AgentClient {
 
   async agentListSecrets() {
     const requestedAt = this._clock.nowIso();
-    const requestId = `${this._identity.agentId}:${requestedAt}:list_secrets`;
+    const requestId = createRequestIdValue("list_secrets");
     return this._transport.agentListSecrets({
       vaultId: this._capability.vaultId,
       requestId,
@@ -140,7 +141,7 @@ class DefaultAgentClient implements AgentClient {
 
   async agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identity.agentId}:${requestedAt}:submit_capability_request`;
+    const requestId = createRequestIdValue("submit_capability_request");
     const payload = {
       scope: input.scope,
       methods: input.methods,

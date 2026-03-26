@@ -65,6 +65,10 @@ export interface IdGenerator {
   newSecretId(): SecretId;
   newVersion(): { value: string };
   newAuditEntryId(): string;
+  newAgentId(): string;
+  newCapabilityId(): string;
+  newFlowId(): string;
+  newRequestId(action?: string): string;
 }
 
 export interface AgentProofVerifier {

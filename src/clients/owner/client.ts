@@ -1,5 +1,11 @@
 import { LocalSigner } from "../../protocol/crypto.js";
 import { OwnerClientError, OwnerClientErrorCode } from "../../errors.js";
+import {
+  createAgentIdValue,
+  createCapabilityIdValue,
+  createFlowIdValue,
+  createRequestIdValue,
+} from "../../internal/id-factory.js";
 import { createIdentity, restoreIdentity, type CreatedIdentity } from "../../runtime/identity.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
@@ -139,7 +145,6 @@ export interface CreateVaultClientOptions {
 }
 
 const VAULT_MASTER_ID = "vault-master";
-const VAULT_AGENT_ID_PREFIX = "vagt_";
 
 class DefaultVaultClient implements VaultClient {
   private readonly _identityId: string;
@@ -198,13 +203,9 @@ class DefaultVaultClient implements VaultClient {
     }
   }
 
-  private _newVaultAgentId(): string {
-    return `${VAULT_AGENT_ID_PREFIX}${crypto.randomUUID()}`;
-  }
-
   async ownerStoreSecret(input: OwnerStoreSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.alias}:write_secret`;
+    const requestId = createRequestIdValue("write_secret");
     
     return this._vault.ownerWriteSecret({
       kind: "owner.write_secret",
@@ -223,7 +224,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerDefineSecretTargets(input: OwnerDefineSecretTargetsInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.alias}:define_secret_targets`;
+    const requestId = createRequestIdValue("define_secret_targets");
     const targetBindings = [...input.targetBindings];
     
     return this._vault.ownerDefineSecretTargets({
@@ -241,7 +242,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerWriteSecret(input: OwnerWriteSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.alias}:write_secret`;
+    const requestId = createRequestIdValue("write_secret");
     const targetBindings = [...input.targetBindings];
     
     return this._vault.ownerWriteSecret({
@@ -261,7 +262,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerReadAudit(query: VaultAuditQueryInput = {}) {
     const requestedAt = this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:read_audit`;
+    const requestId = createRequestIdValue("read_audit");
     
     return this._vault.ownerReadAudit({
       vaultId: this._vault.vaultId,
@@ -284,7 +285,7 @@ class DefaultVaultClient implements VaultClient {
       subject: input.alias,
     });
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.alias}:export_secret`;
+    const requestId = createRequestIdValue("export_secret");
     
     return this._vault.ownerExportSecret({
       vaultId: this._vault.vaultId,
@@ -313,7 +314,7 @@ class DefaultVaultClient implements VaultClient {
         id: this._identityId,
       },
       alias: input.alias,
-      requestId: `${this._identityId}:${input.requestedAt ?? this._clock.nowIso()}:${input.alias}:read_secret_plaintext`,
+      requestId: createRequestIdValue("read_secret_plaintext"),
       requestedAt: input.requestedAt ?? this._clock.nowIso(),
     });
     return exported.plaintext;
@@ -329,7 +330,7 @@ class DefaultVaultClient implements VaultClient {
     });
     const agents = await this._vault.ownerListAgents({
       vaultId: this._vault.vaultId,
-      requestId: `${this._identityId}:${input.requestedAt ?? this._clock.nowIso()}:${input.agentId}:read_agent_private_key`,
+      requestId: createRequestIdValue("read_agent_private_key"),
       requestedAt: input.requestedAt ?? this._clock.nowIso(),
       actor: {
         kind: "owner",
@@ -356,7 +357,7 @@ class DefaultVaultClient implements VaultClient {
     requestedAt?: string;
   }): Promise<import("../../vault-core/index.js").AgentIdentityRecord> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.agentId}:register_agent_identity`;
+    const requestId = createRequestIdValue("register_agent_identity");
     const agentIdentity = {
       vaultId: this._vault.vaultId,
       agentId: input.agentId,
@@ -383,7 +384,7 @@ class DefaultVaultClient implements VaultClient {
   async ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult> {
     const identity = restoreIdentity(input.privateKey, { nickname: input.nickname });
     const agent = await this._ownerRegisterManagedAgentIdentity({
-      agentId: this._newVaultAgentId(),
+      agentId: createAgentIdValue(),
       identityId: identity.identityId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
@@ -407,7 +408,7 @@ class DefaultVaultClient implements VaultClient {
   async ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult> {
     const identity = createIdentity();
     const agent = await this._ownerRegisterManagedAgentIdentity({
-      agentId: this._newVaultAgentId(),
+      agentId: createAgentIdValue(),
       identityId: identity.identityId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
@@ -430,7 +431,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.agentId}:update_agent_identity`;
+    const requestId = createRequestIdValue("update_agent_identity");
     const updated = await this._vault.ownerUpdateAgentIdentity({
       vaultId: this._vault.vaultId,
       requestId,
@@ -451,8 +452,8 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const capabilityId = `vcap_${crypto.randomUUID()}`;
-    const requestId = `${this._identityId}:${requestedAt}:${capabilityId}:register_capability`;
+    const capabilityId = createCapabilityIdValue();
+    const requestId = createRequestIdValue("register_capability");
     
     const capability: import("../../vault-core/index.js").AgentCapability = {
       vaultId: this._vault.vaultId,
@@ -482,8 +483,8 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const flowId = `vflow_${crypto.randomUUID()}`;
-    const requestId = `${this._identityId}:${requestedAt}:${flowId}:register_custom_flow`;
+    const flowId = createFlowIdValue();
+    const requestId = createRequestIdValue("register_custom_flow");
     const flow = {
       flowId,
       mode: input.mode,
@@ -518,7 +519,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.alias}:delete_secret`;
+    const requestId = createRequestIdValue("delete_secret");
     
     await this._vault.ownerDeleteSecret({
       vaultId: this._vault.vaultId,
@@ -534,7 +535,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerListAgents(input: VaultListAgentsInput = {}) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:list_agents`;
+    const requestId = createRequestIdValue("list_agents");
     
     const agents = await this._vault.ownerListAgents({
       vaultId: this._vault.vaultId,
@@ -553,7 +554,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerListCapabilities(input: VaultListCapabilitiesInput = {}) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:list_capabilities`;
+    const requestId = createRequestIdValue("list_capabilities");
     
     return this._vault.ownerListCapabilities({
       vaultId: this._vault.vaultId,
@@ -569,7 +570,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerListSecrets(input: VaultListSecretsInput = {}) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:list_secrets`;
+    const requestId = createRequestIdValue("list_secrets");
     return this._vault.ownerListSecrets({
       vaultId: this._vault.vaultId,
       owner: {
@@ -582,7 +583,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerRevokeCapability(input: VaultRevokeCapabilityInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:revoke_capability`;
+    const requestId = createRequestIdValue("revoke_capability");
 
     return this._vault.ownerRevokeCapability({
       vaultId: this._vault.vaultId,
@@ -599,7 +600,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerIssueSessionToken(input: VaultIssueSessionTokenInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:issue_session_token`;
+    const requestId = createRequestIdValue("issue_session_token");
 
     return this._vault.ownerIssueSessionToken({
       vaultId: this._vault.vaultId,
@@ -626,7 +627,7 @@ class DefaultVaultClient implements VaultClient {
 
   async ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${input.requester.id}:${requestedAt}:${input.agentId}:submit_capability_request`;
+    const requestId = createRequestIdValue("submit_capability_request");
 
     return this._vault.ownerSubmitCapabilityRequest({
       vaultId: this._vault.vaultId,

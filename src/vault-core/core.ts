@@ -523,7 +523,7 @@ export class VaultCore {
     const record = buildSecretRecord(this._deps, {
       kind: "owner.write_secret",
       vaultId: this._deps.vaultId,
-      requestId: `${flow.flowId}:${alias}:custom_flow_store`,
+      requestId: this._deps.ids.newRequestId("custom_flow_store"),
       owner: actor,
       alias,
       plaintext,
@@ -1044,7 +1044,7 @@ export class VaultCore {
     for (const agent of agents) {
       results.push(await this.ownerIssueSessionToken({
         vaultId: this._deps.vaultId,
-        requestId: `warmup_${this._deps.ids.newVersion().value}`,
+        requestId: this._deps.ids.newRequestId("warmup_session_token"),
         actor,
         agentId: agent.agentId,
         requestedAt,
@@ -1094,7 +1094,7 @@ export class VaultCore {
     const capability: AgentCapability = {
       vaultId: this._deps.vaultId,
       agentId: pending.agentId,
-      capabilityId: command.capabilityId ?? `cap_${this._deps.ids.newVersion().value}`,
+      capabilityId: command.capabilityId ?? this._deps.ids.newCapabilityId(),
       operation: pending.scope.operation,
       secretAliases: pending.scope.secretAliases ? [...pending.scope.secretAliases] : [],
       scope: pending.scope.scope,
@@ -1177,7 +1177,7 @@ export class VaultCore {
       capability = existing;
     } else {
       // Discovery case: derive from request
-      const capabilityId = `cap-${this._deps.clock.nowIso()}-${Math.random().toString(36).slice(2, 7)}`;
+      const capabilityId = this._deps.ids.newCapabilityId();
         capability = {
           vaultId: this._deps.vaultId,
           agentId: pending.agentId,

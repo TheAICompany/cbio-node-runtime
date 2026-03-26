@@ -1,4 +1,13 @@
 import * as crypto from "node:crypto";
+import {
+  createAgentIdValue,
+  createAuditEntryIdValue,
+  createCapabilityIdValue,
+  createFlowIdValue,
+  createRequestIdValue,
+  createSecretIdValue,
+  createVersionIdValue,
+} from "../internal/id-factory.js";
 import { verifySignature } from "../protocol/crypto.js";
 import type {
   AgentCapability,
@@ -149,15 +158,31 @@ export class SystemClock implements Clock {
  */
 export class RandomIdGenerator implements IdGenerator {
   newSecretId(): SecretId {
-    return { value: `secret_${crypto.randomUUID()}` };
+    return { value: createSecretIdValue() };
   }
 
   newVersion(): { value: string } {
-    return { value: `v_${crypto.randomUUID()}` };
+    return { value: createVersionIdValue() };
   }
 
   newAuditEntryId(): string {
-    return `audit_${crypto.randomUUID()}`;
+    return createAuditEntryIdValue();
+  }
+
+  newAgentId(): string {
+    return createAgentIdValue();
+  }
+
+  newCapabilityId(): string {
+    return createCapabilityIdValue();
+  }
+
+  newFlowId(): string {
+    return createFlowIdValue();
+  }
+
+  newRequestId(action?: string): string {
+    return createRequestIdValue(action);
   }
 }
 

@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { createVaultCore } from "../vault-core/core.js";
 import {
   createPersistentVaultCoreDependencies,
@@ -14,6 +13,7 @@ import {
 import { createPrefixedStorage } from "../storage/prefix.js";
 import { FsStorageProvider } from "../storage/fs.js";
 import type { IStorageProvider } from "../storage/provider.js";
+import { createVaultIdValue } from "../internal/id-factory.js";
 import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
@@ -147,7 +147,7 @@ export async function createVault(
     storage: IStorageProvider;
     options: CreateVaultOptions;
   };
-  const vaultId = options.vaultId ?? `vault_${crypto.randomUUID()}`;
+  const vaultId = options.vaultId ?? createVaultIdValue();
   const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
   const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vaultId);
 
