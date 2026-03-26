@@ -5,7 +5,7 @@ import {
 } from "../../dist/runtime/index.js";
 import {
   createVaultCore,
-  createDefaultVaultCoreDependencies,
+  createVaultCoreDependencies,
   VaultCoreError,
 } from "../../dist/vault-core/index.js";
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
@@ -14,7 +14,7 @@ import { LocalSigner } from "../../dist/protocol/crypto.js";
 const agentIdentity = createIdentity();
 const signer = new LocalSigner(agentIdentity);
 
-const authority = createVaultCore(createDefaultVaultCoreDependencies({
+const authority = createVaultCore(createVaultCoreDependencies({
   vaultId: "vault-security",
   fetchImpl: async () => new Response("ok", { status: 200 }),
 }));

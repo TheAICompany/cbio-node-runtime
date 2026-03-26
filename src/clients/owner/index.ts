@@ -17,6 +17,8 @@ export type {
   OwnerSensitiveActionConfirmation,
   OwnerSensitiveActionContext,
   VaultGrantCapabilityInput,
+  VaultGrantCapabilityRequest,
+  OwnerGrantCapabilityInput,
   VaultRegisterFlowInput,
   VaultImportAgentInput,
   VaultCreateAgentInput,

@@ -2,11 +2,11 @@
 
 ***
 
-# Interface: CreateVaultOptions
+# Interface: CreateOwnerSessionOptions
 
 ## Extends
 
-- `Omit`\<[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md), `"vaultWorkingKey"` \| `"vaultId"`\>
+- [`RecoverVaultOptions`](RecoverVaultOptions.md)
 
 ## Properties
 
@@ -34,7 +34,7 @@
 
 > `optional` **clock?**: `Clock`
 
-#### Inherited from
+#### Overrides
 
 [`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`clock`](VaultCoreDependenciesOptions.md#clock)
 
@@ -90,21 +90,19 @@
 
 ***
 
-### metadata?
+### ownerIdentity?
 
-> `optional` **metadata?**: `Record`\<`string`, `any`\>
-
-***
-
-### nickname?
-
-> `optional` **nickname?**: `string`
+> `optional` **ownerIdentity?**: `CreatedIdentity` \| [`VaultIdentity`](VaultIdentity.md)
 
 ***
 
 ### password
 
 > **password**: `string`
+
+#### Inherited from
+
+[`RecoverVaultOptions`](RecoverVaultOptions.md).[`password`](RecoverVaultOptions.md#password)
 
 ***
 
@@ -138,6 +136,26 @@
 
 ***
 
+### sensitiveActionVerifier?
+
+> `optional` **sensitiveActionVerifier?**: (`confirmation`, `context`) => `boolean` \| `Promise`\<`boolean`\>
+
+#### Parameters
+
+##### confirmation
+
+[`OwnerSensitiveActionConfirmation`](OwnerSensitiveActionConfirmation.md)
+
+##### context
+
+[`OwnerSensitiveActionContext`](OwnerSensitiveActionContext.md)
+
+#### Returns
+
+`boolean` \| `Promise`\<`boolean`\>
+
+***
+
 ### sessionTokens?
 
 > `optional` **sessionTokens?**: `ISessionTokenRegistry`
@@ -145,6 +163,18 @@
 #### Inherited from
 
 [`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`sessionTokens`](VaultCoreDependenciesOptions.md#sessiontokens)
+
+***
+
+### signer?
+
+> `optional` **signer?**: [`VaultSigner`](VaultSigner.md)
+
+***
+
+### skipWarmup?
+
+> `optional` **skipWarmup?**: `boolean`
 
 ***
 
@@ -199,3 +229,17 @@
 ###### Returns
 
 `Promise`\<`Response`\>
+
+#### Inherited from
+
+[`RecoverVaultOptions`](RecoverVaultOptions.md).[`vault`](RecoverVaultOptions.md#vault)
+
+***
+
+### vaultId
+
+> **vaultId**: `string`
+
+#### Inherited from
+
+[`RecoverVaultOptions`](RecoverVaultOptions.md).[`vaultId`](RecoverVaultOptions.md#vaultid)

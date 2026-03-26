@@ -7,6 +7,7 @@ import {
   createWorkspaceStorage,
   getDefaultWorkspaceDir,
   recoverVault,
+  createOwnerSession,
   listVaults,
   updateVaultMetadata,
   createStandardAcquireBoundary,
@@ -49,6 +50,7 @@ import { MemoryStorageProvider } from "../../dist/storage/memory.js";
 assert.equal(typeof createVaultCore, "function");
 assert.equal(typeof createStandardAcquireBoundary, "function");
 assert.equal(typeof createVaultClient, "function");
+assert.equal(typeof createOwnerSession, "function");
 assert.equal(typeof createAgentClient, "function");
 assert.equal(typeof VaultCoreError, "function");
 assert.equal(typeof IdentityError, "function");
@@ -305,6 +307,23 @@ try {
     password: "password-1",
   });
   assert.equal(recoveredVaultInstance.nickname, "persistent-main");
+  const ownerSession = createOwnerSession(storage, {
+    vaultId: createdVault.core.vaultId.value,
+    password: "password-1",
+  });
+  assert.equal(ownerSession.isValid(), true);
+  const sessionClientA = await ownerSession.client();
+  const sessionClientB = await ownerSession.client();
+  assert.notEqual(sessionClientA, sessionClientB, "OwnerSession should not cache raw VaultClient instances");
+  const sessionAgents = await ownerSession.withClient((sessionClient) => sessionClient.ownerListAgents());
+  assert.ok(Array.isArray(sessionAgents));
+  await ownerSession.refresh();
+  ownerSession.invalidate();
+  assert.equal(ownerSession.isValid(), false);
+  await assert.rejects(
+    () => ownerSession.client(),
+    /invalidated/,
+  );
 
   const defaultWorkspaceDir = await mkdtemp(join(tmpdir(), "cbio-default-workspace-"));
   process.env.C_BIO_WORKSPACE_DIR = defaultWorkspaceDir;
@@ -389,7 +408,10 @@ try {
   assert.equal(typeof approvedCapability.capabilityId, "string");
   assert.equal(approvedCapability.scope, "https://api.example.com/users/*");
   const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
-  assert.ok(capabilitiesAfterApproval.some((cap) => cap.capabilityId === "cap-users-read"), "Approved capability should be registered");
+  assert.ok(
+    capabilitiesAfterApproval.some((cap) => cap.capabilityId === approvedCapability.capabilityId),
+    "Approved capability should be registered",
+  );
   console.log("   [OK] Proactive capability request approval flow passed");
 
   const acquiredCapability = {
@@ -422,23 +444,24 @@ try {
     }),
     /VAULT_AGENT_DISPATCH_REJECTED|VAULT_DISPATCH_DENIED/,
   );
-  const secretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent_v1/secrets.sealed"), "utf8").catch(() => "");
+  const persistentVaultDir = join(tempDir, `vaults/${createdVault.core.vaultId.value}_v1`);
+  const secretsFile = await readFile(join(persistentVaultDir, "secrets.sealed"), "utf8").catch(() => "");
   assert.ok(!secretsFile.includes("issuer-secret"), "Encrypted file should not contain plaintext!");
   console.log("-> Secret Storage Security Verification OK: Data encrypted and isolated on disk");
 
   console.log("-> Verifying Custody Directory Structure...");
-  const custodyDirEntries = await readdir(join(tempDir, "vaults/vault-runtime-persistent_v1")).then((entries) => entries.filter((entry) => entry.startsWith("secret-")));
+  const custodyDirEntries = await readdir(persistentVaultDir).then((entries) => entries.filter((entry) => entry.startsWith("secret-")));
   assert.ok(custodyDirEntries.length >= 1, "Custody entries missing!");
   console.log("   [OK] Custody directory moved to encrypted area");
 
   console.log("-> Verifying Secret Physical Deletion...");
   // Use ownerClient for deletion to verify high-level API loop
-  await auditClient.ownerDeleteSecret({ alias: "issuer-token" });
+  await auditClient.ownerDeleteSecret({ alias: "issuer-token", password: "password-1" });
   
   // Verify cannot retrieve after deletion
   await assert.rejects(
     () => auditClient.ownerExportSecret({ alias: "issuer-token", password: "password-1" }),
-    /SECRET_NOT_FOUND/
+    /VAULT_SECRET_NOT_FOUND|secret not found/
   );
   console.log("   [OK] Logical deletion and permission check successful");
   console.log("   [OK] Physical deletion successful");

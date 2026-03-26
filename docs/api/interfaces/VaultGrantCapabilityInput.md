@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
 
 ***
 
@@ -9,6 +9,24 @@
 ### agentId
 
 > **agentId**: `string`
+
+***
+
+### auditRequired?
+
+> `optional` **auditRequired?**: `boolean`
+
+***
+
+### customFlowId?
+
+> `optional` **customFlowId?**: `string`
+
+***
+
+### expiresAt?
+
+> `optional` **expiresAt?**: `string`
 
 ***
 
@@ -59,6 +77,12 @@
 ### secretAliases?
 
 > `optional` **secretAliases?**: readonly `string`[]
+
+***
+
+### secretIds?
+
+> `optional` **secretIds?**: readonly `string`[]
 
 ***
 

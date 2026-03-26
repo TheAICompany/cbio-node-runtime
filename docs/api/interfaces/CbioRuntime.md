@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
 
 ***
 
@@ -88,6 +88,44 @@ console.log(identity.identityId);
 #### Returns
 
 `OwnerHttpFlowBoundary`
+
+***
+
+### createOwnerSession
+
+> **createOwnerSession**: \{(`storage`, `options`): [`OwnerSession`](OwnerSession.md); (`options`): [`OwnerSession`](OwnerSession.md); \}
+
+#### Call Signature
+
+> (`storage`, `options`): [`OwnerSession`](OwnerSession.md)
+
+##### Parameters
+
+###### storage
+
+`string` \| [`IStorageProvider`](IStorageProvider.md)
+
+###### options
+
+[`CreateOwnerSessionOptions`](CreateOwnerSessionOptions.md)
+
+##### Returns
+
+[`OwnerSession`](OwnerSession.md)
+
+#### Call Signature
+
+> (`options`): [`OwnerSession`](OwnerSession.md)
+
+##### Parameters
+
+###### options
+
+[`CreateOwnerSessionOptions`](CreateOwnerSessionOptions.md)
+
+##### Returns
+
+[`OwnerSession`](OwnerSession.md)
 
 ***
 

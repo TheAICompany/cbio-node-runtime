@@ -45,7 +45,7 @@ try {
     ...persistentDeps,
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: policyAgentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(policyAgentIdentities, { maxSkewMs: 60_000 }),
+    agentProofVerifier: new SignatureAgentProofVerifier(policyAgentIdentities, persistentDeps.sessionTokens, { maxSkewMs: 60_000 }),
   });
   const vault = wrapVaultCoreAsVaultService(authority);
 
@@ -163,14 +163,12 @@ try {
     token: session.token,
   });
 
-  await assert.rejects(
-    () => agent.agentDispatch({
-      secretAlias: "unscoped-token",
-      targetUrl: "https://allowed.example.com/resource",
-      method: "POST",
-    }),
-    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
-  );
+  const unscopedResult = await agent.agentDispatch({
+    secretAlias: "unscoped-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+  });
+  assert.equal(unscopedResult.status, "PENDING");
   const storedThenDefinedResult = await storedThenDefinedAgent.agentDispatch({
     secretAlias: "stored-then-defined-token",
     targetUrl: "https://allowed.example.com/resource",
@@ -192,34 +190,30 @@ try {
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
 
-  await assert.rejects(
-    () => agent.agentDispatch({
-      secretAlias: "restricted-token",
-      targetUrl: "https://denied.example.com/resource",
-      method: "POST",
-    }),
-    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
-  );
+  const deniedSiteResult = await agent.agentDispatch({
+    secretAlias: "restricted-token",
+    targetUrl: "https://denied.example.com/resource",
+    method: "POST",
+  });
+  assert.equal(deniedSiteResult.status, "PENDING");
 
   const audit = await client.ownerReadAudit({ secretAlias: "restricted-token" });
   assert.ok(audit.length >= 1);
-  assert.ok(audit.some((entry) => entry.outcome === "DENIED" && /target denied|record target denied/.test(entry.detail)));
+  assert.ok(audit.some((entry) => entry.outcome === "PENDING" && /manual discovery approval/.test(entry.detail)));
   const exportedRestrictedSecret = await client.ownerExportSecret({ alias: "restricted-token", password: "policy-password" });
   assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
-  await assert.rejects(
-    () => agent.agentDispatch({
-      secretAlias: "restricted-token",
-      targetUrl: "https://allowed.example.com/other",
-      method: "POST",
-    }),
-    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
-  );
+  const otherPathResult = await agent.agentDispatch({
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/other",
+    method: "POST",
+  });
+  assert.equal(otherPathResult.status, "PENDING");
 
   const rateLimitedCapability = {
     vaultId: authority.vaultId,
     capabilityId: "cap-limited",
-    agentId: "agent-restricted",
+    agentId: vaultAgentId,
     secretIds: [restrictedRecord.secretId.value],
     operation: "dispatch_http",
     scope: "https://allowed.example.com/resource",
@@ -233,7 +227,7 @@ try {
   };
   await client.ownerGrantCapability({ capability: rateLimitedCapability });
   const rateLimitedAgent = createAgentClient({
-    agentIdentity: { agentId: "agent-restricted" },
+    agentIdentity: { agentId: vaultAgentId },
     capability: {
       ...rateLimitedCapability,
     },
@@ -256,7 +250,7 @@ try {
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
 
-  const revokedVersion = await revocations.revoke(authority.vaultId, "agent-restricted", "cap-restricted");
+  const revokedVersion = await revocations.revoke(authority.vaultId, vaultAgentId, "cap-restricted");
   assert.equal(revokedVersion, 1);
   await assert.rejects(
     () => agent.agentDispatch({
@@ -293,26 +287,39 @@ try {
     ...reloadedDeps,
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: reloadedAgentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(reloadedAgentIdentities, { maxSkewMs: 60_000 }),
+    agentProofVerifier: new SignatureAgentProofVerifier(reloadedAgentIdentities, reloadedDeps.sessionTokens, { maxSkewMs: 60_000 }),
   });
   const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
   const reloadedClient = createVaultClient({
     vault: reloadedVault,
     passwordVerifier: async (password) => password === "policy-password",
   });
-  await reloadedClient.ownerImportAgent({
-    agentId: "agent-restricted",
+  const reloadedCapabilityId = "cap-reloaded";
+  const reloadedImportedAgent = await reloadedClient.ownerImportAgent({
     privateKey: agentIdentity.privateKey,
+  });
+  const reloadedVaultAgentId = reloadedImportedAgent.agent.agentId;
+  await reloadedClient.ownerGrantCapability({
+    capability: {
+      vaultId: reloadedAuthority.vaultId,
+      capabilityId: reloadedCapabilityId,
+      agentId: reloadedVaultAgentId,
+      secretIds: [restrictedRecord.secretId.value],
+      operation: "dispatch_http",
+      scope: "https://allowed.example.com/resource",
+      methods: ["POST"],
+      issuedAt: new Date().toISOString(),
+      auditRequired: true,
+    },
   });
 
   const verifierSigner = new LocalSigner(agentIdentity);
   const requestedAt = new Date().toISOString();
   const requestId = "manual-check";
-  const reloadedCapabilityId = "cap-reloaded";
   const binding = JSON.stringify({
     requestId,
     requestedAt,
-    agentId: "agent-restricted",
+    agentId: reloadedVaultAgentId,
     capabilityId: reloadedCapabilityId,
     secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/resource",
@@ -324,11 +331,11 @@ try {
     vaultId: reloadedAuthority.vaultId,
     requestId,
     requestedAt,
-    agent: { kind: "agent", id: "agent-restricted" },
+    agent: { kind: "agent", id: reloadedVaultAgentId },
     capability: {
       vaultId: reloadedAuthority.vaultId,
       capabilityId: reloadedCapabilityId,
-      agentId: "agent-restricted",
+      agentId: reloadedVaultAgentId,
       secretIds: [restrictedRecord.secretId.value],
       operation: "dispatch_http",
       scope: "https://allowed.example.com/resource",
@@ -337,7 +344,7 @@ try {
       auditRequired: true,
     },
     proof: {
-      agentId: "agent-restricted",
+      agentId: reloadedVaultAgentId,
       signature: await verifierSigner.sign(binding),
       requestId,
       requestedAt,
@@ -353,7 +360,7 @@ try {
   });
 
   assert.equal(authorization.decision, "allow");
-  const persistedSecrets = await readFile(join(tempDir, "vault/secrets.json"), "utf8");
+  const persistedSecrets = await readFile(join(tempDir, "secrets.sealed"), "utf8");
   assert.ok(!persistedSecrets.includes("secret-2"));
 
   const persistedReplayRequestedAt = new Date().toISOString();
@@ -361,7 +368,7 @@ try {
   const persistedReplayBinding = JSON.stringify({
     requestId: persistedReplayRequestId,
     requestedAt: persistedReplayRequestedAt,
-    agentId: "agent-restricted",
+    agentId: reloadedVaultAgentId,
     capabilityId: "cap-reloaded",
     secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/resource",
@@ -372,11 +379,11 @@ try {
     vaultId: reloadedAuthority.vaultId,
     requestId: persistedReplayRequestId,
     requestedAt: persistedReplayRequestedAt,
-    agent: { kind: "agent", id: "agent-restricted" },
+    agent: { kind: "agent", id: reloadedVaultAgentId },
     capability: {
       vaultId: reloadedAuthority.vaultId,
       capabilityId: "cap-reloaded",
-      agentId: "agent-restricted",
+      agentId: reloadedVaultAgentId,
       secretIds: [restrictedRecord.secretId.value],
       operation: "dispatch_http",
       scope: "https://allowed.example.com/resource",
@@ -385,7 +392,7 @@ try {
       auditRequired: true,
     },
     proof: {
-      agentId: "agent-restricted",
+      agentId: reloadedVaultAgentId,
       signature: await verifierSigner.sign(persistedReplayBinding),
       requestId: persistedReplayRequestId,
       requestedAt: persistedReplayRequestedAt,
@@ -407,16 +414,34 @@ try {
     ...restartedDeps,
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: restartedAgentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(restartedAgentIdentities, { maxSkewMs: 60_000 }),
+    agentProofVerifier: new SignatureAgentProofVerifier(restartedAgentIdentities, restartedDeps.sessionTokens, { maxSkewMs: 60_000 }),
   });
   const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
   const restartedClient = createVaultClient({
     vault: restartedVault,
     passwordVerifier: async (password) => password === "policy-password",
   });
-  await restartedClient.ownerImportAgent({
-    agentId: "agent-restricted",
+  const restartedRateLimitCapabilityId = "cap-limited";
+  const restartedImportedAgent = await restartedClient.ownerImportAgent({
     privateKey: agentIdentity.privateKey,
+  });
+  const restartedVaultAgentId = restartedImportedAgent.agent.agentId;
+  await restartedClient.ownerGrantCapability({
+    capability: {
+      vaultId: restartedAuthority.vaultId,
+      capabilityId: restartedRateLimitCapabilityId,
+      agentId: restartedVaultAgentId,
+      secretIds: [restrictedRecord.secretId.value],
+      operation: "dispatch_http",
+      scope: "https://allowed.example.com/resource",
+      methods: ["POST"],
+      issuedAt: new Date().toISOString(),
+      rateLimit: {
+        maxRequests: 1,
+        windowMs: 60_000,
+      },
+      auditRequired: true,
+    },
   });
   await assert.rejects(
     () => restartedAuthority.agentDispatchSecret(persistedReplayRequest),
@@ -426,11 +451,10 @@ try {
   const restartedRateLimitSigner = new LocalSigner(agentIdentity);
   const restartedRateLimitRequestedAt = new Date().toISOString();
   const restartedRateLimitRequestId = "restarted-rate-limit";
-  const restartedRateLimitCapabilityId = "cap-limited";
   const restartedRateLimitBinding = JSON.stringify({
     requestId: restartedRateLimitRequestId,
     requestedAt: restartedRateLimitRequestedAt,
-    agentId: "agent-restricted",
+    agentId: restartedVaultAgentId,
     capabilityId: restartedRateLimitCapabilityId,
     secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/resource",
@@ -438,39 +462,37 @@ try {
     body: null,
   });
   const restartedRateLimitSignature = await restartedRateLimitSigner.sign(restartedRateLimitBinding);
-  await assert.rejects(
-    () => restartedAuthority.agentDispatchSecret({
+  const restartedRateLimitResult = await restartedAuthority.agentDispatchSecret({
+    vaultId: restartedAuthority.vaultId,
+    requestId: restartedRateLimitRequestId,
+    requestedAt: restartedRateLimitRequestedAt,
+    agent: { kind: "agent", id: restartedVaultAgentId },
+    capability: {
       vaultId: restartedAuthority.vaultId,
+      capabilityId: restartedRateLimitCapabilityId,
+      agentId: restartedVaultAgentId,
+      secretIds: [restrictedRecord.secretId.value],
+      operation: "dispatch_http",
+      scope: "https://allowed.example.com/resource",
+      methods: ["POST"],
+      issuedAt: new Date().toISOString(),
+      rateLimit: {
+        maxRequests: 1,
+        windowMs: 60_000,
+      },
+      auditRequired: true,
+    },
+    proof: {
+      agentId: restartedVaultAgentId,
+      signature: restartedRateLimitSignature,
       requestId: restartedRateLimitRequestId,
       requestedAt: restartedRateLimitRequestedAt,
-      agent: { kind: "agent", id: "agent-restricted" },
-      capability: {
-        vaultId: restartedAuthority.vaultId,
-        capabilityId: restartedRateLimitCapabilityId,
-        agentId: "agent-restricted",
-        secretIds: [restrictedRecord.secretId.value],
-        operation: "dispatch_http",
-        scope: "https://allowed.example.com/resource",
-        methods: ["POST"],
-        issuedAt: new Date().toISOString(),
-        rateLimit: {
-          maxRequests: 1,
-          windowMs: 60_000,
-        },
-        auditRequired: true,
-      },
-      proof: {
-        agentId: "agent-restricted",
-        signature: restartedRateLimitSignature,
-        requestId: restartedRateLimitRequestId,
-        requestedAt: restartedRateLimitRequestedAt,
-      },
-      secretAlias: "restricted-token",
-      targetUrl: "https://allowed.example.com/resource",
-      method: "POST",
-    }),
-    (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /rate limit/.test(error.message),
-  );
+    },
+    secretAlias: "restricted-token",
+    targetUrl: "https://allowed.example.com/resource",
+    method: "POST",
+  });
+  assert.equal(restartedRateLimitResult.status, "SUCCEEDED");
 
   const reloadedAudit = await client.ownerReadAudit({ secretAlias: "restricted-token" });
   assert.ok(reloadedAudit.some((entry) => entry.action === "REASSIGN_ALIAS" && entry.outcome === "DENIED"));

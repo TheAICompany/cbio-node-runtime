@@ -71,7 +71,7 @@ const replayRecord = await client.ownerWriteSecret({
   requestedAt: new Date().toISOString(),
 });
 
-await client.ownerGrantCapability({
+const replayCapability = await client.ownerGrantCapability({
   agentId: vaultAgentId,
   secretAliases: ["replay-token"],
   scope: "https://allowed.example.com/replay",
@@ -84,7 +84,7 @@ const binding = JSON.stringify({
   requestId,
   requestedAt,
   agentId: vaultAgentId,
-  capabilityId: "cap-replay",
+  capabilityId: replayCapability.capabilityId,
   secretAlias: "replay-token",
   targetUrl: "https://allowed.example.com/replay",
   method: "POST",
@@ -99,14 +99,15 @@ const request = {
   agent: { kind: "agent", id: vaultAgentId },
   capability: {
     vaultId: authority.vaultId,
-    capabilityId: "cap-replay",
+    capabilityId: replayCapability.capabilityId,
     agentId: vaultAgentId,
-    secretIds: [replayRecord.secretId.value],
-    operation: "dispatch_http",
-    scope: "https://allowed.example.com/replay",
-    methods: ["POST"],
-    issuedAt: new Date().toISOString(),
-    auditRequired: true,
+    secretIds: replayCapability.secretIds,
+    secretAliases: replayCapability.secretAliases,
+    operation: replayCapability.operation,
+    scope: replayCapability.scope,
+    methods: replayCapability.methods,
+    issuedAt: replayCapability.issuedAt,
+    skipAudit: replayCapability.skipAudit,
   },
   proof: {
     agentId: vaultAgentId,

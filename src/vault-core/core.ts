@@ -48,6 +48,8 @@ import { VaultCoreError } from "./errors.js";
 import { verifySignature } from "../protocol/crypto.js";
 import { getAgentToolbox } from "./tool-metadata.js";
 
+const VAULT_MASTER_ID = "vault-master";
+
 
 function toAuditEntry(
   deps: VaultCoreDependencies,
@@ -102,11 +104,37 @@ function buildSecretRecord(
   };
 }
 
-function isScopeMatch(scope: string, targetUrl: string): boolean {
-  if (scope.endsWith("*")) {
-    return targetUrl.startsWith(scope.slice(0, -1));
+function normalizeScopeTarget(targetUrl: string): string | null {
+  try {
+    const parsed = new URL(targetUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    parsed.protocol = parsed.protocol.toLowerCase();
+    parsed.hostname = parsed.hostname.toLowerCase();
+    parsed.hash = "";
+    parsed.search = "";
+    if ((parsed.protocol === "https:" && parsed.port === "443") || (parsed.protocol === "http:" && parsed.port === "80")) {
+      parsed.port = "";
+    }
+    parsed.pathname = parsed.pathname || "/";
+    return parsed.toString();
+  } catch {
+    return null;
   }
-  return scope === targetUrl;
+}
+
+function isScopeMatch(scope: string, targetUrl: string): boolean {
+  const normalizedTarget = normalizeScopeTarget(targetUrl);
+  if (!normalizedTarget) {
+    return false;
+  }
+  if (scope.endsWith("*")) {
+    const normalizedPrefix = normalizeScopeTarget(scope.slice(0, -1));
+    return normalizedPrefix ? normalizedTarget.startsWith(normalizedPrefix) : false;
+  }
+  const normalizedScope = normalizeScopeTarget(scope);
+  return normalizedScope === normalizedTarget;
 }
 
 function createAgentControlBinding(
@@ -134,6 +162,12 @@ export class VaultCore {
   private readonly _pendingCapabilityObservers = new Set<(record: PendingCapabilityRequestRecord) => void>();
 
   constructor(private readonly _deps: VaultCoreDependencies) {}
+
+  private _assertOwnerPrincipal(actor: VaultPrincipal, code: "VAULT_AUDIT_DENIED" | "VAULT_IDENTITY_DENIED" = "VAULT_AUDIT_DENIED"): void {
+    if (actor.kind !== "owner" || actor.id !== VAULT_MASTER_ID) {
+      throw new VaultCoreError("owner access denied", code);
+    }
+  }
 
   get vaultId() {
     return this._deps.vaultId;
@@ -722,7 +756,11 @@ export class VaultCore {
     }
 
     const capabilities = await this._deps.capabilities.list(this._deps.vaultId, request.agent.id);
-    const capability = capabilities.find(cap => this.isCapabilityMatch(cap, request));
+    const requestedCapabilityId = request.capability?.capabilityId;
+    const candidateCapabilities = requestedCapabilityId
+      ? capabilities.filter((cap) => cap.capabilityId === requestedCapabilityId)
+      : capabilities;
+    const capability = candidateCapabilities.find((cap) => this.isCapabilityMatch(cap, request, record?.secretId.value));
 
     const executorTarget = record
       ? record.targetBindings.find((binding) => binding.targetUrl === request.targetUrl)
@@ -764,6 +802,26 @@ export class VaultCore {
         vaultId: this._deps.vaultId,
         decision: "pending",
         reason: "no matching capability found (discovery needed)",
+        secretId: record?.secretId ?? null,
+        executorTarget,
+      };
+    }
+
+    try {
+      await this._deps.policy.authorizeDispatch({
+        ...request,
+        capability,
+      }, record);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      await this._appendDecisionAudit(request, AuditOutcome.DENIED, detail, {
+        secretAlias: record?.alias.value ?? request.secretAlias,
+        secretId: record?.secretId.value,
+      });
+      return {
+        vaultId: this._deps.vaultId,
+        decision: "deny",
+        reason: detail,
         secretId: record?.secretId ?? null,
         executorTarget,
       };
@@ -854,6 +912,7 @@ export class VaultCore {
     query: AuditQuery,
     request?: Omit<import("./contracts.js").OwnerAuditRequest, "actor" | "query" | "vaultId">,
   ): Promise<readonly AuditEntry[]> {
+    this._assertOwnerPrincipal(actor, "VAULT_AUDIT_DENIED");
     const entries = await this._deps.audit.query(query);
     await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.READ_AUDIT, AuditOutcome.ALLOWED, "audit queried"),
@@ -866,6 +925,7 @@ export class VaultCore {
     alias: string,
     request?: Omit<OwnerExportSecretRequest, "actor" | "alias" | "vaultId">,
   ): Promise<OwnerSecretExport> {
+    this._assertOwnerPrincipal(actor, "VAULT_AUDIT_DENIED");
     try {
       const record = await this._deps.secrets.getByAlias({ value: alias });
       if (!record) {
@@ -902,10 +962,14 @@ export class VaultCore {
     }
   }
 
-  private isCapabilityMatch(capability: AgentCapability, request: DispatchRequest): boolean {
-    // Basic Iron Triangle match
-    if (request.secretAlias && !capability.secretAliases?.includes(request.secretAlias)) {
-      return false;
+  private isCapabilityMatch(capability: AgentCapability, request: DispatchRequest, secretId?: string): boolean {
+    // Match either alias- or id-based capability grants when a secret is specified.
+    if (request.secretAlias) {
+      const aliasMatched = capability.secretAliases?.includes(request.secretAlias) ?? false;
+      const idMatched = secretId ? (capability.secretIds?.includes(secretId) ?? false) : false;
+      if (!aliasMatched && !idMatched) {
+        return false;
+      }
     }
 
     if (request.method && capability.methods?.length > 0 && !capability.methods.includes(request.method)) {

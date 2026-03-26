@@ -16,6 +16,7 @@ import type {
   VaultReadSecretPlaintextInput,
   VaultReadAgentPrivateKeyInput,
   VaultGrantCapabilityInput,
+  OwnerGrantCapabilityInput,
   VaultRegisterFlowInput,
   VaultImportAgentInput,
   VaultCreateAgentInput,
@@ -75,7 +76,7 @@ export interface VaultClient {
   /**
    * Grants a specific capability to an agent.
    */
-  ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability>;
+  ownerGrantCapability(input: OwnerGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability>;
 
   /**
    * Reads the tamper-evident audit log for the vault.
@@ -201,6 +202,55 @@ class DefaultVaultClient implements VaultClient {
         "invalid vault password",
       );
     }
+  }
+
+  private _resolveGrantedCapability(input: OwnerGrantCapabilityInput): {
+    requestedAt?: string;
+    capability: {
+      vaultId?: import("../../vault-core/index.js").VaultId;
+      capabilityId?: string;
+      agentId: string;
+      operation?: "dispatch_http" | "custom_http" | string;
+      secretAliases?: readonly string[];
+      secretIds?: readonly string[];
+      customFlowId?: string;
+      scope: string;
+      methods: readonly string[];
+      issuedAt?: string;
+      expiresAt?: string;
+      rateLimit?: {
+        maxRequests: number;
+        windowMs: number;
+      };
+      skipAudit?: boolean;
+      auditRequired?: boolean;
+    };
+  } {
+    if ("capability" in input) {
+      return {
+        requestedAt: input.requestedAt ?? input.capability.issuedAt,
+        capability: {
+          vaultId: input.capability.vaultId,
+          capabilityId: input.capability.capabilityId,
+          agentId: input.capability.agentId,
+          operation: input.capability.operation,
+          secretAliases: input.capability.secretAliases,
+          secretIds: input.capability.secretIds,
+          customFlowId: input.capability.customFlowId,
+          scope: input.capability.scope,
+          methods: input.capability.methods,
+          issuedAt: input.capability.issuedAt,
+          expiresAt: input.capability.expiresAt,
+          rateLimit: input.capability.rateLimit,
+          skipAudit: input.capability.skipAudit,
+          auditRequired: input.capability.auditRequired,
+        },
+      };
+    }
+    return {
+      requestedAt: input.requestedAt,
+      capability: input,
+    };
   }
 
   async ownerStoreSecret(input: OwnerStoreSecretInput) {
@@ -450,22 +500,31 @@ class DefaultVaultClient implements VaultClient {
     };
   }
 
-  async ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability> {
-    const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const capabilityId = createCapabilityIdValue();
+  async ownerGrantCapability(input: OwnerGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability> {
+    const normalized = this._resolveGrantedCapability(input);
+    const requestedAt = normalized.requestedAt ?? this._clock.nowIso();
+    const capabilityId = normalized.capability.capabilityId ?? createCapabilityIdValue();
     const requestId = createRequestIdValue("register_capability");
+    const skipAudit = normalized.capability.skipAudit ?? (
+      normalized.capability.auditRequired === undefined
+        ? undefined
+        : !normalized.capability.auditRequired
+    );
     
     const capability: import("../../vault-core/index.js").AgentCapability = {
-      vaultId: this._vault.vaultId,
-      agentId: input.agentId,
+      vaultId: normalized.capability.vaultId ?? this._vault.vaultId,
+      agentId: normalized.capability.agentId,
       capabilityId,
-      operation: (input.operation as any) ?? "dispatch_http",
-      secretAliases: input.secretAliases ? [...input.secretAliases] : [],
-      scope: input.scope,
-      methods: [...input.methods],
-      rateLimit: input.rateLimit,
-      skipAudit: input.skipAudit,
-      issuedAt: requestedAt,
+      operation: (normalized.capability.operation as any) ?? "dispatch_http",
+      secretAliases: normalized.capability.secretAliases ? [...normalized.capability.secretAliases] : undefined,
+      secretIds: normalized.capability.secretIds ? [...normalized.capability.secretIds] : undefined,
+      customFlowId: normalized.capability.customFlowId,
+      scope: normalized.capability.scope,
+      methods: [...normalized.capability.methods],
+      expiresAt: normalized.capability.expiresAt,
+      rateLimit: normalized.capability.rateLimit,
+      skipAudit,
+      issuedAt: normalized.capability.issuedAt ?? requestedAt,
     };
     
     await this._vault.ownerRegisterCapability({

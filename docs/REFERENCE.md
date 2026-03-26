@@ -12,7 +12,8 @@ The v1.48.4 runtime centers on a simplified, authority-centric model with manage
 - `recoverVault(...)` - Reopen an existing vault using its master password.
 - `listVaults(...)` - Scan the workspace for available vault IDs.
 - `updateVaultMetadata(...)` - Update the nickname or other metadata of an unlocked vault.
-- `createVaultClient(...)` - Create an administrative client for an unlocked vault. For plaintext secret reads, configure `passwordVerifier`.
+- `createOwnerSession(...)` - Create an SDK-managed owner session handle for long-running apps such as GUIs.
+- `createVaultClient(...)` - Create an administrative client for the current runtime. Best for short-lived scripts or one-shot tasks.
 - `createAgentClient(...)` - Create a delegated client for an agent.
 - `createIdentity(...)` - Generate a standalone cryptographic identity keypair.
 - `restoreIdentity(...)` - Restore an identity from a private key.
@@ -28,6 +29,19 @@ Creates a secure vault.
 #### `recoverVault(storage, { vaultId, password })`
 Unlocks and reopens a vault. 
 - Returns a `RecoveredVault` object containing the `VaultService` and metadata.
+
+#### `createOwnerSession(storage, { vaultId, password, ... })`
+Creates a first-class owner session for GUI and other long-running processes.
+- Hold the `OwnerSession`, not a raw `VaultClient`.
+- Call `session.client()` or `session.withClient(...)` when you need an owner client.
+- Invalidate the session explicitly when the vault is locked or the app unloads.
+
+### Owner Session Lifecycle
+
+- `createVaultClient(...)` is not a long-lived session handle.
+- Do not cache a raw `VaultClient` across HMR, module reloads, runtime swaps, or similar process-local lifecycle changes.
+- For long-running apps, keep an `OwnerSession` and let the SDK recreate owner clients on demand.
+- For short-lived scripts, `recoverVault(...)` plus `createVaultClient(...)` remains appropriate.
 
 #### `listVaults(storage)`
 Returns a `string[]` of vault IDs found in the storage. 
@@ -49,7 +63,7 @@ The `VaultClient` provides the administrative interface for the vault.
 
 ### Stable Owner API Checklist
 
-The following owner-side methods are part of the supported public surface and are intended for direct GUI usage:
+The following owner-side methods are part of the supported public surface and are intended to be called through an owner session or a short-lived owner client:
 
 - `ownerWriteSecret(...)`
 - `ownerReadSecretPlaintext(...)`
@@ -132,6 +146,8 @@ Stable owner client error codes:
 
 Recommended GUI behavior:
 
+- Keep an `OwnerSession`, not a raw `VaultClient`
+- Call `session.client()` or `session.withClient(...)` for each owner operation
 - Show a single reusable confirmation dialog for sensitive actions
 - Always collect the password
 - Optionally collect a second factor such as a 6-digit verification code

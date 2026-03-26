@@ -91,16 +91,29 @@ export interface VaultGrantCapabilityInput {
   agentId: string;
   operation?: string;
   secretAliases?: readonly string[];
+  secretIds?: readonly string[];
+  customFlowId?: string;
   scope: string;
   methods: readonly string[];
+  expiresAt?: string;
   expiresIn?: number;
   rateLimit?: {
     maxRequests: number;
     windowMs: number;
   };
   skipAudit?: boolean;
+  auditRequired?: boolean;
   requestedAt?: string;
 }
+
+export interface VaultGrantCapabilityRequest {
+  capability: import("../../vault-core/index.js").AgentCapability & {
+    auditRequired?: boolean;
+  };
+  requestedAt?: string;
+}
+
+export type OwnerGrantCapabilityInput = VaultGrantCapabilityInput | VaultGrantCapabilityRequest;
 
 export interface VaultApproveDispatchInput {
   requestId: string;
@@ -195,7 +208,7 @@ export interface VaultClient {
   ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
   ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string>;
   ownerReadAgentPrivateKey(input: VaultReadAgentPrivateKeyInput): Promise<string>;
-  ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability>;
+  ownerGrantCapability(input: OwnerGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability>;
   ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;

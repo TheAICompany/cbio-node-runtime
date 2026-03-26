@@ -18,14 +18,11 @@ npm install @the-ai-company/cbio-node-runtime
 
 ```ts
 import {
-  createVaultService,
   createIdentity,
-  readIdentityMetadata,
-   createVault,
-  listIdentities,
+  createVault,
   listVaults,
   recoverVault,
-  LocalVaultTransport,
+  createOwnerSession,
   createVaultClient,
   createAgentClient,
   FsStorageProvider,
@@ -41,10 +38,10 @@ import {
 
 권장되는 persistent-vault 주 경로:
 
-- `createVault(...)` 로 persistent vault 를 생성합니다 (`publicMetadata` 를 통한 공개 정보 검색 지원)
-- `recoverVault(...)` 로 owner identity 를 사용해 persistent vault 를 복구합니다
-- 분리된 스토리지 계층: `vaults/` (기명 Vault) 및 `identities/` (개인 ID 공간)
-    - 닉네임과 같은 모든 공개 메타데이터는 `VaultPublicMetadata` 인터페이스를 따르며, **디지털 서명**이 포함되어 있어 SDK가 그 정당성을 자동으로 검증합니다.
+- `createVault(...)` 로 persistent vault 를 생성합니다
+- `recoverVault(...)` 로 `vaultId` 와 `password` 를 사용해 persistent vault 를 복구합니다
+- GUI 나 장수명 프로세스에서는 raw `createVaultClient(...)` 를 캐시하지 말고 `createOwnerSession(...)` 을 유지합니다
+- `createVaultClient(...)` 는 현재 runtime 안의 짧은 스크립트나 일회성 작업에 사용합니다
 
 이전 `CbioIdentity` 중심 API 는 더 이상 주요 제품 표면이 아닙니다.
 

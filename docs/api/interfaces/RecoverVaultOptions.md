@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
 
 ***
 
@@ -7,6 +7,10 @@
 ## Extends
 
 - `Omit`\<[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md), `"vaultWorkingKey"` \| `"vaultId"`\>
+
+## Extended by
+
+- [`CreateOwnerSessionOptions`](CreateOwnerSessionOptions.md)
 
 ## Properties
 

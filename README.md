@@ -58,7 +58,34 @@ const vault = await recoverVault(storage, {
 });
 ```
 
-### 3. Managed Agent Identities
+### 3. Owner Sessions for GUI Apps
+
+For long-running processes such as GUI apps, keep an `OwnerSession`, not a raw `VaultClient`.
+
+`createVaultClient(...)` creates an owner client for the current runtime. It is not intended to be cached across HMR, module reloads, or runtime swaps. `OwnerSession` gives you a stable SDK-managed handle and recreates owner clients on demand.
+
+```ts
+import { createOwnerSession, FsStorageProvider } from '@the-ai-company/cbio-node-runtime';
+
+const session = createOwnerSession(storage, {
+  vaultId: myVault.core.vaultId.value,
+  password: 'your-secure-password',
+});
+
+const createdAgent = await session.withClient((client) =>
+  client.ownerCreateAgent({ nickname: 'Background Worker' })
+);
+
+const ownerClient = await session.client();
+const agents = await ownerClient.ownerListAgents();
+
+// Invalidate the session when your app unloads or explicitly locks the vault.
+session.invalidate();
+```
+
+If you are writing a short-lived script, `recoverVault(...)` plus `createVaultClient(...)` is still fine.
+
+### 4. Managed Agent Identities
 
 You can generate and register agents directly within the vault. The vault holds the private keys for full custody.
 
@@ -105,14 +132,6 @@ await client.ownerGrantCapability({
   secretAliases: ['api-token'],
   scope: 'https://api.example.com/*',
   methods: ['POST']
-});
-
-// 5. Setup client with automatic warmup (v1.48.4+)
-const client = createVaultClient({
-  vault,
-  ownerIdentity: { identityId: 'owner-1' }
-  // warmup: true is now DEFAULT (v1.48.4+)
-  // skipWarmup: true // Optional: pass this to disable automatic token generation
 });
 ```
 
@@ -203,7 +222,7 @@ if (result.status === 'PENDING') {
 }
 
 // OR: Use the Observer for real-time push (v1.48.4+)
-ownerClient.ownerOnPendingDispatch((req) => {
+client.ownerOnPendingDispatch((req) => {
   console.log("New discovery request:", req.requestId);
 });
 

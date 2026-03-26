@@ -131,7 +131,7 @@ export async function initializeVaultCustody(
         kind: "vault_working_key",
       },
     },
-    vaultRecoveryKey,
+    kdk,
   );
   await storage.write(storageKey, Buffer.from(sealed, "utf8"));
   return {

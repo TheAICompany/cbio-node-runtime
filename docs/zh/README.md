@@ -1,6 +1,6 @@
-# cbio Vault Runtime (中文文档)
+# cbio Vault Runtime（中文文档）
 
-cbio 权限核心运行时：采用 **Sovereign Vault（主权保险箱）** 架构。管理权限扎根于主密码，Agent 身份完全由保险箱加密存储托管。
+cbio Vault Runtime 采用 **Sovereign Vault（主权保险箱）** 架构：管理权限扎根于主密码，Agent 身份与机密材料由保险箱加密托管。
 
 ---
 
@@ -9,7 +9,8 @@ cbio 权限核心运行时：采用 **Sovereign Vault（主权保险箱）** 架
 - **库优先**：纯 JavaScript/TypeScript 库，无 CLI 或 TUI。
 - **权限中心化**：管理权限绑定于保险箱主密码，而非外部身份密钥。
 - **Agent 身份托管**：支持在保险箱内直接生成并加密存储 Agent 私钥。
-- **进程隔离**：安全进程（Security Process - 掌管主密码）与 Agent 进程（Consumer Process - 消费机密）的物理分离。
+- **Agent Session Token**：为 Agent 发放可撤销的 session token，避免在消费进程中持有原始私钥。
+- **进程隔离**：安全进程（Security Process）与 Agent 进程（Consumer Process）物理分离。
 - **零泄露发现**：保险箱元数据全加密，未解锁前对外部完全透明。
 
 ## 安装
@@ -24,41 +25,76 @@ npm install @the-ai-company/cbio-node-runtime
 
 ### 1. 初始化保险箱
 
-主权保险箱仅需存储提供者（Storage Provider）和主密码。
-
 ```ts
 import { createVault, FsStorageProvider } from '@the-ai-company/cbio-node-runtime';
 
 const storage = new FsStorageProvider('./my-vaults');
 
 const myVault = await createVault(storage, {
-  vaultId: 'main-vault',
   password: 'your-secure-password',
   nickname: '生产环境保险箱'
 });
 ```
 
-### 2. 托管 Agent 身份
+### 2. 恢复已存在的保险箱
 
-你可以直接在保险箱内创建 Agent，私钥将由保险箱全程托管。
+```ts
+import { recoverVault } from '@the-ai-company/cbio-node-runtime';
+
+const vault = await recoverVault(storage, {
+  vaultId: myVault.core.vaultId.value,
+  password: 'your-secure-password'
+});
+```
+
+### 3. GUI 的 Owner Session
+
+对于 GUI 这类长生命周期进程，应该持有 `OwnerSession`，而不是长期缓存裸 `VaultClient`。
+
+`createVaultClient(...)` 只负责基于当前 runtime 创建 owner client；它不应该跨 HMR、模块重载或 runtime 替换被长期复用。`OwnerSession` 会提供稳定的 SDK 句柄，并按需重新创建 owner client。
+
+```ts
+import { createOwnerSession } from '@the-ai-company/cbio-node-runtime';
+
+const session = createOwnerSession(storage, {
+  vaultId: myVault.core.vaultId.value,
+  password: 'your-secure-password',
+});
+
+const createdAgent = await session.withClient((client) =>
+  client.ownerCreateAgent({ nickname: '后台处理插件' })
+);
+
+const ownerClient = await session.client();
+const agents = await ownerClient.ownerListAgents();
+
+session.invalidate();
+```
+
+如果你写的是一次性脚本，`recoverVault(...)` 配合 `createVaultClient(...)` 仍然是合适的。
+
+### 4. 托管 Agent 身份
 
 ```ts
 import { createVaultClient } from '@the-ai-company/cbio-node-runtime';
 
-const client = createVaultClient({ vault: myVault.vault });
-
-// 一键生成并注册 Agent
-const [agentRecord, agentPrivateKey] = await client.createAgent({
-  agentId: 'worker-1',
-  nickname: '后台处理插件'
+const client = createVaultClient({
+  vault: vault.vault,
+  passwordVerifier: vault.verifyPassword,
 });
+
+const createdAgent = await client.ownerCreateAgent({
+  nickname: '后台处理插件',
+});
+
+const agentId = createdAgent.agent.agentId;
+const sessionToken = createdAgent.sessionToken;
 ```
 
-### 3. 机密管理
+### 5. 机密管理
 
 ```ts
-// 写入机密并绑定目标
-const record = await client.writeSecret({
+const record = await client.ownerWriteSecret({
   alias: 'api-token',
   plaintext: 'secret-value',
   targetBindings: [{
@@ -68,40 +104,51 @@ const record = await client.writeSecret({
     methods: ['POST']
   }]
 });
+
+await client.ownerGrantCapability({
+  agentId,
+  secretAliases: ['api-token'],
+  scope: 'https://api.example.com/*',
+  methods: ['POST']
+});
 ```
 
----
-
-### 4. 人机协同 (HITL) 工作流
-
-系统采用 **“发现优先 (Discovery-first)”** 模型。如果 Agent 尝试执行的操作不在白名单内（即 Agent-Key-Action “铁三角”未对齐），动作将被自动暂停：
+### 6. Agent 消费机密
 
 ```ts
-// Agent 进程中
-const result = await agent.dispatch({ ... });
+import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
+
+const agent = createAgentClient({
+  agentIdentity: { agentId },
+  capability: myCapability,
+  token: sessionToken.token,
+  vault: vault.vault
+});
+
+const result = await agent.agentDispatch({ ... });
+```
+
+Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身份材料，也应先换取 session token，再进行 dispatch。
+
+### 7. 人机协同（HITL）工作流
+
+系统采用 **“发现优先（Discovery-first）”** 模型。如果 Agent 尝试执行的动作不在白名单内，dispatch 会自动进入 `PENDING`，等待 Owner 审批。
+
+```ts
+const result = await agent.agentDispatch({ ... });
 if (result.status === 'PENDING') {
-  console.log("触发发现流程：等待所有者审批...");
+  console.log('触发发现流程：等待所有者审批...');
 }
 
-// 或者：使用观察者模式监听推送 (v1.48.4+)
-ownerClient.onPendingRequest((req) => {
-  console.log("收到新请求:", req.requestId);
+client.ownerOnPendingDispatch((req) => {
+  console.log('收到新请求:', req.requestId);
 });
 
-// 或者：启动时自动发牌 (v1.48.4+ 默认行为)
-const client = createVaultClient({
-  vault,
-  ownerIdentity: { identityId: 'owner-1' }
-  // skipWarmup: true // 如果不想自动发牌，请传入此参数
-});
-
-// 所有者进程中 (GUI 或 脚本)
-const pending = await client.listPendingDispatches();
+const pending = await client.ownerListPendingDispatches();
 if (pending.length > 0) {
-  // 检查并批准请求，可选择将其设为“永久授权”
-  await client.approveDispatch({ 
-    requestId: pending[0].requestId, 
-    permanent: true 
+  await client.ownerApproveDispatch({
+    requestId: pending[0].requestId,
+    permanent: true
   });
 }
 ```
@@ -110,12 +157,12 @@ if (pending.length > 0) {
 
 ## 详细文档
 
-- [进程隔离 (A/B 架构)](../PROCESS_ISOLATION.md)
-- [根目录 README (英文)](../../README.md)
+- [进程隔离（A/B 架构）](../PROCESS_ISOLATION.md)
+- [根目录 README（英文）](../../README.md)
 
 ## 架构原则
 
 1. **机密隔离**：机密明文绝不离开安全进程。
 2. **密码即权限**：主密码是唯一的管理授权来源。
-3. **可审计性**：所有管理动作在高层均记录为 `vault-master` 或对应的 Agent 身份。
-4. **二元状态**：保险箱要么被解锁并可见，要么是磁盘上一堆加密的碎片。
+3. **可审计性**：所有管理动作均记录为 `vault-master` 或对应的 Agent 身份。
+4. **二元状态**：保险箱要么被解锁并可见，要么只是磁盘上一组加密碎片。

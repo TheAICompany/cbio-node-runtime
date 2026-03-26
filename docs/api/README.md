@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.55.1**
+**CBIO Node Runtime Agent API v1.56.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.55.1
+# CBIO Node Runtime Agent API v1.56.0
 
 ## Enumerations
 
@@ -28,6 +28,7 @@
 - [CreateAgentClientOptions](interfaces/CreateAgentClientOptions.md)
 - [CreatedVault](interfaces/CreatedVault.md)
 - [CreateIdentityOptions](interfaces/CreateIdentityOptions.md)
+- [CreateOwnerSessionOptions](interfaces/CreateOwnerSessionOptions.md)
 - [CreatePersistentVaultCoreDependenciesOptions](interfaces/CreatePersistentVaultCoreDependenciesOptions.md)
 - [CreateVaultClientOptions](interfaces/CreateVaultClientOptions.md)
 - [CreateVaultOptions](interfaces/CreateVaultOptions.md)
@@ -40,6 +41,7 @@
 - [OwnerSecretTargetBinding](interfaces/OwnerSecretTargetBinding.md)
 - [OwnerSensitiveActionConfirmation](interfaces/OwnerSensitiveActionConfirmation.md)
 - [OwnerSensitiveActionContext](interfaces/OwnerSensitiveActionContext.md)
+- [OwnerSession](interfaces/OwnerSession.md)
 - [OwnerStoreSecretInput](interfaces/OwnerStoreSecretInput.md)
 - [OwnerWriteSecretInput](interfaces/OwnerWriteSecretInput.md)
 - [RecoveredVault](interfaces/RecoveredVault.md)
@@ -55,6 +57,7 @@
 - [VaultDeleteSecretInput](interfaces/VaultDeleteSecretInput.md)
 - [VaultExportSecretInput](interfaces/VaultExportSecretInput.md)
 - [VaultGrantCapabilityInput](interfaces/VaultGrantCapabilityInput.md)
+- [VaultGrantCapabilityRequest](interfaces/VaultGrantCapabilityRequest.md)
 - [VaultIdentity](interfaces/VaultIdentity.md)
 - [VaultImportAgentInput](interfaces/VaultImportAgentInput.md)
 - [VaultIssueSessionTokenInput](interfaces/VaultIssueSessionTokenInput.md)
@@ -78,6 +81,7 @@
 - [AgentCapabilityEnvelope](type-aliases/AgentCapabilityEnvelope.md)
 - [AgentVisibleSecretRecord](type-aliases/AgentVisibleSecretRecord.md)
 - [CbioRuntimeModule](type-aliases/CbioRuntimeModule.md)
+- [OwnerGrantCapabilityInput](type-aliases/OwnerGrantCapabilityInput.md)
 
 ## Variables
 
@@ -88,6 +92,7 @@
 - [createAgentClient](functions/createAgentClient.md)
 - [createIdentity](functions/createIdentity.md)
 - [createOwnerHttpFlowBoundary](functions/createOwnerHttpFlowBoundary.md)
+- [createOwnerSession](functions/createOwnerSession.md)
 - [createPersistentVaultCoreDependencies](functions/createPersistentVaultCoreDependencies.md)
 - [createStandardAcquireBoundary](functions/createStandardAcquireBoundary.md)
 - [createStandardDispatchBoundary](functions/createStandardDispatchBoundary.md)

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
 
 ***
 
@@ -124,7 +124,7 @@ Grants a specific capability to an agent.
 
 ##### input
 
-[`VaultGrantCapabilityInput`](VaultGrantCapabilityInput.md)
+[`OwnerGrantCapabilityInput`](../type-aliases/OwnerGrantCapabilityInput.md)
 
 #### Returns
 

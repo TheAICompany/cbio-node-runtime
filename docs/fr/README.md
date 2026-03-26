@@ -18,14 +18,11 @@ npm install @the-ai-company/cbio-node-runtime
 
 ```ts
 import {
-  createVaultService,
   createIdentity,
-  readIdentityMetadata,
-   createVault,
-  listIdentities,
+  createVault,
   listVaults,
   recoverVault,
-  LocalVaultTransport,
+  createOwnerSession,
   createVaultClient,
   createAgentClient,
   FsStorageProvider,
@@ -41,11 +38,10 @@ import {
 
 Chemin principal recommande pour un vault persistant :
 
-- créer le coffre persistant avec `createVault(...)` (prend en charge `publicMetadata` pour la découverte d'informations publiques)
-- restaurer le coffre persistant avec `recoverVault(...)` via l'identité de l'owner
-- Couches de stockage divisées : `vaults/` (Coffres nommés) et `identities/` (Espace d'identité personnel)
-- **Découverte Vérifiable (Verifiable Discovery)** :
-    - Toutes les métadonnées publiques (comme le pseudo) suivent désormais l'interface `VaultPublicMetadata` et incluent une **signature numérique** que le SDK vérifie automatiquement.
+- créer le coffre persistant avec `createVault(...)`
+- restaurer le coffre persistant avec `recoverVault(...)` via `vaultId` + `password`
+- pour les GUIs ou processus longs, conserver `createOwnerSession(...)` plutôt qu'un `createVaultClient(...)` brut en cache
+- réserver `createVaultClient(...)` aux scripts courts ou aux tâches ponctuelles dans le runtime courant
 
 L'ancienne API centree sur `CbioIdentity` n'est plus la surface principale du produit.
 
