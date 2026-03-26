@@ -3,7 +3,7 @@
  * Main API: typed high-level runtime plus supported low-level building blocks.
  */
 
-export { IdentityError, IdentityErrorCode } from "../errors.js";
+export { IdentityError, IdentityErrorCode, OwnerClientError, OwnerClientErrorCode } from "../errors.js";
 export { derivePublicKey, LocalSigner, type Signer, deriveVaultWorkingKeyFromPassword } from "../protocol/crypto.js";
 export { deriveIdentityId } from "../protocol/identity.js";
 export type { IStorageProvider } from "../storage/provider.js";
@@ -86,12 +86,16 @@ export {
   type OwnerStoreSecretInput,
   type OwnerWriteSecretInput,
   type VaultDeleteSecretInput,
+  type VaultUpdateAgentInput,
   type VaultListAgentsInput,
   type VaultListCapabilitiesInput,
   type VaultListSecretsInput,
   type VaultRevokeCapabilityInput,
+  type VaultIssueSessionTokenInput,
+  type VaultRevokeSessionTokenInput,
   type VaultSubmitCapabilityRequestInput,
   type VaultApproveCapabilityRequestInput,
+  type VaultApproveDispatchInput,
 } from "../clients/owner/index.js";
 
 export {
@@ -130,6 +134,8 @@ export { LocalVaultTransport } from "../vault-ingress/defaults.js";
 export interface CbioRuntime {
   IdentityError: typeof import("../errors.js").IdentityError;
   IdentityErrorCode: typeof import("../errors.js").IdentityErrorCode;
+  OwnerClientError: typeof import("../errors.js").OwnerClientError;
+  OwnerClientErrorCode: typeof import("../errors.js").OwnerClientErrorCode;
   VaultCoreError: typeof import("../vault-core/index.js").VaultCoreError;
   FsStorageProvider: typeof import("../storage/fs.js").FsStorageProvider;
   MemoryStorageProvider: typeof import("../storage/memory.js").MemoryStorageProvider;

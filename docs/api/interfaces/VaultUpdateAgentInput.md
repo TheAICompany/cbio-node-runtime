@@ -2,9 +2,15 @@
 
 ***
 
-# Interface: VaultCreateAgentInput
+# Interface: VaultUpdateAgentInput
 
 ## Properties
+
+### agentId
+
+> **agentId**: `string`
+
+***
 
 ### metadata?
 

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.51.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.52.1**](../README.md)
 
 ***
 
@@ -327,6 +327,22 @@ Securely stores a new secret in the vault.
 #### Returns
 
 `Promise`\<`PendingCapabilityRequestRecord`\>
+
+***
+
+### ownerUpdateAgent()
+
+> **ownerUpdateAgent**(`input`): `Promise`\<`AgentIdentityRecord`\>
+
+#### Parameters
+
+##### input
+
+[`VaultUpdateAgentInput`](VaultUpdateAgentInput.md)
+
+#### Returns
+
+`Promise`\<`AgentIdentityRecord`\>
 
 ***
 

@@ -22,6 +22,7 @@ import type {
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
+  OwnerUpdateAgentIdentityCommand,
   OwnerRegisterCapabilityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerRevokeCapabilityCommand,
@@ -281,6 +282,54 @@ export class VaultCore {
           AuditAction.REGISTER_AGENT_IDENTITY,
           AuditOutcome.DENIED,
           detail,
+        ),
+      );
+      throw error;
+    }
+  }
+
+  async ownerUpdateAgentIdentity(command: OwnerUpdateAgentIdentityCommand): Promise<AgentIdentityRecord> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("identity update vault mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    const existing = await this._deps.agentIdentities.get(this._deps.vaultId, command.agentId);
+    if (!existing) {
+      throw new VaultCoreError("agent identity not found", "VAULT_IDENTITY_DENIED");
+    }
+    const updated: AgentIdentityRecord = {
+      ...existing,
+      nickname: command.nickname,
+      metadata: command.metadata,
+    };
+    try {
+      await this._deps.agentIdentities.register(updated);
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          AuditAction.UPDATE_AGENT_IDENTITY,
+          AuditOutcome.SUCCEEDED,
+          `agent identity updated: ${command.agentId}`,
+          {
+            requestId: command.requestId,
+            agentId: command.agentId,
+          },
+        ),
+      );
+      return updated;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          AuditAction.UPDATE_AGENT_IDENTITY,
+          AuditOutcome.DENIED,
+          detail,
+          {
+            requestId: command.requestId,
+            agentId: command.agentId,
+          },
         ),
       );
       throw error;

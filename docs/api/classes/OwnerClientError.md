@@ -2,7 +2,7 @@
 
 ***
 
-# Class: IdentityError
+# Class: OwnerClientError
 
 Runtime export.
 Main API: typed high-level runtime plus supported low-level building blocks.
@@ -15,13 +15,13 @@ Main API: typed high-level runtime plus supported low-level building blocks.
 
 ### Constructor
 
-> **new IdentityError**(`code`, `message`, `options?`): `IdentityError`
+> **new OwnerClientError**(`code`, `message`, `options?`): `OwnerClientError`
 
 #### Parameters
 
 ##### code
 
-[`IdentityErrorCode`](../enumerations/IdentityErrorCode.md)
+[`OwnerClientErrorCode`](../enumerations/OwnerClientErrorCode.md)
 
 ##### message
 
@@ -33,7 +33,7 @@ Main API: typed high-level runtime plus supported low-level building blocks.
 
 #### Returns
 
-`IdentityError`
+`OwnerClientError`
 
 #### Overrides
 
@@ -43,13 +43,13 @@ Main API: typed high-level runtime plus supported low-level building blocks.
 
 ### code
 
-> `readonly` **code**: [`IdentityErrorCode`](../enumerations/IdentityErrorCode.md)
+> `readonly` **code**: [`OwnerClientErrorCode`](../enumerations/OwnerClientErrorCode.md)
 
 ## Methods
 
-### isIdentityError()
+### isOwnerClientError()
 
-> `static` **isIdentityError**(`e`): `e is IdentityError`
+> `static` **isOwnerClientError**(`e`): `e is OwnerClientError`
 
 #### Parameters
 
@@ -59,4 +59,4 @@ Main API: typed high-level runtime plus supported low-level building blocks.
 
 #### Returns
 
-`e is IdentityError`
+`e is OwnerClientError`

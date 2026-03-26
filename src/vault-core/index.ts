@@ -62,6 +62,7 @@ export type {
   OwnerListAgentsRequest,
   OwnerListCapabilitiesRequest,
   OwnerRegisterAgentIdentityCommand,
+  OwnerUpdateAgentIdentityCommand,
   OwnerRegisterCustomHttpFlowCommand,
   OwnerIssueSessionTokenRequest,
   OwnerSessionToken,

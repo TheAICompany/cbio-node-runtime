@@ -1,4 +1,5 @@
 import { LocalSigner } from "../../protocol/crypto.js";
+import { OwnerClientError, OwnerClientErrorCode } from "../../errors.js";
 import { createIdentity, restoreIdentity, type CreatedIdentity } from "../../runtime/identity.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
@@ -16,6 +17,7 @@ import type {
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
   VaultDeleteSecretInput,
+  VaultUpdateAgentInput,
   VaultListAgentsInput,
   VaultListCapabilitiesInput,
   VaultListSecretsInput,
@@ -80,6 +82,7 @@ export interface VaultClient {
    * The private key is stored in the vault for managed custody.
    */
   ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;
+  ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord>;
 
   /**
    * Registers a custom HTTP flow for complex secret usage.
@@ -154,7 +157,10 @@ class DefaultVaultClient implements VaultClient {
   ): Promise<void> {
     const normalizedPassword = confirmation.password.trim();
     if (!normalizedPassword) {
-      throw new Error("owner password is required");
+      throw new OwnerClientError(
+        OwnerClientErrorCode.SENSITIVE_ACTION_PASSWORD_REQUIRED,
+        "owner password is required",
+      );
     }
     if (this._sensitiveActionVerifier) {
       const valid = await this._sensitiveActionVerifier({
@@ -162,16 +168,25 @@ class DefaultVaultClient implements VaultClient {
         verificationCode: confirmation.verificationCode,
       }, context);
       if (!valid) {
-        throw new Error("sensitive action confirmation rejected");
+        throw new OwnerClientError(
+          OwnerClientErrorCode.SENSITIVE_ACTION_REJECTED,
+          "sensitive action confirmation rejected",
+        );
       }
       return;
     }
     if (!this._passwordVerifier) {
-      throw new Error("VaultClient: sensitiveActionVerifier or passwordVerifier is required for sensitive reads");
+      throw new OwnerClientError(
+        OwnerClientErrorCode.SENSITIVE_ACTION_VERIFIER_REQUIRED,
+        "VaultClient: sensitiveActionVerifier or passwordVerifier is required for sensitive reads",
+      );
     }
     const valid = await this._passwordVerifier(normalizedPassword);
     if (!valid) {
-      throw new Error("invalid vault password");
+      throw new OwnerClientError(
+        OwnerClientErrorCode.SENSITIVE_ACTION_INVALID_PASSWORD,
+        "invalid vault password",
+      );
     }
   }
 
@@ -315,7 +330,10 @@ class DefaultVaultClient implements VaultClient {
     });
     const agent = agents.find((record) => record.agentId === input.agentId);
     if (!agent?.privateKey) {
-      throw new Error("agent private key not found");
+      throw new OwnerClientError(
+        OwnerClientErrorCode.AGENT_PRIVATE_KEY_NOT_FOUND,
+        "agent private key not found",
+      );
     }
     return agent.privateKey;
   }
@@ -399,6 +417,27 @@ class DefaultVaultClient implements VaultClient {
         privateKey: undefined,
       },
       sessionToken,
+    };
+  }
+
+  async ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord> {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identityId}:${requestedAt}:${input.agentId}:update_agent_identity`;
+    const updated = await this._vault.ownerUpdateAgentIdentity({
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: {
+        kind: "owner",
+        id: this._identityId,
+      },
+      agentId: input.agentId,
+      nickname: input.nickname,
+      metadata: input.metadata,
+      requestedAt,
+    });
+    return {
+      ...updated,
+      privateKey: undefined,
     };
   }
 
@@ -707,7 +746,10 @@ function resolveVaultIdentity(options: CreateVaultClientOptions): VaultIdentity 
  */
 export function createVaultClient(options: CreateVaultClientOptions): VaultClient {
   if (!isCreateVaultClientOptions(options)) {
-    throw new Error("createVaultClient() requires a single options object with 'vault'");
+    throw new OwnerClientError(
+      OwnerClientErrorCode.INVALID_CREATE_VAULT_CLIENT_OPTIONS,
+      "createVaultClient() requires a single options object with 'vault'",
+    );
   }
   const client = new DefaultVaultClient(
     options.vault,

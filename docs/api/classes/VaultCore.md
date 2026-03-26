@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.51.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.52.1**](../README.md)
 
 ***
 
@@ -586,6 +586,22 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`PendingCapabilityRequestRecord`\>
+
+***
+
+### ownerUpdateAgentIdentity()
+
+> **ownerUpdateAgentIdentity**(`command`): `Promise`\<`AgentIdentityRecord`\>
+
+#### Parameters
+
+##### command
+
+`OwnerUpdateAgentIdentityCommand`
+
+#### Returns
+
+`Promise`\<`AgentIdentityRecord`\>
 
 ***
 

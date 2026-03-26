@@ -1,4 +1,5 @@
 export { createVaultClient } from "./client.js";
+export { OwnerClientError, OwnerClientErrorCode } from "../../errors.js";
 
 export type {
   VaultClient,
@@ -24,6 +25,7 @@ export type {
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
   VaultDeleteSecretInput,
+  VaultUpdateAgentInput,
   VaultListAgentsInput,
   VaultListCapabilitiesInput,
   VaultListSecretsInput,
@@ -32,4 +34,5 @@ export type {
   VaultRevokeSessionTokenInput,
   VaultSubmitCapabilityRequestInput,
   VaultApproveCapabilityRequestInput,
+  VaultApproveDispatchInput,
 } from "./contracts.js";

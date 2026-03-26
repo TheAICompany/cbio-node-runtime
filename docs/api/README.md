@@ -1,16 +1,18 @@
-**CBIO Node Runtime Agent API v1.51.0**
+**CBIO Node Runtime Agent API v1.52.1**
 
 ***
 
-# CBIO Node Runtime Agent API v1.51.0
+# CBIO Node Runtime Agent API v1.52.1
 
 ## Enumerations
 
 - [IdentityErrorCode](enumerations/IdentityErrorCode.md)
+- [OwnerClientErrorCode](enumerations/OwnerClientErrorCode.md)
 
 ## Classes
 
 - [IdentityError](classes/IdentityError.md)
+- [OwnerClientError](classes/OwnerClientError.md)
 - [VaultCore](classes/VaultCore.md)
 - [VaultCoreError](classes/VaultCoreError.md)
 
@@ -45,6 +47,7 @@
 - [RestoreIdentityOptions](interfaces/RestoreIdentityOptions.md)
 - [Signer](interfaces/Signer.md)
 - [VaultApproveCapabilityRequestInput](interfaces/VaultApproveCapabilityRequestInput.md)
+- [VaultApproveDispatchInput](interfaces/VaultApproveDispatchInput.md)
 - [VaultAuditQueryInput](interfaces/VaultAuditQueryInput.md)
 - [VaultClient](interfaces/VaultClient.md)
 - [VaultCoreDependenciesOptions](interfaces/VaultCoreDependenciesOptions.md)
@@ -54,6 +57,7 @@
 - [VaultGrantCapabilityInput](interfaces/VaultGrantCapabilityInput.md)
 - [VaultIdentity](interfaces/VaultIdentity.md)
 - [VaultImportAgentInput](interfaces/VaultImportAgentInput.md)
+- [VaultIssueSessionTokenInput](interfaces/VaultIssueSessionTokenInput.md)
 - [VaultListAgentsInput](interfaces/VaultListAgentsInput.md)
 - [VaultListCapabilitiesInput](interfaces/VaultListCapabilitiesInput.md)
 - [VaultListSecretsInput](interfaces/VaultListSecretsInput.md)
@@ -64,8 +68,10 @@
 - [VaultReadSecretPlaintextInput](interfaces/VaultReadSecretPlaintextInput.md)
 - [VaultRegisterFlowInput](interfaces/VaultRegisterFlowInput.md)
 - [VaultRevokeCapabilityInput](interfaces/VaultRevokeCapabilityInput.md)
+- [VaultRevokeSessionTokenInput](interfaces/VaultRevokeSessionTokenInput.md)
 - [VaultSigner](interfaces/VaultSigner.md)
 - [VaultSubmitCapabilityRequestInput](interfaces/VaultSubmitCapabilityRequestInput.md)
+- [VaultUpdateAgentInput](interfaces/VaultUpdateAgentInput.md)
 
 ## Type Aliases
 

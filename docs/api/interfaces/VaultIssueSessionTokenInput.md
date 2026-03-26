@@ -2,13 +2,13 @@
 
 ***
 
-# Interface: VaultDeleteSecretInput
+# Interface: VaultIssueSessionTokenInput
 
 ## Properties
 
-### alias
+### agentId
 
-> **alias**: `string`
+> **agentId**: `string`
 
 ***
 

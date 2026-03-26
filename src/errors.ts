@@ -24,6 +24,15 @@ export enum IdentityErrorCode {
     SECRET_OPERATION_RATE_LIMITED = "SECRET_OPERATION_RATE_LIMITED",
 }
 
+export enum OwnerClientErrorCode {
+    SENSITIVE_ACTION_PASSWORD_REQUIRED = "SENSITIVE_ACTION_PASSWORD_REQUIRED",
+    SENSITIVE_ACTION_VERIFIER_REQUIRED = "SENSITIVE_ACTION_VERIFIER_REQUIRED",
+    SENSITIVE_ACTION_REJECTED = "SENSITIVE_ACTION_REJECTED",
+    SENSITIVE_ACTION_INVALID_PASSWORD = "SENSITIVE_ACTION_INVALID_PASSWORD",
+    AGENT_PRIVATE_KEY_NOT_FOUND = "AGENT_PRIVATE_KEY_NOT_FOUND",
+    INVALID_CREATE_VAULT_CLIENT_OPTIONS = "INVALID_CREATE_VAULT_CLIENT_OPTIONS",
+}
+
 export class IdentityError extends Error {
     readonly code: IdentityErrorCode;
 
@@ -36,5 +45,20 @@ export class IdentityError extends Error {
 
     static isIdentityError(e: unknown): e is IdentityError {
         return e instanceof IdentityError;
+    }
+}
+
+export class OwnerClientError extends Error {
+    readonly code: OwnerClientErrorCode;
+
+    constructor(code: OwnerClientErrorCode, message: string, options?: ErrorOptions) {
+        super(message, options);
+        this.name = "OwnerClientError";
+        this.code = code;
+        Object.setPrototypeOf(this, OwnerClientError.prototype);
+    }
+
+    static isOwnerClientError(e: unknown): e is OwnerClientError {
+        return e instanceof OwnerClientError;
     }
 }

@@ -2,9 +2,15 @@
 
 ***
 
-# Interface: VaultApproveCapabilityRequestInput
+# Interface: VaultApproveDispatchInput
 
 ## Properties
+
+### permanent?
+
+> `optional` **permanent?**: `boolean`
+
+***
 
 ### requestedAt?
 
@@ -15,3 +21,9 @@
 ### requestId
 
 > **requestId**: `string`
+
+***
+
+### skipAudit?
+
+> `optional` **skipAudit?**: `boolean`

@@ -46,10 +46,42 @@ Identity material already managed elsewhere can be imported into vault custody v
 
 The `VaultClient` provides the administrative interface for the vault.
 
+### Stable Owner API Checklist
+
+The following owner-side methods are part of the supported public surface and are intended for direct GUI usage:
+
+- `ownerWriteSecret(...)`
+- `ownerReadSecretPlaintext(...)`
+- `ownerExportSecret(...)`
+- `ownerCreateAgent(...)`
+- `ownerImportAgent(...)`
+- `ownerUpdateAgent(...)`
+- `ownerReadAgentPrivateKey(...)`
+- `ownerListAgents(...)`
+- `ownerGrantCapability(...)`
+- `ownerRevokeCapability(...)`
+- `ownerListCapabilities(...)`
+- `ownerListSecrets(...)`
+- `ownerRegisterFlow(...)`
+- `ownerSubmitCapabilityRequest(...)`
+- `ownerListPendingCapabilityRequests()`
+- `ownerApproveCapabilityRequest(...)`
+- `ownerRejectCapabilityRequest(...)`
+- `ownerOnPendingCapabilityRequest(...)`
+- `ownerListPendingDispatches()`
+- `ownerApproveDispatch(...)`
+- `ownerRejectDispatch(...)`
+- `ownerOnPendingDispatch(...)`
+- `ownerIssueSessionToken(...)`
+- `ownerIssueAllSessionTokens()`
+- `ownerRevokeSessionToken(...)`
+- `ownerReadAudit(...)`
+
 ### Core Operations
 - `ownerWriteSecret(...)`: Store a secret and bind it to specific targets in one step.
 - `ownerCreateAgent(...)`: Generate and host a new agent identity, then return its public record plus a session token.
 - `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
+- `ownerUpdateAgent(...)`: Update an agent's stored nickname and metadata.
 - `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
 - `ownerSubmitCapabilityRequest(...)`: Submit a broader pending capability request for later owner review.
@@ -68,6 +100,40 @@ The `VaultClient` provides the administrative interface for the vault.
 - `ownerExportSecret({ alias, password })`: Export a secret's full plaintext record after re-entering the vault password.
 - `ownerReadAgentPrivateKey({ agentId, password })`: Read one managed agent private key after re-entering the vault password.
 - `ownerReadAudit(...)`: Access the append-only record of all vault actions.
+
+### Sensitive Action Contract
+
+The following owner operations are sensitive actions:
+
+- `ownerReadSecretPlaintext(...)`
+- `ownerExportSecret(...)`
+- `ownerReadAgentPrivateKey(...)`
+
+All three require:
+
+- `password`
+- optional `verificationCode`
+
+Client configuration:
+
+- `createVaultClient(...)` may be configured with `sensitiveActionVerifier(confirmation, context)`
+- if no `sensitiveActionVerifier` is provided, `passwordVerifier(password)` is required for these operations
+
+Stable owner client error codes:
+
+- `SENSITIVE_ACTION_PASSWORD_REQUIRED`
+- `SENSITIVE_ACTION_VERIFIER_REQUIRED`
+- `SENSITIVE_ACTION_REJECTED`
+- `SENSITIVE_ACTION_INVALID_PASSWORD`
+- `AGENT_PRIVATE_KEY_NOT_FOUND`
+- `INVALID_CREATE_VAULT_CLIENT_OPTIONS`
+
+Recommended GUI behavior:
+
+- Show a single reusable confirmation dialog for sensitive actions
+- Always collect the password
+- Optionally collect a second factor such as a 6-digit verification code
+- Branch UI behavior on `OwnerClientError.code` rather than parsing error strings
 
 ## Agent Client (Consumer)
 

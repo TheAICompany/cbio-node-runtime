@@ -136,6 +136,13 @@ export interface VaultDeleteSecretInput {
   requestedAt?: string;
 }
 
+export interface VaultUpdateAgentInput {
+  agentId: string;
+  nickname?: string;
+  metadata?: Record<string, any>;
+  requestedAt?: string;
+}
+
 export interface VaultListAgentsInput {
   requestedAt?: string;
 }
@@ -190,6 +197,7 @@ export interface VaultClient {
   ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;
+  ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord>;
   ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition>;
   ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void>;
   ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;

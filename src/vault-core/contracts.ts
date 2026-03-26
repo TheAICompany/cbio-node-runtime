@@ -95,6 +95,16 @@ export interface OwnerRegisterAgentIdentityCommand {
   requestedAt: string;
 }
 
+export interface OwnerUpdateAgentIdentityCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal & { kind: "owner" };
+  agentId: string;
+  nickname?: string;
+  metadata?: Record<string, any>;
+  requestedAt: string;
+}
+
 export interface CustomHttpFlowDefinition {
   vaultId: VaultId;
   flowId: string;
@@ -354,6 +364,7 @@ export interface AuditQuery {
 
 export enum AuditAction {
   REGISTER_AGENT_IDENTITY = "REGISTER_AGENT_IDENTITY",
+  UPDATE_AGENT_IDENTITY = "UPDATE_AGENT_IDENTITY",
   REGISTER_CUSTOM_FLOW = "REGISTER_CUSTOM_FLOW",
   REGISTER_CAPABILITY = "REGISTER_CAPABILITY",
   SUBMIT_CAPABILITY_REQUEST = "SUBMIT_CAPABILITY_REQUEST",

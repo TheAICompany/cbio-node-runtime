@@ -2,10 +2,10 @@
 
 ***
 
-# Interface: VaultIdentity
+# Interface: VaultRevokeSessionTokenInput
 
 ## Properties
 
-### identityId
+### token
 
-> **identityId**: `string`
+> **token**: `string`
