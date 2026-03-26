@@ -23,12 +23,12 @@ const vault = wrapVaultCoreAsVaultService(authority);
 const client = createVaultClient({
   vault,
 });
-await client.registerAgent({
+await client.ownerRegisterAgent({
   agentId: "agent-security",
   publicKey: agentIdentity.publicKey,
 });
 
-const guardedRecord = await client.writeSecret({
+const guardedRecord = await client.ownerWriteSecret({
   alias: "guarded-token",
   plaintext: "guarded-secret",
   targetBindings: [
@@ -139,7 +139,7 @@ await assert.rejects(
   },
 );
 
-const securityAudit = await client.readAudit({ secretAlias: "guarded-token" });
+const securityAudit = await client.ownerReadAudit({ secretAlias: "guarded-token" });
 assert.ok(securityAudit.some((entry) => entry.outcome === "DENIED" && /expired|binding mismatch|timestamp out of range|invalid proof signature/.test(entry.detail)));
 
 // Sovereign Vault: identity registration for unlocked vault is implicitly authorized.
@@ -178,7 +178,7 @@ await assert.rejects(
 );
 
 await assert.rejects(
-  () => authority.exportSecret(
+  () => authority.ownerExportSecret(
     { kind: "owner", id: "owner-security" },
     "guarded-token",
   ),

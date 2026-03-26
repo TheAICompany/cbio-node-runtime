@@ -110,11 +110,11 @@ const client = createVaultClient({
 });
 assert.equal(typeof client.storeSecret, "function");
 assert.equal(typeof client.defineSecretTargets, "function");
-await client.registerAgent({
+await client.ownerRegisterAgent({
   agentId: "agent-1",
   publicKey: agentIdentity.publicKey,
 });
-const ownedRecord = await client.writeSecret({
+const ownedRecord = await client.ownerWriteSecret({
   alias: "api-token",
   plaintext: "super-secret",
   targetBindings: [
@@ -133,7 +133,7 @@ const ownedRecord = await client.writeSecret({
   ],
 });
 
-const exportedSecret = await client.exportSecret({ alias: "api-token" });
+const exportedSecret = await client.ownerExportSecret({ alias: "api-token" });
 assert.equal(exportedSecret.plaintext, "super-secret");
 assert.equal(exportedSecret.alias.value, "api-token");
 
@@ -148,7 +148,7 @@ const dispatchCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await client.grantCapability({ capability: dispatchCapability });
+await client.ownerGrantCapability({ capability: dispatchCapability });
 
 const agent = createAgentClient({
   agentIdentity: { agentId: "agent-1" },
@@ -159,7 +159,7 @@ const agent = createAgentClient({
   signer: new LocalSigner(agentIdentity),
 });
 
-const result = await agent.dispatch({
+const result = await agent.agentDispatch({
   secretAlias: "api-token",
   targetUrl: "https://api.example.com/endpoint",
   method: "POST",
@@ -170,7 +170,7 @@ assert.equal(result.status, "SUCCEEDED");
 assert.equal(seenAuthHeader, "Bearer super-secret");
 assert.equal(result.responseBody, "ok");
 
-await client.registerFlow({
+await client.ownerRegisterFlow({
   flowId: "flow-shape-only",
   mode: "send_secret",
   targetUrl: "https://api.example.com/custom-status",
@@ -190,7 +190,7 @@ const customCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await client.grantCapability({ capability: customCapability });
+await client.ownerGrantCapability({ capability: customCapability });
 
 const customAgent = createAgentClient({
   agentIdentity: { agentId: "agent-1" },
@@ -201,7 +201,7 @@ const customAgent = createAgentClient({
   signer: new LocalSigner(agentIdentity),
 });
 
-const customResult = await customAgent.dispatch({
+const customResult = await customAgent.agentDispatch({
   secretAlias: "api-token",
   targetUrl: "https://api.example.com/custom-status",
   method: "POST",
@@ -211,7 +211,7 @@ const customResult = await customAgent.dispatch({
 assert.equal(customResult.status, "SUCCEEDED");
 assert.equal(customResult.responseBody, JSON.stringify({ state: null, nested: { code: null } }));
 
-await client.registerFlow({
+await client.ownerRegisterFlow({
   flowId: "flow-custom-acquire",
   mode: "acquire_secret",
   targetUrl: "https://api.example.com/custom-acquire",
@@ -235,7 +235,7 @@ const customAcquireCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await client.grantCapability({ capability: customAcquireCapability });
+await client.ownerGrantCapability({ capability: customAcquireCapability });
 
 const customAcquireAgent = createAgentClient({
   agentIdentity: { agentId: "agent-1" },
@@ -246,7 +246,7 @@ const customAcquireAgent = createAgentClient({
   signer: new LocalSigner(agentIdentity),
 });
 
-const customAcquireResult = await customAcquireAgent.dispatch({
+const customAcquireResult = await customAcquireAgent.agentDispatch({
   targetUrl: "https://api.example.com/custom-acquire",
   method: "POST",
 });
@@ -295,9 +295,9 @@ try {
     scope: "read write",
   });
   const auditClient = createVaultClient({ vault: persistentVault });
-  const audit = await auditClient.readAudit({ secretAlias: "issuer-token" });
+  const audit = await auditClient.ownerReadAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
-  const persistentExport = await auditClient.exportSecret({ alias: "issuer-token" });
+  const persistentExport = await auditClient.ownerExportSecret({ alias: "issuer-token" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
   const recoveredVaultInstance = await recoverVault(storage, {
     vaultId: "vault-runtime-persistent",
@@ -350,7 +350,7 @@ try {
   assert.ok(!remainingVaults.find(v => v.vaultId === "vault-runtime-sibling"), "Vault should be deleted");
   console.log("   [OK] Vault physical deletion successful");
   console.log("-> Verifying Managed Agent Identity Custody...");
-  const [managedRecord, managedPrivateKey] = await auditClient.createAgent({ 
+  const [managedRecord, managedPrivateKey] = await auditClient.ownerCreateAgent({ 
     agentId: "agent-managed",
     nickname: "Managed Worker",
     metadata: { dept: "security" }
@@ -360,17 +360,17 @@ try {
   assert.equal(managedRecord.nickname, "Managed Worker");
   
   // Verify recovery after persistence
-  const agentsInVault = await auditClient.listAgents();
+  const agentsInVault = await auditClient.ownerListAgents();
   const foundManaged = agentsInVault.find(a => a.agentId === "agent-managed");
   assert.equal(foundManaged?.privateKey, managedPrivateKey, "Vault should persist the private key");
   console.log("   [OK] Agent creation and private key custody verification passed");
 
   console.log("-> Verifying Proactive Capability Request Flow...");
   let pendingCapabilityRequest = null;
-  const unsubscribeCapability = auditClient.onPendingCapabilityRequest((record) => {
+  const unsubscribeCapability = auditClient.ownerOnPendingCapabilityRequest((record) => {
     pendingCapabilityRequest = record;
   });
-  const submittedCapabilityRequest = await auditClient.submitCapabilityRequest({
+  const submittedCapabilityRequest = await auditClient.ownerSubmitCapabilityRequest({
     requester: { kind: "trusted_executor", id: "llm-planner" },
     agentId: "agent-managed",
     secretAliases: ["api-token"],
@@ -381,16 +381,16 @@ try {
   assert.equal(submittedCapabilityRequest.agentId, "agent-managed");
   assert.equal(submittedCapabilityRequest.scope.scope, "https://api.example.com/users/*");
   assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
-  const pendingCapabilityRequests = await auditClient.listPendingCapabilityRequests();
+  const pendingCapabilityRequests = await auditClient.ownerListPendingCapabilityRequests();
   assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
-  const approvedCapability = await auditClient.approveCapabilityRequest({
+  const approvedCapability = await auditClient.ownerApproveCapabilityRequest({
     requestId: pendingCapabilityRequests[0].requestId,
     capabilityId: "cap-users-read",
   });
   unsubscribeCapability();
   assert.equal(approvedCapability.capabilityId, "cap-users-read");
   assert.equal(approvedCapability.scope, "https://api.example.com/users/*");
-  const capabilitiesAfterApproval = await auditClient.listCapabilities({ agentId: "agent-managed" });
+  const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: "agent-managed" });
   assert.ok(capabilitiesAfterApproval.some((cap) => cap.capabilityId === "cap-users-read"), "Approved capability should be registered");
   console.log("   [OK] Proactive capability request approval flow passed");
 
@@ -406,7 +406,7 @@ try {
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
-  await auditClient.grantCapability({ capability: acquiredCapability });
+  await auditClient.ownerGrantCapability({ capability: acquiredCapability });
   const acquiredVault = wrapVaultCoreAsVaultService(recoveredVaultInstance.core);
   const acquiredAgent = createAgentClient({
     agentIdentity: { agentId: "agent-acquired" },
@@ -417,7 +417,7 @@ try {
     signer: new LocalSigner(acquiredAgentIdentity),
   });
   await assert.rejects(
-    () => acquiredAgent.dispatch({
+    () => acquiredAgent.agentDispatch({
       secretAlias: "issuer-token",
       targetUrl: "https://issuer.example.com/other",
       method: "GET",
@@ -435,11 +435,11 @@ try {
 
   console.log("-> Verifying Secret Physical Deletion...");
   // Use ownerClient for deletion to verify high-level API loop
-  await auditClient.deleteSecret({ alias: "issuer-token" });
+  await auditClient.ownerDeleteSecret({ alias: "issuer-token" });
   
   // Verify cannot retrieve after deletion
   await assert.rejects(
-    () => auditClient.exportSecret({ alias: "issuer-token" }),
+    () => auditClient.ownerExportSecret({ alias: "issuer-token" }),
     /SECRET_NOT_FOUND/
   );
   console.log("   [OK] Logical deletion and permission check successful");
@@ -501,7 +501,7 @@ try {
   const custodyDir = join(tempDir, "vaults/vault-runtime-persistent/vault/sealed/custody");
   const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
   await assert.rejects(
-    () => rollbackClient.writeSecret({
+    () => rollbackClient.ownerWriteSecret({
       alias: "should-rollback",
       plaintext: "rollback-secret",
       targetBindings: [

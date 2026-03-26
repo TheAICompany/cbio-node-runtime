@@ -76,7 +76,7 @@ async function runAgentDemo(port: number, agentIdentity: any, capability: any) {
   console.log("[Process A] LLM Agent requesting secret-backed dispatch...");
   
   try {
-    const result = await agentClient.dispatch({
+    const result = await agentClient.agentDispatch({
       secretAlias: "api-token",
       targetUrl: "https://httpbin.org/post",
       method: "POST",
@@ -114,7 +114,7 @@ async function main() {
   });
 
   // Owner writes a secret (simulated local call for setup)
-  const secret = await vault.writeSecret({
+  const secret = await vault.ownerWriteSecret({
     kind: "owner.write_secret",
     vaultId: vault.vaultId,
     owner: { kind: "owner", id: ownerIdentity.identityId },

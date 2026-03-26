@@ -27,7 +27,7 @@ export interface AgentClient {
    *
    * @example
    * ```ts
-   * const result = await agent.dispatch({
+   * const result = await agent.agentDispatch({
    *   targetUrl: 'https://api.example.com/data',
    *   method: 'POST',
    *   secretAlias: 'api-token',
@@ -35,7 +35,7 @@ export interface AgentClient {
    * });
    * ```
    */
-  dispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
+  agentDispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
 }
 
 export interface CreateAgentClientOptions {
@@ -80,7 +80,7 @@ class DefaultAgentClient implements AgentClient {
     private readonly _token?: string,
   ) {}
 
-  async dispatch(intent: AgentDispatchIntent) {
+  async agentDispatch(intent: AgentDispatchIntent) {
     const requestedAt = intent.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identity.agentId}:${requestedAt}:${intent.secretAlias ?? "no-secret"}:${intent.method}`;
 
@@ -106,7 +106,7 @@ class DefaultAgentClient implements AgentClient {
       );
     }
 
-    return this._transport.dispatch({
+    return this._transport.agentDispatch({
       vaultId: this._capability.vaultId,
       requestId,
       requestedAt,

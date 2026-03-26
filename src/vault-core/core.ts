@@ -113,7 +113,7 @@ export class VaultCore {
     return this._deps.vaultId;
   }
 
-  private async appendAudit(entry: AuditEntry): Promise<void> {
+  private async _appendAudit(entry: AuditEntry): Promise<void> {
     try {
       await this._deps.audit.append(entry);
     } catch (error) {
@@ -122,7 +122,7 @@ export class VaultCore {
     }
   }
 
-  private async appendDecisionAudit(
+  private async _appendDecisionAudit(
     request: DispatchRequest,
     outcome: AuditOutcome.ALLOWED | AuditOutcome.DENIED | AuditOutcome.PENDING,
     detail: string,
@@ -131,7 +131,7 @@ export class VaultCore {
       secretId?: string;
     },
   ): Promise<void> {
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, request.agent, AuditAction.AUTHORIZE_DISPATCH, outcome, detail, {
         requestId: request.requestId,
         capabilityId: request.capability?.capabilityId,
@@ -144,21 +144,21 @@ export class VaultCore {
   }
 
 
-  onPendingRequest(callback: (record: import("./contracts.js").PendingDispatchRecord) => void): () => void {
+  ownerOnPendingDispatch(callback: (record: import("./contracts.js").PendingDispatchRecord) => void): () => void {
     this._pendingObservers.add(callback);
     return () => {
       this._pendingObservers.delete(callback);
     };
   }
 
-  onPendingCapabilityRequest(callback: (record: PendingCapabilityRequestRecord) => void): () => void {
+  ownerOnPendingCapabilityRequest(callback: (record: PendingCapabilityRequestRecord) => void): () => void {
     this._pendingCapabilityObservers.add(callback);
     return () => {
       this._pendingCapabilityObservers.delete(callback);
     };
   }
 
-  async registerAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void> {
+  async ownerRegisterAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("identity registration vault mismatch", "VAULT_IDENTITY_DENIED");
     }
@@ -168,7 +168,7 @@ export class VaultCore {
     try {
       // Sovereign Vault: Owner has full privileges. No signature required for unlocked vault.
       await this._deps.agentIdentities.register(command.agentIdentity);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.owner,
@@ -179,7 +179,7 @@ export class VaultCore {
       );
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.owner,
@@ -192,7 +192,7 @@ export class VaultCore {
     }
   }
 
-  async registerCapability(command: OwnerRegisterCapabilityCommand): Promise<void> {
+  async ownerRegisterCapability(command: OwnerRegisterCapabilityCommand): Promise<void> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("capability registration vault mismatch", "VAULT_IDENTITY_DENIED");
     }
@@ -207,7 +207,7 @@ export class VaultCore {
     }
     try {
       await this._deps.capabilities.register(command.capability);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.owner,
@@ -222,7 +222,7 @@ export class VaultCore {
       );
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.owner,
@@ -239,7 +239,7 @@ export class VaultCore {
     }
   }
 
-  async submitCapabilityRequest(command: SubmitCapabilityRequestCommand): Promise<PendingCapabilityRequestRecord> {
+  async ownerSubmitCapabilityRequest(command: SubmitCapabilityRequestCommand): Promise<PendingCapabilityRequestRecord> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("capability request vault mismatch", "VAULT_IDENTITY_DENIED");
     }
@@ -279,7 +279,7 @@ export class VaultCore {
       }
     }
 
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(
         this._deps,
         command.requester,
@@ -297,14 +297,14 @@ export class VaultCore {
     return pendingRecord;
   }
 
-  async getCapability(vaultId: import("./contracts.js").VaultId, agentId: string, capabilityId: string) {
+  async _getCapability(vaultId: import("./contracts.js").VaultId, agentId: string, capabilityId: string) {
     if (vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("capability lookup vault mismatch", "VAULT_IDENTITY_DENIED");
     }
     return this._deps.capabilities.get(vaultId, agentId, capabilityId);
   }
 
-  async registerCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void> {
+  async ownerRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("custom flow vault mismatch", "VAULT_IDENTITY_DENIED");
     }
@@ -326,7 +326,7 @@ export class VaultCore {
         responseSecret: command.flow.responseSecret,
         createdAt: this._deps.clock.nowIso(),
       });
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.owner,
@@ -337,7 +337,7 @@ export class VaultCore {
       );
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.owner,
@@ -350,7 +350,7 @@ export class VaultCore {
     }
   }
 
-  async storeCustomFlowSecret(flow: CustomHttpFlowDefinition, alias: string, plaintext: string): Promise<SecretRecord> {
+  async _storeCustomFlowSecret(flow: CustomHttpFlowDefinition, alias: string, plaintext: string): Promise<SecretRecord> {
     const actor: VaultPrincipal & { kind: "owner" } = { kind: "owner", id: flow.ownerId };
     const targetBindings = [{
       kind: "site" as const,
@@ -361,7 +361,7 @@ export class VaultCore {
     }];
     const existing = await this._deps.secrets.getByAlias({ value: alias });
     if (existing) {
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           actor,
@@ -389,7 +389,7 @@ export class VaultCore {
     try {
       await this._deps.custody.store(record.secretId, plaintext);
       await this._deps.secrets.save(record);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(this._deps, actor, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, `custom flow stored secret: ${alias}`, {
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
@@ -405,7 +405,7 @@ export class VaultCore {
     return record;
   }
 
-  async writeSecret(command: VaultWriteSecretCommand): Promise<SecretRecord> {
+  async ownerWriteSecret(command: VaultWriteSecretCommand): Promise<SecretRecord> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
@@ -413,7 +413,7 @@ export class VaultCore {
       await this._deps.policy.authorizeWrite(command);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.kind === "owner.write_secret" ? command.owner : command.issuer,
@@ -429,7 +429,7 @@ export class VaultCore {
     }
     const existing = await this._deps.secrets.getByAlias({ value: command.alias });
     if (existing) {
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.kind === "owner.write_secret" ? command.owner : command.issuer,
@@ -448,7 +448,7 @@ export class VaultCore {
     try {
       await this._deps.custody.store(record.secretId, command.plaintext);
       await this._deps.secrets.save(record);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(this._deps, command.kind === "owner.write_secret" ? command.owner : command.issuer, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, "secret stored", {
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
@@ -464,7 +464,7 @@ export class VaultCore {
     return record;
   }
 
-  async deleteSecret(command: OwnerDeleteSecretCommand): Promise<void> {
+  async ownerDeleteSecret(command: OwnerDeleteSecretCommand): Promise<void> {
     const record = await this._deps.secrets.getByAlias({ value: command.alias });
     if (!record) {
       throw new VaultCoreError(`secret not found: ${command.alias}`, "VAULT_SECRET_NOT_FOUND");
@@ -473,7 +473,7 @@ export class VaultCore {
     await this._deps.secrets.delete(record.secretId);
     await this._deps.custody.delete(record.secretId);
     
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.DELETE_SECRET, AuditOutcome.SUCCEEDED, `deleted secret ${command.alias}`, {
         requestId: command.requestId,
         secretAlias: command.alias,
@@ -482,7 +482,7 @@ export class VaultCore {
     );
   }
 
-  async defineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<SecretRecord> {
+  async ownerDefineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<SecretRecord> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
@@ -490,7 +490,7 @@ export class VaultCore {
       await this._deps.policy.authorizeDefineSecretTargets(command);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(
           this._deps,
           command.owner,
@@ -508,7 +508,7 @@ export class VaultCore {
     const existing = await this._deps.secrets.getByAlias({ value: command.alias });
     if (!existing) {
       const error = new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(this._deps, command.owner, AuditAction.DEFINE_SECRET_TARGETS, AuditOutcome.DENIED, error.message, {
           secretAlias: command.alias,
         }),
@@ -522,7 +522,7 @@ export class VaultCore {
       updatedAt: this._deps.clock.nowIso(),
     };
     await this._deps.secrets.save(nextRecord);
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.DEFINE_SECRET_TARGETS, AuditOutcome.SUCCEEDED, "secret targets defined", {
         requestId: command.requestId,
         secretAlias: nextRecord.alias.value,
@@ -532,7 +532,7 @@ export class VaultCore {
     return nextRecord;
   }
 
-  async authorizeDispatch(request: DispatchRequest): Promise<DispatchAuthorization> {
+  async agentAuthorizeDispatch(request: DispatchRequest): Promise<DispatchAuthorization> {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("request vault mismatch", "VAULT_DISPATCH_DENIED");
     }
@@ -540,7 +540,7 @@ export class VaultCore {
       ? await this._deps.secrets.getByAlias({ value: request.secretAlias })
       : null;
     if (request.secretAlias && !record) {
-      await this.appendDecisionAudit(request, AuditOutcome.DENIED, "secret not found");
+      await this._appendDecisionAudit(request, AuditOutcome.DENIED, "secret not found");
       return {
         vaultId: this._deps.vaultId,
         decision: "deny",
@@ -556,7 +556,7 @@ export class VaultCore {
       // Removed direct policy.authorizeDispatch here to handle discovery
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendDecisionAudit(request, AuditOutcome.DENIED, detail, {
+      await this._appendDecisionAudit(request, AuditOutcome.DENIED, detail, {
         secretAlias: record?.alias.value ?? request.secretAlias,
         secretId: record?.secretId.value,
       });
@@ -603,7 +603,7 @@ export class VaultCore {
         }
       }
 
-      await this.appendDecisionAudit(request, AuditOutcome.PENDING, "dispatch stalled for manual discovery approval", {
+      await this._appendDecisionAudit(request, AuditOutcome.PENDING, "dispatch stalled for manual discovery approval", {
         secretAlias: record?.alias.value ?? request.secretAlias,
         secretId: record?.secretId.value,
       });
@@ -619,7 +619,7 @@ export class VaultCore {
 
     // Capability found, proceed
     if (!capability.skipAudit) {
-      await this.appendDecisionAudit(request, AuditOutcome.ALLOWED, "dispatch authorized", {
+      await this._appendDecisionAudit(request, AuditOutcome.ALLOWED, "dispatch authorized", {
         secretAlias: record?.alias.value ?? request.secretAlias,
         secretId: record?.secretId.value,
       });
@@ -635,8 +635,8 @@ export class VaultCore {
     };
   }
 
-  async dispatchSecret(request: DispatchRequest): Promise<DispatchResult> {
-    const authorization = await this.authorizeDispatch(request);
+  async agentDispatchSecret(request: DispatchRequest): Promise<DispatchResult> {
+    const authorization = await this.agentAuthorizeDispatch(request);
     if (authorization.decision === "deny" || !authorization.secretId) {
       throw new VaultCoreError("dispatch denied", "VAULT_DISPATCH_DENIED");
     }
@@ -673,7 +673,7 @@ export class VaultCore {
       { record, plaintext },
     );
 
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(
         this._deps,
         request.agent,
@@ -697,19 +697,19 @@ export class VaultCore {
     };
   }
 
-  async getAudit(
+  async ownerReadAudit(
     actor: VaultPrincipal & { kind: "owner" },
     query: AuditQuery,
     request?: Omit<import("./contracts.js").OwnerAuditRequest, "actor" | "query" | "vaultId">,
   ): Promise<readonly AuditEntry[]> {
     const entries = await this._deps.audit.query(query);
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.READ_AUDIT, AuditOutcome.ALLOWED, "audit queried"),
     );
     return entries;
   }
 
-  async exportSecret(
+  async ownerExportSecret(
     actor: VaultPrincipal & { kind: "owner" },
     alias: string,
     request?: Omit<OwnerExportSecretRequest, "actor" | "alias" | "vaultId">,
@@ -724,7 +724,7 @@ export class VaultCore {
         throw new VaultCoreError("secret material not found", "VAULT_SECRET_NOT_FOUND");
       }
       const exportedAt = this._deps.clock.nowIso();
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(this._deps, actor, AuditAction.EXPORT_SECRET, AuditOutcome.SUCCEEDED, "secret exported", {
           requestId: request?.requestId,
           secretAlias: record.alias.value,
@@ -740,7 +740,7 @@ export class VaultCore {
       };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      await this.appendAudit(
+      await this._appendAudit(
         toAuditEntry(this._deps, actor, AuditAction.EXPORT_SECRET, AuditOutcome.DENIED, detail, {
           requestId: request?.requestId,
           secretAlias: alias,
@@ -767,12 +767,12 @@ export class VaultCore {
     return true;
   }
 
-  async listAgents(
+  async ownerListAgents(
     actor: VaultPrincipal & { kind: "owner" },
     request?: Omit<OwnerListAgentsRequest, "actor" | "vaultId">,
   ): Promise<readonly AgentIdentityRecord[]> {
     const identities = await this._deps.agentIdentities.list(this._deps.vaultId);
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_AGENTS, AuditOutcome.ALLOWED, "agent identities listed", {
         requestId: request?.requestId,
       }),
@@ -780,13 +780,13 @@ export class VaultCore {
     return identities;
   }
 
-  async listCapabilities(
+  async ownerListCapabilities(
     actor: VaultPrincipal & { kind: "owner" },
     agentId?: string,
     request?: Omit<OwnerListCapabilitiesRequest, "actor" | "agentId" | "vaultId">,
   ): Promise<readonly AgentCapability[]> {
     const capabilities = await this._deps.capabilities.list(this._deps.vaultId, agentId);
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_CAPABILITIES, AuditOutcome.ALLOWED, "capabilities listed", {
         requestId: request?.requestId,
         agentId,
@@ -795,9 +795,9 @@ export class VaultCore {
     return capabilities;
   }
 
-  async revokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {
+  async ownerRevokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {
     await this._deps.policy.revokeCapability(command.vaultId, command.agentId, command.capabilityId);
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.REVOKE_CAPABILITY, AuditOutcome.SUCCEEDED, "capability revoked", {
         requestId: command.requestId,
         agentId: command.agentId,
@@ -806,7 +806,7 @@ export class VaultCore {
     );
   }
 
-  async issueAgentSessionToken(request: OwnerIssueSessionTokenRequest): Promise<OwnerSessionToken> {
+  async ownerIssueSessionToken(request: OwnerIssueSessionTokenRequest): Promise<OwnerSessionToken> {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("session token vault mismatch", "VAULT_IDENTITY_DENIED");
     }
@@ -817,7 +817,7 @@ export class VaultCore {
     const token = await this._deps.sessionTokens.issue(request.agentId);
     const issuedAt = this._deps.clock.nowIso();
 
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(
         this._deps,
         request.actor,
@@ -834,12 +834,12 @@ export class VaultCore {
     };
   }
 
-  async issueAllAgentSessionTokens(actor: VaultPrincipal & { kind: "owner" }): Promise<OwnerSessionToken[]> {
+  async ownerIssueAllAgentSessionTokens(actor: VaultPrincipal & { kind: "owner" }): Promise<OwnerSessionToken[]> {
     const agents = await this._deps.agentIdentities.list(this._deps.vaultId);
     const results: OwnerSessionToken[] = [];
     const requestedAt = this._deps.clock.nowIso();
     for (const agent of agents) {
-      results.push(await this.issueAgentSessionToken({
+      results.push(await this.ownerIssueSessionToken({
         vaultId: this._deps.vaultId,
         requestId: `warmup_${this._deps.ids.newVersion().value}`,
         actor,
@@ -850,12 +850,12 @@ export class VaultCore {
     return results;
   }
 
-  async revokeAgentSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
+  async ownerRevokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("session token vault mismatch", "VAULT_IDENTITY_DENIED");
     }
     await this._deps.sessionTokens.revoke(request.token);
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(
         this._deps,
         request.actor,
@@ -866,21 +866,21 @@ export class VaultCore {
     );
   }
 
-  async listPendingDispatches(command: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("./contracts.js").PendingDispatchRecord[]> {
+  async ownerListPendingDispatches(command: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("./contracts.js").PendingDispatchRecord[]> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
     }
     return this._deps.pendingRequests.list(command.vaultId);
   }
 
-  async listPendingCapabilityRequests(command: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly PendingCapabilityRequestRecord[]> {
+  async ownerListPendingCapabilityRequests(command: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly PendingCapabilityRequestRecord[]> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
     }
     return this._deps.pendingCapabilityRequests.list(command.vaultId);
   }
 
-  async approveCapabilityRequest(command: OwnerApproveCapabilityRequestCommand): Promise<AgentCapability> {
+  async ownerApproveCapabilityRequest(command: OwnerApproveCapabilityRequestCommand): Promise<AgentCapability> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
@@ -905,7 +905,7 @@ export class VaultCore {
     await this._deps.capabilities.register(capability);
     await this._deps.pendingCapabilityRequests.delete(command.requestId);
 
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(
         this._deps,
         command.owner,
@@ -924,7 +924,7 @@ export class VaultCore {
     return capability;
   }
 
-  async rejectCapabilityRequest(command: OwnerRejectCapabilityRequestCommand): Promise<void> {
+  async ownerRejectCapabilityRequest(command: OwnerRejectCapabilityRequestCommand): Promise<void> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
@@ -934,7 +934,7 @@ export class VaultCore {
     }
 
     await this._deps.pendingCapabilityRequests.delete(command.requestId);
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(
         this._deps,
         command.owner,
@@ -950,7 +950,7 @@ export class VaultCore {
     );
   }
 
-  async approveDispatch(command: import("./contracts.js").OwnerApproveDispatchCommand): Promise<DispatchResult> {
+  async ownerApproveDispatch(command: import("./contracts.js").OwnerApproveDispatchCommand): Promise<DispatchResult> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
@@ -992,7 +992,7 @@ export class VaultCore {
       }
     }
 
-    const result = await this.dispatchSecret({
+    const result = await this.agentDispatchSecret({
       vaultId: this._deps.vaultId,
       agent: { kind: "agent", id: pending.agentId },
       capability: capability,
@@ -1008,7 +1008,7 @@ export class VaultCore {
 
     await this._deps.pendingRequests.delete(command.requestId);
     
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.APPROVE_DISPATCH, AuditOutcome.SUCCEEDED, `approved dispatch ${command.requestId}${command.permanent ? " and granted permanent capability" : ""}`, {
         requestId: command.requestId,
         agentId: pending.agentId,
@@ -1019,7 +1019,7 @@ export class VaultCore {
     return result;
   }
 
-  async rejectDispatch(command: import("./contracts.js").OwnerRejectDispatchCommand): Promise<void> {
+  async ownerRejectDispatch(command: import("./contracts.js").OwnerRejectDispatchCommand): Promise<void> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
@@ -1030,7 +1030,7 @@ export class VaultCore {
 
     await this._deps.pendingRequests.delete(command.requestId);
 
-    await this.appendAudit(
+    await this._appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.REJECT_DISPATCH, AuditOutcome.SUCCEEDED, `rejected dispatch ${command.requestId}`, {
         requestId: command.requestId,
       }),

@@ -19,17 +19,17 @@ const ownerClient = createVaultClient({
   skipWarmup: true,
 });
 
-await ownerClient.createAgent({
+await ownerClient.ownerCreateAgent({
   agentId: "agent-1",
   nickname: "Planner",
 });
 
 let observed = null;
-const unsubscribe = ownerClient.onPendingCapabilityRequest((record) => {
+const unsubscribe = ownerClient.ownerOnPendingCapabilityRequest((record) => {
   observed = record;
 });
 
-const submitted = await ownerClient.submitCapabilityRequest({
+const submitted = await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },
   agentId: "agent-1",
   secretAliases: ["crm-token"],
@@ -43,11 +43,11 @@ assert.deepEqual(submitted.scope.methods, ["GET"]);
 assert.equal(submitted.scope.scope, "https://api.example.com/users/*");
 assert.ok(observed, "pending capability request observer should fire");
 
-const pending = await ownerClient.listPendingCapabilityRequests();
+const pending = await ownerClient.ownerListPendingCapabilityRequests();
 assert.equal(pending.length, 1);
 assert.equal(pending[0].justification, "Need to read user resources without per-id approval");
 
-const approved = await ownerClient.approveCapabilityRequest({
+const approved = await ownerClient.ownerApproveCapabilityRequest({
   requestId: pending[0].requestId,
   capabilityId: "cap-users-read",
 });
@@ -55,20 +55,20 @@ assert.equal(approved.capabilityId, "cap-users-read");
 assert.deepEqual(approved.methods, ["GET"]);
 assert.equal(approved.scope, "https://api.example.com/users/*");
 
-const capabilities = await ownerClient.listCapabilities({ agentId: "agent-1" });
+const capabilities = await ownerClient.ownerListCapabilities({ agentId: "agent-1" });
 assert.ok(capabilities.some((cap) => cap.capabilityId === "cap-users-read"));
 
-await ownerClient.submitCapabilityRequest({
+await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },
   agentId: "agent-1",
   secretAliases: ["crm-token"],
   scope: "https://api.example.com/admin/*",
   methods: ["POST"],
 });
-const pendingAfterSecondSubmit = await ownerClient.listPendingCapabilityRequests();
+const pendingAfterSecondSubmit = await ownerClient.ownerListPendingCapabilityRequests();
 assert.equal(pendingAfterSecondSubmit.length, 1);
-await ownerClient.rejectCapabilityRequest(pendingAfterSecondSubmit[0].requestId);
-assert.equal((await ownerClient.listPendingCapabilityRequests()).length, 0);
+await ownerClient.ownerRejectCapabilityRequest(pendingAfterSecondSubmit[0].requestId);
+assert.equal((await ownerClient.ownerListPendingCapabilityRequests()).length, 0);
 
 unsubscribe();
 

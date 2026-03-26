@@ -52,12 +52,12 @@ const client = createVaultClient({
   vault,
   skipWarmup: true,
 });
-await client.registerAgent({
+await client.ownerRegisterAgent({
   agentId: "agent-replay",
   publicKey: agentIdentity.publicKey,
 });
 
-const replayRecord = await client.writeSecret({
+const replayRecord = await client.ownerWriteSecret({
   alias: "replay-token",
   plaintext: "replay-secret",
   targetBindings: [
@@ -71,7 +71,7 @@ const replayRecord = await client.writeSecret({
   requestedAt: new Date().toISOString(),
 });
 
-await client.grantCapability({
+await client.ownerGrantCapability({
   agentId: "agent-replay",
   secretAliases: ["replay-token"],
   scope: "https://allowed.example.com/replay",
@@ -119,11 +119,11 @@ const request = {
   method: "POST",
 };
 
-const first = await authority.dispatchSecret(request);
+const first = await authority.agentDispatchSecret(request);
 assert.equal(first.status, "SUCCEEDED");
 
 await assert.rejects(
-  () => authority.dispatchSecret(request),
+  () => authority.agentDispatchSecret(request),
   (error) => {
     assert.equal(error?.code, "VAULT_DISPATCH_DENIED");
     assert.match(String(error?.message), /request replay detected/);
@@ -131,7 +131,7 @@ await assert.rejects(
   },
 );
 
-const replayAudit = await client.readAudit({ secretAlias: "replay-token" });
+const replayAudit = await client.ownerReadAudit({ secretAlias: "replay-token" });
 assert.ok(replayAudit.some((entry) => entry.outcome === "DENIED" && /replay/.test(entry.detail)));
 
 console.log("replay guard smoke test passed");

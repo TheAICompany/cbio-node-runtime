@@ -7,10 +7,10 @@ import type { VaultService } from "./index.js";
 export class LocalVaultTransport implements AgentDispatchTransport {
   constructor(private readonly _vault: VaultService) {}
 
-  async dispatch(
+  async agentDispatch(
     request: import("../vault-core/index.js").DispatchRequest,
   ): Promise<import("../vault-core/index.js").DispatchResult> {
-    const response = await this._vault.handleAgentDispatch({
+    const response = await this._vault.agentHandleDispatch({
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,

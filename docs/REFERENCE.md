@@ -36,42 +36,42 @@ Returns a `string[]` of vault IDs found in the storage.
 
 ### 1. Managed Identity (Recommended)
 Identity material (private keys) generated and stored securely within the vault's own registry. 
-- Use `client.createAgent(...)` to manage these.
+- Use `client.ownerCreateAgent(...)` to manage these.
 - **Session Tokens**: Owners can issue revocable `sat_...` tokens for managed agents to enable stateless authentication without raw private keys.
 
 ### 2. External Identity
-Identity material managed by the user outside the vault. Registered via `client.registerAgent({ publicKey, ... })`.
+Identity material managed by the user outside the vault. Registered via `client.ownerRegisterAgent({ publicKey, ... })`.
 
 ## Vault Client (Owner/Admin)
 
 The `VaultClient` provides the administrative interface for the vault.
 
 ### Core Operations
-- `writeSecret(...)`: Store a secret and bind it to specific targets in one step.
-- `createAgent(...)`: Generate and host a new agent identity.
-- `listAgents()`: Enumerate authorized agents and retrieve managed private keys.
-- `grantCapability(...)`: Assign specific secret-use permissions to an agent. 
-- `submitCapabilityRequest(...)`: Submit a broader pending capability request for later owner review.
-- `listPendingCapabilityRequests()`: List proactive capability requests that are waiting for approval.
-- `approveCapabilityRequest({ requestId, capabilityId })`: Turn a pending capability request into a real stored capability.
-- `rejectCapabilityRequest(requestId)`: Deny a pending capability request.
-- `onPendingCapabilityRequest(callback)`: Register a real-time observer to receive proactive capability requests.
-- `listPendingDispatches()`: List agent requests awaiting manual approval (HITL).
-- `approveDispatch({ requestId, permanent, skipAudit })`: Grant a stalled request manual authorization.
-- `onPendingRequest(callback)`: Register a real-time observer to receive push notifications for discovery requests.
-- `rejectDispatch(requestId)`: Deny a stalled request.
-- `issueSessionToken(input)`: Issue a session token for a specific agent.
-- `issueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
-- `revokeSessionToken({ token })`: Invalidate a specific session token.
-- `exportSecret(...)`: Reveal a secret's plaintext (requires active authority).
-- `readAudit(...)`: Access the append-only record of all vault actions.
+- `ownerWriteSecret(...)`: Store a secret and bind it to specific targets in one step.
+- `ownerCreateAgent(...)`: Generate and host a new agent identity.
+- `ownerListAgents()`: Enumerate authorized agents and retrieve managed private keys.
+- `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. 
+- `ownerSubmitCapabilityRequest(...)`: Submit a broader pending capability request for later owner review.
+- `ownerListPendingCapabilityRequests()`: List proactive capability requests that are waiting for approval.
+- `ownerApproveCapabilityRequest({ requestId, capabilityId })`: Turn a pending capability request into a real stored capability.
+- `ownerRejectCapabilityRequest(requestId)`: Deny a pending capability request.
+- `ownerOnPendingCapabilityRequest(callback)`: Register a real-time observer to receive proactive capability requests.
+- `ownerListPendingDispatches()`: List agent requests awaiting manual approval (HITL).
+- `ownerApproveDispatch({ requestId, permanent, skipAudit })`: Grant a stalled request manual authorization.
+- `ownerOnPendingDispatch(callback)`: Register a real-time observer to receive push notifications for discovery requests.
+- `ownerRejectDispatch(requestId)`: Deny a stalled request.
+- `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
+- `ownerIssueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
+- `ownerRevokeSessionToken({ token })`: Invalidate a specific session token.
+- `ownerExportSecret(...)`: Reveal a secret's plaintext (requires active authority).
+- `ownerReadAudit(...)`: Access the append-only record of all vault actions.
 
 ## Agent Client (Consumer)
 
 The `AgentClient` is used by delegated processes (e.g., LLMs or background workers) to perform authorized actions.
 
 ### Core Operations
-- `dispatch(...)`: Use a granted capability to send a secret to an authorized target.
+- `agentDispatch(...)`: Use a granted capability to send a secret to an authorized target.
   - **Status**: Returns `SUCCEEDED`, `FAILED`, or `PENDING`.
   - **Discovery Flow**: If an agent attempts an action not explicitly in its white-list, the request is automatically stalled as `PENDING` for owner review. 
 - **Security**: The agent never handles the vault's master password. By using **Session Tokens**, the agent also avoids handling its own raw private key in memory.
@@ -89,11 +89,11 @@ This is useful for LLM-driven planners that can infer the needed scope ahead of 
 - methods `["GET"]`
 
 The request stays pending until the owner approves or rejects it:
-- `submitCapabilityRequest(...)` creates the request record.
-- `listPendingCapabilityRequests()` reads the current queue.
-- `approveCapabilityRequest(...)` persists a real capability.
-- `rejectCapabilityRequest(...)` removes the request without granting access.
-- `onPendingCapabilityRequest(...)` supports push-style owner interfaces.
+- `ownerSubmitCapabilityRequest(...)` creates the request record.
+- `ownerListPendingCapabilityRequests()` reads the current queue.
+- `ownerApproveCapabilityRequest(...)` persists a real capability.
+- `ownerRejectCapabilityRequest(...)` removes the request without granting access.
+- `ownerOnPendingCapabilityRequest(...)` supports push-style owner interfaces.
 
 The proactive request flow does not replace dispatch discovery. It is an additional, explicit path for requesting broader access without generating one pending dispatch per resource ID.
 

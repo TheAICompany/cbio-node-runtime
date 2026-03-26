@@ -18,5 +18,5 @@ export async function handleVaultHttpDispatch(
       error: { code: "VAULT_INVALID_REQUEST_BODY", message: "Request body must be a JSON object" },
     };
   }
-  return service.handleAgentDispatch(body as VaultAgentDispatchRequest);
+  return service.agentHandleDispatch(body as VaultAgentDispatchRequest);
 }

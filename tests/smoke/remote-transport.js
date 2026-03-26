@@ -42,7 +42,7 @@ async function test() {
       proof: { signature: "sig-1" }
     };
 
-    const result = await transport.dispatch(mockRequest);
+    const result = await transport.agentDispatch(mockRequest);
 
     assert.equal(result.status, "SUCCEEDED");
     assert.equal(result.responseBody, "mock-ok");

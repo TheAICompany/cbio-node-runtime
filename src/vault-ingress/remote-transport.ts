@@ -15,7 +15,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     private readonly _fetchImpl: typeof fetch = fetch,
   ) {}
 
-  async dispatch(request: DispatchRequest): Promise<DispatchResult> {
+  async agentDispatch(request: DispatchRequest): Promise<DispatchResult> {
     const remoteRequest: VaultAgentDispatchRequest = {
       vaultId: request.vaultId.value,
       requestId: request.requestId,

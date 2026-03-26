@@ -52,25 +52,25 @@ try {
   const client = createVaultClient({
     vault,
   });
-  const unscopedRecord = await client.storeSecret({
+  const unscopedRecord = await client.ownerStoreSecret({
     alias: "unscoped-token",
     plaintext: "secret-0",
   });
   assert.equal(unscopedRecord.targetBindings.length, 0);
 
-  const unscopedArrayRecord = await client.storeSecret({
+  const unscopedArrayRecord = await client.ownerStoreSecret({
     alias: "unscoped-array-token",
     plaintext: "secret-0b",
   });
   assert.equal(unscopedArrayRecord.targetBindings.length, 0);
 
-  const storedThenDefinedRecord = await client.storeSecret({
+  const storedThenDefinedRecord = await client.ownerStoreSecret({
     alias: "stored-then-defined-token",
     plaintext: "secret-1",
   });
   assert.equal(storedThenDefinedRecord.targetBindings.length, 0);
 
-  const definedRecord = await client.defineSecretTargets({
+  const definedRecord = await client.ownerDefineSecretTargets({
     alias: "stored-then-defined-token",
     targetBindings: [
       {
@@ -84,7 +84,7 @@ try {
   assert.equal(definedRecord.targetBindings.length, 1);
 
   await assert.rejects(
-    () => client.writeSecret({
+    () => client.ownerWriteSecret({
       alias: "malformed-token",
       plaintext: "secret-bad",
       targetBindings: [
@@ -99,7 +99,7 @@ try {
     (error) => error instanceof VaultCoreError && error.code === "VAULT_WRITE_DENIED",
   );
 
-  const restrictedRecord = await client.writeSecret({
+  const restrictedRecord = await client.ownerWriteSecret({
     alias: "restricted-token",
     plaintext: "secret-2",
     targetBindings: [
@@ -113,7 +113,7 @@ try {
   });
 
   const agentIdentity = createIdentity();
-  await client.registerAgent({
+  await client.ownerRegisterAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
   });
@@ -128,7 +128,7 @@ try {
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
-  await client.grantCapability({ capability: restrictedCapability });
+  await client.ownerGrantCapability({ capability: restrictedCapability });
   const storedThenDefinedCapability = {
     vaultId: authority.vaultId,
     capabilityId: "cap-stored-then-defined",
@@ -140,7 +140,7 @@ try {
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
-  await client.grantCapability({ capability: storedThenDefinedCapability });
+  await client.ownerGrantCapability({ capability: storedThenDefinedCapability });
 
   const agent = createAgentClient({
     agentIdentity: { agentId: "agent-restricted" },
@@ -162,27 +162,27 @@ try {
   });
 
   await assert.rejects(
-    () => agent.dispatch({
+    () => agent.agentDispatch({
       secretAlias: "unscoped-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
     }),
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
-  const storedThenDefinedResult = await storedThenDefinedAgent.dispatch({
+  const storedThenDefinedResult = await storedThenDefinedAgent.agentDispatch({
     secretAlias: "stored-then-defined-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(storedThenDefinedResult.status, "SUCCEEDED");
 
-  const clearedRecord = await client.defineSecretTargets({
+  const clearedRecord = await client.ownerDefineSecretTargets({
     alias: "stored-then-defined-token",
     targetBindings: [],
   });
   assert.equal(clearedRecord.targetBindings.length, 0);
   await assert.rejects(
-    () => storedThenDefinedAgent.dispatch({
+    () => storedThenDefinedAgent.agentDispatch({
       secretAlias: "stored-then-defined-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
@@ -191,7 +191,7 @@ try {
   );
 
   await assert.rejects(
-    () => agent.dispatch({
+    () => agent.agentDispatch({
       secretAlias: "restricted-token",
       targetUrl: "https://denied.example.com/resource",
       method: "POST",
@@ -199,14 +199,14 @@ try {
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
 
-  const audit = await client.readAudit({ secretAlias: "restricted-token" });
+  const audit = await client.ownerReadAudit({ secretAlias: "restricted-token" });
   assert.ok(audit.length >= 1);
   assert.ok(audit.some((entry) => entry.outcome === "DENIED" && /target denied|record target denied/.test(entry.detail)));
-  const exportedRestrictedSecret = await client.exportSecret({ alias: "restricted-token" });
+  const exportedRestrictedSecret = await client.ownerExportSecret({ alias: "restricted-token" });
   assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
   await assert.rejects(
-    () => agent.dispatch({
+    () => agent.agentDispatch({
       secretAlias: "restricted-token",
       targetUrl: "https://allowed.example.com/other",
       method: "POST",
@@ -229,7 +229,7 @@ try {
     },
     auditRequired: true,
   };
-  await client.grantCapability({ capability: rateLimitedCapability });
+  await client.ownerGrantCapability({ capability: rateLimitedCapability });
   const rateLimitedAgent = createAgentClient({
     agentIdentity: { agentId: "agent-restricted" },
     capability: {
@@ -239,14 +239,14 @@ try {
     transport: new LocalVaultTransport(vault),
     clock: new SystemClock(),
   });
-  const firstLimited = await rateLimitedAgent.dispatch({
+  const firstLimited = await rateLimitedAgent.agentDispatch({
     secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(firstLimited.status, "SUCCEEDED");
   await assert.rejects(
-    () => rateLimitedAgent.dispatch({
+    () => rateLimitedAgent.agentDispatch({
       secretAlias: "restricted-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
@@ -257,7 +257,7 @@ try {
   const revokedVersion = await revocations.revoke(authority.vaultId, "agent-restricted", "cap-restricted");
   assert.equal(revokedVersion, 1);
   await assert.rejects(
-    () => agent.dispatch({
+    () => agent.agentDispatch({
       secretAlias: "restricted-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
@@ -266,7 +266,7 @@ try {
   );
 
   await assert.rejects(
-    () => client.writeSecret({
+    () => client.ownerWriteSecret({
       alias: "restricted-token",
       plaintext: "replacement-secret",
       targetBindings: [
@@ -297,7 +297,7 @@ try {
   const reloadedClient = createVaultClient({
     vault: reloadedVault,
   });
-  await reloadedClient.registerAgent({
+  await reloadedClient.ownerRegisterAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
   });
@@ -410,7 +410,7 @@ try {
   const restartedClient = createVaultClient({
     vault: restartedVault,
   });
-  await restartedClient.registerAgent({
+  await restartedClient.ownerRegisterAgent({
     agentId: "agent-restricted",
     publicKey: agentIdentity.publicKey,
   });
@@ -468,12 +468,12 @@ try {
     (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /rate limit/.test(error.message),
   );
 
-  const reloadedAudit = await client.readAudit({ secretAlias: "restricted-token" });
+  const reloadedAudit = await client.ownerReadAudit({ secretAlias: "restricted-token" });
   assert.ok(reloadedAudit.some((entry) => entry.action === "REASSIGN_ALIAS" && entry.outcome === "DENIED"));
   assert.ok(reloadedAudit.some((entry) => entry.action === "EXPORT_SECRET" && entry.outcome === "SUCCEEDED"));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "DENIED" && /capability revoked/.test(entry.detail)));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "DENIED" && /path denied|capability rate limit exceeded/.test(entry.detail)));
-  const storedThenDefinedAudit = await client.readAudit({ secretAlias: "stored-then-defined-token" });
+  const storedThenDefinedAudit = await client.ownerReadAudit({ secretAlias: "stored-then-defined-token" });
   assert.ok(storedThenDefinedAudit.some((entry) => entry.action === "DEFINE_SECRET_TARGETS" && entry.outcome === "SUCCEEDED"));
 
   console.log("policy and persistence smoke test passed");

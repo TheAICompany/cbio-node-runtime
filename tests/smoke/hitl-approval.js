@@ -15,19 +15,19 @@ async function testHitlApproval() {
   });
 
   // 2. Create and Register Agent
-  const [agentRecord, privateKey] = await ownerClient.createAgent({
+  const [agentRecord, privateKey] = await ownerClient.ownerCreateAgent({
     agentId: 'agent-1'
   });
 
   // 3. Register a Secret
-  await ownerClient.writeSecret({
+  await ownerClient.ownerWriteSecret({
     alias: 'top-secret',
     plaintext: 'shhh!',
     targetBindings: [{ kind: 'site', targetId: 'mock-api', targetUrl: 'https://api.example.com/*' }]
   });
 
   // 4. Grant Capability (NO LONGER REQUIRES EXPLICIT FLAG)
-  await ownerClient.grantCapability({
+  await ownerClient.ownerGrantCapability({
     agentId: 'agent-1',
     secretAliases: ['top-secret'],
     scope: 'https://api.example.com/*',
@@ -35,7 +35,7 @@ async function testHitlApproval() {
     // requiresApproval: true removed
   });
 
-  const capabilities = await ownerClient.listCapabilities({ agentId: 'agent-1' });
+  const capabilities = await ownerClient.ownerListCapabilities({ agentId: 'agent-1' });
   const agentClient = createAgentClient({
     agentIdentity: { agentId: 'agent-1', privateKey },
     capability: capabilities[0],
@@ -44,7 +44,7 @@ async function testHitlApproval() {
 
   // 5. Agent attempts dispatch -> Should be ALLOWED (already in whitelist)
   console.log('Agent dispatching request (on whitelist)...');
-  const result1 = await agentClient.dispatch({
+  const result1 = await agentClient.agentDispatch({
     targetUrl: 'https://api.example.com/data',
     method: 'POST',
     secretAlias: 'top-secret',
@@ -57,12 +57,12 @@ async function testHitlApproval() {
   // 6. Discovery Flow: Owner listens via observer
   console.log('--- Testing Discovery Flow with Observer ---');
   let interceptedRequest = null;
-  const unsubscribe = ownerClient.onPendingRequest((req) => {
+  const unsubscribe = ownerClient.ownerOnPendingDispatch((req) => {
     console.log('Observer caught request:', req.requestId);
     interceptedRequest = req;
   });
 
-  const unknownResult = await agentClient.dispatch({
+  const unknownResult = await agentClient.agentDispatch({
     targetUrl: 'https://other-api.example.com/data',
     method: 'GET',
     secretAlias: 'top-secret',
@@ -74,12 +74,12 @@ async function testHitlApproval() {
   unsubscribe();
 
   // 7. Owner lists pending requests (to get the object for approval)
-  const pending = await ownerClient.listPendingDispatches();
+  const pending = await ownerClient.ownerListPendingDispatches();
   assert.strictEqual(pending.length, 1);
 
   // 8. Owner approves and makes it PERMANENT
   console.log('Owner approving and granting permanent capability...');
-  const approveResult = await ownerClient.approveDispatch({
+  const approveResult = await ownerClient.ownerApproveDispatch({
     requestId: pending[0].requestId,
     permanent: true
   });
@@ -88,7 +88,7 @@ async function testHitlApproval() {
   assert.strictEqual(approveResult.status, 'SUCCEEDED', 'Approved discovery should succeed');
 
   // 9. Verify new capability is granted
-  const finalCapabilities = await ownerClient.listCapabilities({ agentId: 'agent-1' });
+  const finalCapabilities = await ownerClient.ownerListCapabilities({ agentId: 'agent-1' });
   console.log('Final capabilities count:', finalCapabilities.length);
   // Should have the original one + the newly granted discovery one
   assert.strictEqual(finalCapabilities.length, 2, 'Should have 2 capabilities after permanent grant');

@@ -39,71 +39,71 @@ export interface VaultClient {
   /**
    * Securely stores a new secret in the vault.
    */
-  storeSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  ownerStoreSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
 
   /**
    * Refines the allowed targets for an existing secret.
    */
-  defineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  ownerDefineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
 
   /**
    * Atomic operation to store a secret and define its targets in one step.
    */
-  writeSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  ownerWriteSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
 
   /**
    * Exports a secret's plaintext.
    */
-  exportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+  ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
 
   /**
    * Grants a specific capability to an agent.
    */
-  grantCapability(input: VaultGrantCapabilityInput): Promise<void>;
+  ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void>;
 
   /**
    * Reads the tamper-evident audit log for the vault.
    */
-  readAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
+  ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
 
-  registerAgent(input: VaultRegisterAgentInput): Promise<void>;
+  ownerRegisterAgent(input: VaultRegisterAgentInput): Promise<void>;
 
   /**
    * Generates a new identity and registers it as an agent in one step.
    * The private key is stored in the vault for managed custody.
    */
-  createAgent(input: VaultCreateAgentInput): Promise<readonly [import("../../vault-core/index.js").AgentIdentityRecord, string]>;
+  ownerCreateAgent(input: VaultCreateAgentInput): Promise<readonly [import("../../vault-core/index.js").AgentIdentityRecord, string]>;
 
   /**
    * Registers a custom HTTP flow for complex secret usage.
    */
-  registerFlow(input: VaultRegisterFlowInput): Promise<void>;
+  ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<void>;
 
   /**
    * Permanently deletes a secret from the vault.
    */
-  deleteSecret(input: VaultDeleteSecretInput): Promise<void>;
+  ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void>;
 
   /**
    * Lists all agents registered in the vault.
    */
-  listAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
+  ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
 
   /**
    * Lists all active capabilities granted to agents.
    */
-  listCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  ownerListCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
 
   /**
    * Revokes a previously granted capability.
    */
-  revokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
+  ownerRevokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
 
-  submitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
-  listPendingCapabilityRequests(): Promise<readonly import("../../vault-core/index.js").PendingCapabilityRequestRecord[]>;
-  approveCapabilityRequest(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").AgentCapability>;
-  rejectCapabilityRequest(requestId: string): Promise<void>;
-  onPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
+  ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
+  ownerListPendingCapabilityRequests(): Promise<readonly import("../../vault-core/index.js").PendingCapabilityRequestRecord[]>;
+  ownerApproveCapabilityRequest(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").AgentCapability>;
+  ownerRejectCapabilityRequest(requestId: string): Promise<void>;
+  ownerOnPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
 }
 
 export interface CreateVaultClientOptions {
@@ -129,11 +129,11 @@ class DefaultVaultClient implements VaultClient {
     this._identityId = _identity?.identityId ?? VAULT_MASTER_ID;
   }
 
-  async storeSecret(input: OwnerStoreSecretInput) {
+  async ownerStoreSecret(input: OwnerStoreSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.alias}:write_secret`;
     
-    return this._vault.writeSecret({
+    return this._vault.ownerWriteSecret({
       kind: "owner.write_secret",
       vaultId: this._vault.vaultId,
       requestId,
@@ -148,12 +148,12 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async defineSecretTargets(input: OwnerDefineSecretTargetsInput) {
+  async ownerDefineSecretTargets(input: OwnerDefineSecretTargetsInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.alias}:define_secret_targets`;
     const targetBindings = [...input.targetBindings];
     
-    return this._vault.defineSecretTargets({
+    return this._vault.ownerDefineSecretTargets({
       vaultId: this._vault.vaultId,
       requestId,
       owner: {
@@ -166,12 +166,12 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async writeSecret(input: OwnerWriteSecretInput) {
+  async ownerWriteSecret(input: OwnerWriteSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.alias}:write_secret`;
     const targetBindings = [...input.targetBindings];
     
-    return this._vault.writeSecret({
+    return this._vault.ownerWriteSecret({
       kind: "owner.write_secret",
       vaultId: this._vault.vaultId,
       requestId,
@@ -186,11 +186,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async readAudit(query: VaultAuditQueryInput = {}) {
+  async ownerReadAudit(query: VaultAuditQueryInput = {}) {
     const requestedAt = this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:read_audit`;
     
-    return this._vault.readAudit({
+    return this._vault.ownerReadAudit({
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
@@ -202,11 +202,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async exportSecret(input: VaultExportSecretInput) {
+  async ownerExportSecret(input: VaultExportSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.alias}:export_secret`;
     
-    return this._vault.exportSecret({
+    return this._vault.ownerExportSecret({
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
@@ -218,7 +218,7 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async registerAgent(input: VaultRegisterAgentInput): Promise<void> {
+  async ownerRegisterAgent(input: VaultRegisterAgentInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.agentId}:register_agent_identity`;
     const agentIdentity = {
@@ -230,7 +230,7 @@ class DefaultVaultClient implements VaultClient {
       nickname: input.nickname,
     };
     
-    await this._vault.registerAgentIdentity({
+    await this._vault.ownerRegisterAgentIdentity({
       vaultId: this._vault.vaultId,
       requestId,
       owner: {
@@ -242,11 +242,11 @@ class DefaultVaultClient implements VaultClient {
     });
 
     if (!this._skipWarmup) {
-      await this.issueSessionToken({ agentId: input.agentId, requestedAt });
+      await this.ownerIssueSessionToken({ agentId: input.agentId, requestedAt });
     }
   }
 
-  async createAgent(input: VaultCreateAgentInput) {
+  async ownerCreateAgent(input: VaultCreateAgentInput) {
     const identity = createIdentity();
     const record = {
       vaultId: this._vault.vaultId,
@@ -257,11 +257,11 @@ class DefaultVaultClient implements VaultClient {
       nickname: input.nickname,
     };
     
-    await this.registerAgent(record);
+    await this.ownerRegisterAgent(record);
     return [record, identity.privateKey] as const;
   }
 
-  async grantCapability(input: VaultGrantCapabilityInput): Promise<void> {
+  async ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const capabilityId = input.capabilityId ?? `cap_${crypto.randomUUID()}`;
     const requestId = `${this._identityId}:${requestedAt}:${capabilityId}:register_capability`;
@@ -279,7 +279,7 @@ class DefaultVaultClient implements VaultClient {
       issuedAt: requestedAt,
     };
     
-    await this._vault.registerCapability({
+    await this._vault.ownerRegisterCapability({
       vaultId: this._vault.vaultId,
       requestId,
       owner: {
@@ -291,7 +291,7 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async registerFlow(input: VaultRegisterFlowInput): Promise<void> {
+  async ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.flowId}:register_custom_flow`;
     const flow = {
@@ -303,7 +303,7 @@ class DefaultVaultClient implements VaultClient {
       responseSecret: input.responseSecret,
     };
     
-    await this._vault.registerCustomFlow({
+    await this._vault.ownerRegisterCustomFlow({
       vaultId: this._vault.vaultId,
       requestId,
       owner: {
@@ -315,11 +315,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async deleteSecret(input: VaultDeleteSecretInput): Promise<void> {
+  async ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.alias}:delete_secret`;
     
-    await this._vault.deleteSecret({
+    await this._vault.ownerDeleteSecret({
       vaultId: this._vault.vaultId,
       requestId,
       owner: {
@@ -331,11 +331,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async listAgents(input: VaultListAgentsInput = {}) {
+  async ownerListAgents(input: VaultListAgentsInput = {}) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:list_agents`;
     
-    return this._vault.listAgents({
+    return this._vault.ownerListAgents({
       vaultId: this._vault.vaultId,
       requestId,
       requestedAt,
@@ -346,11 +346,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async listCapabilities(input: VaultListCapabilitiesInput = {}) {
+  async ownerListCapabilities(input: VaultListCapabilitiesInput = {}) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:list_capabilities`;
     
-    return this._vault.listCapabilities({
+    return this._vault.ownerListCapabilities({
       vaultId: this._vault.vaultId,
       requestId,
       requestedAt,
@@ -362,11 +362,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async revokeCapability(input: VaultRevokeCapabilityInput) {
+  async ownerRevokeCapability(input: VaultRevokeCapabilityInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:revoke_capability`;
 
-    return this._vault.revokeCapability({
+    return this._vault.ownerRevokeCapability({
       vaultId: this._vault.vaultId,
       requestId,
       requestedAt,
@@ -379,11 +379,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async issueSessionToken(input: VaultIssueSessionTokenInput) {
+  async ownerIssueSessionToken(input: VaultIssueSessionTokenInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:issue_session_token`;
 
-    return this._vault.issueSessionToken({
+    return this._vault.ownerIssueSessionToken({
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
@@ -395,8 +395,8 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async revokeSessionToken(input: VaultRevokeSessionTokenInput) {
-    return this._vault.revokeSessionToken({
+  async ownerRevokeSessionToken(input: VaultRevokeSessionTokenInput) {
+    return this._vault.ownerRevokeSessionToken({
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
@@ -406,11 +406,11 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async submitCapabilityRequest(input: VaultSubmitCapabilityRequestInput) {
+  async ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${input.requester.id}:${requestedAt}:${input.agentId}:submit_capability_request`;
 
-    return this._vault.submitCapabilityRequest({
+    return this._vault.ownerSubmitCapabilityRequest({
       vaultId: this._vault.vaultId,
       requestId,
       requester: input.requester,
@@ -429,29 +429,29 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async listPendingCapabilityRequests() {
-    return this._vault.listPendingCapabilityRequests({
+  async ownerListPendingCapabilityRequests() {
+    return this._vault.ownerListPendingCapabilityRequests({
       vaultId: this._vault.vaultId,
       owner: { kind: "owner", id: this._identityId },
     });
   }
 
-  async listPendingDispatches() {
-    return this._vault.listPendingDispatches({
+  async ownerListPendingDispatches() {
+    return this._vault.ownerListPendingDispatches({
       vaultId: this._vault.vaultId,
       owner: { kind: "owner", id: this._identityId },
     });
   }
 
-  async issueAllSessionTokens() {
-    return this._vault.issueAllAgentSessionTokens({
+  async ownerIssueAllSessionTokens() {
+    return this._vault.ownerIssueAllAgentSessionTokens({
       vaultId: this._vault.vaultId,
       actor: { kind: "owner", id: this._identityId },
     });
   }
 
-  async approveDispatch(input: VaultApproveDispatchInput) {
-    return this._vault.approveDispatch({
+  async ownerApproveDispatch(input: VaultApproveDispatchInput) {
+    return this._vault.ownerApproveDispatch({
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
       permanent: input.permanent,
@@ -460,8 +460,8 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async approveCapabilityRequest(input: VaultApproveCapabilityRequestInput) {
-    return this._vault.approveCapabilityRequest({
+  async ownerApproveCapabilityRequest(input: VaultApproveCapabilityRequestInput) {
+    return this._vault.ownerApproveCapabilityRequest({
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
       capabilityId: input.capabilityId,
@@ -469,28 +469,28 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async rejectDispatch(requestId: string) {
-    return this._vault.rejectDispatch({
+  async ownerRejectDispatch(requestId: string) {
+    return this._vault.ownerRejectDispatch({
       vaultId: this._vault.vaultId,
       requestId,
       owner: { kind: "owner", id: this._identityId },
     });
   }
 
-  async rejectCapabilityRequest(requestId: string) {
-    return this._vault.rejectCapabilityRequest({
+  async ownerRejectCapabilityRequest(requestId: string) {
+    return this._vault.ownerRejectCapabilityRequest({
       vaultId: this._vault.vaultId,
       requestId,
       owner: { kind: "owner", id: this._identityId },
     });
   }
 
-  onPendingRequest(callback: (record: import("../../vault-core/index.js").PendingDispatchRecord) => void): () => void {
-    return this._vault.onPendingRequest(callback);
+  ownerOnPendingDispatch(callback: (record: import("../../vault-core/index.js").PendingDispatchRecord) => void): () => void {
+    return this._vault.ownerOnPendingDispatch(callback);
   }
 
-  onPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void {
-    return this._vault.onPendingCapabilityRequest(callback);
+  ownerOnPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void {
+    return this._vault.ownerOnPendingCapabilityRequest(callback);
   }
 }
 
@@ -549,7 +549,7 @@ export function createVaultClient(options: CreateVaultClientOptions): VaultClien
 
   if (!options.skipWarmup) {
     // Warmup session tokens by default unless explicitly skipped
-    client.issueAllSessionTokens().catch((err: unknown) => {
+    client.ownerIssueAllSessionTokens().catch((err: unknown) => {
       console.error("VaultClient: failed to warmup session tokens:", err);
     });
   }

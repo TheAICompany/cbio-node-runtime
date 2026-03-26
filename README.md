@@ -68,7 +68,7 @@ import { createVaultClient } from '@the-ai-company/cbio-node-runtime';
 const client = createVaultClient({ vault: vault.vault });
 
 // Generate and register a new agent in one step
-const [agentRecord, agentPrivateKey] = await client.createAgent({
+const [agentRecord, agentPrivateKey] = await client.ownerCreateAgent({
   agentId: 'worker-1',
   nickname: 'Background Worker'
 });
@@ -78,17 +78,17 @@ console.log(`Agent public key: ${agentRecord.publicKey}`);
 
 // 4. Issue a Session Token (Optional but Recommended)
 // Avoid passing the raw private key to agent processes (v1.48+).
-const session = await client.issueSessionToken({ agentId: 'worker-1' });
+const session = await client.ownerIssueSessionToken({ agentId: 'worker-1' });
 
 // RECOMENDED (v1.48.4+): Batch issue tokens for all agents at once
-const tokens = await client.issueAllSessionTokens();
+const tokens = await client.ownerIssueAllSessionTokens();
 ```
 
 ### 5. Secret Management (Owner)
 
 ```ts
 // Write a secret and bind it to a target site
-const record = await client.writeSecret({
+const record = await client.ownerWriteSecret({
   alias: 'api-token',
   plaintext: 'super-secret-value',
   targetBindings: [{
@@ -100,7 +100,7 @@ const record = await client.writeSecret({
 });
 
 // 4. Grant agent capabilities
-await client.grantCapability({
+await client.ownerGrantCapability({
   agentId: 'worker-1',
   secretAliases: ['api-token'],
   scope: 'https://api.example.com/*',
@@ -131,7 +131,7 @@ const agent = createAgentClient({
   vault: vault.vault
 });
 
-const result = await agent.dispatch({ ... });
+const result = await agent.agentDispatch({ ... });
 ```
 
 #### Using a Signature (Stateful/Key-based)
@@ -151,7 +151,7 @@ const agent = createAgentClient({
 If an LLM or orchestration layer already knows it needs a broader scope, it can ask for that scope up front instead of triggering one pending dispatch per concrete URL.
 
 ```ts
-const request = await client.submitCapabilityRequest({
+const request = await client.ownerSubmitCapabilityRequest({
   requester: { kind: 'trusted_executor', id: 'llm-planner' },
   agentId: 'worker-1',
   secretAliases: ['api-token'],
@@ -160,19 +160,19 @@ const request = await client.submitCapabilityRequest({
   justification: 'Need collection-level user read access'
 });
 
-const pendingRequests = await client.listPendingCapabilityRequests();
+const pendingRequests = await client.ownerListPendingCapabilityRequests();
 
-const capability = await client.approveCapabilityRequest({
+const capability = await client.ownerApproveCapabilityRequest({
   requestId: pendingRequests[0].requestId,
   capabilityId: 'cap-users-read'
 });
 ```
 
 This flow is separate from dispatch discovery:
-- `submitCapabilityRequest(...)` creates a pending capability request for owner review.
-- `onPendingCapabilityRequest(...)` pushes new requests to the owner UI or controller.
-- `approveCapabilityRequest(...)` turns the request into a real stored capability.
-- `rejectCapabilityRequest(...)` drops the request without granting access.
+- `ownerSubmitCapabilityRequest(...)` creates a pending capability request for owner review.
+- `ownerOnPendingCapabilityRequest(...)` pushes new requests to the owner UI or controller.
+- `ownerApproveCapabilityRequest(...)` turns the request into a real stored capability.
+- `ownerRejectCapabilityRequest(...)` drops the request without granting access.
 
 ---
 
@@ -194,21 +194,21 @@ The system uses a **Discovery-first** model. If an agent attempts an action not 
 
 ```ts
 // In Agent process
-const result = await agent.dispatch({ ... });
+const result = await agent.agentDispatch({ ... });
 if (result.status === 'PENDING') {
   console.log("Discovery needed: Waiting for owner approval...");
 }
 
 // OR: Use the Observer for real-time push (v1.48.4+)
-ownerClient.onPendingRequest((req) => {
+ownerClient.ownerOnPendingDispatch((req) => {
   console.log("New discovery request:", req.requestId);
 });
 
 // In Owner process (GUI or Script)
-const pending = await client.listPendingDispatches();
+const pending = await client.ownerListPendingDispatches();
 if (pending.length > 0) {
   // Inspect and approve the request, optionally making it permanent
-  await client.approveDispatch({ 
+  await client.ownerApproveDispatch({ 
     requestId: pending[0].requestId, 
     permanent: true 
   });

@@ -14,5 +14,5 @@ export interface AgentSigner {
 }
 
 export interface AgentDispatchTransport {
-  dispatch(request: import("../../vault-core/index.js").DispatchRequest): Promise<import("../../vault-core/index.js").DispatchResult>;
+  agentDispatch(request: import("../../vault-core/index.js").DispatchRequest): Promise<import("../../vault-core/index.js").DispatchResult>;
 }
