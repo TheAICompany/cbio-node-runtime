@@ -1,5 +1,6 @@
 import { LocalSigner } from "../../protocol/crypto.js";
 import { createIdentity, restoreIdentity, type CreatedIdentity } from "../../runtime/identity.js";
+import { deriveIdentityId } from "../../protocol/identity.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
@@ -118,6 +119,7 @@ export interface CreateVaultClientOptions {
 }
 
 const VAULT_MASTER_ID = "vault-master";
+const VAULT_AGENT_ID_PREFIX = "vagt_";
 
 class DefaultVaultClient implements VaultClient {
   private readonly _identityId: string;
@@ -130,6 +132,10 @@ class DefaultVaultClient implements VaultClient {
     private readonly _skipWarmup: boolean = false,
   ) {
     this._identityId = _identity?.identityId ?? VAULT_MASTER_ID;
+  }
+
+  private _newVaultAgentId(): string {
+    return `${VAULT_AGENT_ID_PREFIX}${crypto.randomUUID()}`;
   }
 
   async ownerStoreSecret(input: OwnerStoreSecretInput) {
@@ -223,6 +229,7 @@ class DefaultVaultClient implements VaultClient {
 
   private async _ownerRegisterManagedAgentIdentity(input: {
     agentId: string;
+    identityId: string;
     publicKey: string;
     privateKey?: string;
     metadata?: Record<string, any>;
@@ -234,6 +241,7 @@ class DefaultVaultClient implements VaultClient {
     const agentIdentity = {
       vaultId: this._vault.vaultId,
       agentId: input.agentId,
+      identityId: input.identityId,
       publicKey: input.publicKey,
       privateKey: input.privateKey,
       metadata: input.metadata,
@@ -256,7 +264,8 @@ class DefaultVaultClient implements VaultClient {
   async ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult> {
     const identity = restoreIdentity(input.privateKey, { nickname: input.nickname });
     const agent = await this._ownerRegisterManagedAgentIdentity({
-      agentId: input.agentId,
+      agentId: this._newVaultAgentId(),
+      identityId: identity.identityId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
       metadata: input.metadata,
@@ -264,7 +273,7 @@ class DefaultVaultClient implements VaultClient {
       requestedAt: input.requestedAt,
     });
     const sessionToken = await this.ownerIssueSessionToken({
-      agentId: input.agentId,
+      agentId: agent.agentId,
       requestedAt: input.requestedAt,
     });
     return {
@@ -279,7 +288,8 @@ class DefaultVaultClient implements VaultClient {
   async ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult> {
     const identity = createIdentity();
     const agent = await this._ownerRegisterManagedAgentIdentity({
-      agentId: input.agentId,
+      agentId: this._newVaultAgentId(),
+      identityId: identity.identityId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
       metadata: input.metadata,
@@ -287,7 +297,7 @@ class DefaultVaultClient implements VaultClient {
       requestedAt: input.requestedAt,
     });
     const sessionToken = await this.ownerIssueSessionToken({
-      agentId: input.agentId,
+      agentId: agent.agentId,
       requestedAt: input.requestedAt,
     });
     return {

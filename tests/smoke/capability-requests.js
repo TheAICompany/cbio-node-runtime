@@ -19,10 +19,10 @@ const ownerClient = createVaultClient({
   skipWarmup: true,
 });
 
-await ownerClient.ownerCreateAgent({
-  agentId: "agent-1",
+const provisionedAgent = await ownerClient.ownerCreateAgent({
   nickname: "Planner",
 });
+const vaultAgentId = provisionedAgent.agent.agentId;
 
 let observed = null;
 const unsubscribe = ownerClient.ownerOnPendingCapabilityRequest((record) => {
@@ -31,14 +31,14 @@ const unsubscribe = ownerClient.ownerOnPendingCapabilityRequest((record) => {
 
 const submitted = await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },
-  agentId: "agent-1",
+  agentId: vaultAgentId,
   secretAliases: ["crm-token"],
   scope: "https://api.example.com/users/*",
   methods: ["GET"],
   justification: "Need to read user resources without per-id approval",
 });
 
-assert.equal(submitted.agentId, "agent-1");
+assert.equal(submitted.agentId, vaultAgentId);
 assert.deepEqual(submitted.scope.methods, ["GET"]);
 assert.equal(submitted.scope.scope, "https://api.example.com/users/*");
 assert.ok(observed, "pending capability request observer should fire");
@@ -55,12 +55,12 @@ assert.equal(approved.capabilityId, "cap-users-read");
 assert.deepEqual(approved.methods, ["GET"]);
 assert.equal(approved.scope, "https://api.example.com/users/*");
 
-const capabilities = await ownerClient.ownerListCapabilities({ agentId: "agent-1" });
+const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
 assert.ok(capabilities.some((cap) => cap.capabilityId === "cap-users-read"));
 
 await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },
-  agentId: "agent-1",
+  agentId: vaultAgentId,
   secretAliases: ["crm-token"],
   scope: "https://api.example.com/admin/*",
   methods: ["POST"],

@@ -113,14 +113,14 @@ try {
   });
 
   const agentIdentity = createIdentity();
-  await client.ownerImportAgent({
-    agentId: "agent-restricted",
+  const importedAgent = await client.ownerImportAgent({
     privateKey: agentIdentity.privateKey,
   });
+  const vaultAgentId = importedAgent.agent.agentId;
   const restrictedCapability = {
     vaultId: authority.vaultId,
     capabilityId: "cap-restricted",
-    agentId: "agent-restricted",
+    agentId: vaultAgentId,
     secretIds: [restrictedRecord.secretId.value],
     operation: "dispatch_http",
     scope: "https://allowed.example.com/resource",
@@ -132,7 +132,7 @@ try {
   const storedThenDefinedCapability = {
     vaultId: authority.vaultId,
     capabilityId: "cap-stored-then-defined",
-    agentId: "agent-restricted",
+    agentId: vaultAgentId,
     secretIds: [storedThenDefinedRecord.secretId.value],
     operation: "dispatch_http",
     scope: "https://allowed.example.com/resource",
@@ -141,10 +141,10 @@ try {
     auditRequired: true,
   };
   await client.ownerGrantCapability({ capability: storedThenDefinedCapability });
-  const session = await client.ownerIssueSessionToken({ agentId: "agent-restricted" });
+  const session = await client.ownerIssueSessionToken({ agentId: vaultAgentId });
 
   const agent = createAgentClient({
-    agentIdentity: { agentId: "agent-restricted" },
+    agentIdentity: { agentId: vaultAgentId },
     capability: {
       ...restrictedCapability,
     },
@@ -153,7 +153,7 @@ try {
     token: session.token,
   });
   const storedThenDefinedAgent = createAgentClient({
-    agentIdentity: { agentId: "agent-restricted" },
+    agentIdentity: { agentId: vaultAgentId },
     capability: {
       ...storedThenDefinedCapability,
     },

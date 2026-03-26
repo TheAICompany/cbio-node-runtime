@@ -20,10 +20,10 @@ const vault = wrapVaultCoreAsVaultService(authority);
 const ownerClient = createVaultClient({ vault, skipWarmup: true });
 
 const agentIdentity = createIdentity({ nickname: "introspector" });
-await ownerClient.ownerImportAgent({
-  agentId: agentIdentity.identityId,
+const importedAgent = await ownerClient.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
+const vaultAgentId = importedAgent.agent.agentId;
 await ownerClient.ownerWriteSecret({
   alias: "crm-token",
   plaintext: "secret-crm-token",
@@ -45,16 +45,16 @@ await ownerClient.ownerWriteSecret({
   }],
 });
 await ownerClient.ownerGrantCapability({
-  agentId: agentIdentity.identityId,
+  agentId: vaultAgentId,
   secretAliases: ["crm-token"],
   scope: "https://api.example.com/users/*",
   methods: ["GET"],
 });
 
-const capabilities = await ownerClient.ownerListCapabilities({ agentId: agentIdentity.identityId });
-const session = await ownerClient.ownerIssueSessionToken({ agentId: agentIdentity.identityId });
+const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
+const session = await ownerClient.ownerIssueSessionToken({ agentId: vaultAgentId });
 const agentClient = createAgentClient({
-  agentIdentity,
+  agentIdentity: { agentId: vaultAgentId },
   capability: capabilities[0],
   vault,
   token: session.token,
@@ -77,7 +77,7 @@ const httpResult = await handleVaultAgentControlHttp(vault, {
   vaultId: vault.vaultId.value,
   requestId,
   requestedAt,
-  agentId: agentIdentity.identityId,
+  agentId: vaultAgentId,
   proof: { token: session.token },
   scope: "https://api.example.com/admin/*",
   methods: ["POST"],

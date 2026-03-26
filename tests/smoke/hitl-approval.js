@@ -18,8 +18,8 @@ async function testHitlApproval() {
 
   // 2. Create and Register Agent
   const provisionedAgent = await ownerClient.ownerCreateAgent({
-    agentId: 'agent-1'
   });
+  const vaultAgentId = provisionedAgent.agent.agentId;
 
   // 3. Register a Secret
   await ownerClient.ownerWriteSecret({
@@ -30,16 +30,16 @@ async function testHitlApproval() {
 
   // 4. Grant Capability (NO LONGER REQUIRES EXPLICIT FLAG)
   await ownerClient.ownerGrantCapability({
-    agentId: 'agent-1',
+    agentId: vaultAgentId,
     secretAliases: ['top-secret'],
     scope: 'https://api.example.com/*',
     methods: ['POST'],
     // requiresApproval: true removed
   });
 
-  const capabilities = await ownerClient.ownerListCapabilities({ agentId: 'agent-1' });
+  const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
   const agentClient = createAgentClient({
-    agentIdentity: { agentId: 'agent-1' },
+    agentIdentity: { agentId: vaultAgentId },
     capability: capabilities[0],
     vault,
     token: provisionedAgent.sessionToken.token,
@@ -91,7 +91,7 @@ async function testHitlApproval() {
   assert.strictEqual(approveResult.status, 'SUCCEEDED', 'Approved discovery should succeed');
 
   // 9. Verify new capability is granted
-  const finalCapabilities = await ownerClient.ownerListCapabilities({ agentId: 'agent-1' });
+  const finalCapabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
   console.log('Final capabilities count:', finalCapabilities.length);
   // Should have the original one + the newly granted discovery one
   assert.strictEqual(finalCapabilities.length, 2, 'Should have 2 capabilities after permanent grant');

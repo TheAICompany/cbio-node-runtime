@@ -405,6 +405,7 @@ export interface AuditEntry {
 export interface AgentIdentityRecord {
   vaultId: VaultId;
   agentId: string;
+  identityId: string;
   publicKey: string;
   privateKey?: string;
   metadata?: Record<string, any>;

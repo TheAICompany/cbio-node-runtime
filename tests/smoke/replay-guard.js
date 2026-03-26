@@ -52,10 +52,10 @@ const client = createVaultClient({
   vault,
   skipWarmup: true,
 });
-await client.ownerImportAgent({
-  agentId: "agent-replay",
+const importedAgent = await client.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
+const vaultAgentId = importedAgent.agent.agentId;
 
 const replayRecord = await client.ownerWriteSecret({
   alias: "replay-token",
@@ -72,7 +72,7 @@ const replayRecord = await client.ownerWriteSecret({
 });
 
 await client.ownerGrantCapability({
-  agentId: "agent-replay",
+  agentId: vaultAgentId,
   secretAliases: ["replay-token"],
   scope: "https://allowed.example.com/replay",
   methods: ["POST"],
@@ -83,7 +83,7 @@ const requestedAt = new Date().toISOString();
 const binding = JSON.stringify({
   requestId,
   requestedAt,
-  agentId: "agent-replay",
+  agentId: vaultAgentId,
   capabilityId: "cap-replay",
   secretAlias: "replay-token",
   targetUrl: "https://allowed.example.com/replay",
@@ -96,11 +96,11 @@ const request = {
   vaultId: authority.vaultId,
   requestId,
   requestedAt,
-  agent: { kind: "agent", id: "agent-replay" },
+  agent: { kind: "agent", id: vaultAgentId },
   capability: {
     vaultId: authority.vaultId,
     capabilityId: "cap-replay",
-    agentId: "agent-replay",
+    agentId: vaultAgentId,
     secretIds: [replayRecord.secretId.value],
     operation: "dispatch_http",
     scope: "https://allowed.example.com/replay",
@@ -109,7 +109,7 @@ const request = {
     auditRequired: true,
   },
   proof: {
-    agentId: "agent-replay",
+    agentId: vaultAgentId,
     signature,
     requestId,
     requestedAt,

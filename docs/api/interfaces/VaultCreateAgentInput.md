@@ -1,16 +1,10 @@
-[**CBIO Node Runtime Agent API v1.49.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.50.0**](../README.md)
 
 ***
 
 # Interface: VaultCreateAgentInput
 
 ## Properties
-
-### agentId
-
-> **agentId**: `string`
-
-***
 
 ### metadata?
 

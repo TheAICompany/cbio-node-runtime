@@ -23,10 +23,10 @@ const vault = wrapVaultCoreAsVaultService(authority);
 const client = createVaultClient({
   vault,
 });
-await client.ownerImportAgent({
-  agentId: "agent-security",
+const importedAgent = await client.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
+const vaultAgentId = importedAgent.agent.agentId;
 
 const guardedRecord = await client.ownerWriteSecret({
   alias: "guarded-token",
@@ -46,7 +46,7 @@ const expiredRequestId = "expired-request";
 const expiredBinding = JSON.stringify({
   requestId: expiredRequestId,
   requestedAt: expiredRequestedAt,
-  agentId: "agent-security",
+  agentId: vaultAgentId,
   capabilityId: "cap-expired",
   secretAlias: "guarded-token",
   targetUrl: "https://guarded.example.com/endpoint",
@@ -60,11 +60,11 @@ await assert.rejects(
     vaultId: authority.vaultId,
     requestId: expiredRequestId,
     requestedAt: expiredRequestedAt,
-    agent: { kind: "agent", id: "agent-security" },
+    agent: { kind: "agent", id: vaultAgentId },
     capability: {
       vaultId: authority.vaultId,
       capabilityId: "cap-expired",
-      agentId: "agent-security",
+      agentId: vaultAgentId,
       secretIds: [guardedRecord.secretId.value],
       operation: "dispatch_http",
       scope: "https://guarded.example.com/endpoint",
@@ -74,7 +74,7 @@ await assert.rejects(
       auditRequired: true,
     },
     proof: {
-      agentId: "agent-security",
+      agentId: vaultAgentId,
       signature: expiredSignature,
       requestId: expiredRequestId,
       requestedAt: expiredRequestedAt,
@@ -95,7 +95,7 @@ const validRequestId = "valid-security-request";
 const badBinding = JSON.stringify({
   requestId: validRequestId,
   requestedAt: validRequestedAt,
-  agentId: "agent-security",
+  agentId: vaultAgentId,
   capabilityId: "cap-valid",
   secretAlias: "guarded-token",
   targetUrl: "https://guarded.example.com/endpoint",
@@ -109,11 +109,11 @@ await assert.rejects(
     vaultId: authority.vaultId,
     requestId: validRequestId,
     requestedAt: validRequestedAt,
-    agent: { kind: "agent", id: "agent-security" },
+    agent: { kind: "agent", id: vaultAgentId },
     capability: {
       vaultId: authority.vaultId,
       capabilityId: "cap-valid",
-      agentId: "agent-security",
+      agentId: vaultAgentId,
       secretIds: [guardedRecord.secretId.value],
       operation: "dispatch_http",
       scope: "https://guarded.example.com/endpoint",
@@ -122,7 +122,7 @@ await assert.rejects(
       auditRequired: true,
     },
     proof: {
-      agentId: "agent-security",
+      agentId: vaultAgentId,
       signature: badSignature,
       requestId: validRequestId,
       requestedAt: validRequestedAt,

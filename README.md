@@ -69,11 +69,12 @@ const client = createVaultClient({ vault: vault.vault });
 
 // Generate and register a new agent in one step
 const createdAgent = await client.ownerCreateAgent({
-  agentId: 'worker-1',
   nickname: 'Background Worker'
 });
 
+const agentId = createdAgent.agent.agentId;
 console.log(`Agent public key: ${createdAgent.agent.publicKey}`);
+console.log(`Identity ID: ${createdAgent.agent.identityId}`);
 const session = createdAgent.sessionToken;
 
 // RECOMENDED (v1.48.4+): Batch issue tokens for all agents at once
@@ -97,7 +98,7 @@ const record = await client.ownerWriteSecret({
 
 // 4. Grant agent capabilities
 await client.ownerGrantCapability({
-  agentId: 'worker-1',
+  agentId,
   secretAliases: ['api-token'],
   scope: 'https://api.example.com/*',
   methods: ['POST']
@@ -121,7 +122,7 @@ Agents run in isolated processes and communicate with the vault via a transport.
 import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
 
 const agent = createAgentClient({
-  agentIdentity: { agentId: 'worker-1' },
+  agentIdentity: { agentId },
   capability: myCapability, 
   token: session.token,
   vault: vault.vault
@@ -139,7 +140,7 @@ If an LLM or orchestration layer already knows it needs a broader scope, it can 
 ```ts
 const request = await client.ownerSubmitCapabilityRequest({
   requester: { kind: 'trusted_executor', id: 'llm-planner' },
-  agentId: 'worker-1',
+  agentId,
   secretAliases: ['api-token'],
   scope: 'https://api.example.com/users/*',
   methods: ['GET'],

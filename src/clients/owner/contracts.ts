@@ -40,7 +40,6 @@ export interface VaultExportSecretInput {
 }
 
 export interface VaultImportAgentInput {
-  agentId: string;
   privateKey: string;
   metadata?: Record<string, any>;
   nickname?: string;
@@ -48,7 +47,6 @@ export interface VaultImportAgentInput {
 }
 
 export interface VaultCreateAgentInput {
-  agentId: string;
   metadata?: Record<string, any>;
   nickname?: string;
   requestedAt?: string;

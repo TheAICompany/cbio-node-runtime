@@ -111,9 +111,10 @@ const client = createVaultClient({
 assert.equal(typeof client.ownerStoreSecret, "function");
 assert.equal(typeof client.ownerDefineSecretTargets, "function");
 await client.ownerImportAgent({
-  agentId: "agent-1",
   privateKey: agentIdentity.privateKey,
 });
+const importedAgentId = (await client.ownerListAgents()).find((agent) => agent.identityId === agentIdentity.identityId)?.agentId;
+assert.equal(typeof importedAgentId, "string");
 const ownedRecord = await client.ownerWriteSecret({
   alias: "api-token",
   plaintext: "super-secret",
@@ -140,7 +141,7 @@ assert.equal(exportedSecret.alias.value, "api-token");
 const dispatchCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-1",
-  agentId: "agent-1",
+  agentId: importedAgentId,
   secretIds: [ownedRecord.secretId.value],
   operation: "dispatch_http",
   scope: "https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment",
@@ -149,10 +150,10 @@ const dispatchCapability = {
   auditRequired: true,
 };
 await client.ownerGrantCapability({ capability: dispatchCapability });
-const agent1Session = await client.ownerIssueSessionToken({ agentId: "agent-1" });
+const agent1Session = await client.ownerIssueSessionToken({ agentId: importedAgentId });
 
 const agent = createAgentClient({
-  agentIdentity: { agentId: "agent-1" },
+  agentIdentity: { agentId: importedAgentId },
   capability: {
     ...dispatchCapability,
   },
@@ -182,7 +183,7 @@ await client.ownerRegisterFlow({
 const customCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-custom",
-  agentId: "agent-1",
+  agentId: importedAgentId,
   customFlowId: "flow-shape-only",
   secretIds: [ownedRecord.secretId.value],
   operation: "custom_http",
@@ -194,7 +195,7 @@ const customCapability = {
 await client.ownerGrantCapability({ capability: customCapability });
 
 const customAgent = createAgentClient({
-  agentIdentity: { agentId: "agent-1" },
+  agentIdentity: { agentId: importedAgentId },
   capability: {
     ...customCapability,
   },
@@ -228,7 +229,7 @@ await client.ownerRegisterFlow({
 const customAcquireCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-custom-acquire",
-  agentId: "agent-1",
+  agentId: importedAgentId,
   customFlowId: "flow-custom-acquire",
   operation: "custom_http",
   scope: "https://api.example.com/custom-acquire",
@@ -239,7 +240,7 @@ const customAcquireCapability = {
 await client.ownerGrantCapability({ capability: customAcquireCapability });
 
 const customAcquireAgent = createAgentClient({
-  agentIdentity: { agentId: "agent-1" },
+  agentIdentity: { agentId: importedAgentId },
   capability: {
     ...customAcquireCapability,
   },
@@ -352,18 +353,16 @@ try {
   console.log("   [OK] Vault physical deletion successful");
   console.log("-> Verifying Managed Agent Identity Custody...");
   const managedProvision = await auditClient.ownerCreateAgent({ 
-    agentId: "agent-managed",
     nickname: "Managed Worker",
     metadata: { dept: "security" }
   });
   const managedRecord = managedProvision.agent;
   assert.ok(managedProvision.sessionToken.token, "Should issue a session token during creation");
-  assert.equal(managedRecord.agentId, "agent-managed");
   assert.equal(managedRecord.nickname, "Managed Worker");
   
   // Verify recovery after persistence
   const agentsInVault = await auditClient.ownerListAgents();
-  const foundManaged = agentsInVault.find(a => a.agentId === "agent-managed");
+  const foundManaged = agentsInVault.find(a => a.agentId === managedRecord.agentId);
   assert.equal(typeof foundManaged?.privateKey, "string", "Vault should persist the private key");
   console.log("   [OK] Agent creation and private key custody verification passed");
 
@@ -374,13 +373,13 @@ try {
   });
   const submittedCapabilityRequest = await auditClient.ownerSubmitCapabilityRequest({
     requester: { kind: "trusted_executor", id: "llm-planner" },
-    agentId: "agent-managed",
+    agentId: managedRecord.agentId,
     secretAliases: ["api-token"],
     scope: "https://api.example.com/users/*",
     methods: ["GET"],
     justification: "Need collection-level user read access",
   });
-  assert.equal(submittedCapabilityRequest.agentId, "agent-managed");
+  assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
   assert.equal(submittedCapabilityRequest.scope.scope, "https://api.example.com/users/*");
   assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
   const pendingCapabilityRequests = await auditClient.ownerListPendingCapabilityRequests();
@@ -392,15 +391,14 @@ try {
   unsubscribeCapability();
   assert.equal(approvedCapability.capabilityId, "cap-users-read");
   assert.equal(approvedCapability.scope, "https://api.example.com/users/*");
-  const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: "agent-managed" });
+  const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
   assert.ok(capabilitiesAfterApproval.some((cap) => cap.capabilityId === "cap-users-read"), "Approved capability should be registered");
   console.log("   [OK] Proactive capability request approval flow passed");
 
-  const acquiredAgentIdentity = { publicKey: managedRecord.publicKey, privateKey: managedPrivateKey };
   const acquiredCapability = {
     vaultId: createdVault.core.vaultId,
     capabilityId: "cap-acquired",
-    agentId: "agent-acquired",
+    agentId: managedRecord.agentId,
     secretAliases: ["issuer-token"],
     operation: "dispatch_http",
     scope: "https://issuer.example.com/other",
@@ -410,9 +408,9 @@ try {
   };
   await auditClient.ownerGrantCapability({ capability: acquiredCapability });
   const acquiredVault = wrapVaultCoreAsVaultService(recoveredVaultInstance.core);
-  const acquiredAgentSession = await auditClient.ownerIssueSessionToken({ agentId: "agent-acquired" });
+  const acquiredAgentSession = await auditClient.ownerIssueSessionToken({ agentId: managedRecord.agentId });
   const acquiredAgent = createAgentClient({
-    agentIdentity: { agentId: "agent-acquired" },
+    agentIdentity: { agentId: managedRecord.agentId },
     capability: {
       ...acquiredCapability,
     },
