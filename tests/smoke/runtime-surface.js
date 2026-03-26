@@ -260,7 +260,6 @@ const tempDir = await mkdtemp(join(tmpdir(), "cbio-authority-"));
 try {
   const storage = new FsStorageProvider(tempDir);
   const createdVault = await createVault(storage, {
-    vaultId: "vault-runtime-persistent",
     nickname: "persistent-main",
     policy: {
       trustedIssuerIds: ["issuer-1"],
@@ -302,7 +301,7 @@ try {
   const persistentExport = await auditClient.ownerExportSecret({ alias: "issuer-token", password: "password-1" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
   const recoveredVaultInstance = await recoverVault(storage, {
-    vaultId: "vault-runtime-persistent",
+    vaultId: createdVault.core.vaultId.value,
     password: "password-1",
   });
   assert.equal(recoveredVaultInstance.nickname, "persistent-main");
@@ -310,7 +309,6 @@ try {
   const defaultWorkspaceDir = await mkdtemp(join(tmpdir(), "cbio-default-workspace-"));
   process.env.C_BIO_WORKSPACE_DIR = defaultWorkspaceDir;
   const autoCreatedVault = await createVault({
-    vaultId: "vault-runtime-default-storage",
     nickname: "default-storage-vault",
     password: "password-1",
   });
@@ -321,20 +319,19 @@ try {
 
   console.log("-> Verifying Vault Discovery API...");
   const autoRecoveredVault = await recoverVault({
-    vaultId: "vault-runtime-default-storage",
+    vaultId: autoCreatedVault.core.vaultId.value,
     password: "password-1",
   });
   assert.equal(autoRecoveredVault.nickname, "default-storage-vault");
   
   const siblingVault = await createVault(storage, {
-    vaultId: "vault-runtime-sibling",
     nickname: "sibling-vault",
     password: "password-1",
   });
 
   const allVaults = await listVaults(storage);
-  assert.ok(allVaults.includes("vault-runtime-sibling"), "Vault should be in the list");
-  console.log(`-> Vault List Discovery OK: Successfully found "vault-runtime-sibling"`);
+  assert.ok(allVaults.includes(siblingVault.core.vaultId.value), "Vault should be in the list");
+  console.log(`-> Vault List Discovery OK: Successfully found "${siblingVault.core.vaultId.value}"`);
 
   console.log("-> Verifying Metadata Update...");
   await updateVaultMetadata(siblingVault, {
@@ -343,13 +340,13 @@ try {
   });
   
   const updatedVaults = await listVaults(storage);
-  assert.ok(updatedVaults.includes("vault-runtime-sibling"), "Vault should still be in the list");
+  assert.ok(updatedVaults.includes(siblingVault.core.vaultId.value), "Vault should still be in the list");
   console.log(`   [OK] Metadata updated successfully (verified via ID)`);
 
   console.log("-> Verifying Physical Delete...");
-  await rm(join(tempDir, "vaults/vault-runtime-sibling_v1"), { recursive: true });
+  await rm(join(tempDir, `vaults/${siblingVault.core.vaultId.value}_v1`), { recursive: true });
   const remainingVaults = await listVaults(storage);
-  assert.ok(!remainingVaults.find(v => v.vaultId === "vault-runtime-sibling"), "Vault should be deleted");
+  assert.ok(!remainingVaults.includes(siblingVault.core.vaultId.value), "Vault should be deleted");
   console.log("   [OK] Vault physical deletion successful");
   console.log("-> Verifying Managed Agent Identity Custody...");
   const managedProvision = await auditClient.ownerCreateAgent({ 

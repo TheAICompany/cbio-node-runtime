@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.54.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.55.0**](../README.md)
 
 ***
 
@@ -199,9 +199,3 @@
 ###### Returns
 
 `Promise`\<`Response`\>
-
-***
-
-### vaultId?
-
-> `optional` **vaultId?**: `string`

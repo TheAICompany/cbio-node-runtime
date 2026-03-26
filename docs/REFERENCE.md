@@ -19,10 +19,11 @@ The v1.48.4 runtime centers on a simplified, authority-centric model with manage
 
 ### Vault Lifecycle
 
-#### `createVault(storage, { vaultId, password, nickname, metadata })`
+#### `createVault(storage, { password, nickname, metadata })`
 Creates a secure vault. 
 - **Authority**: Rooted in the `password`.
 - **Storage**: All data is encrypted using a key derived from the password via `scrypt`.
+- **Vault ID**: Generated internally by the runtime.
 
 #### `recoverVault(storage, { vaultId, password })`
 Unlocks and reopens a vault. 

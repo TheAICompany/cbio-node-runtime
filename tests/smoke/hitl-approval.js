@@ -6,7 +6,6 @@ async function testHitlApproval() {
 
   // 1. Setup Vault and Clients
   const { vault } = await createVault(new MemoryStorageProvider(), {
-    vaultId: 'vault-hitl-test',
     nickname: 'HITL Test Vault',
     password: 'hitl-test-password',
   });

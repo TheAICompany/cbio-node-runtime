@@ -42,7 +42,6 @@ export interface VaultMetadata extends Record<string, any> {
 }
 
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
-  vaultId?: string;
   nickname?: string;
   metadata?: Record<string, any>;
   password: string;
@@ -147,7 +146,10 @@ export async function createVault(
     storage: IStorageProvider;
     options: CreateVaultOptions;
   };
-  const vaultId = options.vaultId ?? createVaultIdValue();
+  if ("vaultId" in (options as unknown as Record<string, unknown>)) {
+    throw new Error("createVault() no longer accepts caller-supplied vaultId");
+  }
+  const vaultId = createVaultIdValue();
   const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
   const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vaultId);
 

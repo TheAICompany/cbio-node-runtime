@@ -23,7 +23,6 @@ async function startVaultServer(port: number) {
   
   // Create a real vault in memory
   const { core } = await createVault(storage, {
-    vaultId: "vault-isolated-server",
     password: "process-isolation-demo-password",
   });
   

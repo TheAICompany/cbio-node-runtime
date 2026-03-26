@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.54.0**
+**CBIO Node Runtime Agent API v1.55.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.54.0
+# CBIO Node Runtime Agent API v1.55.0
 
 ## Enumerations
 

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { createVault, createVaultClient, MemoryStorageProvider } from "../../dist/runtime/index.js";
 
 const created = await createVault(new MemoryStorageProvider(), {
-  vaultId: "vault-owner-update-agent",
   password: "pw-owner-update",
 });
 

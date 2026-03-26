@@ -39,7 +39,6 @@ import {
 const storage = new FsStorageProvider('./my-vaults');
 
 const myVault = await createVault(storage, {
-  vaultId: 'main-vault',
   password: 'your-secure-password',
   nickname: 'Production Vault'
 });
@@ -53,7 +52,7 @@ console.log(`Vault created: ${myVault.nickname}`);
 import { recoverVault, FsStorageProvider } from '@the-ai-company/cbio-node-runtime';
 
 const vault = await recoverVault(storage, {
-  vaultId: 'main-vault',
+  vaultId: myVault.core.vaultId.value,
   password: 'your-secure-password'
 });
 ```

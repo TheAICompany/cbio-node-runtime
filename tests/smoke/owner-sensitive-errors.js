@@ -8,7 +8,6 @@ import {
 async function main() {
   const storage = new MemoryStorageProvider();
   const vault = await createVault(storage, {
-    vaultId: "owner-sensitive-errors",
     password: "hunter2",
     nickname: "Owner Sensitive Errors",
   });
