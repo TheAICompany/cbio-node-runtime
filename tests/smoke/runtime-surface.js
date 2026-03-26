@@ -315,8 +315,8 @@ try {
     password: "password-1",
   });
   assert.equal(autoCreatedVault.nickname, "default-storage-vault");
-  assert.equal(await autoCreatedVault.storage.has("vault/sealed/profile.sealed"), true, "Missing profile.sealed");
-  assert.equal(await autoCreatedVault.storage.has("vault/sealed/public.sealed"), false, "public.sealed should be removed");
+  assert.equal(await autoCreatedVault.storage.has("profile.sealed"), true, "Missing profile.sealed");
+  assert.equal(await autoCreatedVault.storage.has("public.sealed"), false, "public.sealed should be removed");
   console.log("-> Storage Architecture Verification OK: Detected single encrypted .sealed profile");
 
   console.log("-> Verifying Vault Discovery API...");
@@ -347,7 +347,7 @@ try {
   console.log(`   [OK] Metadata updated successfully (verified via ID)`);
 
   console.log("-> Verifying Physical Delete...");
-  await rm(join(tempDir, "vaults/vault-runtime-sibling"), { recursive: true });
+  await rm(join(tempDir, "vaults/vault-runtime-sibling_v1"), { recursive: true });
   const remainingVaults = await listVaults(storage);
   assert.ok(!remainingVaults.find(v => v.vaultId === "vault-runtime-sibling"), "Vault should be deleted");
   console.log("   [OK] Vault physical deletion successful");
@@ -425,12 +425,12 @@ try {
     }),
     /VAULT_AGENT_DISPATCH_REJECTED|VAULT_DISPATCH_DENIED/,
   );
-  const secretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent/vault/sealed/secrets.sealed"), "utf8").catch(() => "");
+  const secretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent_v1/secrets.sealed"), "utf8").catch(() => "");
   assert.ok(!secretsFile.includes("issuer-secret"), "Encrypted file should not contain plaintext!");
   console.log("-> Secret Storage Security Verification OK: Data encrypted and isolated on disk");
 
   console.log("-> Verifying Custody Directory Structure...");
-  const custodyDirEntries = await readdir(join(tempDir, "vaults/vault-runtime-persistent/vault/sealed/custody"));
+  const custodyDirEntries = await readdir(join(tempDir, "vaults/vault-runtime-persistent_v1")).then((entries) => entries.filter((entry) => entry.startsWith("secret-")));
   assert.ok(custodyDirEntries.length >= 1, "Custody entries missing!");
   console.log("   [OK] Custody directory moved to encrypted area");
 
@@ -499,8 +499,8 @@ try {
   const rollbackClient = createVaultClient({
     vault: rollbackVault,
   });
-  const custodyDir = join(tempDir, "vaults/vault-runtime-persistent/vault/sealed/custody");
-  const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
+  const custodyDir = join(tempDir, "vaults/vault-runtime-persistent_v1");
+  const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.filter((entry) => entry.startsWith("secret-")).length).catch(() => 0);
   await assert.rejects(
     () => rollbackClient.ownerWriteSecret({
       alias: "should-rollback",
@@ -516,9 +516,9 @@ try {
     }),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_AUDIT_FAILED",
   );
-  const rollbackSecretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent/vault/sealed/secrets.sealed"), "utf8").catch(() => "");
+  const rollbackSecretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent_v1/secrets.sealed"), "utf8").catch(() => "");
   assert.ok(!rollbackSecretsFile.includes("should-rollback"));
-  const custodyCountAfter = await readdir(custodyDir).then((entries) => entries.length).catch(() => 0);
+  const custodyCountAfter = await readdir(custodyDir).then((entries) => entries.filter((entry) => entry.startsWith("secret-")).length).catch(() => 0);
   assert.equal(custodyCountAfter, custodyCountBefore);
   await rm(rollbackDir, { recursive: true, force: true });
 } finally {

@@ -27,13 +27,17 @@ The runtime distinguishes between administrative authority and delegated agency:
 
 ## Unified Storage Layout
 
-All vault data is stored under a single prefix: `vaults/<vault-id>/`.
-- **`vault/sealed/profile.sealed`**: Contains all vault metadata (nickname, owner ID, etc.).
-- **`vault/sealed/secrets.sealed`**: Contains the encrypted secret registry.
-- **`vault/sealed/custody/`**: Contains the physical secret shards.
-- **`vault/sealed/identities/`**: Contains the agent identity registry (including managed private keys).
+All vault data is stored under a flat versioned prefix: `vaults/<vault-id>_v1/`.
+- **`profile.sealed`**: Contains all vault metadata (nickname, owner ID, etc.).
+- **`secrets.sealed`**: Contains the encrypted secret registry.
+- **`agents.sealed`**: Contains the agent identity registry (including managed private keys).
+- **`capabilities.sealed`**: Contains granted capabilities.
+- **`custom-flows.sealed`**: Contains registered custom flow definitions.
+- **`audit.jsonl`**: Contains the tamper-evident audit log.
+- **`working-key.sealed`**: Contains the sealed vault working key custody blob.
+- **`secret-<secret-id>.sealed`**: Contains encrypted secret material blobs.
 
-Everything in the `vault/sealed/` path is encrypted using the `vaultWorkingKey`, which is derived from the master password.
+The `_v1` suffix is the storage-layout version. Future layout changes should increment this suffix rather than adding deeper wrapper directories.
 
 ## Process Isolation (A/B Architecture)
 

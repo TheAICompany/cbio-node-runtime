@@ -76,7 +76,7 @@ interface AgentIdentityState {
 }
 
 
-export const DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY = "vault/sealed/custody/working-key.sealed";
+export const DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY = "working-key.sealed";
 
 export interface InitializeVaultCustodyOptions {
   vaultWorkingKey?: string;
@@ -171,8 +171,8 @@ export class FileSecretRepository implements SecretRepository {
   constructor(
     storage: IStorageProvider,
     vaultWorkingKey: string,
-    key = "vault/sealed/secrets.sealed",
-    private readonly _lockKey = "vault/sealed/locks/secrets",
+    key = "secrets.sealed",
+    private readonly _lockKey = "lock-secrets",
   ) {
     this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
   }
@@ -223,8 +223,8 @@ export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
   constructor(
     storage: IStorageProvider,
     vaultWorkingKey: string,
-    key = "vault/sealed/identities/agents.sealed",
-    private readonly _lockKey = "vault/sealed/locks/agent-identities",
+    key = "agents.sealed",
+    private readonly _lockKey = "lock-agents",
   ) {
     this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
   }
@@ -262,8 +262,8 @@ export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
 export class FileAuditLog implements AuditLog {
   constructor(
     private readonly _storage: IStorageProvider,
-    private readonly _key = "vault/sealed/audit.jsonl",
-    private readonly _lockKey = "vault/sealed/locks/audit",
+    private readonly _key = "audit.jsonl",
+    private readonly _lockKey = "lock-audit",
   ) {}
 
   private hash(value: string): string {
@@ -338,11 +338,11 @@ export class FileSecretCustody implements SecretCustody {
   constructor(
     private readonly _storage: IStorageProvider,
     private readonly _vaultWorkingKey: string,
-    private readonly _keyPrefix = "vault/sealed/custody",
+    private readonly _keyPrefix = "secret",
   ) {}
 
   private key(secretId: SecretId): string {
-    return `${this._keyPrefix}/${secretId.value}.sealed`;
+    return `${this._keyPrefix}-${secretId.value}.sealed`;
   }
 
   async store(secretId: SecretId, plaintext: string): Promise<void> {
@@ -388,8 +388,8 @@ export class FileReplayGuard implements ReplayGuard {
   constructor(
     storage: IStorageProvider,
     vaultWorkingKey: string,
-    key = "vault/sealed/security/replay.sealed",
-    private readonly _lockKey = "vault/sealed/locks/replay",
+    key = "replay.sealed",
+    private readonly _lockKey = "lock-replay",
     private readonly _ttlMs = 5 * 60 * 1000,
   ) {
     this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
@@ -424,8 +424,8 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
   constructor(
     storage: IStorageProvider,
     vaultWorkingKey: string,
-    key = "vault/sealed/capabilities.sealed",
-    private readonly _lockKey = "vault/sealed/locks/capabilities",
+    key = "capabilities.sealed",
+    private readonly _lockKey = "lock-capabilities",
   ) {
     this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
   }
@@ -477,8 +477,8 @@ export class FileRateLimitStore implements RateLimitStore {
   constructor(
     storage: IStorageProvider,
     vaultWorkingKey: string,
-    key = "vault/sealed/security/rate-limits.sealed",
-    private readonly _lockKey = "vault/sealed/locks/rate-limits",
+    key = "rate-limits.sealed",
+    private readonly _lockKey = "lock-rate-limits",
   ) {
     this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
   }
@@ -518,8 +518,8 @@ export class FileCapabilityRevocationRegistry implements CapabilityRevocationReg
   constructor(
     storage: IStorageProvider,
     vaultWorkingKey: string,
-    key = "vault/sealed/security/revocations.sealed",
-    private readonly _lockKey = "vault/sealed/locks/revocations",
+    key = "revocations.sealed",
+    private readonly _lockKey = "lock-revocations",
   ) {
     this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
   }
@@ -554,8 +554,8 @@ export class FileCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
   constructor(
     storage: IStorageProvider,
     vaultWorkingKey: string,
-    key = "vault/sealed/custom-flows.sealed",
-    private readonly _lockKey = "vault/sealed/locks/custom-flows",
+    key = "custom-flows.sealed",
+    private readonly _lockKey = "lock-custom-flows",
   ) {
     this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
   }
@@ -606,8 +606,8 @@ export function createPersistentVaultCoreDependencies(
     replayGuard: new FileReplayGuard(
       storage,
       options.vaultWorkingKey,
-      "vault/sealed/security/replay.sealed",
-      "vault/sealed/locks/replay",
+      "replay.sealed",
+      "lock-replay",
       options.proofVerifier?.maxSkewMs ?? (5 * 60 * 1000),
     ),
     agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),

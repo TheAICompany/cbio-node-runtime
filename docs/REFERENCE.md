@@ -172,10 +172,14 @@ The proactive request flow does not replace dispatch discovery. It is an additio
 ## Storage Layout
 
 The vault uses a unified encrypted partition:
-- `vault/sealed/profile.sealed`: Unified vault profile.
-- `vault/sealed/secrets.sealed`: Secret registry.
-- `vault/sealed/custody/`: Encrypted secret material.
-- `vault/sealed/identities/`: Agent and capability registries.
+- `vaults/<vaultId>_v1/profile.sealed`: Unified vault profile.
+- `vaults/<vaultId>_v1/secrets.sealed`: Secret registry.
+- `vaults/<vaultId>_v1/agents.sealed`: Agent identity registry.
+- `vaults/<vaultId>_v1/capabilities.sealed`: Capability registry.
+- `vaults/<vaultId>_v1/custom-flows.sealed`: Custom flow registry.
+- `vaults/<vaultId>_v1/audit.jsonl`: Tamper-evident audit log.
+- `vaults/<vaultId>_v1/working-key.sealed`: Sealed working-key custody blob.
+- `vaults/<vaultId>_v1/secret-<secretId>.sealed`: Encrypted secret material.
 
 ## Build & Integration
 

@@ -4,6 +4,22 @@ This release tightens the public owner-side contract so GUI clients can stop dep
 
 ## Breaking Changes
 
+### Vault storage layout
+
+- Vault directories now use a versioned flat layout: `vaults/<vaultId>_v1/`
+- The old nested `vault/sealed/...` structure is no longer the active layout
+- Persistent file names are now flat under the versioned vault directory, for example:
+  - `profile.sealed`
+  - `secrets.sealed`
+  - `agents.sealed`
+  - `capabilities.sealed`
+  - `custom-flows.sealed`
+  - `audit.jsonl`
+  - `working-key.sealed`
+  - `secret-<secretId>.sealed`
+
+This version suffix is for storage-layout evolution. Future storage rewrites should increment the directory suffix rather than introducing deeper wrapper directories.
+
 ### Owner client initialization
 
 - `createVaultClient(...)` now has a stable public type for:

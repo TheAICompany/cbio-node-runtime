@@ -18,10 +18,22 @@ import type { CreatedIdentity } from "./identity.js";
 import { readVaultProfile, writeVaultProfile } from "./vault-metadata.js";
 import { createWorkspaceStorage } from "./workspace-storage.js";
 
-
+const VAULT_STORAGE_LAYOUT_VERSION = 1;
+const VAULT_STORAGE_DIR_VERSION_SUFFIX = `_v${VAULT_STORAGE_LAYOUT_VERSION}`;
 
 function vaultStoragePrefix(vaultId: string): string {
-  return `vaults/${vaultId}`;
+  return `vaults/${vaultId}${VAULT_STORAGE_DIR_VERSION_SUFFIX}`;
+}
+
+function parseVaultStorageDirName(entry: string): { vaultId: string; version: number } | null {
+  const match = /^(.*)_v(\d+)$/.exec(entry);
+  if (!match) {
+    return null;
+  }
+  return {
+    vaultId: match[1],
+    version: Number.parseInt(match[2], 10),
+  };
 }
 
 export interface VaultMetadata extends Record<string, any> {
@@ -227,7 +239,19 @@ export async function listVaults(storage: IStorageProvider): Promise<string[]> {
   if (!storage.list) {
     return [];
   }
-  return await storage.list("vaults");
+  const entries = await storage.list("vaults");
+  const latestByVaultId = new Map<string, number>();
+  for (const entry of entries) {
+    const parsed = parseVaultStorageDirName(entry);
+    if (!parsed) {
+      continue;
+    }
+    const current = latestByVaultId.get(parsed.vaultId);
+    if (current === undefined || parsed.version > current) {
+      latestByVaultId.set(parsed.vaultId, parsed.version);
+    }
+  }
+  return [...latestByVaultId.keys()];
 }
 
 /**
@@ -249,4 +273,3 @@ export async function updateVaultMetadata(
     ...(options.metadata ?? {}),
   }, vaultWorkingKey, vaultId);
 }
-
