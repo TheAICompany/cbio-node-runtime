@@ -14,25 +14,31 @@ import type {
   SecretId,
   SecretRecord,
   VaultId,
+  VaultPrincipal,
+  StoredSessionToken,
 } from "./contracts.js";
 import { VaultCoreError } from "./errors.js";
 import { DispatchStatus } from "./contracts.js";
 import type {
-  AgentIdentityRegistry,
-  AgentProofVerifier,
   AuditLog,
-  CapabilityRegistry,
-  CustomHttpFlowRegistry,
   CapabilityRevocationRegistry,
-  Clock,
-  IdGenerator,
+  CustomHttpFlowRegistry,
   PolicyEngine,
   RateLimitStore,
+  TrustedExecutor,
+  VaultCoreDependencies,
+} from "./ports.js";
+import {
+  AgentIdentityRegistry,
+  AgentProofVerifier,
+  CapabilityRegistry,
+  Clock,
+  IdGenerator,
+  IPendingRequestRegistry,
+  ISessionTokenRegistry,
   ReplayGuard,
   SecretCustody,
   SecretRepository,
-  TrustedExecutor,
-  VaultCoreDependencies,
 } from "./ports.js";
 
 export interface DefaultPolicyEngineOptions {
@@ -498,37 +504,110 @@ export class DefaultPolicyEngine implements PolicyEngine {
   }
 }
 
+export class InMemoryPendingRequestRegistry implements IPendingRequestRegistry {
+  private readonly _requests = new Map<string, import("./contracts.js").PendingDispatchRecord>();
+
+  async save(record: import("./contracts.js").PendingDispatchRecord): Promise<void> {
+    this._requests.set(record.requestId, record);
+  }
+
+  async get(requestId: string): Promise<import("./contracts.js").PendingDispatchRecord | null> {
+    return this._requests.get(requestId) ?? null;
+  }
+
+  async list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingDispatchRecord[]> {
+    return Array.from(this._requests.values());
+  }
+
+  async delete(requestId: string): Promise<void> {
+    this._requests.delete(requestId);
+  }
+}
+
+export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
+  private readonly _tokens = new Map<string, StoredSessionToken>();
+
+  async issue(agentId: string): Promise<string> {
+    const token = `sat_${crypto.randomBytes(16).toString("hex")}`;
+    this._tokens.set(token, {
+      token,
+      agentId,
+      issuedAt: new Date().toISOString(),
+    });
+    return token;
+  }
+
+  async verify(token: string, agentId: string): Promise<boolean> {
+    const stored = this._tokens.get(token);
+    if (!stored) return false;
+    return stored.agentId === agentId;
+  }
+
+  async revoke(token: string): Promise<void> {
+    this._tokens.delete(token);
+  }
+}
+
+export interface SignatureAgentProofVerifierOptions {
+  maxSkewMs?: number;
+  now?: () => Date;
+}
+
 /**
  * @internal
  */
 export class SignatureAgentProofVerifier implements AgentProofVerifier {
   private readonly _maxSkewMs: number;
   private readonly _now: () => Date;
-  private readonly _agentIdentities: AgentIdentityRegistry;
 
-  constructor(agentIdentities: AgentIdentityRegistry, options: SignatureAgentProofVerifierOptions = {}) {
-    this._agentIdentities = agentIdentities;
+  constructor(
+    private _identities: AgentIdentityRegistry,
+    private _sessionTokens: ISessionTokenRegistry,
+    options: SignatureAgentProofVerifierOptions = {},
+  ) {
     this._maxSkewMs = options.maxSkewMs ?? (5 * 60 * 1000);
     this._now = options.now ?? (() => new Date());
   }
 
   async verify(request: DispatchRequest): Promise<void> {
-    if (request.proof.agentId !== request.agent.id) {
-      throw new VaultCoreError("proof agent mismatch", "VAULT_DISPATCH_DENIED");
+    const { vaultId, agent, capability, proof, requestId, requestedAt } = request;
+    if (proof.agentId !== agent.id) {
+      throw new VaultCoreError("agent identity mismatch", "VAULT_DISPATCH_DENIED");
     }
-    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
+
+    // Try token authentication first
+    if (proof.token) {
+      const valid = await this._sessionTokens.verify(proof.token, proof.agentId);
+      if (valid) {
+        return; // Token is valid, skip signature check
+      }
+      throw new VaultCoreError("invalid or expired session token", "VAULT_DISPATCH_DENIED");
+    }
+
+    // Fallback to signature authentication
+    if (!proof.signature) {
+      throw new VaultCoreError("missing agent proof (signature or token required)", "VAULT_DISPATCH_DENIED");
+    }
+
+    if (proof.requestId !== requestId || proof.requestedAt !== requestedAt) {
       throw new VaultCoreError("proof binding mismatch", "VAULT_DISPATCH_DENIED");
     }
-    const requestedAt = Date.parse(request.requestedAt);
-    if (Number.isNaN(requestedAt) || Math.abs(this._now().getTime() - requestedAt) > this._maxSkewMs) {
+
+    const parsedRequestedAt = Date.parse(requestedAt);
+    const now = this._now().getTime();
+    const maxSkewMs = this._maxSkewMs;
+
+    if (Number.isNaN(parsedRequestedAt) || Math.abs(now - parsedRequestedAt) > maxSkewMs) {
       throw new VaultCoreError("proof timestamp out of range", "VAULT_DISPATCH_DENIED");
     }
-    const registeredIdentity = await this._agentIdentities.get(request.vaultId, request.agent.id);
-    if (!registeredIdentity) {
+
+    const identity = await this._identities.get(vaultId, proof.agentId);
+    if (!identity) {
       throw new VaultCoreError("agent identity not registered", "VAULT_DISPATCH_DENIED");
     }
+
     const binding = createDispatchBinding(request);
-    if (!verifySignature(registeredIdentity.publicKey, request.proof.signature, binding)) {
+    if (!verifySignature(identity.publicKey, proof.signature, binding)) {
       throw new VaultCoreError("invalid proof signature", "VAULT_DISPATCH_DENIED");
     }
   }
@@ -612,15 +691,18 @@ export interface VaultCoreDependenciesOptions {
   authPrefix?: string;
   policy?: DefaultPolicyEngineOptions;
   proofVerifier?: SignatureAgentProofVerifierOptions;
+  replayGuard?: ReplayGuard;
+  sessionTokens?: ISessionTokenRegistry;
+  clock?: Clock;
 }
 
 export function createVaultCoreDependencies(
   options: VaultCoreDependenciesOptions = {},
 ): VaultCoreDependencies {
   const agentIdentities = new InMemoryAgentIdentityRegistry();
-  const vaultId = { value: options.vaultId ?? `vault_${crypto.randomUUID()}` };
+  const sessionTokens = new InMemorySessionTokenRegistry();
   return {
-    vaultId,
+    vaultId: { value: options.vaultId ?? `vault_${crypto.randomUUID()}` },
     secrets: new InMemorySecretRepository(),
     custody: new InMemorySecretCustody(),
     policy: new DefaultPolicyEngine(options.policy),
@@ -631,11 +713,13 @@ export function createVaultCoreDependencies(
       options.authPrefix,
     ),
     agentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, options.proofVerifier),
+    agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
     capabilities: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
-    replayGuard: new InMemoryReplayGuard(options.proofVerifier),
-    clock: new SystemClock(),
+    replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
+    sessionTokens: options.sessionTokens ?? new InMemorySessionTokenRegistry(),
+    pendingRequests: new InMemoryPendingRequestRegistry(),
+    clock: options.clock ?? new SystemClock(),
     ids: new RandomIdGenerator(),
   };
 }

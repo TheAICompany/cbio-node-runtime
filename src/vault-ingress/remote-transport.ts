@@ -27,7 +27,10 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       method: request.method,
       headers: request.headers,
       body: request.body,
-      proof: { signature: request.proof.signature },
+      proof: { 
+        signature: request.proof.signature,
+        token: request.proof.token,
+      },
     };
 
     const response = await this._fetchImpl(this._url, {

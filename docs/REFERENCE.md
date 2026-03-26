@@ -1,10 +1,10 @@
-# CBIO Vault Runtime Reference (v1.47.0)
+# CBIO Vault Runtime Reference (v1.47.2)
 
 This document describes the current implemented runtime surface for the **Sovereign Vault**. 
 
 ## Primary API Surface
 
-The v1.47.0 runtime centers on a simplified, authority-centric model.
+The v1.47.2 runtime centers on a simplified, authority-centric model with managed agency and session tokens.
 
 ### Main Constructors and Entrypoints
 
@@ -37,6 +37,7 @@ Returns a `string[]` of vault IDs found in the storage.
 ### 1. Managed Identity (Recommended)
 Identity material (private keys) generated and stored securely within the vault's own registry. 
 - Use `client.createAgent(...)` to manage these.
+- **Session Tokens**: Owners can issue revocable `sat_...` tokens for managed agents to enable stateless authentication without raw private keys.
 
 ### 2. External Identity
 Identity material managed by the user outside the vault. Registered via `client.registerAgent({ publicKey, ... })`.
@@ -50,6 +51,8 @@ The `VaultClient` provides the administrative interface for the vault.
 - `createAgent(...)`: Generate and host a new agent identity.
 - `listAgents()`: Enumerate authorized agents and retrieve managed private keys.
 - `grantCapability(...)`: Assign specific secret-use permissions to an agent.
+- `issueSessionToken(...)`: Generate a revocable session token for a managed agent.
+- `revokeSessionToken(...)`: Immediately invalidate a previously issued session token.
 - `exportSecret(...)`: Reveal a secret's plaintext (requires active authority).
 - `readAudit(...)`: Access the append-only record of all vault actions.
 
@@ -59,7 +62,7 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 
 ### Core Operations
 - `dispatch(...)`: Use a granted capability to send a secret to an authorized target.
-- **Security**: The agent never handles the vault's master password or the secret's plaintext.
+- **Security**: The agent never handles the vault's master password. By using **Session Tokens**, the agent also avoids handling its own raw private key in memory.
 
 ## Storage Layout
 

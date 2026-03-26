@@ -3,6 +3,7 @@ import type {
   AuditQuery,
   AgentCapability,
   AgentIdentityRecord,
+  AgentProof,
   OwnerDefineSecretTargetsCommand,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
@@ -66,6 +67,12 @@ export interface AgentProofVerifier {
   verify(request: DispatchRequest): Promise<void>;
 }
 
+export interface ISessionTokenRegistry {
+  issue(agentId: string): Promise<string>;
+  verify(token: string, agentId: string): Promise<boolean>;
+  revoke(token: string): Promise<void>;
+}
+
 export interface AgentIdentityRegistry {
   register(identity: AgentIdentityRecord): Promise<void>;
   get(vaultId: VaultId, agentId: string): Promise<AgentIdentityRecord | null>;
@@ -109,8 +116,15 @@ export interface VaultCoreDependencies {
   customFlows: CustomHttpFlowRegistry;
   agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;
+  sessionTokens: ISessionTokenRegistry;
+  pendingRequests: IPendingRequestRegistry;
   clock: Clock;
   ids: IdGenerator;
 }
 
-
+export interface IPendingRequestRegistry {
+  save(record: import("./contracts.js").PendingDispatchRecord): Promise<void>;
+  get(requestId: string): Promise<import("./contracts.js").PendingDispatchRecord | null>;
+  list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingDispatchRecord[]>;
+  delete(requestId: string): Promise<void>;
+}

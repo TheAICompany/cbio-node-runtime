@@ -1,4 +1,4 @@
-# Architecture (v1.47.0)
+# Architecture (v1.47.2)
 
 The cbio runtime follows a **Sovereign Vault** architecture: a unified, authority-centric model where security is grounded in proof-of-knowledge (passwords) rather than external identity hierarchies.
 
@@ -38,8 +38,8 @@ Everything in the `vault/sealed/` path is encrypted using the `vaultWorkingKey`,
 ## Process Isolation (A/B Architecture)
 
 To prevent secret leakage even in the case of agent compromise, the runtime is designed for process-level isolation:
-- **Process A (Agent)**: Runs business logic/LLM. Holders a **Managed Identity** signer but has no access to the vault's working key.
-- **Process B (Vault Server)**: Unlocks the vault and processes dispatch requests from Process A.
+- **Process A (Agent)**: Runs business logic/LLM. Authenticates via **Session Tokens** (or Managed Identity signers) but has no access to the vault's working key.
+- **Process B (Vault Server)**: Unlocks the vault, issues/revokes tokens, and processes dispatch requests from Process A.
 
 ## Implementation Rules
 

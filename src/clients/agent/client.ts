@@ -44,6 +44,7 @@ export interface CreateAgentClientOptions {
   vault?: VaultService;
   transport?: AgentDispatchTransport;
   signer?: AgentSigner;
+  token?: string;
   clock?: Clock;
 }
 
@@ -73,26 +74,37 @@ class DefaultAgentClient implements AgentClient {
   constructor(
     private readonly _identity: AgentIdentity,
     private readonly _capability: AgentCapabilityEnvelope,
-    private readonly _signer: AgentSigner,
+    private readonly _signer: AgentSigner | undefined,
     private readonly _transport: AgentDispatchTransport,
     private readonly _clock: Clock,
+    private readonly _token?: string,
   ) {}
 
   async dispatch(intent: AgentDispatchIntent) {
     const requestedAt = intent.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identity.agentId}:${requestedAt}:${intent.secretAlias ?? "no-secret"}:${intent.method}`;
-    const signature = await this._signer.sign(
-      createDispatchBinding(
-        requestId,
-        requestedAt,
-        this._identity.agentId,
-        this._capability.capabilityId,
-        intent.secretAlias,
-        intent.targetUrl,
-        intent.method,
-        intent.body,
-      ),
-    );
+
+    let signature: string | undefined;
+    if (this._token) {
+      // Use token-based authentication
+    } else {
+      // Use signature-based authentication
+      if (!this._signer) {
+        throw new Error("AgentClient: signer required for signature-based authentication when no token is provided");
+      }
+      signature = await this._signer.sign(
+        createDispatchBinding(
+          requestId,
+          requestedAt,
+          this._identity.agentId,
+          this._capability.capabilityId,
+          intent.secretAlias,
+          intent.targetUrl,
+          intent.method,
+          intent.body,
+        ),
+      );
+    }
 
     return this._transport.dispatch({
       vaultId: this._capability.vaultId,
@@ -117,10 +129,12 @@ class DefaultAgentClient implements AgentClient {
         revocationVersion: this._capability.revocationVersion,
         rateLimit: this._capability.rateLimit,
         auditRequired: this._capability.auditRequired,
+        requiresApproval: this._capability.requiresApproval,
       },
       proof: {
         agentId: this._identity.agentId,
         signature,
+        token: this._token,
         requestId,
         requestedAt,
       },
@@ -141,14 +155,17 @@ function isCreatedIdentity(value: AgentIdentity | CreatedIdentity): value is Cre
   return "privateKey" in value && "publicKey" in value;
 }
 
-function resolveAgentSigner(identity: AgentIdentity | CreatedIdentity, signer?: AgentSigner): AgentSigner {
-  if (signer) {
-    return signer;
+function resolveAgentSigner(options: CreateAgentClientOptions): AgentSigner | undefined {
+  if (options.signer) {
+    return options.signer;
   }
-  if (isCreatedIdentity(identity)) {
-    return new LocalSigner(identity);
+  if (isCreatedIdentity(options.agentIdentity)) {
+    return new LocalSigner(options.agentIdentity);
   }
-  throw new Error("createAgentClient() requires signer when agentIdentity does not include keys");
+  if (options.token) {
+    return undefined; // No signer needed if token is present
+  }
+  throw new Error("createAgentClient() requires signer or private key when no session token is provided");
 }
 
 function resolveAgentIdentity(options: CreateAgentClientOptions): AgentIdentity {
@@ -191,8 +208,9 @@ export function createAgentClient(options: CreateAgentClientOptions): AgentClien
   return new DefaultAgentClient(
     resolveAgentIdentity(options),
     options.capability,
-    resolveAgentSigner(options.agentIdentity, options.signer),
+    resolveAgentSigner(options),
     resolveAgentTransport(options),
     options.clock ?? new SystemClock(),
+    options.token,
   );
 }

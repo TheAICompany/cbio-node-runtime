@@ -11,6 +11,7 @@ import type {
   DispatchRequest,
   DispatchResult,
   OwnerDefineSecretTargetsCommand,
+  OwnerIssueSessionTokenRequest,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
@@ -20,7 +21,11 @@ import type {
   OwnerListAgentsRequest,
   OwnerListCapabilitiesRequest,
   OwnerSecretExport,
+  OwnerSessionToken,
+  SecretAlias,
+  SecretId,
   SecretRecord,
+  VaultId,
   VaultPrincipal,
   VaultWriteSecretCommand,
   AgentIdentityRecord,
@@ -104,7 +109,7 @@ export class VaultCore {
 
   private async appendDecisionAudit(
     request: DispatchRequest,
-    outcome: AuditOutcome.ALLOWED | AuditOutcome.DENIED,
+    outcome: AuditOutcome.ALLOWED | AuditOutcome.DENIED | AuditOutcome.PENDING,
     detail: string,
     options?: {
       secretAlias?: string;
@@ -477,6 +482,34 @@ export class VaultCore {
         ?? null
       : null;
 
+    if (request.capability.requiresApproval) {
+      await this._deps.pendingRequests.save({
+        requestId: request.requestId,
+        agentId: request.agent.id,
+        capabilityId: request.capability.capabilityId,
+        secretAlias: request.secretAlias ?? "unknown",
+        targetUrl: request.targetUrl,
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        requestedAt: request.requestedAt,
+        proof: request.proof,
+      });
+
+      await this.appendDecisionAudit(request, AuditOutcome.PENDING, "dispatch stalled for manual approval", {
+        secretAlias: record?.alias.value ?? request.secretAlias,
+        secretId: record?.secretId.value,
+      });
+
+      return {
+        vaultId: this._deps.vaultId,
+        decision: "pending",
+        reason: "manual approval required",
+        secretId: record?.secretId ?? null,
+        executorTarget,
+      };
+    }
+
     if (request.capability.auditRequired !== false) {
       await this.appendDecisionAudit(request, AuditOutcome.ALLOWED, "dispatch authorized", {
         secretAlias: record?.alias.value ?? request.secretAlias,
@@ -495,8 +528,18 @@ export class VaultCore {
 
   async dispatchSecret(request: DispatchRequest): Promise<DispatchResult> {
     const authorization = await this.authorizeDispatch(request);
-    if (authorization.decision !== "allow" || !authorization.secretId) {
+    if (authorization.decision === "deny" || !authorization.secretId) {
       throw new VaultCoreError("dispatch denied", "VAULT_DISPATCH_DENIED");
+    }
+
+    if (authorization.decision === "pending") {
+      return {
+        vaultId: this._deps.vaultId,
+        requestId: request.requestId,
+        status: DispatchStatus.PENDING,
+        targetUrl: request.targetUrl,
+        method: request.method,
+      };
     }
 
     const record = await this._deps.secrets.getById(authorization.secretId);
@@ -633,6 +676,122 @@ export class VaultCore {
         requestId: command.requestId,
         agentId: command.agentId,
         capabilityId: command.capabilityId,
+      }),
+    );
+  }
+
+  async issueAgentSessionToken(request: OwnerIssueSessionTokenRequest): Promise<OwnerSessionToken> {
+    if (request.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("session token vault mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    const agent = await this._deps.agentIdentities.get(this._deps.vaultId, request.agentId);
+    if (!agent) {
+      throw new VaultCoreError("agent identity not found", "VAULT_IDENTITY_DENIED");
+    }
+    const token = await this._deps.sessionTokens.issue(request.agentId);
+    const issuedAt = this._deps.clock.nowIso();
+
+    await this.appendAudit(
+      toAuditEntry(
+        this._deps,
+        request.actor,
+        AuditAction.ISSUE_SESSION_TOKEN,
+        AuditOutcome.SUCCEEDED,
+        `session token issued for agent: ${request.agentId}`,
+      ),
+    );
+
+    return {
+      token,
+      agentId: request.agentId,
+      issuedAt,
+    };
+  }
+
+  async revokeAgentSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
+    if (request.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("session token vault mismatch", "VAULT_IDENTITY_DENIED");
+    }
+    await this._deps.sessionTokens.revoke(request.token);
+    await this.appendAudit(
+      toAuditEntry(
+        this._deps,
+        request.actor,
+        AuditAction.REVOKE_SESSION_TOKEN,
+        AuditOutcome.SUCCEEDED,
+        "session token revoked",
+      ),
+    );
+  }
+
+  async listPendingDispatches(command: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("./contracts.js").PendingDispatchRecord[]> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
+    }
+    return this._deps.pendingRequests.list(command.vaultId);
+  }
+
+  async approveDispatch(command: import("./contracts.js").OwnerApproveDispatchCommand): Promise<DispatchResult> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+    }
+    const pending = await this._deps.pendingRequests.get(command.requestId);
+    if (!pending) {
+      throw new VaultCoreError("pending request not found", "VAULT_REQUEST_NOT_FOUND");
+    }
+
+    const agentRecord = await this._deps.agentIdentities.get(this._deps.vaultId, pending.agentId);
+    if (!agentRecord) {
+      throw new VaultCoreError("agent identity not found", "VAULT_AGENT_NOT_FOUND");
+    }
+
+    const capability = await this._deps.capabilities.get(this._deps.vaultId, pending.agentId, pending.capabilityId);
+    if (!capability) {
+      throw new VaultCoreError("capability not found", "VAULT_CAPABILITY_NOT_FOUND");
+    }
+
+    // Mark as approved (temporarily bypass requiresApproval)
+    const approvedCapability = { ...capability, requiresApproval: false };
+
+    const result = await this.dispatchSecret({
+      vaultId: this._deps.vaultId,
+      agent: { kind: "agent", id: pending.agentId },
+      capability: approvedCapability,
+      secretAlias: pending.secretAlias === "unknown" ? undefined : pending.secretAlias,
+      targetUrl: pending.targetUrl,
+      method: pending.method,
+      headers: pending.headers,
+      body: pending.body,
+      proof: pending.proof,
+      requestId: pending.requestId,
+      requestedAt: pending.requestedAt,
+    });
+
+    await this._deps.pendingRequests.delete(command.requestId);
+    
+    await this.appendAudit(
+      toAuditEntry(this._deps, command.owner, AuditAction.APPROVE_DISPATCH, AuditOutcome.SUCCEEDED, `approved dispatch ${command.requestId}`, {
+        requestId: command.requestId,
+      }),
+    );
+
+    return result;
+  }
+
+  async rejectDispatch(command: import("./contracts.js").OwnerRejectDispatchCommand): Promise<void> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+    }
+    const pending = await this._deps.pendingRequests.get(command.requestId);
+    if (!pending) {
+      throw new VaultCoreError("pending request not found", "VAULT_REQUEST_NOT_FOUND");
+    }
+
+    await this._deps.pendingRequests.delete(command.requestId);
+
+    await this.appendAudit(
+      toAuditEntry(this._deps, command.owner, AuditAction.REJECT_DISPATCH, AuditOutcome.SUCCEEDED, `rejected dispatch ${command.requestId}`, {
+        requestId: command.requestId,
       }),
     );
   }

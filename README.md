@@ -11,6 +11,7 @@ Node.js vault runtime with a **Sovereign Vault** architecture: authority is root
 - **No CLI / No TUI**: Pure library for integration into Node.js applications.
 - **Authority-centric**: Administrative control is tied to the vault's master password, not an external identity.
 - **Managed Agent Custody**: Generate and store agent private keys securely inside the vault.
+- **Agent Session Tokens**: Issue revocable, short-lived (or long-lived) tokens for agents to avoid handling raw private keys.
 - **Process Isolation**: Hard separation between the Security Process (Master) and Agent Processes (Consumers).
 - **Zero-Leak Discovery**: Vault metadata is fully encrypted and hidden until unlocked.
 
@@ -74,9 +75,14 @@ const [agentRecord, agentPrivateKey] = await client.createAgent({
 
 console.log(`Agent public key: ${agentRecord.publicKey}`);
 // Private key is returned during creation and stored securely in the vault.
+
+// 4. Issue a Session Token (Optional but Recommended)
+// Avoid passing the raw private key to agent processes.
+const session = await client.issueSessionToken({ agentId: 'worker-1' });
+console.log(`Session Token: ${session.token}`);
 ```
 
-### 4. Secret Management (Owner)
+### 5. Secret Management (Owner)
 
 ```ts
 // Write a secret and bind it to a target site
@@ -91,40 +97,42 @@ const record = await client.writeSecret({
   }]
 });
 
-// Grant the agent capability to use this secret
+// 4. Grant agent capabilities (Simplified Flattened API)
 await client.grantCapability({
-  capability: {
-    vaultId: vault.vaultId,
-    capabilityId: 'cap-1',
-    agentId: 'worker-1',
-    secretAliases: ['api-token'],
-    operation: 'dispatch_http',
-    allowedTargets: ['https://api.example.com/endpoint'],
-    allowedMethods: ['POST'],
-    issuedAt: new Date().toISOString()
-  }
+  agentId: 'worker-1',
+  secretAliases: ['api-token'],
+  allowedTargets: ['https://api.example.com/*'],
+  requiresApproval: true // Enable Human-in-the-Loop
 });
 ```
 
-### 5. Consuming Secrets (Agent)
+### 6. Consuming Secrets (Agent)
 
-Agents run in isolated processes and communicate with the vault via a transport.
+Agents run in isolated processes and communicate with the vault via a transport. They can use either a **Session Token** (recommended) or a **Signature** (raw private key).
 
+#### Using a Session Token (Stateless/Token-based)
+```ts
+import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
+
+const agent = createAgentClient({
+  agentIdentity: { agentId: 'worker-1' },
+  capability: myCapability, 
+  token: session.token,     // Issued by the owner
+  vault: vault.vault
+});
+
+const result = await agent.dispatch({ ... });
+```
+
+#### Using a Signature (Stateful/Key-based)
 ```ts
 import { createAgentClient, LocalSigner } from '@the-ai-company/cbio-node-runtime';
 
 const agent = createAgentClient({
   agentIdentity: { agentId: 'worker-1' },
-  capability: myCapability, // Shared with the agent
-  vault: vault.vault,       // Remote or local transport
-  signer: new LocalSigner({ privateKey: agentPrivateKey })
-});
-
-const result = await agent.dispatch({
-  secretAlias: 'api-token',
-  targetUrl: 'https://api.example.com/endpoint',
-  method: 'POST',
-  body: '{"data": "..."}'
+  capability: myCapability,
+  signer: new LocalSigner({ privateKey: agentPrivateKey }),
+  vault: vault.vault
 });
 ```
 
@@ -141,6 +149,25 @@ const result = await agent.dispatch({
 2. **Authority Root**: The master password is the only source of administrative authority.
 3. **Auditability**: Every administrative and agent action is recorded in the vault's audit log under the `vault-master` or agent principal.
 4. **Binary Discovery**: Either the vault is unlocked and visible, or it is a silent directory of encrypted shards.
+
+### Human-in-the-Loop (HITL) Workflow
+
+If a capability is granted with `requiresApproval: true`, the agent's dispatch will be paused until an owner approves it:
+
+```ts
+// In Agent process
+const result = await agent.dispatch({ ... });
+if (result.status === 'PENDING') {
+  console.log("Waiting for owner approval...");
+}
+
+// In Owner process (GUI or Script)
+const pending = await client.listPendingDispatches();
+if (pending.length > 0) {
+  // Inspect and approve the request
+  await client.approveDispatch(pending[0].requestId);
+}
+```
 
 ## Build & Test
 

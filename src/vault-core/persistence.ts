@@ -26,8 +26,21 @@ import type {
   VaultCoreDependencies,
 } from "./ports.js";
 import {
-  DefaultPolicyEngine,
+  InMemoryAgentIdentityRegistry,
+  InMemoryAuditLog,
+  InMemoryCapabilityRegistry,
+  InMemoryCustomHttpFlowRegistry,
+  InMemoryReplayGuard,
+  InMemorySecretCustody,
+  InMemorySecretRepository,
+  InMemoryPendingRequestRegistry,
+  InMemorySessionTokenRegistry,
+  RandomIdGenerator,
   SignatureAgentProofVerifier,
+  SystemClock,
+} from "./defaults.js";
+import {
+  DefaultPolicyEngine,
   createVaultCoreDependencies,
   type VaultCoreDependenciesOptions,
 } from "./defaults.js";
@@ -566,6 +579,8 @@ export function createPersistentVaultCoreDependencies(
 ): VaultCoreDependencies {
   const defaults = createVaultCoreDependencies(options);
   const agentIdentities = new FileAgentIdentityRegistry(storage, options.vaultWorkingKey);
+  const sessionTokens = new InMemorySessionTokenRegistry(); // Session tokens are in-memory for now
+  const pendingRequests = new InMemoryPendingRequestRegistry(); // Pending requests are in-memory
   const capabilityRevocations = new FileCapabilityRevocationRegistry(storage, options.vaultWorkingKey);
   const capabilities = new FileCapabilityRegistry(storage, options.vaultWorkingKey);
   const customFlows = new FileCustomHttpFlowRegistry(storage, options.vaultWorkingKey);
@@ -588,9 +603,11 @@ export function createPersistentVaultCoreDependencies(
       "vault/sealed/locks/replay",
       options.proofVerifier?.maxSkewMs ?? (5 * 60 * 1000),
     ),
-    agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, options.proofVerifier),
+    agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
     capabilities,
     customFlows,
+    sessionTokens,
+    pendingRequests,
     clock: defaults.clock,
     ids: defaults.ids,
     executor: defaults.executor,

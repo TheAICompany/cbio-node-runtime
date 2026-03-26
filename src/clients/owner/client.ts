@@ -16,6 +16,8 @@ import type {
   VaultListAgentsInput,
   VaultListCapabilitiesInput,
   VaultRevokeCapabilityInput,
+  VaultIssueSessionTokenInput,
+  VaultRevokeSessionTokenInput,
 } from "./contracts.js";
 
 export interface VaultIdentity {
@@ -246,10 +248,22 @@ class DefaultVaultClient implements VaultClient {
 
   async grantCapability(input: VaultGrantCapabilityInput): Promise<void> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.capability.capabilityId}:register_capability`;
-    const capability = {
-      ...input.capability,
+    const capabilityId = input.capabilityId ?? `cap_${crypto.randomUUID()}`;
+    const requestId = `${this._identityId}:${requestedAt}:${capabilityId}:register_capability`;
+    
+    const capability: import("../../vault-core/index.js").AgentCapability = {
       vaultId: this._vault.vaultId,
+      agentId: input.agentId,
+      capabilityId,
+      operation: (input.operation as any) ?? "dispatch_http",
+      secretAliases: input.secretAliases ? [...input.secretAliases] : [],
+      allowedTargets: input.allowedTargets ? [...input.allowedTargets] : [],
+      allowedMethods: input.allowedMethods ? [...input.allowedMethods] : [],
+      allowedPaths: input.allowedPaths ? [...input.allowedPaths] : [],
+      rateLimit: input.rateLimit,
+      auditRequired: input.auditRequired,
+      requiresApproval: input.requiresApproval,
+      issuedAt: requestedAt,
     };
     
     await this._vault.registerCapability({
@@ -338,7 +352,7 @@ class DefaultVaultClient implements VaultClient {
   async revokeCapability(input: VaultRevokeCapabilityInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:revoke_capability`;
-    
+
     return this._vault.revokeCapability({
       vaultId: this._vault.vaultId,
       requestId,
@@ -349,6 +363,56 @@ class DefaultVaultClient implements VaultClient {
       },
       agentId: input.agentId,
       capabilityId: input.capabilityId,
+    });
+  }
+
+  async issueSessionToken(input: VaultIssueSessionTokenInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identityId}:${requestedAt}:issue_session_token`;
+
+    return this._vault.issueSessionToken({
+      vaultId: this._vault.vaultId,
+      actor: {
+        kind: "owner",
+        id: this._identityId,
+      },
+      agentId: input.agentId,
+      requestId,
+      requestedAt,
+    });
+  }
+
+  async revokeSessionToken(input: VaultRevokeSessionTokenInput) {
+    return this._vault.revokeSessionToken({
+      vaultId: this._vault.vaultId,
+      actor: {
+        kind: "owner",
+        id: this._identityId,
+      },
+      token: input.token,
+    });
+  }
+
+  async listPendingDispatches() {
+    return this._vault.listPendingDispatches({
+      vaultId: this._vault.vaultId,
+      owner: { kind: "owner", id: this._identityId },
+    });
+  }
+
+  async approveDispatch(requestId: string) {
+    return this._vault.approveDispatch({
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: { kind: "owner", id: this._identityId },
+    });
+  }
+
+  async rejectDispatch(requestId: string) {
+    return this._vault.rejectDispatch({
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: { kind: "owner", id: this._identityId },
     });
   }
 }

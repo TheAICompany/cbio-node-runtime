@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.47.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.47.2**](../README.md)
 
 ***
 
@@ -27,6 +27,12 @@
 ### signer?
 
 > `optional` **signer?**: [`AgentSigner`](AgentSigner.md)
+
+***
+
+### token?
+
+> `optional` **token?**: `string`
 
 ***
 

@@ -19,7 +19,8 @@ import {
   type OwnerSecretExport,
   type SecretRecord,
   type AgentIdentityRecord,
-  type VaultId,
+  VaultPrincipal,
+  VaultId,
   DispatchStatus,
 } from "../vault-core/index.js";
 import {
@@ -52,7 +53,10 @@ export interface VaultAgentDispatchRequest {
   method: string;
   headers?: Record<string, string>;
   body?: string;
-  proof: { signature: string };
+  proof: {
+    signature?: string;
+    token?: string;
+  };
 }
 
 export interface VaultAgentDispatchResponse {
@@ -115,6 +119,11 @@ export interface VaultService {
   listAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]>;
   listCapabilities(request: OwnerListCapabilitiesRequest): Promise<readonly AgentCapability[]>;
   revokeCapability(request: OwnerRevokeCapabilityCommand): Promise<void>;
+  issueSessionToken(request: import("../vault-core/index.js").OwnerIssueSessionTokenRequest): Promise<import("../vault-core/index.js").OwnerSessionToken>;
+  revokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void>;
+  listPendingDispatches(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingDispatchRecord[]>;
+  approveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult>;
+  rejectDispatch(request: import("../vault-core/index.js").OwnerRejectDispatchCommand): Promise<void>;
 }
 
 class LocalVaultService implements VaultService {
@@ -354,6 +363,7 @@ class LocalVaultService implements VaultService {
           proof: {
             agentId: request.agentId,
             signature: request.proof.signature,
+            token: request.proof.token,
             requestId: request.requestId,
             requestedAt: request.requestedAt,
           },
@@ -405,6 +415,7 @@ class LocalVaultService implements VaultService {
         proof: {
           agentId: request.agentId,
           signature: request.proof.signature,
+          token: request.proof.token,
           requestId: request.requestId,
           requestedAt: request.requestedAt,
         },
@@ -474,6 +485,26 @@ class LocalVaultService implements VaultService {
 
   async revokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {
     return await this._authority.revokeCapability(command);
+  }
+
+  async issueSessionToken(request: import("../vault-core/index.js").OwnerIssueSessionTokenRequest): Promise<import("../vault-core/index.js").OwnerSessionToken> {
+    return await this._authority.issueAgentSessionToken(request);
+  }
+
+  async revokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
+    return this._authority.revokeAgentSessionToken(request);
+  }
+
+  listPendingDispatches(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingDispatchRecord[]> {
+    return this._authority.listPendingDispatches(request);
+  }
+
+  approveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult> {
+    return this._authority.approveDispatch(request);
+  }
+
+  rejectDispatch(request: import("../vault-core/index.js").OwnerRejectDispatchCommand): Promise<void> {
+    return this._authority.rejectDispatch(request);
   }
 
   private async resolveCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability> {

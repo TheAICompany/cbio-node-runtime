@@ -166,13 +166,40 @@ export interface AgentCapability {
     windowMs: number;
   };
   auditRequired?: boolean;
+  requiresApproval?: boolean;
 }
 
 export interface AgentProof {
   agentId: string;
-  signature: string;
   requestId: string;
   requestedAt: string;
+  signature?: string;
+  token?: string;
+}
+
+export interface PendingDispatchRecord {
+  requestId: string;
+  agentId: string;
+  capabilityId: string;
+  secretAlias: string;
+  targetUrl: string;
+  method: string;
+  headers?: Record<string, string>;
+  body?: string;
+  requestedAt: string;
+  proof: AgentProof;
+}
+
+export interface OwnerApproveDispatchCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
+}
+
+export interface OwnerRejectDispatchCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
 }
 
 
@@ -190,9 +217,11 @@ export interface DispatchRequest {
   body?: string;
 }
 
+export type DispatchDecision = "allow" | "deny" | "pending";
+
 export interface DispatchAuthorization {
   vaultId: VaultId;
-  decision: "allow" | "deny";
+  decision: DispatchDecision;
   reason: string | null;
   secretId: SecretId | null;
   executorTarget: VaultTargetBinding | null;
@@ -212,6 +241,8 @@ export enum DispatchStatus {
   SUCCEEDED = "SUCCEEDED",
   DENIED = "DENIED",
   FAILED = "FAILED",
+  PENDING = "PENDING",
+  STALLED = "STALLED",
 }
 
 export interface DispatchResult {
@@ -247,6 +278,11 @@ export enum AuditAction {
   LIST_AGENTS = "LIST_AGENTS",
   LIST_CAPABILITIES = "LIST_CAPABILITIES",
   READ_AUDIT = "READ_AUDIT",
+  ISSUE_SESSION_TOKEN = "ISSUE_SESSION_TOKEN",
+  REVOKE_SESSION_TOKEN = "REVOKE_SESSION_TOKEN",
+  APPROVE_DISPATCH = "APPROVE_DISPATCH",
+  REJECT_DISPATCH = "REJECT_DISPATCH",
+  STALL_DISPATCH = "STALL_DISPATCH",
 }
 
 export enum AuditOutcome {
@@ -254,6 +290,7 @@ export enum AuditOutcome {
   DENIED = "DENIED",
   SUCCEEDED = "SUCCEEDED",
   FAILED = "FAILED",
+  PENDING = "PENDING",
 }
 
 export interface AuditEntry {
@@ -280,6 +317,13 @@ export interface AgentIdentityRecord {
   privateKey?: string;
   metadata?: Record<string, any>;
   nickname?: string;
+}
+
+export interface StoredSessionToken {
+  token: string;
+  agentId: string;
+  issuedAt: string;
+  expiresAt?: string;
 }
 
 
@@ -320,4 +364,18 @@ export interface OwnerListCapabilitiesRequest {
   actor: VaultPrincipal & { kind: "owner" };
   agentId?: string;
   requestedAt: string;
+}
+
+export interface OwnerIssueSessionTokenRequest {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  agentId: string;
+  requestedAt: string;
+}
+
+export interface OwnerSessionToken {
+  token: string;
+  agentId: string;
+  issuedAt: string;
 }

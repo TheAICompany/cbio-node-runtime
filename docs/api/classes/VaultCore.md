@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.47.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.47.2**](../README.md)
 
 ***
 
@@ -173,6 +173,22 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### issueAgentSessionToken()
+
+> **issueAgentSessionToken**(`request`): `Promise`\<`OwnerSessionToken`\>
+
+#### Parameters
+
+##### request
+
+`OwnerIssueSessionTokenRequest`
+
+#### Returns
+
+`Promise`\<`OwnerSessionToken`\>
+
+***
+
 ### listAgents()
 
 > **listAgents**(`actor`, `request?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
@@ -258,6 +274,32 @@ This is the primary implementation of the Vault logic.
 ##### command
 
 `OwnerRegisterCustomHttpFlowCommand`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### revokeAgentSessionToken()
+
+> **revokeAgentSessionToken**(`request`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### request
+
+###### actor
+
+`VaultPrincipal` & `object`
+
+###### token
+
+`string`
+
+###### vaultId
+
+`VaultId`
 
 #### Returns
 

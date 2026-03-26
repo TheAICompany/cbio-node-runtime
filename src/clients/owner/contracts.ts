@@ -61,7 +61,20 @@ export interface VaultRegisterFlowInput extends OwnerHttpFlowBoundary {
 }
 
 export interface VaultGrantCapabilityInput {
-  capability: import("../../vault-core/index.js").AgentCapability;
+  agentId: string;
+  capabilityId?: string;
+  operation?: string;
+  secretAliases?: readonly string[];
+  allowedTargets?: readonly string[];
+  allowedMethods?: readonly string[];
+  allowedPaths?: readonly string[];
+  expiresIn?: number;
+  rateLimit?: {
+    maxRequests: number;
+    windowMs: number;
+  };
+  auditRequired?: boolean;
+  requiresApproval?: boolean;
   requestedAt?: string;
 }
 
@@ -83,4 +96,37 @@ export interface VaultRevokeCapabilityInput {
   agentId: string;
   capabilityId: string;
   requestedAt?: string;
+}
+
+export interface VaultIssueSessionTokenInput {
+  agentId: string;
+  requestedAt?: string;
+}
+
+export interface VaultRevokeSessionTokenInput {
+  token: string;
+}
+
+/**
+ * A client for vault owners to manage secrets, agents, and capabilities.
+ */
+export interface VaultClient {
+  storeSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  defineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  writeSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  exportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+  grantCapability(input: VaultGrantCapabilityInput): Promise<void>;
+  readAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
+  registerAgent(input: VaultRegisterAgentInput): Promise<void>;
+  createAgent(input: VaultCreateAgentInput): Promise<readonly [import("../../vault-core/index.js").AgentIdentityRecord, string]>;
+  registerFlow(input: VaultRegisterFlowInput): Promise<void>;
+  deleteSecret(input: VaultDeleteSecretInput): Promise<void>;
+  listAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
+  listCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  revokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
+  issueSessionToken(input: VaultIssueSessionTokenInput): Promise<import("../../vault-core/index.js").OwnerSessionToken>;
+  revokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
+  listPendingDispatches(): Promise<readonly import("../../vault-core/index.js").PendingDispatchRecord[]>;
+  approveDispatch(requestId: string): Promise<import("../../vault-core/index.js").DispatchResult>;
+  rejectDispatch(requestId: string): Promise<void>;
 }
