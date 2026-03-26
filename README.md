@@ -97,12 +97,12 @@ const record = await client.writeSecret({
   }]
 });
 
-// 4. Grant agent capabilities (Simplified Flattened API)
+// 4. Grant agent capabilities
 await client.grantCapability({
   agentId: 'worker-1',
   secretAliases: ['api-token'],
   allowedTargets: ['https://api.example.com/*'],
-  requiresApproval: true // Enable Human-in-the-Loop
+  skipAudit: false // Optional, defaults to false
 });
 ```
 
@@ -152,20 +152,23 @@ const agent = createAgentClient({
 
 ### Human-in-the-Loop (HITL) Workflow
 
-If a capability is granted with `requiresApproval: true`, the agent's dispatch will be paused until an owner approves it:
+The system uses a **Discovery-first** model. If an agent attempts an action not explicitly in its white-list (the "Iron Triangle" of Agent-Key-Action), the dispatch is paused:
 
 ```ts
 // In Agent process
 const result = await agent.dispatch({ ... });
 if (result.status === 'PENDING') {
-  console.log("Waiting for owner approval...");
+  console.log("Discovery needed: Waiting for owner approval...");
 }
 
 // In Owner process (GUI or Script)
 const pending = await client.listPendingDispatches();
 if (pending.length > 0) {
-  // Inspect and approve the request
-  await client.approveDispatch(pending[0].requestId);
+  // Inspect and approve the request, optionally making it permanent
+  await client.approveDispatch({ 
+    requestId: pending[0].requestId, 
+    permanent: true 
+  });
 }
 ```
 

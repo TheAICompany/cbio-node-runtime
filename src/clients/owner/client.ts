@@ -18,6 +18,7 @@ import type {
   VaultRevokeCapabilityInput,
   VaultIssueSessionTokenInput,
   VaultRevokeSessionTokenInput,
+  VaultApproveDispatchInput,
 } from "./contracts.js";
 
 export interface VaultIdentity {
@@ -261,8 +262,7 @@ class DefaultVaultClient implements VaultClient {
       allowedMethods: input.allowedMethods ? [...input.allowedMethods] : [],
       allowedPaths: input.allowedPaths ? [...input.allowedPaths] : [],
       rateLimit: input.rateLimit,
-      auditRequired: input.auditRequired,
-      requiresApproval: input.requiresApproval,
+      skipAudit: input.skipAudit,
       issuedAt: requestedAt,
     };
     
@@ -400,10 +400,12 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async approveDispatch(requestId: string) {
+  async approveDispatch(input: VaultApproveDispatchInput) {
     return this._vault.approveDispatch({
       vaultId: this._vault.vaultId,
-      requestId,
+      requestId: input.requestId,
+      permanent: input.permanent,
+      skipAudit: input.skipAudit,
       owner: { kind: "owner", id: this._identityId },
     });
   }
@@ -414,6 +416,10 @@ class DefaultVaultClient implements VaultClient {
       requestId,
       owner: { kind: "owner", id: this._identityId },
     });
+  }
+
+  onPendingRequest(callback: (record: import("../../vault-core/index.js").PendingDispatchRecord) => void): () => void {
+    return this._vault.onPendingRequest(callback);
   }
 }
 

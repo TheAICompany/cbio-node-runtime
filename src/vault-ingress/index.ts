@@ -47,7 +47,7 @@ export interface VaultAgentDispatchRequest {
   requestId: string;
   requestedAt: string;
   agentId: string;
-  capabilityId: string;
+  capabilityId?: string;
   secretAlias?: string;
   targetUrl: string;
   method: string;
@@ -124,6 +124,7 @@ export interface VaultService {
   listPendingDispatches(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingDispatchRecord[]>;
   approveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult>;
   rejectDispatch(request: import("../vault-core/index.js").OwnerRejectDispatchCommand): Promise<void>;
+  onPendingRequest(callback: (record: import("../vault-core/index.js").PendingDispatchRecord) => void): () => void;
 }
 
 class LocalVaultService implements VaultService {
@@ -138,6 +139,10 @@ class LocalVaultService implements VaultService {
     return this._authority.vaultId;
   }
 
+
+  onPendingRequest(callback: (record: import("../vault-core/index.js").PendingDispatchRecord) => void): () => void {
+    return this._authority.onPendingRequest(callback);
+  }
 
   registerCapability(request: OwnerRegisterCapabilityCommand): Promise<void> {
     return this._authority.registerCapability(request);
@@ -331,7 +336,7 @@ class LocalVaultService implements VaultService {
     try {
       const vaultId = { value: request.vaultId };
       const capability = await this.resolveCapability(vaultId, request.agentId, request.capabilityId);
-      const customFlow = capability.operation === "custom_http"
+      const customFlow = capability?.operation === "custom_http"
         ? await this.resolveCustomFlow(vaultId, capability.customFlowId)
         : null;
       const boundary = customFlow
@@ -507,12 +512,12 @@ class LocalVaultService implements VaultService {
     return this._authority.rejectDispatch(request);
   }
 
-  private async resolveCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability> {
-    const capability = await this._authority.getCapability(vaultId, agentId, capabilityId);
-    if (!capability) {
-      throw new Error("VAULT_CAPABILITY_NOT_FOUND");
+  private async resolveCapability(vaultId: VaultId, agentId: string, capabilityId?: string): Promise<AgentCapability | undefined> {
+    if (!capabilityId) {
+      return undefined;
     }
-    return capability;
+    const capability = await this._authority.getCapability(vaultId, agentId, capabilityId);
+    return capability ?? undefined;
   }
 
   private parseBody(body: string | undefined): unknown {

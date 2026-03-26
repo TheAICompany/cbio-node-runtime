@@ -73,8 +73,14 @@ export interface VaultGrantCapabilityInput {
     maxRequests: number;
     windowMs: number;
   };
-  auditRequired?: boolean;
-  requiresApproval?: boolean;
+  skipAudit?: boolean;
+  requestedAt?: string;
+}
+
+export interface VaultApproveDispatchInput {
+  requestId: string;
+  permanent?: boolean;
+  skipAudit?: boolean;
   requestedAt?: string;
 }
 
@@ -127,6 +133,7 @@ export interface VaultClient {
   issueSessionToken(input: VaultIssueSessionTokenInput): Promise<import("../../vault-core/index.js").OwnerSessionToken>;
   revokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
   listPendingDispatches(): Promise<readonly import("../../vault-core/index.js").PendingDispatchRecord[]>;
-  approveDispatch(requestId: string): Promise<import("../../vault-core/index.js").DispatchResult>;
+  approveDispatch(input: VaultApproveDispatchInput): Promise<import("../../vault-core/index.js").DispatchResult>;
   rejectDispatch(requestId: string): Promise<void>;
+  onPendingRequest(callback: (record: import("../../vault-core/index.js").PendingDispatchRecord) => void): () => void;
 }

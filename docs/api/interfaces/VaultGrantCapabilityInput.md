@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.47.2**](../README.md)
+[**CBIO Node Runtime Agent API v1.48.4**](../README.md)
 
 ***
 
@@ -6,12 +6,74 @@
 
 ## Properties
 
-### capability
+### agentId
 
-> **capability**: `AgentCapability`
+> **agentId**: `string`
+
+***
+
+### allowedMethods?
+
+> `optional` **allowedMethods?**: readonly `string`[]
+
+***
+
+### allowedPaths?
+
+> `optional` **allowedPaths?**: readonly `string`[]
+
+***
+
+### allowedTargets?
+
+> `optional` **allowedTargets?**: readonly `string`[]
+
+***
+
+### capabilityId?
+
+> `optional` **capabilityId?**: `string`
+
+***
+
+### expiresIn?
+
+> `optional` **expiresIn?**: `number`
+
+***
+
+### operation?
+
+> `optional` **operation?**: `string`
+
+***
+
+### rateLimit?
+
+> `optional` **rateLimit?**: `object`
+
+#### maxRequests
+
+> **maxRequests**: `number`
+
+#### windowMs
+
+> **windowMs**: `number`
 
 ***
 
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
+
+***
+
+### secretAliases?
+
+> `optional` **secretAliases?**: readonly `string`[]
+
+***
+
+### skipAudit?
+
+> `optional` **skipAudit?**: `boolean`

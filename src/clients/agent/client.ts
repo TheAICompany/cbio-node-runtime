@@ -128,8 +128,7 @@ class DefaultAgentClient implements AgentClient {
         expiresAt: this._capability.expiresAt,
         revocationVersion: this._capability.revocationVersion,
         rateLimit: this._capability.rateLimit,
-        auditRequired: this._capability.auditRequired,
-        requiresApproval: this._capability.requiresApproval,
+        skipAudit: this._capability.skipAudit,
       },
       proof: {
         agentId: this._identity.agentId,

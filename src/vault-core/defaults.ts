@@ -108,7 +108,7 @@ function createDispatchBinding(request: DispatchRequest): string {
     requestId: request.requestId,
     requestedAt: request.requestedAt,
     agentId: request.agent.id,
-    capabilityId: request.capability.capabilityId,
+    capabilityId: request.capability?.capabilityId ?? null,
     secretAlias: request.secretAlias ?? null,
     targetUrl: request.targetUrl,
     method: request.method,
@@ -368,7 +368,7 @@ export class DefaultPolicyEngine implements PolicyEngine {
   }
 
   private async assertCapabilityRateLimit(request: DispatchRequest): Promise<void> {
-    const rateLimit = request.capability.rateLimit;
+    const rateLimit = request.capability?.rateLimit;
     if (!rateLimit) {
       return;
     }
@@ -379,7 +379,7 @@ export class DefaultPolicyEngine implements PolicyEngine {
       throw new VaultCoreError("capability rate limit invalid", "VAULT_DISPATCH_DENIED");
     }
     const now = this._options.now?.().getTime() ?? Date.now();
-    const key = `${request.vaultId.value}:${request.agent.id}:${request.capability.capabilityId}`;
+    const key = `${request.vaultId.value}:${request.agent.id}:${request.capability?.capabilityId}`;
     await this._rateLimitStore.consume(key, rateLimit.maxRequests, rateLimit.windowMs, now);
   }
 
@@ -420,63 +420,68 @@ export class DefaultPolicyEngine implements PolicyEngine {
   }
 
   async authorizeDispatch(request: DispatchRequest, record?: SecretRecord | null): Promise<void> {
+    const { capability } = request;
+    if (!capability) {
+      throw new VaultCoreError("capability required for authorization", "VAULT_DISPATCH_DENIED");
+    }
+
     const now = this._options.now?.() ?? new Date();
     const canonicalRequestTarget = canonicalizeHttpTarget(request.targetUrl, request.method);
-    if (request.capability.vaultId.value !== request.vaultId.value) {
+    if (capability.vaultId.value !== request.vaultId.value) {
       throw new VaultCoreError("capability vault mismatch", "VAULT_DISPATCH_DENIED");
     }
     if (record && record.vaultId.value !== request.vaultId.value) {
       throw new VaultCoreError("record vault mismatch", "VAULT_DISPATCH_DENIED");
     }
-    if (request.capability.expiresAt) {
-      const expiresAt = Date.parse(request.capability.expiresAt);
+    if (capability.expiresAt) {
+      const expiresAt = Date.parse(capability.expiresAt);
       if (Number.isNaN(expiresAt) || expiresAt < now.getTime()) {
         throw new VaultCoreError("capability expired", "VAULT_DISPATCH_DENIED");
       }
     }
-    if (request.capability.agentId !== request.agent.id) {
+    if (capability.agentId !== request.agent.id) {
       throw new VaultCoreError("capability agent mismatch", "VAULT_DISPATCH_DENIED");
     }
-    if (request.capability.operation !== "dispatch_http" && request.capability.operation !== "custom_http") {
+    if (capability.operation !== "dispatch_http" && capability.operation !== "custom_http") {
       throw new VaultCoreError("operation denied", "VAULT_DISPATCH_DENIED");
     }
-    const issuedAt = Date.parse(request.capability.issuedAt);
+    const issuedAt = Date.parse(capability.issuedAt);
     if (Number.isNaN(issuedAt) || issuedAt > now.getTime()) {
       throw new VaultCoreError("capability issuedAt invalid", "VAULT_DISPATCH_DENIED");
     }
     if (record) {
-      if (request.capability.secretIds?.length) {
-        if (!request.capability.secretIds.includes(record.secretId.value)) {
+      if (capability.secretIds?.length) {
+        if (!capability.secretIds.includes(record.secretId.value)) {
           throw new VaultCoreError("secret id denied", "VAULT_DISPATCH_DENIED");
         }
-      } else if (request.capability.secretAliases?.length && !request.capability.secretAliases.includes(record.alias.value)) {
+      } else if (capability.secretAliases?.length && !capability.secretAliases.includes(record.alias.value)) {
         throw new VaultCoreError("secret alias denied", "VAULT_DISPATCH_DENIED");
       }
     } else {
-      if (request.capability.operation !== "custom_http") {
+      if (capability.operation !== "custom_http") {
         throw new VaultCoreError("secret alias required", "VAULT_DISPATCH_DENIED");
       }
-      if (request.capability.secretIds?.length || request.capability.secretAliases?.length) {
+      if (capability.secretIds?.length || capability.secretAliases?.length) {
         throw new VaultCoreError("secret scope denied", "VAULT_DISPATCH_DENIED");
       }
     }
-    if (!request.capability.allowedTargets.some((target) => canonicalizeAllowedTarget(target) === canonicalRequestTarget.url)) {
+    if (!capability.allowedTargets.some((target) => canonicalizeAllowedTarget(target) === canonicalRequestTarget.url)) {
       throw new VaultCoreError("target denied", "VAULT_DISPATCH_DENIED");
     }
-    if (!request.capability.allowedMethods.includes(canonicalRequestTarget.method)) {
+    if (!capability.allowedMethods.includes(canonicalRequestTarget.method)) {
       throw new VaultCoreError("method denied", "VAULT_DISPATCH_DENIED");
     }
-    if (request.capability.allowedPaths?.length && !request.capability.allowedPaths.includes(canonicalRequestTarget.path)) {
+    if (capability.allowedPaths?.length && !capability.allowedPaths.includes(canonicalRequestTarget.path)) {
       throw new VaultCoreError("path denied", "VAULT_DISPATCH_DENIED");
     }
     const currentRevocationVersion = this._options.capabilityRevocationRegistry
       ? await this._options.capabilityRevocationRegistry.get(
-        request.capability.vaultId,
-        request.capability.agentId,
-        request.capability.capabilityId,
+        capability.vaultId,
+        capability.agentId,
+        capability.capabilityId,
       )
       : 0;
-    if ((request.capability.revocationVersion ?? 0) < currentRevocationVersion) {
+    if ((capability.revocationVersion ?? 0) < currentRevocationVersion) {
       throw new VaultCoreError("capability revoked", "VAULT_DISPATCH_DENIED");
     }
     if (record) {

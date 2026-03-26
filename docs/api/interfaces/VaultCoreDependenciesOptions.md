@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.47.2**](../README.md)
+[**CBIO Node Runtime Agent API v1.48.4**](../README.md)
 
 ***
 
@@ -19,6 +19,12 @@
 ### authPrefix?
 
 > `optional` **authPrefix?**: `string`
+
+***
+
+### clock?
+
+> `optional` **clock?**: `Clock`
 
 ***
 
@@ -77,6 +83,18 @@
 ### proofVerifier?
 
 > `optional` **proofVerifier?**: `SignatureAgentProofVerifierOptions`
+
+***
+
+### replayGuard?
+
+> `optional` **replayGuard?**: `ReplayGuard`
+
+***
+
+### sessionTokens?
+
+> `optional` **sessionTokens?**: `ISessionTokenRegistry`
 
 ***
 

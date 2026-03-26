@@ -1,10 +1,10 @@
-# CBIO Vault Runtime Reference (v1.47.2)
+# CBIO Vault Runtime Reference (v1.48.3)
 
 This document describes the current implemented runtime surface for the **Sovereign Vault**. 
 
 ## Primary API Surface
 
-The v1.47.2 runtime centers on a simplified, authority-centric model with managed agency and session tokens.
+The v1.48.3 runtime centers on a simplified, authority-centric model with managed agency and session tokens, featuring a **Discovery-first** HITL workflow.
 
 ### Main Constructors and Entrypoints
 
@@ -50,7 +50,10 @@ The `VaultClient` provides the administrative interface for the vault.
 - `writeSecret(...)`: Store a secret and bind it to specific targets in one step.
 - `createAgent(...)`: Generate and host a new agent identity.
 - `listAgents()`: Enumerate authorized agents and retrieve managed private keys.
-- `grantCapability(...)`: Assign specific secret-use permissions to an agent.
+- `grantCapability(...)`: Assign specific secret-use permissions to an agent. 
+- `listPendingDispatches()`: List agent requests awaiting manual approval (HITL).
+- `approveDispatch({ requestId, permanent, skipAudit })`: Grant a stalled request manual authorization. If `permanent` is true, a new capability is automatically granted to the agent.
+- `rejectDispatch(requestId)`: Deny a stalled request.
 - `issueSessionToken(...)`: Generate a revocable session token for a managed agent.
 - `revokeSessionToken(...)`: Immediately invalidate a previously issued session token.
 - `exportSecret(...)`: Reveal a secret's plaintext (requires active authority).
@@ -62,7 +65,10 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 
 ### Core Operations
 - `dispatch(...)`: Use a granted capability to send a secret to an authorized target.
+  - **Status**: Returns `SUCCEEDED`, `FAILED`, or `PENDING`.
+  - **Discovery Flow**: If an agent attempts an action not explicitly in its white-list, the request is automatically stalled as `PENDING` for owner review. 
 - **Security**: The agent never handles the vault's master password. By using **Session Tokens**, the agent also avoids handling its own raw private key in memory.
+- **Auditing**: Dispatches are audited by default. Set `skipAudit: true` in the capability (or during approval) to disable logging for specific actions.
 
 ## Storage Layout
 

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.47.2**](../README.md)
+[**CBIO Node Runtime Agent API v1.48.4**](../README.md)
 
 ***
 
@@ -27,6 +27,16 @@
 #### Inherited from
 
 [`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`authPrefix`](VaultCoreDependenciesOptions.md#authprefix)
+
+***
+
+### clock?
+
+> `optional` **clock?**: `Clock`
+
+#### Inherited from
+
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`clock`](VaultCoreDependenciesOptions.md#clock)
 
 ***
 
@@ -103,6 +113,26 @@
 #### Inherited from
 
 [`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`proofVerifier`](VaultCoreDependenciesOptions.md#proofverifier)
+
+***
+
+### replayGuard?
+
+> `optional` **replayGuard?**: `ReplayGuard`
+
+#### Inherited from
+
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`replayGuard`](VaultCoreDependenciesOptions.md#replayguard)
+
+***
+
+### sessionTokens?
+
+> `optional` **sessionTokens?**: `ISessionTokenRegistry`
+
+#### Inherited from
+
+[`VaultCoreDependenciesOptions`](VaultCoreDependenciesOptions.md).[`sessionTokens`](VaultCoreDependenciesOptions.md#sessiontokens)
 
 ***
 

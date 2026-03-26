@@ -165,8 +165,7 @@ export interface AgentCapability {
     maxRequests: number;
     windowMs: number;
   };
-  auditRequired?: boolean;
-  requiresApproval?: boolean;
+  skipAudit?: boolean;
 }
 
 export interface AgentProof {
@@ -180,7 +179,7 @@ export interface AgentProof {
 export interface PendingDispatchRecord {
   requestId: string;
   agentId: string;
-  capabilityId: string;
+  capabilityId?: string;
   secretAlias: string;
   targetUrl: string;
   method: string;
@@ -194,6 +193,8 @@ export interface OwnerApproveDispatchCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;
+  permanent?: boolean;
+  skipAudit?: boolean;
 }
 
 export interface OwnerRejectDispatchCommand {
@@ -208,7 +209,7 @@ export interface DispatchRequest {
   requestId: string;
   requestedAt: string;
   agent: VaultPrincipal & { kind: "agent" };
-  capability: AgentCapability;
+  capability?: AgentCapability;
   proof: AgentProof;
   secretAlias?: string;
   targetUrl: string;
@@ -225,6 +226,7 @@ export interface DispatchAuthorization {
   reason: string | null;
   secretId: SecretId | null;
   executorTarget: VaultTargetBinding | null;
+  capability?: AgentCapability;
 }
 
 export interface DispatchInstruction {

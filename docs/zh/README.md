@@ -72,7 +72,31 @@ const record = await client.writeSecret({
 
 ---
 
-## 详细详细文档
+### 4. 人机协同 (HITL) 工作流
+
+系统采用 **“发现优先 (Discovery-first)”** 模型。如果 Agent 尝试执行的操作不在白名单内（即 Agent-Key-Action “铁三角”未对齐），动作将被自动暂停：
+
+```ts
+// Agent 进程中
+const result = await agent.dispatch({ ... });
+if (result.status === 'PENDING') {
+  console.log("触发发现流程：等待所有者审批...");
+}
+
+// 所有者进程中 (GUI 或 脚本)
+const pending = await client.listPendingDispatches();
+if (pending.length > 0) {
+  // 检查并批准请求，可选择将其设为“永久授权”
+  await client.approveDispatch({ 
+    requestId: pending[0].requestId, 
+    permanent: true 
+  });
+}
+```
+
+---
+
+## 详细文档
 
 - [进程隔离 (A/B 架构)](../PROCESS_ISOLATION.md)
 - [根目录 README (英文)](../../README.md)
@@ -81,5 +105,5 @@ const record = await client.writeSecret({
 
 1. **机密隔离**：机密明文绝不离开安全进程。
 2. **密码即权限**：主密码是唯一的管理授权来源。
-3. **可审计性**：所有管理动作在高层均记录为 `vault-master` 身份。
+3. **可审计性**：所有管理动作在高层均记录为 `vault-master` 或对应的 Agent 身份。
 4. **二元状态**：保险箱要么被解锁并可见，要么是磁盘上一堆加密的碎片。

@@ -26,12 +26,12 @@ async function testHitlApproval() {
     targetBindings: [{ kind: 'site', targetId: 'mock-api', targetUrl: 'https://api.example.com/*' }]
   });
 
-  // 4. Grant Capability with REQUIRES APPROVAL
+  // 4. Grant Capability (NO LONGER REQUIRES EXPLICIT FLAG)
   await ownerClient.grantCapability({
     agentId: 'agent-1',
     secretAliases: ['top-secret'],
     allowedTargets: ['https://api.example.com/*'],
-    requiresApproval: true // THIS IS THE KEY
+    // requiresApproval: true removed
   });
 
   const capabilities = await ownerClient.listCapabilities({ agentId: 'agent-1' });
@@ -41,8 +41,8 @@ async function testHitlApproval() {
     vault
   });
 
-  // 5. Agent attempts dispatch -> Should be PENDING
-  console.log('Agent dispatching request (requires approval)...');
+  // 5. Agent attempts dispatch -> Should be ALLOWED (already in whitelist)
+  console.log('Agent dispatching request (on whitelist)...');
   const result1 = await agentClient.dispatch({
     targetUrl: 'https://api.example.com/data',
     method: 'POST',
@@ -51,28 +51,48 @@ async function testHitlApproval() {
   });
 
   console.log('Result status:', result1.status);
-  assert.strictEqual(result1.status, 'PENDING', 'Dispatch should be pending');
+  assert.strictEqual(result1.status, 'SUCCEEDED', 'Dispatch on whitelist should succeed');
 
-  // 6. Owner lists pending requests
+  // 6. Discovery Flow: Owner listens via observer
+  console.log('--- Testing Discovery Flow with Observer ---');
+  let interceptedRequest = null;
+  const unsubscribe = ownerClient.onPendingRequest((req) => {
+    console.log('Observer caught request:', req.requestId);
+    interceptedRequest = req;
+  });
+
+  const unknownResult = await agentClient.dispatch({
+    targetUrl: 'https://other-api.example.com/data',
+    method: 'GET',
+    secretAlias: 'top-secret',
+  });
+
+  console.log('Result status:', unknownResult.status);
+  assert.strictEqual(unknownResult.status, 'PENDING');
+  assert.ok(interceptedRequest, 'Observer should have been triggered');
+  unsubscribe();
+
+  // 7. Owner lists pending requests (to get the object for approval)
   const pending = await ownerClient.listPendingDispatches();
-  console.log('Pending requests found:', pending.length);
-  assert.strictEqual(pending.length, 1, 'Should have 1 pending request');
-  assert.strictEqual(pending[0].agentId, 'agent-1');
-  assert.strictEqual(pending[0].secretAlias, 'top-secret');
+  assert.strictEqual(pending.length, 1);
 
-  // 7. Owner approves the request
-  console.log('Owner approving request:', pending[0].requestId);
-  const result2 = await ownerClient.approveDispatch(pending[0].requestId);
+  // 8. Owner approves and makes it PERMANENT
+  console.log('Owner approving and granting permanent capability...');
+  const approveResult = await ownerClient.approveDispatch({
+    requestId: pending[0].requestId,
+    permanent: true
+  });
   
-  console.log('Approved dispatch status:', result2.status);
-  // Note: in a real environment this would actualy perform the fetch. 
-  // In a smoke test with default mocks, it might succeed or fail depending on fetch mock.
-  
-  // 8. Verify request is no longer pending
-  const pendingAfter = await ownerClient.listPendingDispatches();
-  assert.strictEqual(pendingAfter.length, 0, 'Should have 0 pending requests after approval');
+  console.log('Approve result status:', approveResult.status);
+  assert.strictEqual(approveResult.status, 'SUCCEEDED', 'Approved discovery should succeed');
 
-  console.log('--- HITL Approval Flow Test Passed ---');
+  // 9. Verify new capability is granted
+  const finalCapabilities = await ownerClient.listCapabilities({ agentId: 'agent-1' });
+  console.log('Final capabilities count:', finalCapabilities.length);
+  // Should have the original one + the newly granted discovery one
+  assert.strictEqual(finalCapabilities.length, 2, 'Should have 2 capabilities after permanent grant');
+
+  console.log('--- HITL Discovery & Approval Flow Test Passed ---');
 }
 
 testHitlApproval().catch(err => {

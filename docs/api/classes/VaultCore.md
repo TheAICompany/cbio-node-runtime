@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.47.2**](../README.md)
+[**CBIO Node Runtime Agent API v1.48.4**](../README.md)
 
 ***
 
@@ -36,6 +36,22 @@ This is the primary implementation of the Vault logic.
 `VaultId`
 
 ## Methods
+
+### approveDispatch()
+
+> **approveDispatch**(`command`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### command
+
+`OwnerApproveDispatchCommand`
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
 
 ### authorizeDispatch()
 
@@ -233,6 +249,44 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### listPendingDispatches()
+
+> **listPendingDispatches**(`command`): `Promise`\<readonly `PendingDispatchRecord`[]\>
+
+#### Parameters
+
+##### command
+
+###### owner
+
+`VaultPrincipal`
+
+###### vaultId
+
+`VaultId`
+
+#### Returns
+
+`Promise`\<readonly `PendingDispatchRecord`[]\>
+
+***
+
+### onPendingRequest()
+
+> **onPendingRequest**(`callback`): () => `void`
+
+#### Parameters
+
+##### callback
+
+(`record`) => `void`
+
+#### Returns
+
+() => `void`
+
+***
+
 ### registerAgentIdentity()
 
 > **registerAgentIdentity**(`command`): `Promise`\<`void`\>
@@ -274,6 +328,22 @@ This is the primary implementation of the Vault logic.
 ##### command
 
 `OwnerRegisterCustomHttpFlowCommand`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### rejectDispatch()
+
+> **rejectDispatch**(`command`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### command
+
+`OwnerRejectDispatchCommand`
 
 #### Returns
 

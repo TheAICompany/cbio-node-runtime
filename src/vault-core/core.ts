@@ -92,6 +92,8 @@ function buildSecretRecord(
  * This is the primary implementation of the Vault logic.
  */
 export class VaultCore {
+  private readonly _pendingObservers = new Set<(record: import("./contracts.js").PendingDispatchRecord) => void>();
+
   constructor(private readonly _deps: VaultCoreDependencies) {}
 
   get vaultId() {
@@ -119,8 +121,8 @@ export class VaultCore {
     await this.appendAudit(
       toAuditEntry(this._deps, request.agent, AuditAction.AUTHORIZE_DISPATCH, outcome, detail, {
         requestId: request.requestId,
-        capabilityId: request.capability.capabilityId,
-        operation: request.capability.operation,
+        capabilityId: request.capability?.capabilityId,
+        operation: (request.capability?.operation as any) ?? AuditAction.AUTHORIZE_DISPATCH,
         targetUrl: request.targetUrl,
         secretAlias: options?.secretAlias ?? request.secretAlias,
         secretId: options?.secretId,
@@ -128,6 +130,13 @@ export class VaultCore {
     );
   }
 
+
+  onPendingRequest(callback: (record: import("./contracts.js").PendingDispatchRecord) => void): () => void {
+    this._pendingObservers.add(callback);
+    return () => {
+      this._pendingObservers.delete(callback);
+    };
+  }
 
   async registerAgentIdentity(command: OwnerRegisterAgentIdentityCommand): Promise<void> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
@@ -466,7 +475,7 @@ export class VaultCore {
     try {
       await this._deps.replayGuard.assertNotReplayed(request);
       await this._deps.agentProofVerifier.verify(request);
-      await this._deps.policy.authorizeDispatch(request, record);
+      // Removed direct policy.authorizeDispatch here to handle discovery
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       await this.appendDecisionAudit(request, AuditOutcome.DENIED, detail, {
@@ -476,17 +485,27 @@ export class VaultCore {
       throw error;
     }
 
+    // DISCOVERY LOGIC: Find best matching capability
+    const agentRecord = await this._deps.agentIdentities.get(this._deps.vaultId, request.agent.id);
+    if (!agentRecord) {
+       return { vaultId: this._deps.vaultId, decision: "deny", reason: "agent not found", secretId: null, executorTarget: null };
+    }
+
+    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, request.agent.id);
+    const capability = capabilities.find(cap => this.isCapabilityMatch(cap, request));
+
     const executorTarget = record
       ? record.targetBindings.find((binding) => binding.targetUrl === request.targetUrl)
         ?? record.targetBindings.find((binding) => binding.targetId === request.targetUrl)
         ?? null
       : null;
 
-    if (request.capability.requiresApproval) {
-      await this._deps.pendingRequests.save({
+    if (!capability) {
+      // It's a discovery case if the agent and secret exist but no capability matches
+      const pendingRecord = {
         requestId: request.requestId,
         agentId: request.agent.id,
-        capabilityId: request.capability.capabilityId,
+        capabilityId: undefined,
         secretAlias: request.secretAlias ?? "unknown",
         targetUrl: request.targetUrl,
         method: request.method,
@@ -494,9 +513,19 @@ export class VaultCore {
         body: request.body,
         requestedAt: request.requestedAt,
         proof: request.proof,
-      });
+      };
+      await this._deps.pendingRequests.save(pendingRecord);
 
-      await this.appendDecisionAudit(request, AuditOutcome.PENDING, "dispatch stalled for manual approval", {
+      // Notify observers
+      for (const observer of this._pendingObservers) {
+        try {
+          observer(pendingRecord);
+        } catch (error) {
+          console.error("VaultCore: error in pending observer:", error);
+        }
+      }
+
+      await this.appendDecisionAudit(request, AuditOutcome.PENDING, "dispatch stalled for manual discovery approval", {
         secretAlias: record?.alias.value ?? request.secretAlias,
         secretId: record?.secretId.value,
       });
@@ -504,13 +533,14 @@ export class VaultCore {
       return {
         vaultId: this._deps.vaultId,
         decision: "pending",
-        reason: "manual approval required",
+        reason: "no matching capability found (discovery needed)",
         secretId: record?.secretId ?? null,
         executorTarget,
       };
     }
 
-    if (request.capability.auditRequired !== false) {
+    // Capability found, proceed
+    if (!capability.skipAudit) {
       await this.appendDecisionAudit(request, AuditOutcome.ALLOWED, "dispatch authorized", {
         secretAlias: record?.alias.value ?? request.secretAlias,
         secretId: record?.secretId.value,
@@ -523,6 +553,7 @@ export class VaultCore {
       reason: null,
       secretId: record?.secretId ?? null,
       executorTarget,
+      capability, // Expose the found capability for subsequent steps
     };
   }
 
@@ -573,8 +604,8 @@ export class VaultCore {
         result.status === DispatchStatus.SUCCEEDED ? "dispatch completed" : (result.error ?? "dispatch failed"),
         {
           requestId: request.requestId,
-          capabilityId: request.capability.capabilityId,
-          operation: request.capability.operation,
+          capabilityId: authorization.capability?.capabilityId,
+          operation: authorization.capability?.operation,
           targetUrl: request.targetUrl,
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
@@ -639,6 +670,31 @@ export class VaultCore {
       );
       throw error;
     }
+  }
+
+  private isCapabilityMatch(capability: AgentCapability, request: DispatchRequest): boolean {
+    // Basic Iron Triangle match
+    if (request.secretAlias && !capability.secretAliases?.includes(request.secretAlias)) {
+      return false;
+    }
+
+    if (request.method && capability.allowedMethods?.length > 0 && !capability.allowedMethods.includes(request.method)) {
+      return false;
+    }
+
+    // Target match (supports glob-like patterns in simple string comparison for now)
+    if (capability.allowedTargets?.length > 0) {
+      const match = capability.allowedTargets.some(target => {
+        if (target.endsWith("*")) {
+          const prefix = target.slice(0, -1);
+          return request.targetUrl.startsWith(prefix);
+        }
+        return target === request.targetUrl;
+      });
+      if (!match) return false;
+    }
+
+    return true;
   }
 
   async listAgents(
@@ -745,18 +801,39 @@ export class VaultCore {
       throw new VaultCoreError("agent identity not found", "VAULT_AGENT_NOT_FOUND");
     }
 
-    const capability = await this._deps.capabilities.get(this._deps.vaultId, pending.agentId, pending.capabilityId);
-    if (!capability) {
-      throw new VaultCoreError("capability not found", "VAULT_CAPABILITY_NOT_FOUND");
-    }
+    let capability: AgentCapability;
 
-    // Mark as approved (temporarily bypass requiresApproval)
-    const approvedCapability = { ...capability, requiresApproval: false };
+    if (pending.capabilityId) {
+      const existing = await this._deps.capabilities.get(this._deps.vaultId, pending.agentId, pending.capabilityId);
+      if (!existing) {
+        throw new VaultCoreError("capability not found", "VAULT_CAPABILITY_NOT_FOUND");
+      }
+      capability = existing;
+    } else {
+      // Discovery case: derive from request
+      const capabilityId = `cap-${this._deps.clock.nowIso()}-${Math.random().toString(36).slice(2, 7)}`;
+      capability = {
+        vaultId: this._deps.vaultId,
+        agentId: pending.agentId,
+        capabilityId,
+        secretAliases: [pending.secretAlias],
+        allowedMethods: [pending.method],
+        allowedTargets: [pending.targetUrl],
+        allowedPaths: [],
+        operation: "dispatch_http",
+        issuedAt: this._deps.clock.nowIso(),
+        skipAudit: command.skipAudit ?? false,
+      };
+
+      if (command.permanent) {
+        await this._deps.capabilities.register(capability);
+      }
+    }
 
     const result = await this.dispatchSecret({
       vaultId: this._deps.vaultId,
       agent: { kind: "agent", id: pending.agentId },
-      capability: approvedCapability,
+      capability: capability,
       secretAlias: pending.secretAlias === "unknown" ? undefined : pending.secretAlias,
       targetUrl: pending.targetUrl,
       method: pending.method,
@@ -770,8 +847,10 @@ export class VaultCore {
     await this._deps.pendingRequests.delete(command.requestId);
     
     await this.appendAudit(
-      toAuditEntry(this._deps, command.owner, AuditAction.APPROVE_DISPATCH, AuditOutcome.SUCCEEDED, `approved dispatch ${command.requestId}`, {
+      toAuditEntry(this._deps, command.owner, AuditAction.APPROVE_DISPATCH, AuditOutcome.SUCCEEDED, `approved dispatch ${command.requestId}${command.permanent ? " and granted permanent capability" : ""}`, {
         requestId: command.requestId,
+        agentId: pending.agentId,
+        capabilityId: capability.capabilityId,
       }),
     );
 
