@@ -11,4 +11,6 @@ export type {
   AgentDispatchIntent,
   AgentDispatchTransport,
   AgentSigner,
+  AgentSubmitCapabilityRequestInput,
+  AgentVisibleSecretRecord,
 } from "./contracts.js";

@@ -207,6 +207,11 @@ export class FileSecretRepository implements SecretRepository {
     const state = await this.loadState();
     return state.records.find((record) => record.secretId.value === secretId.value) ?? null;
   }
+
+  async list(vaultId: VaultId): Promise<readonly SecretRecord[]> {
+    const state = await this.loadState();
+    return state.records.filter((record) => record.vaultId.value === vaultId.value);
+  }
 }
 
 /**

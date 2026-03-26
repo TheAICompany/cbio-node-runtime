@@ -8,13 +8,12 @@ import {
   AgentDispatchHttpTransport,
   MemoryStorageProvider,
 } from "../src/runtime/index.js";
-import { LocalSigner } from "../src/protocol/crypto.js";
 
 /**
  * This example demonstrates the A/B Process Architecture (Process Isolation).
  * 
  * - Process B (The Vault): Hosts the actual secrets and performs the HTTP dispatch.
- * - Process A (The Agent): Signs requests and sends them to Process B. A never sees the secret.
+ * - Process A (The Agent): Uses a session token to call Process B. A never sees the secret.
  */
 
 // --- Process B: The Vault Server Logic ---
@@ -25,7 +24,7 @@ async function startVaultServer(port: number) {
   // Create a real vault in memory
   const { core } = await createVault(storage, {
     vaultId: "vault-isolated-server",
-    ownerIdentity,
+    password: "process-isolation-demo-password",
   });
   
   // Wrap as a Service
@@ -61,7 +60,7 @@ async function startVaultServer(port: number) {
 }
 
 // --- Process A: The LLM Agent Logic ---
-async function runAgentDemo(port: number, agentIdentity: any, capability: any) {
+async function runAgentDemo(port: number, agentIdentity: any, capability: any, token: string) {
   // Process A ONLY knows the remote URL and its own Agent Identity.
   // It has NO access to the Vault's master key or storage.
   const transport = new AgentDispatchHttpTransport(`http://localhost:${port}/dispatch`);
@@ -70,7 +69,7 @@ async function runAgentDemo(port: number, agentIdentity: any, capability: any) {
     agentIdentity,
     capability,
     transport,
-    signer: new LocalSigner(agentIdentity),
+    token,
   });
 
   console.log("[Process A] LLM Agent requesting secret-backed dispatch...");
@@ -102,27 +101,28 @@ async function main() {
   const agentIdentity = createIdentity({ nickname: "llm-agent-1" });
   
   // Owner registers the agent and a capability (simulated local call for setup)
-  await vault.registerAgentIdentity({
+  await vault.ownerRegisterAgentIdentity({
     vaultId: vault.vaultId,
+    requestId: `setup:${Date.now()}:register_agent`,
     owner: { kind: "owner", id: ownerIdentity.identityId },
     agentIdentity: {
       vaultId: vault.vaultId,
       agentId: agentIdentity.identityId,
       publicKey: agentIdentity.publicKey,
     },
-    proof: { signature: "setup-proof", ownerId: ownerIdentity.identityId, requestedAt: new Date().toISOString() },
+    requestedAt: new Date().toISOString(),
   });
 
   // Owner writes a secret (simulated local call for setup)
   const secret = await vault.ownerWriteSecret({
     kind: "owner.write_secret",
     vaultId: vault.vaultId,
+    requestId: `setup:${Date.now()}:write_secret`,
     owner: { kind: "owner", id: ownerIdentity.identityId },
     alias: "api-token",
     plaintext: "SK-PROD-12345",
     targetBindings: [{ kind: "site", targetId: "httpbin.org", targetUrl: "https://httpbin.org/post", methods: ["POST"] }],
     requestedAt: new Date().toISOString(),
-    proof: { signature: "setup-proof", ownerId: ownerIdentity.identityId, requestedAt: new Date().toISOString() },
   });
 
   const capability = {
@@ -137,15 +137,24 @@ async function main() {
     issuedAt: new Date().toISOString(),
   };
 
-  await vault.registerCapability({
+  await vault.ownerRegisterCapability({
     vaultId: vault.vaultId,
+    requestId: `setup:${Date.now()}:register_capability`,
     owner: { kind: "owner", id: ownerIdentity.identityId },
     capability,
-    proof: { signature: "setup-proof", ownerId: ownerIdentity.identityId, requestedAt: new Date().toISOString() },
+    requestedAt: new Date().toISOString(),
+  });
+
+  const session = await vault.ownerIssueSessionToken({
+    vaultId: vault.vaultId,
+    requestId: `setup:${Date.now()}:issue_session_token`,
+    actor: { kind: "owner", id: ownerIdentity.identityId },
+    agentId: agentIdentity.identityId,
+    requestedAt: new Date().toISOString(),
   });
 
   // 3. Run the "LLM Agent" (Process A)
-  await runAgentDemo(PORT, agentIdentity, capability);
+  await runAgentDemo(PORT, agentIdentity, capability, session.token);
 
   // 4. Cleanup
   server.close();

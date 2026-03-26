@@ -5,6 +5,10 @@ import {
 } from "./contracts.js";
 import type {
   CapabilityRequestScope,
+  AgentListCapabilitiesRequest,
+  AgentListSecretsRequest,
+  AgentSubmitCapabilityRequestCommand,
+  AgentVisibleSecretRecord,
   AuditEntry,
   AuditQuery,
   CustomHttpFlowDefinition,
@@ -38,6 +42,7 @@ import type {
 } from "./contracts.js";
 import type { VaultCoreDependencies } from "./ports.js";
 import { VaultCoreError } from "./errors.js";
+import { verifySignature } from "../protocol/crypto.js";
 
 function toAuditEntry(
   deps: VaultCoreDependencies,
@@ -99,6 +104,22 @@ function isScopeMatch(scope: string, targetUrl: string): boolean {
   return scope === targetUrl;
 }
 
+function createAgentControlBinding(
+  requestId: string,
+  requestedAt: string,
+  agentId: string,
+  action: string,
+  payload: Record<string, unknown> = {},
+): string {
+  return JSON.stringify({
+    requestId,
+    requestedAt,
+    agentId,
+    action,
+    ...payload,
+  });
+}
+
 /**
  * The Sovereign Vault Core.
  * This is the primary implementation of the Vault logic.
@@ -141,6 +162,80 @@ export class VaultCore {
         secretId: options?.secretId,
       }),
     );
+  }
+
+  private async _verifyAgentControlProof(request: {
+    vaultId: VaultId;
+    requestId: string;
+    requestedAt: string;
+    agent: VaultPrincipal & { kind: "agent" };
+    proof: import("./contracts.js").AgentProof;
+  }, action: string, payload: Record<string, unknown> = {}): Promise<void> {
+    if (request.proof.agentId !== request.agent.id) {
+      throw new VaultCoreError("agent identity mismatch", "VAULT_DISPATCH_DENIED");
+    }
+    if (request.proof.token) {
+      const valid = await this._deps.sessionTokens.verify(request.proof.token, request.agent.id);
+      if (!valid) {
+        throw new VaultCoreError("invalid or expired session token", "VAULT_DISPATCH_DENIED");
+      }
+      return;
+    }
+    if (!request.proof.signature) {
+      throw new VaultCoreError("missing agent proof (signature or token required)", "VAULT_DISPATCH_DENIED");
+    }
+    if (request.proof.requestId !== request.requestId || request.proof.requestedAt !== request.requestedAt) {
+      throw new VaultCoreError("proof binding mismatch", "VAULT_DISPATCH_DENIED");
+    }
+    const identity = await this._deps.agentIdentities.get(request.vaultId, request.agent.id);
+    if (!identity) {
+      throw new VaultCoreError("agent identity not registered", "VAULT_DISPATCH_DENIED");
+    }
+    const binding = createAgentControlBinding(
+      request.requestId,
+      request.requestedAt,
+      request.agent.id,
+      action,
+      payload,
+    );
+    if (!verifySignature(identity.publicKey, request.proof.signature, binding)) {
+      throw new VaultCoreError("invalid proof signature", "VAULT_DISPATCH_DENIED");
+    }
+  }
+
+  private async _listVisibleSecretsForAgent(agentId: string): Promise<readonly AgentVisibleSecretRecord[]> {
+    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, agentId);
+    const capabilityMap = new Map<string, {
+      capabilityId: string;
+      scope: string;
+      methods: readonly string[];
+    }[]>();
+    for (const capability of capabilities) {
+      for (const alias of capability.secretAliases ?? []) {
+        const existing = capabilityMap.get(alias) ?? [];
+        existing.push({
+          capabilityId: capability.capabilityId,
+          scope: capability.scope,
+          methods: [...capability.methods],
+        });
+        capabilityMap.set(alias, existing);
+      }
+    }
+    const records = await this._deps.secrets.list(this._deps.vaultId);
+    return records.map((record) => {
+      const authorizedCapabilities = capabilityMap.get(record.alias.value) ?? [];
+      return {
+        vaultId: record.vaultId,
+        secretId: record.secretId,
+        alias: record.alias,
+        issuerId: record.issuerId,
+        targetBindings: [...record.targetBindings],
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        isAuthorizedForAgent: authorizedCapabilities.length > 0,
+        authorizedCapabilities,
+      };
+    });
   }
 
 
@@ -793,6 +888,65 @@ export class VaultCore {
       }),
     );
     return capabilities;
+  }
+
+  async ownerListSecrets(
+    actor: VaultPrincipal & { kind: "owner" },
+    request?: { requestId?: string },
+  ): Promise<readonly AgentVisibleSecretRecord[]> {
+    const records = await this._deps.secrets.list(this._deps.vaultId);
+    await this._appendAudit(
+      toAuditEntry(this._deps, actor, AuditAction.READ_AUDIT, AuditOutcome.ALLOWED, "secret metadata listed", {
+        requestId: request?.requestId,
+      }),
+    );
+    return records.map((record) => ({
+      vaultId: record.vaultId,
+      secretId: record.secretId,
+      alias: record.alias,
+      issuerId: record.issuerId,
+      targetBindings: [...record.targetBindings],
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    }));
+  }
+
+  async agentListCapabilities(request: AgentListCapabilitiesRequest): Promise<readonly AgentCapability[]> {
+    if (request.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
+    }
+    await this._verifyAgentControlProof(request, "list_capabilities");
+    return this._deps.capabilities.list(this._deps.vaultId, request.agent.id);
+  }
+
+  async agentListSecrets(request: AgentListSecretsRequest): Promise<readonly AgentVisibleSecretRecord[]> {
+    if (request.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
+    }
+    await this._verifyAgentControlProof(request, "list_secrets");
+    return this._listVisibleSecretsForAgent(request.agent.id);
+  }
+
+  async agentSubmitCapabilityRequest(command: AgentSubmitCapabilityRequestCommand): Promise<PendingCapabilityRequestRecord> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+    }
+    await this._verifyAgentControlProof(command, "submit_capability_request", {
+      scope: command.scope.scope,
+      methods: command.scope.methods,
+      operation: command.scope.operation,
+      secretAliases: command.scope.secretAliases ?? [],
+      justification: command.justification ?? null,
+    });
+    return this.ownerSubmitCapabilityRequest({
+      vaultId: command.vaultId,
+      requestId: command.requestId,
+      requester: command.agent,
+      agentId: command.agent.id,
+      scope: command.scope,
+      justification: command.justification,
+      requestedAt: command.requestedAt,
+    });
   }
 
   async ownerRevokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {

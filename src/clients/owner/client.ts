@@ -1,5 +1,5 @@
 import { LocalSigner } from "../../protocol/crypto.js";
-import { createIdentity, type CreatedIdentity } from "../../runtime/identity.js";
+import { createIdentity, restoreIdentity, type CreatedIdentity } from "../../runtime/identity.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
@@ -8,13 +8,15 @@ import type {
   VaultExportSecretInput,
   VaultGrantCapabilityInput,
   VaultRegisterFlowInput,
-  VaultRegisterAgentInput,
+  VaultImportAgentInput,
   VaultCreateAgentInput,
+  OwnerAgentProvisionResult,
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
   VaultDeleteSecretInput,
   VaultListAgentsInput,
   VaultListCapabilitiesInput,
+  VaultListSecretsInput,
   VaultRevokeCapabilityInput,
   VaultIssueSessionTokenInput,
   VaultRevokeSessionTokenInput,
@@ -66,13 +68,13 @@ export interface VaultClient {
    */
   ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
 
-  ownerRegisterAgent(input: VaultRegisterAgentInput): Promise<void>;
+  ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;
 
   /**
    * Generates a new identity and registers it as an agent in one step.
    * The private key is stored in the vault for managed custody.
    */
-  ownerCreateAgent(input: VaultCreateAgentInput): Promise<readonly [import("../../vault-core/index.js").AgentIdentityRecord, string]>;
+  ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;
 
   /**
    * Registers a custom HTTP flow for complex secret usage.
@@ -93,6 +95,7 @@ export interface VaultClient {
    * Lists all active capabilities granted to agents.
    */
   ownerListCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  ownerListSecrets(input?: VaultListSecretsInput): Promise<readonly import("../../vault-core/index.js").AgentVisibleSecretRecord[]>;
 
   /**
    * Revokes a previously granted capability.
@@ -218,7 +221,14 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async ownerRegisterAgent(input: VaultRegisterAgentInput): Promise<void> {
+  private async _ownerRegisterManagedAgentIdentity(input: {
+    agentId: string;
+    publicKey: string;
+    privateKey?: string;
+    metadata?: Record<string, any>;
+    nickname?: string;
+    requestedAt?: string;
+  }): Promise<import("../../vault-core/index.js").AgentIdentityRecord> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.agentId}:register_agent_identity`;
     const agentIdentity = {
@@ -240,25 +250,53 @@ class DefaultVaultClient implements VaultClient {
       agentIdentity,
       requestedAt,
     });
-
-    if (!this._skipWarmup) {
-      await this.ownerIssueSessionToken({ agentId: input.agentId, requestedAt });
-    }
+    return agentIdentity;
   }
 
-  async ownerCreateAgent(input: VaultCreateAgentInput) {
-    const identity = createIdentity();
-    const record = {
-      vaultId: this._vault.vaultId,
+  async ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult> {
+    const identity = restoreIdentity(input.privateKey, { nickname: input.nickname });
+    const agent = await this._ownerRegisterManagedAgentIdentity({
       agentId: input.agentId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
       metadata: input.metadata,
       nickname: input.nickname,
+      requestedAt: input.requestedAt,
+    });
+    const sessionToken = await this.ownerIssueSessionToken({
+      agentId: input.agentId,
+      requestedAt: input.requestedAt,
+    });
+    return {
+      agent: {
+        ...agent,
+        privateKey: undefined,
+      },
+      sessionToken,
     };
-    
-    await this.ownerRegisterAgent(record);
-    return [record, identity.privateKey] as const;
+  }
+
+  async ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult> {
+    const identity = createIdentity();
+    const agent = await this._ownerRegisterManagedAgentIdentity({
+      agentId: input.agentId,
+      publicKey: identity.publicKey,
+      privateKey: identity.privateKey,
+      metadata: input.metadata,
+      nickname: input.nickname,
+      requestedAt: input.requestedAt,
+    });
+    const sessionToken = await this.ownerIssueSessionToken({
+      agentId: input.agentId,
+      requestedAt: input.requestedAt,
+    });
+    return {
+      agent: {
+        ...agent,
+        privateKey: undefined,
+      },
+      sessionToken,
+    };
   }
 
   async ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void> {
@@ -359,6 +397,19 @@ class DefaultVaultClient implements VaultClient {
         id: this._identityId,
       },
       agentId: input.agentId,
+    });
+  }
+
+  async ownerListSecrets(input: VaultListSecretsInput = {}) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identityId}:${requestedAt}:list_secrets`;
+    return this._vault.ownerListSecrets({
+      vaultId: this._vault.vaultId,
+      owner: {
+        kind: "owner",
+        id: this._identityId,
+      },
+      requestId,
     });
   }
 

@@ -175,6 +175,48 @@ export interface AgentProof {
   token?: string;
 }
 
+export interface AgentVisibleSecretRecord {
+  vaultId: VaultId;
+  secretId: SecretId;
+  alias: SecretAlias;
+  issuerId: string | null;
+  targetBindings: VaultTargetBinding[];
+  createdAt: string;
+  updatedAt: string;
+  isAuthorizedForAgent?: boolean;
+  authorizedCapabilities?: readonly {
+    capabilityId: string;
+    scope: string;
+    methods: readonly string[];
+  }[];
+}
+
+export interface AgentListCapabilitiesRequest {
+  vaultId: VaultId;
+  requestId: string;
+  requestedAt: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  proof: AgentProof;
+}
+
+export interface AgentListSecretsRequest {
+  vaultId: VaultId;
+  requestId: string;
+  requestedAt: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  proof: AgentProof;
+}
+
+export interface AgentSubmitCapabilityRequestCommand {
+  vaultId: VaultId;
+  requestId: string;
+  requestedAt: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  proof: AgentProof;
+  scope: CapabilityRequestScope;
+  justification?: string;
+}
+
 export interface PendingDispatchRecord {
   requestId: string;
   agentId: string;

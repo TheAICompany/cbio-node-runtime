@@ -68,17 +68,13 @@ import { createVaultClient } from '@the-ai-company/cbio-node-runtime';
 const client = createVaultClient({ vault: vault.vault });
 
 // Generate and register a new agent in one step
-const [agentRecord, agentPrivateKey] = await client.ownerCreateAgent({
+const createdAgent = await client.ownerCreateAgent({
   agentId: 'worker-1',
   nickname: 'Background Worker'
 });
 
-console.log(`Agent public key: ${agentRecord.publicKey}`);
-// Private key is returned during creation and stored securely in the vault.
-
-// 4. Issue a Session Token (Optional but Recommended)
-// Avoid passing the raw private key to agent processes (v1.48+).
-const session = await client.ownerIssueSessionToken({ agentId: 'worker-1' });
+console.log(`Agent public key: ${createdAgent.agent.publicKey}`);
+const session = createdAgent.sessionToken;
 
 // RECOMENDED (v1.48.4+): Batch issue tokens for all agents at once
 const tokens = await client.ownerIssueAllSessionTokens();
@@ -118,7 +114,7 @@ const client = createVaultClient({
 
 ### 6. Consuming Secrets (Agent)
 
-Agents run in isolated processes and communicate with the vault via a transport. They can use either a **Session Token** (recommended) or a **Signature** (raw private key).
+Agents run in isolated processes and communicate with the vault via a transport. Agent execution now requires a **Session Token** issued by the owner.
 
 #### Using a Session Token (Stateless/Token-based)
 ```ts
@@ -127,24 +123,14 @@ import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
 const agent = createAgentClient({
   agentIdentity: { agentId: 'worker-1' },
   capability: myCapability, 
-  token: session.token,     // Issued by the owner
+  token: session.token,
   vault: vault.vault
 });
 
 const result = await agent.agentDispatch({ ... });
 ```
 
-#### Using a Signature (Stateful/Key-based)
-```ts
-import { createAgentClient, LocalSigner } from '@the-ai-company/cbio-node-runtime';
-
-const agent = createAgentClient({
-  agentIdentity: { agentId: 'worker-1' },
-  capability: myCapability,
-  signer: new LocalSigner({ privateKey: agentPrivateKey }),
-  vault: vault.vault
-});
-```
+The agent process does not execute directly with its raw private key. If it has an identity key, it still needs to exchange that trust for a session token before dispatching.
 
 ### 7. Proactive Capability Requests
 

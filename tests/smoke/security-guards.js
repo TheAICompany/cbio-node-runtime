@@ -23,9 +23,9 @@ const vault = wrapVaultCoreAsVaultService(authority);
 const client = createVaultClient({
   vault,
 });
-await client.ownerRegisterAgent({
+await client.ownerImportAgent({
   agentId: "agent-security",
-  publicKey: agentIdentity.publicKey,
+  privateKey: agentIdentity.privateKey,
 });
 
 const guardedRecord = await client.ownerWriteSecret({
@@ -56,7 +56,7 @@ const expiredBinding = JSON.stringify({
 const expiredSignature = await signer.sign(expiredBinding);
 
 await assert.rejects(
-  () => authority.dispatchSecret({
+  () => authority.agentDispatchSecret({
     vaultId: authority.vaultId,
     requestId: expiredRequestId,
     requestedAt: expiredRequestedAt,
@@ -105,7 +105,7 @@ const badBinding = JSON.stringify({
 const badSignature = await signer.sign(badBinding);
 
 await assert.rejects(
-  () => authority.dispatchSecret({
+  () => authority.agentDispatchSecret({
     vaultId: authority.vaultId,
     requestId: validRequestId,
     requestedAt: validRequestedAt,
@@ -147,7 +147,7 @@ assert.ok(securityAudit.some((entry) => entry.outcome === "DENIED" && /expired|b
 const unauthorizedIdentityRequestId = "unauthorized-agent-registration";
 const unauthorizedIdentityRequestedAt = new Date().toISOString();
 await assert.rejects(
-  () => authority.registerAgentIdentity({
+  () => authority.ownerRegisterAgentIdentity({
     vaultId: { value: "mismatch-vault" },
     requestId: unauthorizedIdentityRequestId,
     owner: { kind: "owner", id: "vault-master" },
@@ -166,7 +166,7 @@ await assert.rejects(
 );
 
 await assert.rejects(
-  () => authority.getAudit(
+  () => authority.ownerReadAudit(
     { kind: "trusted_executor", id: "not-an-owner" },
     { secretAlias: "guarded-token" },
   ),

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.48.6**](../README.md)
+[**CBIO Node Runtime Agent API v1.49.0**](../README.md)
 
 ***
 
@@ -9,9 +9,25 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 
 ## Methods
 
-### createAgent()
+### ownerApproveCapabilityRequest()
 
-> **createAgent**(`input`): `Promise`\<readonly \[`AgentIdentityRecord`, `string`\]\>
+> **ownerApproveCapabilityRequest**(`input`): `Promise`\<`AgentCapability`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`AgentCapability`\>
+
+***
+
+### ownerCreateAgent()
+
+> **ownerCreateAgent**(`input`): `Promise`\<[`OwnerAgentProvisionResult`](OwnerAgentProvisionResult.md)\>
 
 Generates a new identity and registers it as an agent in one step.
 The private key is stored in the vault for managed custody.
@@ -24,13 +40,13 @@ The private key is stored in the vault for managed custody.
 
 #### Returns
 
-`Promise`\<readonly \[`AgentIdentityRecord`, `string`\]\>
+`Promise`\<[`OwnerAgentProvisionResult`](OwnerAgentProvisionResult.md)\>
 
 ***
 
-### defineSecretTargets()
+### ownerDefineSecretTargets()
 
-> **defineSecretTargets**(`input`): `Promise`\<`SecretRecord`\>
+> **ownerDefineSecretTargets**(`input`): `Promise`\<`SecretRecord`\>
 
 Refines the allowed targets for an existing secret.
 
@@ -46,9 +62,9 @@ Refines the allowed targets for an existing secret.
 
 ***
 
-### deleteSecret()
+### ownerDeleteSecret()
 
-> **deleteSecret**(`input`): `Promise`\<`void`\>
+> **ownerDeleteSecret**(`input`): `Promise`\<`void`\>
 
 Permanently deletes a secret from the vault.
 
@@ -64,9 +80,9 @@ Permanently deletes a secret from the vault.
 
 ***
 
-### exportSecret()
+### ownerExportSecret()
 
-> **exportSecret**(`input`): `Promise`\<`OwnerSecretExport`\>
+> **ownerExportSecret**(`input`): `Promise`\<`OwnerSecretExport`\>
 
 Exports a secret's plaintext.
 
@@ -82,9 +98,9 @@ Exports a secret's plaintext.
 
 ***
 
-### grantCapability()
+### ownerGrantCapability()
 
-> **grantCapability**(`input`): `Promise`\<`void`\>
+> **ownerGrantCapability**(`input`): `Promise`\<`void`\>
 
 Grants a specific capability to an agent.
 
@@ -100,9 +116,25 @@ Grants a specific capability to an agent.
 
 ***
 
-### listAgents()
+### ownerImportAgent()
 
-> **listAgents**(`input?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
+> **ownerImportAgent**(`input`): `Promise`\<[`OwnerAgentProvisionResult`](OwnerAgentProvisionResult.md)\>
+
+#### Parameters
+
+##### input
+
+[`VaultImportAgentInput`](VaultImportAgentInput.md)
+
+#### Returns
+
+`Promise`\<[`OwnerAgentProvisionResult`](OwnerAgentProvisionResult.md)\>
+
+***
+
+### ownerListAgents()
+
+> **ownerListAgents**(`input?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
 
 Lists all agents registered in the vault.
 
@@ -118,9 +150,9 @@ Lists all agents registered in the vault.
 
 ***
 
-### listCapabilities()
+### ownerListCapabilities()
 
-> **listCapabilities**(`input?`): `Promise`\<readonly `AgentCapability`[]\>
+> **ownerListCapabilities**(`input?`): `Promise`\<readonly `AgentCapability`[]\>
 
 Lists all active capabilities granted to agents.
 
@@ -136,9 +168,51 @@ Lists all active capabilities granted to agents.
 
 ***
 
-### readAudit()
+### ownerListPendingCapabilityRequests()
 
-> **readAudit**(`query?`): `Promise`\<readonly `AuditEntry`[]\>
+> **ownerListPendingCapabilityRequests**(): `Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
+
+#### Returns
+
+`Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
+
+***
+
+### ownerListSecrets()
+
+> **ownerListSecrets**(`input?`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+#### Parameters
+
+##### input?
+
+[`VaultListSecretsInput`](VaultListSecretsInput.md)
+
+#### Returns
+
+`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+***
+
+### ownerOnPendingCapabilityRequest()
+
+> **ownerOnPendingCapabilityRequest**(`callback`): () => `void`
+
+#### Parameters
+
+##### callback
+
+(`record`) => `void`
+
+#### Returns
+
+() => `void`
+
+***
+
+### ownerReadAudit()
+
+> **ownerReadAudit**(`query?`): `Promise`\<readonly `AuditEntry`[]\>
 
 Reads the tamper-evident audit log for the vault.
 
@@ -154,25 +228,9 @@ Reads the tamper-evident audit log for the vault.
 
 ***
 
-### registerAgent()
+### ownerRegisterFlow()
 
-> **registerAgent**(`input`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### input
-
-[`VaultRegisterAgentInput`](VaultRegisterAgentInput.md)
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
-
-### registerFlow()
-
-> **registerFlow**(`input`): `Promise`\<`void`\>
+> **ownerRegisterFlow**(`input`): `Promise`\<`void`\>
 
 Registers a custom HTTP flow for complex secret usage.
 
@@ -188,9 +246,25 @@ Registers a custom HTTP flow for complex secret usage.
 
 ***
 
-### revokeCapability()
+### ownerRejectCapabilityRequest()
 
-> **revokeCapability**(`input`): `Promise`\<`void`\>
+> **ownerRejectCapabilityRequest**(`requestId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### requestId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerRevokeCapability()
+
+> **ownerRevokeCapability**(`input`): `Promise`\<`void`\>
 
 Revokes a previously granted capability.
 
@@ -206,9 +280,9 @@ Revokes a previously granted capability.
 
 ***
 
-### storeSecret()
+### ownerStoreSecret()
 
-> **storeSecret**(`input`): `Promise`\<`SecretRecord`\>
+> **ownerStoreSecret**(`input`): `Promise`\<`SecretRecord`\>
 
 Securely stores a new secret in the vault.
 
@@ -224,9 +298,25 @@ Securely stores a new secret in the vault.
 
 ***
 
-### writeSecret()
+### ownerSubmitCapabilityRequest()
 
-> **writeSecret**(`input`): `Promise`\<`SecretRecord`\>
+> **ownerSubmitCapabilityRequest**(`input`): `Promise`\<`PendingCapabilityRequestRecord`\>
+
+#### Parameters
+
+##### input
+
+[`VaultSubmitCapabilityRequestInput`](VaultSubmitCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`PendingCapabilityRequestRecord`\>
+
+***
+
+### ownerWriteSecret()
+
+> **ownerWriteSecret**(`input`): `Promise`\<`SecretRecord`\>
 
 Atomic operation to store a secret and define its targets in one step.
 

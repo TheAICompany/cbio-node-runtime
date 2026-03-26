@@ -39,7 +39,7 @@ async function test() {
       secretAlias: "s-1",
       targetUrl: "https://example.com",
       method: "GET",
-      proof: { signature: "sig-1" }
+      proof: { token: "sat-1" }
     };
 
     const result = await transport.agentDispatch(mockRequest);
@@ -48,7 +48,7 @@ async function test() {
     assert.equal(result.responseBody, "mock-ok");
     assert.ok(receivedRequest);
     assert.equal(receivedRequest.vaultId, "v-1");
-    assert.equal(receivedRequest.proof.signature, "sig-1");
+    assert.equal(receivedRequest.proof.token, "sat-1");
 
     console.log("AgentDispatchHttpTransport smoke test PASSED");
   } finally {

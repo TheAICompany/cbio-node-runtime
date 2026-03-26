@@ -2,15 +2,9 @@
 
 ***
 
-# Interface: VaultListCapabilitiesInput
+# Interface: VaultListSecretsInput
 
 ## Properties
-
-### agentId?
-
-> `optional` **agentId?**: `string`
-
-***
 
 ### requestedAt?
 

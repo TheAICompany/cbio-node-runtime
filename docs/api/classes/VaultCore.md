@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.48.6**](../README.md)
+[**CBIO Node Runtime Agent API v1.49.0**](../README.md)
 
 ***
 
@@ -37,137 +37,9 @@ This is the primary implementation of the Vault logic.
 
 ## Methods
 
-### approveDispatch()
+### \_getCapability()
 
-> **approveDispatch**(`command`): `Promise`\<`DispatchResult`\>
-
-#### Parameters
-
-##### command
-
-`OwnerApproveDispatchCommand`
-
-#### Returns
-
-`Promise`\<`DispatchResult`\>
-
-***
-
-### authorizeDispatch()
-
-> **authorizeDispatch**(`request`): `Promise`\<`DispatchAuthorization`\>
-
-#### Parameters
-
-##### request
-
-`DispatchRequest`
-
-#### Returns
-
-`Promise`\<`DispatchAuthorization`\>
-
-***
-
-### defineSecretTargets()
-
-> **defineSecretTargets**(`command`): `Promise`\<`SecretRecord`\>
-
-#### Parameters
-
-##### command
-
-`OwnerDefineSecretTargetsCommand`
-
-#### Returns
-
-`Promise`\<`SecretRecord`\>
-
-***
-
-### deleteSecret()
-
-> **deleteSecret**(`command`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### command
-
-`OwnerDeleteSecretCommand`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
-
-### dispatchSecret()
-
-> **dispatchSecret**(`request`): `Promise`\<`DispatchResult`\>
-
-#### Parameters
-
-##### request
-
-`DispatchRequest`
-
-#### Returns
-
-`Promise`\<`DispatchResult`\>
-
-***
-
-### exportSecret()
-
-> **exportSecret**(`actor`, `alias`, `request?`): `Promise`\<`OwnerSecretExport`\>
-
-#### Parameters
-
-##### actor
-
-`VaultPrincipal` & `object`
-
-##### alias
-
-`string`
-
-##### request?
-
-`Omit`\<`OwnerExportSecretRequest`, `"vaultId"` \| `"actor"` \| `"alias"`\>
-
-#### Returns
-
-`Promise`\<`OwnerSecretExport`\>
-
-***
-
-### getAudit()
-
-> **getAudit**(`actor`, `query`, `request?`): `Promise`\<readonly `AuditEntry`[]\>
-
-#### Parameters
-
-##### actor
-
-`VaultPrincipal` & `object`
-
-##### query
-
-`AuditQuery`
-
-##### request?
-
-`Omit`\<`OwnerAuditRequest`, `"vaultId"` \| `"actor"` \| `"query"`\>
-
-#### Returns
-
-`Promise`\<readonly `AuditEntry`[]\>
-
-***
-
-### getCapability()
-
-> **getCapability**(`vaultId`, `agentId`, `capabilityId`): `Promise`\<`AgentCapability` \| `null`\>
+> **\_getCapability**(`vaultId`, `agentId`, `capabilityId`): `Promise`\<`AgentCapability` \| `null`\>
 
 #### Parameters
 
@@ -189,25 +61,201 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### issueAgentSessionToken()
+### \_storeCustomFlowSecret()
 
-> **issueAgentSessionToken**(`request`): `Promise`\<`OwnerSessionToken`\>
+> **\_storeCustomFlowSecret**(`flow`, `alias`, `plaintext`): `Promise`\<`SecretRecord`\>
+
+#### Parameters
+
+##### flow
+
+`CustomHttpFlowDefinition`
+
+##### alias
+
+`string`
+
+##### plaintext
+
+`string`
+
+#### Returns
+
+`Promise`\<`SecretRecord`\>
+
+***
+
+### agentAuthorizeDispatch()
+
+> **agentAuthorizeDispatch**(`request`): `Promise`\<`DispatchAuthorization`\>
 
 #### Parameters
 
 ##### request
 
-`OwnerIssueSessionTokenRequest`
+`DispatchRequest`
 
 #### Returns
 
-`Promise`\<`OwnerSessionToken`\>
+`Promise`\<`DispatchAuthorization`\>
 
 ***
 
-### issueAllAgentSessionTokens()
+### agentDispatchSecret()
 
-> **issueAllAgentSessionTokens**(`actor`): `Promise`\<`OwnerSessionToken`[]\>
+> **agentDispatchSecret**(`request`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### request
+
+`DispatchRequest`
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
+### agentListCapabilities()
+
+> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentCapability`[]\>
+
+#### Parameters
+
+##### request
+
+`AgentListCapabilitiesRequest`
+
+#### Returns
+
+`Promise`\<readonly `AgentCapability`[]\>
+
+***
+
+### agentListSecrets()
+
+> **agentListSecrets**(`request`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+#### Parameters
+
+##### request
+
+`AgentListSecretsRequest`
+
+#### Returns
+
+`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+***
+
+### agentSubmitCapabilityRequest()
+
+> **agentSubmitCapabilityRequest**(`command`): `Promise`\<`PendingCapabilityRequestRecord`\>
+
+#### Parameters
+
+##### command
+
+`AgentSubmitCapabilityRequestCommand`
+
+#### Returns
+
+`Promise`\<`PendingCapabilityRequestRecord`\>
+
+***
+
+### ownerApproveCapabilityRequest()
+
+> **ownerApproveCapabilityRequest**(`command`): `Promise`\<`AgentCapability`\>
+
+#### Parameters
+
+##### command
+
+`OwnerApproveCapabilityRequestCommand`
+
+#### Returns
+
+`Promise`\<`AgentCapability`\>
+
+***
+
+### ownerApproveDispatch()
+
+> **ownerApproveDispatch**(`command`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### command
+
+`OwnerApproveDispatchCommand`
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
+### ownerDefineSecretTargets()
+
+> **ownerDefineSecretTargets**(`command`): `Promise`\<`SecretRecord`\>
+
+#### Parameters
+
+##### command
+
+`OwnerDefineSecretTargetsCommand`
+
+#### Returns
+
+`Promise`\<`SecretRecord`\>
+
+***
+
+### ownerDeleteSecret()
+
+> **ownerDeleteSecret**(`command`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### command
+
+`OwnerDeleteSecretCommand`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerExportSecret()
+
+> **ownerExportSecret**(`actor`, `alias`, `request?`): `Promise`\<`OwnerSecretExport`\>
+
+#### Parameters
+
+##### actor
+
+`VaultPrincipal` & `object`
+
+##### alias
+
+`string`
+
+##### request?
+
+`Omit`\<`OwnerExportSecretRequest`, `"vaultId"` \| `"actor"` \| `"alias"`\>
+
+#### Returns
+
+`Promise`\<`OwnerSecretExport`\>
+
+***
+
+### ownerIssueAllAgentSessionTokens()
+
+> **ownerIssueAllAgentSessionTokens**(`actor`): `Promise`\<`OwnerSessionToken`[]\>
 
 #### Parameters
 
@@ -221,9 +269,25 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### listAgents()
+### ownerIssueSessionToken()
 
-> **listAgents**(`actor`, `request?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
+> **ownerIssueSessionToken**(`request`): `Promise`\<`OwnerSessionToken`\>
+
+#### Parameters
+
+##### request
+
+`OwnerIssueSessionTokenRequest`
+
+#### Returns
+
+`Promise`\<`OwnerSessionToken`\>
+
+***
+
+### ownerListAgents()
+
+> **ownerListAgents**(`actor`, `request?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
 
 #### Parameters
 
@@ -241,9 +305,9 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### listCapabilities()
+### ownerListCapabilities()
 
-> **listCapabilities**(`actor`, `agentId?`, `request?`): `Promise`\<readonly `AgentCapability`[]\>
+> **ownerListCapabilities**(`actor`, `agentId?`, `request?`): `Promise`\<readonly `AgentCapability`[]\>
 
 #### Parameters
 
@@ -257,7 +321,7 @@ This is the primary implementation of the Vault logic.
 
 ##### request?
 
-`Omit`\<`OwnerListCapabilitiesRequest`, `"vaultId"` \| `"actor"` \| `"agentId"`\>
+`Omit`\<`OwnerListCapabilitiesRequest`, `"agentId"` \| `"vaultId"` \| `"actor"`\>
 
 #### Returns
 
@@ -265,9 +329,31 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### listPendingDispatches()
+### ownerListPendingCapabilityRequests()
 
-> **listPendingDispatches**(`command`): `Promise`\<readonly `PendingDispatchRecord`[]\>
+> **ownerListPendingCapabilityRequests**(`command`): `Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
+
+#### Parameters
+
+##### command
+
+###### owner
+
+`VaultPrincipal`
+
+###### vaultId
+
+`VaultId`
+
+#### Returns
+
+`Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
+
+***
+
+### ownerListPendingDispatches()
+
+> **ownerListPendingDispatches**(`command`): `Promise`\<readonly `PendingDispatchRecord`[]\>
 
 #### Parameters
 
@@ -287,9 +373,31 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### onPendingRequest()
+### ownerListSecrets()
 
-> **onPendingRequest**(`callback`): () => `void`
+> **ownerListSecrets**(`actor`, `request?`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+#### Parameters
+
+##### actor
+
+`VaultPrincipal` & `object`
+
+##### request?
+
+###### requestId?
+
+`string`
+
+#### Returns
+
+`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+***
+
+### ownerOnPendingCapabilityRequest()
+
+> **ownerOnPendingCapabilityRequest**(`callback`): () => `void`
 
 #### Parameters
 
@@ -303,9 +411,49 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### registerAgentIdentity()
+### ownerOnPendingDispatch()
 
-> **registerAgentIdentity**(`command`): `Promise`\<`void`\>
+> **ownerOnPendingDispatch**(`callback`): () => `void`
+
+#### Parameters
+
+##### callback
+
+(`record`) => `void`
+
+#### Returns
+
+() => `void`
+
+***
+
+### ownerReadAudit()
+
+> **ownerReadAudit**(`actor`, `query`, `request?`): `Promise`\<readonly `AuditEntry`[]\>
+
+#### Parameters
+
+##### actor
+
+`VaultPrincipal` & `object`
+
+##### query
+
+`AuditQuery`
+
+##### request?
+
+`Omit`\<`OwnerAuditRequest`, `"vaultId"` \| `"actor"` \| `"query"`\>
+
+#### Returns
+
+`Promise`\<readonly `AuditEntry`[]\>
+
+***
+
+### ownerRegisterAgentIdentity()
+
+> **ownerRegisterAgentIdentity**(`command`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -319,9 +467,9 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### registerCapability()
+### ownerRegisterCapability()
 
-> **registerCapability**(`command`): `Promise`\<`void`\>
+> **ownerRegisterCapability**(`command`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -335,9 +483,9 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### registerCustomFlow()
+### ownerRegisterCustomFlow()
 
-> **registerCustomFlow**(`command`): `Promise`\<`void`\>
+> **ownerRegisterCustomFlow**(`command`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -351,9 +499,25 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### rejectDispatch()
+### ownerRejectCapabilityRequest()
 
-> **rejectDispatch**(`command`): `Promise`\<`void`\>
+> **ownerRejectCapabilityRequest**(`command`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### command
+
+`OwnerRejectCapabilityRequestCommand`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerRejectDispatch()
+
+> **ownerRejectDispatch**(`command`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -367,9 +531,25 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### revokeAgentSessionToken()
+### ownerRevokeCapability()
 
-> **revokeAgentSessionToken**(`request`): `Promise`\<`void`\>
+> **ownerRevokeCapability**(`command`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### command
+
+`OwnerRevokeCapabilityCommand`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerRevokeSessionToken()
+
+> **ownerRevokeSessionToken**(`request`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -393,49 +573,25 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### revokeCapability()
+### ownerSubmitCapabilityRequest()
 
-> **revokeCapability**(`command`): `Promise`\<`void`\>
+> **ownerSubmitCapabilityRequest**(`command`): `Promise`\<`PendingCapabilityRequestRecord`\>
 
 #### Parameters
 
 ##### command
 
-`OwnerRevokeCapabilityCommand`
+`SubmitCapabilityRequestCommand`
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`PendingCapabilityRequestRecord`\>
 
 ***
 
-### storeCustomFlowSecret()
+### ownerWriteSecret()
 
-> **storeCustomFlowSecret**(`flow`, `alias`, `plaintext`): `Promise`\<`SecretRecord`\>
-
-#### Parameters
-
-##### flow
-
-`CustomHttpFlowDefinition`
-
-##### alias
-
-`string`
-
-##### plaintext
-
-`string`
-
-#### Returns
-
-`Promise`\<`SecretRecord`\>
-
-***
-
-### writeSecret()
-
-> **writeSecret**(`command`): `Promise`\<`SecretRecord`\>
+> **ownerWriteSecret**(`command`): `Promise`\<`SecretRecord`\>
 
 #### Parameters
 

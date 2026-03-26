@@ -1,4 +1,3 @@
-import { LocalSigner } from "../../protocol/crypto.js";
 import type { CreatedIdentity } from "../../runtime/identity.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import { LocalVaultTransport } from "../../vault-ingress/defaults.js";
@@ -7,7 +6,8 @@ import type {
   AgentCapabilityEnvelope,
   AgentDispatchIntent,
   AgentDispatchTransport,
-  AgentSigner,
+  AgentSubmitCapabilityRequestInput,
+  AgentVisibleSecretRecord,
 } from "./contracts.js";
 
 export interface AgentIdentity {
@@ -20,7 +20,7 @@ export interface AgentIdentity {
  */
 export interface AgentClient {
   /**
-   * Dispatches a signed request to a target using a vault secret.
+   * Dispatches a session-token-authenticated request to a target using a vault secret.
    *
    * @param intent - The destination, method, and secret alias to use.
    * @returns The result of the remote operation.
@@ -36,6 +36,9 @@ export interface AgentClient {
    * ```
    */
   agentDispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
+  agentListCapabilities(): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  agentListSecrets(): Promise<readonly AgentVisibleSecretRecord[]>;
+  agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
 }
 
 export interface CreateAgentClientOptions {
@@ -43,68 +46,22 @@ export interface CreateAgentClientOptions {
   capability: AgentCapabilityEnvelope;
   vault?: VaultService;
   transport?: AgentDispatchTransport;
-  signer?: AgentSigner;
-  token?: string;
+  token: string;
   clock?: Clock;
-}
-
-function createDispatchBinding(
-  requestId: string,
-  requestedAt: string,
-  agentId: string,
-  capabilityId: string,
-  secretAlias: string | undefined,
-  targetUrl: string,
-  method: string,
-  body?: string,
-): string {
-  return JSON.stringify({
-    requestId,
-    requestedAt,
-    agentId,
-    capabilityId,
-    secretAlias: secretAlias ?? null,
-    targetUrl,
-    method,
-    body: body ?? null,
-  });
 }
 
 class DefaultAgentClient implements AgentClient {
   constructor(
     private readonly _identity: AgentIdentity,
     private readonly _capability: AgentCapabilityEnvelope,
-    private readonly _signer: AgentSigner | undefined,
     private readonly _transport: AgentDispatchTransport,
     private readonly _clock: Clock,
-    private readonly _token?: string,
+    private readonly _token: string,
   ) {}
 
   async agentDispatch(intent: AgentDispatchIntent) {
     const requestedAt = intent.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identity.agentId}:${requestedAt}:${intent.secretAlias ?? "no-secret"}:${intent.method}`;
-
-    let signature: string | undefined;
-    if (this._token) {
-      // Use token-based authentication
-    } else {
-      // Use signature-based authentication
-      if (!this._signer) {
-        throw new Error("AgentClient: signer required for signature-based authentication when no token is provided");
-      }
-      signature = await this._signer.sign(
-        createDispatchBinding(
-          requestId,
-          requestedAt,
-          this._identity.agentId,
-          this._capability.capabilityId,
-          intent.secretAlias,
-          intent.targetUrl,
-          intent.method,
-          intent.body,
-        ),
-      );
-    }
 
     return this._transport.agentDispatch({
       vaultId: this._capability.vaultId,
@@ -131,7 +88,6 @@ class DefaultAgentClient implements AgentClient {
       },
       proof: {
         agentId: this._identity.agentId,
-        signature,
         token: this._token,
         requestId,
         requestedAt,
@@ -143,33 +99,87 @@ class DefaultAgentClient implements AgentClient {
       body: intent.body,
     });
   }
+
+  private async _createProof(
+    requestId: string,
+    requestedAt: string,
+    _action: string,
+    _payload: Record<string, unknown> = {},
+  ) {
+    return {
+      agentId: this._identity.agentId,
+      token: this._token,
+      requestId,
+      requestedAt,
+    };
+  }
+
+  async agentListCapabilities() {
+    const requestedAt = this._clock.nowIso();
+    const requestId = `${this._identity.agentId}:${requestedAt}:list_capabilities`;
+    return this._transport.agentListCapabilities({
+      vaultId: this._capability.vaultId,
+      requestId,
+      requestedAt,
+      agent: { kind: "agent", id: this._identity.agentId },
+      proof: await this._createProof(requestId, requestedAt, "list_capabilities"),
+    });
+  }
+
+  async agentListSecrets() {
+    const requestedAt = this._clock.nowIso();
+    const requestId = `${this._identity.agentId}:${requestedAt}:list_secrets`;
+    return this._transport.agentListSecrets({
+      vaultId: this._capability.vaultId,
+      requestId,
+      requestedAt,
+      agent: { kind: "agent", id: this._identity.agentId },
+      proof: await this._createProof(requestId, requestedAt, "list_secrets"),
+    });
+  }
+
+  async agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${this._identity.agentId}:${requestedAt}:submit_capability_request`;
+    const payload = {
+      scope: input.scope,
+      methods: input.methods,
+      operation: input.operation ?? "dispatch_http",
+      secretAliases: input.secretAliases ?? [],
+      justification: input.justification ?? null,
+    };
+    return this._transport.agentSubmitCapabilityRequest({
+      vaultId: this._capability.vaultId,
+      requestId,
+      requestedAt,
+      agent: { kind: "agent", id: this._identity.agentId },
+      proof: await this._createProof(requestId, requestedAt, "submit_capability_request", payload),
+      scope: {
+        operation: input.operation ?? "dispatch_http",
+        secretAliases: input.secretAliases ?? [],
+        scope: input.scope,
+        methods: [...input.methods],
+      },
+      justification: input.justification,
+    });
+  }
 }
 
 function isCreateAgentClientOptions(value: unknown): value is CreateAgentClientOptions {
   return typeof value === "object" && value !== null && "agentIdentity" in value && "capability" in value;
 }
 
-function isCreatedIdentity(value: AgentIdentity | CreatedIdentity): value is CreatedIdentity {
-  return "privateKey" in value && "publicKey" in value;
-}
-
-function resolveAgentSigner(options: CreateAgentClientOptions): AgentSigner | undefined {
-  if (options.signer) {
-    return options.signer;
-  }
-  if (isCreatedIdentity(options.agentIdentity)) {
-    return new LocalSigner(options.agentIdentity);
-  }
-  if (options.token) {
-    return undefined; // No signer needed if token is present
-  }
-  throw new Error("createAgentClient() requires signer or private key when no session token is provided");
-}
-
 function resolveAgentIdentity(options: CreateAgentClientOptions): AgentIdentity {
   return "agentId" in options.agentIdentity
     ? options.agentIdentity
     : { agentId: options.agentIdentity.identityId };
+}
+
+function resolveAgentToken(options: CreateAgentClientOptions): string {
+  if (!options.token) {
+    throw new Error("createAgentClient() requires a session token; raw private-key execution is not supported");
+  }
+  return options.token;
 }
 
 function resolveAgentTransport(
@@ -206,9 +216,8 @@ export function createAgentClient(options: CreateAgentClientOptions): AgentClien
   return new DefaultAgentClient(
     resolveAgentIdentity(options),
     options.capability,
-    resolveAgentSigner(options),
     resolveAgentTransport(options),
     options.clock ?? new SystemClock(),
-    options.token,
+    resolveAgentToken(options),
   );
 }

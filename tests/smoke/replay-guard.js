@@ -52,9 +52,9 @@ const client = createVaultClient({
   vault,
   skipWarmup: true,
 });
-await client.ownerRegisterAgent({
+await client.ownerImportAgent({
   agentId: "agent-replay",
-  publicKey: agentIdentity.publicKey,
+  privateKey: agentIdentity.privateKey,
 });
 
 const replayRecord = await client.ownerWriteSecret({

@@ -40,7 +40,7 @@ Identity material (private keys) generated and stored securely within the vault'
 - **Session Tokens**: Owners can issue revocable `sat_...` tokens for managed agents to enable stateless authentication without raw private keys.
 
 ### 2. External Identity
-Identity material managed by the user outside the vault. Registered via `client.ownerRegisterAgent({ publicKey, ... })`.
+Identity material already managed elsewhere can be imported into vault custody via `client.ownerImportAgent({ privateKey, ... })`.
 
 ## Vault Client (Owner/Admin)
 
@@ -48,7 +48,8 @@ The `VaultClient` provides the administrative interface for the vault.
 
 ### Core Operations
 - `ownerWriteSecret(...)`: Store a secret and bind it to specific targets in one step.
-- `ownerCreateAgent(...)`: Generate and host a new agent identity.
+- `ownerCreateAgent(...)`: Generate and host a new agent identity, then return its public record plus a session token.
+- `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
 - `ownerListAgents()`: Enumerate authorized agents and retrieve managed private keys.
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. 
 - `ownerSubmitCapabilityRequest(...)`: Submit a broader pending capability request for later owner review.
@@ -74,7 +75,10 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 - `agentDispatch(...)`: Use a granted capability to send a secret to an authorized target.
   - **Status**: Returns `SUCCEEDED`, `FAILED`, or `PENDING`.
   - **Discovery Flow**: If an agent attempts an action not explicitly in its white-list, the request is automatically stalled as `PENDING` for owner review. 
-- **Security**: The agent never handles the vault's master password. By using **Session Tokens**, the agent also avoids handling its own raw private key in memory.
+- `agentListCapabilities()`: Read the current capability table granted to that agent.
+- `agentListSecrets()`: Read all secret metadata in the vault, with per-secret authorization markers showing which entries the agent can currently use.
+- `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant before dispatching.
+- **Security**: The agent never handles the vault's master password. Agent execution uses **Session Tokens** rather than raw private-key dispatch.
 - **Auditing**: Dispatches are audited by default. Set `skipAudit: true` in the capability (or during approval) to disable logging for specific actions.
 
 ## Proactive Capability Approval

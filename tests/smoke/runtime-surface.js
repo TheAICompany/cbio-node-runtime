@@ -108,11 +108,11 @@ const vault = wrapVaultCoreAsVaultService(authority, {
 const client = createVaultClient({
   vault,
 });
-assert.equal(typeof client.storeSecret, "function");
-assert.equal(typeof client.defineSecretTargets, "function");
-await client.ownerRegisterAgent({
+assert.equal(typeof client.ownerStoreSecret, "function");
+assert.equal(typeof client.ownerDefineSecretTargets, "function");
+await client.ownerImportAgent({
   agentId: "agent-1",
-  publicKey: agentIdentity.publicKey,
+  privateKey: agentIdentity.privateKey,
 });
 const ownedRecord = await client.ownerWriteSecret({
   alias: "api-token",
@@ -149,6 +149,7 @@ const dispatchCapability = {
   auditRequired: true,
 };
 await client.ownerGrantCapability({ capability: dispatchCapability });
+const agent1Session = await client.ownerIssueSessionToken({ agentId: "agent-1" });
 
 const agent = createAgentClient({
   agentIdentity: { agentId: "agent-1" },
@@ -156,7 +157,7 @@ const agent = createAgentClient({
     ...dispatchCapability,
   },
   vault,
-  signer: new LocalSigner(agentIdentity),
+  token: agent1Session.token,
 });
 
 const result = await agent.agentDispatch({
@@ -198,7 +199,7 @@ const customAgent = createAgentClient({
     ...customCapability,
   },
   vault,
-  signer: new LocalSigner(agentIdentity),
+  token: agent1Session.token,
 });
 
 const customResult = await customAgent.agentDispatch({
@@ -243,7 +244,7 @@ const customAcquireAgent = createAgentClient({
     ...customAcquireCapability,
   },
   vault,
-  signer: new LocalSigner(agentIdentity),
+  token: agent1Session.token,
 });
 
 const customAcquireResult = await customAcquireAgent.agentDispatch({
@@ -350,19 +351,20 @@ try {
   assert.ok(!remainingVaults.find(v => v.vaultId === "vault-runtime-sibling"), "Vault should be deleted");
   console.log("   [OK] Vault physical deletion successful");
   console.log("-> Verifying Managed Agent Identity Custody...");
-  const [managedRecord, managedPrivateKey] = await auditClient.ownerCreateAgent({ 
+  const managedProvision = await auditClient.ownerCreateAgent({ 
     agentId: "agent-managed",
     nickname: "Managed Worker",
     metadata: { dept: "security" }
   });
-  assert.ok(managedPrivateKey, "Should return private key during creation");
+  const managedRecord = managedProvision.agent;
+  assert.ok(managedProvision.sessionToken.token, "Should issue a session token during creation");
   assert.equal(managedRecord.agentId, "agent-managed");
   assert.equal(managedRecord.nickname, "Managed Worker");
   
   // Verify recovery after persistence
   const agentsInVault = await auditClient.ownerListAgents();
   const foundManaged = agentsInVault.find(a => a.agentId === "agent-managed");
-  assert.equal(foundManaged?.privateKey, managedPrivateKey, "Vault should persist the private key");
+  assert.equal(typeof foundManaged?.privateKey, "string", "Vault should persist the private key");
   console.log("   [OK] Agent creation and private key custody verification passed");
 
   console.log("-> Verifying Proactive Capability Request Flow...");
@@ -408,13 +410,14 @@ try {
   };
   await auditClient.ownerGrantCapability({ capability: acquiredCapability });
   const acquiredVault = wrapVaultCoreAsVaultService(recoveredVaultInstance.core);
+  const acquiredAgentSession = await auditClient.ownerIssueSessionToken({ agentId: "agent-acquired" });
   const acquiredAgent = createAgentClient({
     agentIdentity: { agentId: "agent-acquired" },
     capability: {
       ...acquiredCapability,
     },
     vault: acquiredVault,
-    signer: new LocalSigner(acquiredAgentIdentity),
+    token: acquiredAgentSession.token,
   });
   await assert.rejects(
     () => acquiredAgent.agentDispatch({

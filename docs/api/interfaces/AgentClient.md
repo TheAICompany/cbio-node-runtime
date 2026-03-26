@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.48.6**](../README.md)
+[**CBIO Node Runtime Agent API v1.49.0**](../README.md)
 
 ***
 
@@ -9,11 +9,11 @@ This client uses a delegated capability granted by the owner.
 
 ## Methods
 
-### dispatch()
+### agentDispatch()
 
-> **dispatch**(`intent`): `Promise`\<`DispatchResult`\>
+> **agentDispatch**(`intent`): `Promise`\<`DispatchResult`\>
 
-Dispatches a signed request to a target using a vault secret.
+Dispatches a session-token-authenticated request to a target using a vault secret.
 
 #### Parameters
 
@@ -32,10 +32,46 @@ The result of the remote operation.
 #### Example
 
 ```ts
-const result = await agent.dispatch({
+const result = await agent.agentDispatch({
   targetUrl: 'https://api.example.com/data',
   method: 'POST',
   secretAlias: 'api-token',
   body: JSON.stringify({ key: 'value' })
 });
 ```
+
+***
+
+### agentListCapabilities()
+
+> **agentListCapabilities**(): `Promise`\<readonly `AgentCapability`[]\>
+
+#### Returns
+
+`Promise`\<readonly `AgentCapability`[]\>
+
+***
+
+### agentListSecrets()
+
+> **agentListSecrets**(): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+#### Returns
+
+`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+
+***
+
+### agentSubmitCapabilityRequest()
+
+> **agentSubmitCapabilityRequest**(`input`): `Promise`\<`PendingCapabilityRequestRecord`\>
+
+#### Parameters
+
+##### input
+
+[`AgentSubmitCapabilityRequestInput`](AgentSubmitCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`PendingCapabilityRequestRecord`\>

@@ -1,8 +1,8 @@
-[**CBIO Node Runtime Agent API v1.48.6**](../README.md)
+[**CBIO Node Runtime Agent API v1.49.0**](../README.md)
 
 ***
 
-# Interface: VaultRegisterAgentInput
+# Interface: VaultImportAgentInput
 
 ## Properties
 
@@ -24,15 +24,9 @@
 
 ***
 
-### privateKey?
+### privateKey
 
-> `optional` **privateKey?**: `string`
-
-***
-
-### publicKey
-
-> **publicKey**: `string`
+> **privateKey**: `string`
 
 ***
 

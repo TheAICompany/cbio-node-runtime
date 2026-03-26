@@ -39,10 +39,9 @@ export interface VaultExportSecretInput {
   requestedAt?: string;
 }
 
-export interface VaultRegisterAgentInput {
+export interface VaultImportAgentInput {
   agentId: string;
-  publicKey: string;
-  privateKey?: string;
+  privateKey: string;
   metadata?: Record<string, any>;
   nickname?: string;
   requestedAt?: string;
@@ -53,6 +52,11 @@ export interface VaultCreateAgentInput {
   metadata?: Record<string, any>;
   nickname?: string;
   requestedAt?: string;
+}
+
+export interface OwnerAgentProvisionResult {
+  agent: import("../../vault-core/index.js").AgentIdentityRecord;
+  sessionToken: import("../../vault-core/index.js").OwnerSessionToken;
 }
 
 export interface VaultRegisterFlowInput extends OwnerHttpFlowBoundary {
@@ -120,6 +124,10 @@ export interface VaultListCapabilitiesInput {
   requestedAt?: string;
 }
 
+export interface VaultListSecretsInput {
+  requestedAt?: string;
+}
+
 export interface VaultRevokeCapabilityInput {
   agentId: string;
   capabilityId: string;
@@ -152,12 +160,13 @@ export interface VaultClient {
   ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
   ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void>;
   ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
-  ownerRegisterAgent(input: VaultRegisterAgentInput): Promise<void>;
-  ownerCreateAgent(input: VaultCreateAgentInput): Promise<readonly [import("../../vault-core/index.js").AgentIdentityRecord, string]>;
+  ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;
+  ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<void>;
   ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void>;
   ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
   ownerListCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  ownerListSecrets(input?: VaultListSecretsInput): Promise<readonly import("../../vault-core/index.js").AgentVisibleSecretRecord[]>;
   ownerRevokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
   ownerIssueSessionToken(input: VaultIssueSessionTokenInput): Promise<import("../../vault-core/index.js").OwnerSessionToken>;
   ownerIssueAllSessionTokens(): Promise<readonly import("../../vault-core/index.js").OwnerSessionToken[]>;

@@ -189,6 +189,10 @@ export class InMemorySecretRepository implements SecretRepository {
   async getById(secretId: SecretId): Promise<SecretRecord | null> {
     return this._byId.get(secretId.value) ?? null;
   }
+
+  async list(vaultId: VaultId): Promise<readonly SecretRecord[]> {
+    return Array.from(this._byId.values()).filter((record) => record.vaultId.value === vaultId.value);
+  }
 }
 
 /**

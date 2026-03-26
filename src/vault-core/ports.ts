@@ -32,6 +32,7 @@ export interface SecretRepository {
   delete(secretId: SecretId): Promise<void>;
   getByAlias(alias: SecretAlias): Promise<SecretRecord | null>;
   getById(secretId: SecretId): Promise<SecretRecord | null>;
+  list(vaultId: VaultId): Promise<readonly SecretRecord[]>;
 }
 
 export interface SecretCustody {

@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: VaultGrantCapabilityInput
+# Interface: VaultSubmitCapabilityRequestInput
 
 ## Properties
 
@@ -12,15 +12,15 @@
 
 ***
 
-### capabilityId?
+### expiresAt?
 
-> `optional` **capabilityId?**: `string`
+> `optional` **expiresAt?**: `string`
 
 ***
 
-### expiresIn?
+### justification?
 
-> `optional` **expiresIn?**: `number`
+> `optional` **justification?**: `string`
 
 ***
 
@@ -53,6 +53,12 @@
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
+
+***
+
+### requester
+
+> **requester**: `VaultPrincipal`
 
 ***
 

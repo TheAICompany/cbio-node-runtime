@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.48.6**](../README.md)
+[**CBIO Node Runtime Agent API v1.49.0**](../README.md)
 
 ***
 
@@ -321,6 +321,26 @@ Using scrypt for memory-hard key derivation to resist brute-force attacks.
 ### FsStorageProvider
 
 > **FsStorageProvider**: *typeof* `FsStorageProvider`
+
+***
+
+### handleVaultAgentControlHttp
+
+> **handleVaultAgentControlHttp**: (`service`, `body`) => `Promise`\<`VaultAgentControlResponse` \| `VaultAgentControlErrorResponse`\>
+
+#### Parameters
+
+##### service
+
+`VaultService`
+
+##### body
+
+`unknown`
+
+#### Returns
+
+`Promise`\<`VaultAgentControlResponse` \| `VaultAgentControlErrorResponse`\>
 
 ***
 

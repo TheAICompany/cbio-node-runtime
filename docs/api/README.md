@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.48.6**
+**CBIO Node Runtime Agent API v1.49.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.48.6
+# CBIO Node Runtime Agent API v1.49.0
 
 ## Enumerations
 
@@ -21,6 +21,7 @@
 - [AgentDispatchTransport](interfaces/AgentDispatchTransport.md)
 - [AgentIdentity](interfaces/AgentIdentity.md)
 - [AgentSigner](interfaces/AgentSigner.md)
+- [AgentSubmitCapabilityRequestInput](interfaces/AgentSubmitCapabilityRequestInput.md)
 - [CbioRuntime](interfaces/CbioRuntime.md)
 - [CreateAgentClientOptions](interfaces/CreateAgentClientOptions.md)
 - [CreatedVault](interfaces/CreatedVault.md)
@@ -32,6 +33,7 @@
 - [InitializedVaultCustody](interfaces/InitializedVaultCustody.md)
 - [InitializeVaultCustodyOptions](interfaces/InitializeVaultCustodyOptions.md)
 - [IStorageProvider](interfaces/IStorageProvider.md)
+- [OwnerAgentProvisionResult](interfaces/OwnerAgentProvisionResult.md)
 - [OwnerDefineSecretTargetsInput](interfaces/OwnerDefineSecretTargetsInput.md)
 - [OwnerSecretTargetBinding](interfaces/OwnerSecretTargetBinding.md)
 - [OwnerStoreSecretInput](interfaces/OwnerStoreSecretInput.md)
@@ -40,6 +42,7 @@
 - [RecoverVaultOptions](interfaces/RecoverVaultOptions.md)
 - [RestoreIdentityOptions](interfaces/RestoreIdentityOptions.md)
 - [Signer](interfaces/Signer.md)
+- [VaultApproveCapabilityRequestInput](interfaces/VaultApproveCapabilityRequestInput.md)
 - [VaultAuditQueryInput](interfaces/VaultAuditQueryInput.md)
 - [VaultClient](interfaces/VaultClient.md)
 - [VaultCoreDependenciesOptions](interfaces/VaultCoreDependenciesOptions.md)
@@ -48,19 +51,22 @@
 - [VaultExportSecretInput](interfaces/VaultExportSecretInput.md)
 - [VaultGrantCapabilityInput](interfaces/VaultGrantCapabilityInput.md)
 - [VaultIdentity](interfaces/VaultIdentity.md)
+- [VaultImportAgentInput](interfaces/VaultImportAgentInput.md)
 - [VaultListAgentsInput](interfaces/VaultListAgentsInput.md)
 - [VaultListCapabilitiesInput](interfaces/VaultListCapabilitiesInput.md)
+- [VaultListSecretsInput](interfaces/VaultListSecretsInput.md)
 - [VaultMetadata](interfaces/VaultMetadata.md)
 - [VaultObject](interfaces/VaultObject.md)
 - [VaultProfile](interfaces/VaultProfile.md)
-- [VaultRegisterAgentInput](interfaces/VaultRegisterAgentInput.md)
 - [VaultRegisterFlowInput](interfaces/VaultRegisterFlowInput.md)
 - [VaultRevokeCapabilityInput](interfaces/VaultRevokeCapabilityInput.md)
 - [VaultSigner](interfaces/VaultSigner.md)
+- [VaultSubmitCapabilityRequestInput](interfaces/VaultSubmitCapabilityRequestInput.md)
 
 ## Type Aliases
 
 - [AgentCapabilityEnvelope](type-aliases/AgentCapabilityEnvelope.md)
+- [AgentVisibleSecretRecord](type-aliases/AgentVisibleSecretRecord.md)
 - [CbioRuntimeModule](type-aliases/CbioRuntimeModule.md)
 
 ## Variables
@@ -84,6 +90,7 @@
 - [deriveIdentityId](functions/deriveIdentityId.md)
 - [deriveVaultWorkingKeyFromPassword](functions/deriveVaultWorkingKeyFromPassword.md)
 - [getDefaultWorkspaceDir](functions/getDefaultWorkspaceDir.md)
+- [handleVaultAgentControlHttp](functions/handleVaultAgentControlHttp.md)
 - [handleVaultHttpDispatch](functions/handleVaultHttpDispatch.md)
 - [initializeVaultCustody](functions/initializeVaultCustody.md)
 - [listVaults](functions/listVaults.md)

@@ -113,9 +113,9 @@ try {
   });
 
   const agentIdentity = createIdentity();
-  await client.ownerRegisterAgent({
+  await client.ownerImportAgent({
     agentId: "agent-restricted",
-    publicKey: agentIdentity.publicKey,
+    privateKey: agentIdentity.privateKey,
   });
   const restrictedCapability = {
     vaultId: authority.vaultId,
@@ -141,24 +141,25 @@ try {
     auditRequired: true,
   };
   await client.ownerGrantCapability({ capability: storedThenDefinedCapability });
+  const session = await client.ownerIssueSessionToken({ agentId: "agent-restricted" });
 
   const agent = createAgentClient({
     agentIdentity: { agentId: "agent-restricted" },
     capability: {
       ...restrictedCapability,
     },
-    signer: new LocalSigner(agentIdentity),
     transport: new LocalVaultTransport(vault),
     clock: new SystemClock(),
+    token: session.token,
   });
   const storedThenDefinedAgent = createAgentClient({
     agentIdentity: { agentId: "agent-restricted" },
     capability: {
       ...storedThenDefinedCapability,
     },
-    signer: new LocalSigner(agentIdentity),
     transport: new LocalVaultTransport(vault),
     clock: new SystemClock(),
+    token: session.token,
   });
 
   await assert.rejects(
@@ -235,9 +236,9 @@ try {
     capability: {
       ...rateLimitedCapability,
     },
-    signer: new LocalSigner(agentIdentity),
     transport: new LocalVaultTransport(vault),
     clock: new SystemClock(),
+    token: session.token,
   });
   const firstLimited = await rateLimitedAgent.agentDispatch({
     secretAlias: "restricted-token",
@@ -297,9 +298,9 @@ try {
   const reloadedClient = createVaultClient({
     vault: reloadedVault,
   });
-  await reloadedClient.ownerRegisterAgent({
+  await reloadedClient.ownerImportAgent({
     agentId: "agent-restricted",
-    publicKey: agentIdentity.publicKey,
+    privateKey: agentIdentity.privateKey,
   });
 
   const verifierSigner = new LocalSigner(agentIdentity);
@@ -317,7 +318,7 @@ try {
     body: null,
   });
 
-  const authorization = await reloadedAuthority.authorizeDispatch({
+  const authorization = await reloadedAuthority.agentAuthorizeDispatch({
     vaultId: reloadedAuthority.vaultId,
     requestId,
     requestedAt,
@@ -391,7 +392,7 @@ try {
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   };
-  const persistedReplayFirst = await reloadedAuthority.dispatchSecret(persistedReplayRequest);
+  const persistedReplayFirst = await reloadedAuthority.agentDispatchSecret(persistedReplayRequest);
   assert.equal(persistedReplayFirst.status, "SUCCEEDED");
 
   const restartedAgentIdentities = new InMemoryAgentIdentityRegistry();
@@ -410,12 +411,12 @@ try {
   const restartedClient = createVaultClient({
     vault: restartedVault,
   });
-  await restartedClient.ownerRegisterAgent({
+  await restartedClient.ownerImportAgent({
     agentId: "agent-restricted",
-    publicKey: agentIdentity.publicKey,
+    privateKey: agentIdentity.privateKey,
   });
   await assert.rejects(
-    () => restartedAuthority.dispatchSecret(persistedReplayRequest),
+    () => restartedAuthority.agentDispatchSecret(persistedReplayRequest),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_DISPATCH_DENIED" && /replay/.test(error.message),
   );
 
@@ -435,7 +436,7 @@ try {
   });
   const restartedRateLimitSignature = await restartedRateLimitSigner.sign(restartedRateLimitBinding);
   await assert.rejects(
-    () => restartedAuthority.dispatchSecret({
+    () => restartedAuthority.agentDispatchSecret({
       vaultId: restartedAuthority.vaultId,
       requestId: restartedRateLimitRequestId,
       requestedAt: restartedRateLimitRequestedAt,

@@ -1,12 +1,14 @@
-import { createVault, createVaultClient, createAgentClient } from '../../dist/runtime/index.js';
+import { createVault, createVaultClient, createAgentClient, MemoryStorageProvider } from '../../dist/runtime/index.js';
 import assert from 'node:assert';
 
 async function testHitlApproval() {
   console.log('--- Testing HITL Approval Flow ---');
 
   // 1. Setup Vault and Clients
-  const { vault, workingKey } = await createVault({
-    name: 'HITL Test Vault'
+  const { vault } = await createVault(new MemoryStorageProvider(), {
+    vaultId: 'vault-hitl-test',
+    nickname: 'HITL Test Vault',
+    password: 'hitl-test-password',
   });
 
   const ownerClient = createVaultClient({
@@ -15,7 +17,7 @@ async function testHitlApproval() {
   });
 
   // 2. Create and Register Agent
-  const [agentRecord, privateKey] = await ownerClient.ownerCreateAgent({
+  const provisionedAgent = await ownerClient.ownerCreateAgent({
     agentId: 'agent-1'
   });
 
@@ -31,15 +33,16 @@ async function testHitlApproval() {
     agentId: 'agent-1',
     secretAliases: ['top-secret'],
     scope: 'https://api.example.com/*',
-    methods: ['GET'],
+    methods: ['POST'],
     // requiresApproval: true removed
   });
 
   const capabilities = await ownerClient.ownerListCapabilities({ agentId: 'agent-1' });
   const agentClient = createAgentClient({
-    agentIdentity: { agentId: 'agent-1', privateKey },
+    agentIdentity: { agentId: 'agent-1' },
     capability: capabilities[0],
-    vault
+    vault,
+    token: provisionedAgent.sessionToken.token,
   });
 
   // 5. Agent attempts dispatch -> Should be ALLOWED (already in whitelist)

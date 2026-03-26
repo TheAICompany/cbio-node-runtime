@@ -7,7 +7,17 @@ export interface AgentDispatchIntent {
   requestedAt?: string;
 }
 
+export interface AgentSubmitCapabilityRequestInput {
+  operation?: "dispatch_http" | "custom_http";
+  secretAliases?: readonly string[];
+  scope: string;
+  methods: readonly string[];
+  justification?: string;
+  requestedAt?: string;
+}
+
 export type AgentCapabilityEnvelope = import("../../vault-core/index.js").AgentCapability;
+export type AgentVisibleSecretRecord = import("../../vault-core/index.js").AgentVisibleSecretRecord;
 
 export interface AgentSigner {
   sign(input: string): Promise<string>;
@@ -15,4 +25,7 @@ export interface AgentSigner {
 
 export interface AgentDispatchTransport {
   agentDispatch(request: import("../../vault-core/index.js").DispatchRequest): Promise<import("../../vault-core/index.js").DispatchResult>;
+  agentListCapabilities(request: import("../../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  agentListSecrets(request: import("../../vault-core/index.js").AgentListSecretsRequest): Promise<readonly AgentVisibleSecretRecord[]>;
+  agentSubmitCapabilityRequest(request: import("../../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
 }

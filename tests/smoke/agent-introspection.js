@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import {
+  createVaultClient,
+  createAgentClient,
+  createIdentity,
+  handleVaultAgentControlHttp,
+} from "../../dist/runtime/index.js";
+import {
+  createVaultCoreDependencies,
+  createVaultCore,
+} from "../../dist/vault-core/index.js";
+import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
+
+const deps = createVaultCoreDependencies({
+  vaultId: "vault-agent-introspection",
+  fetchImpl: async () => new Response("ok", { status: 200 }),
+});
+const authority = createVaultCore(deps);
+const vault = wrapVaultCoreAsVaultService(authority);
+const ownerClient = createVaultClient({ vault, skipWarmup: true });
+
+const agentIdentity = createIdentity({ nickname: "introspector" });
+await ownerClient.ownerImportAgent({
+  agentId: agentIdentity.identityId,
+  privateKey: agentIdentity.privateKey,
+});
+await ownerClient.ownerWriteSecret({
+  alias: "crm-token",
+  plaintext: "secret-crm-token",
+  targetBindings: [{
+    kind: "site",
+    targetId: "crm",
+    targetUrl: "https://api.example.com/users/*",
+    methods: ["GET"],
+  }],
+});
+await ownerClient.ownerWriteSecret({
+  alias: "payroll-token",
+  plaintext: "secret-payroll-token",
+  targetBindings: [{
+    kind: "site",
+    targetId: "payroll",
+    targetUrl: "https://api.example.com/payroll/*",
+    methods: ["GET"],
+  }],
+});
+await ownerClient.ownerGrantCapability({
+  agentId: agentIdentity.identityId,
+  secretAliases: ["crm-token"],
+  scope: "https://api.example.com/users/*",
+  methods: ["GET"],
+});
+
+const capabilities = await ownerClient.ownerListCapabilities({ agentId: agentIdentity.identityId });
+const session = await ownerClient.ownerIssueSessionToken({ agentId: agentIdentity.identityId });
+const agentClient = createAgentClient({
+  agentIdentity,
+  capability: capabilities[0],
+  vault,
+  token: session.token,
+});
+
+const visibleCapabilities = await agentClient.agentListCapabilities();
+assert.equal(visibleCapabilities.length, 1);
+assert.equal(visibleCapabilities[0].scope, "https://api.example.com/users/*");
+
+const visibleSecrets = await agentClient.agentListSecrets();
+assert.equal(visibleSecrets.length, 2);
+assert.equal(visibleSecrets.find((record) => record.alias.value === "crm-token")?.isAuthorizedForAgent, true);
+assert.equal(visibleSecrets.find((record) => record.alias.value === "payroll-token")?.isAuthorizedForAgent, false);
+
+const requestedAt = new Date().toISOString();
+const requestId = `${agentIdentity.identityId}:${requestedAt}:submit_capability_request`;
+
+const httpResult = await handleVaultAgentControlHttp(vault, {
+  action: "submit_capability_request",
+  vaultId: vault.vaultId.value,
+  requestId,
+  requestedAt,
+  agentId: agentIdentity.identityId,
+  proof: { token: session.token },
+  scope: "https://api.example.com/admin/*",
+  methods: ["POST"],
+  operation: "dispatch_http",
+  secretAliases: ["crm-token"],
+  justification: "Need admin write access",
+});
+
+assert.equal(httpResult.ok, true);
+const pending = await ownerClient.ownerListPendingCapabilityRequests();
+assert.equal(pending.length, 1);
+assert.equal(pending[0].scope.scope, "https://api.example.com/admin/*");
+
+console.log("Agent introspection smoke test passed");

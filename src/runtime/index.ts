@@ -75,14 +75,16 @@ export {
   type VaultExportSecretInput,
   type VaultGrantCapabilityInput,
   type VaultRegisterFlowInput,
-  type VaultRegisterAgentInput,
+  type VaultImportAgentInput,
   type VaultCreateAgentInput,
+  type OwnerAgentProvisionResult,
   type OwnerSecretTargetBinding,
   type OwnerStoreSecretInput,
   type OwnerWriteSecretInput,
   type VaultDeleteSecretInput,
   type VaultListAgentsInput,
   type VaultListCapabilitiesInput,
+  type VaultListSecretsInput,
   type VaultRevokeCapabilityInput,
   type VaultSubmitCapabilityRequestInput,
   type VaultApproveCapabilityRequestInput,
@@ -97,6 +99,8 @@ export {
   type AgentDispatchIntent,
   type AgentDispatchTransport,
   type AgentSigner,
+  type AgentSubmitCapabilityRequestInput,
+  type AgentVisibleSecretRecord,
 } from "../clients/agent/index.js";
 
 export {
@@ -107,7 +111,12 @@ export {
   createStandardDispatchBoundary,
   AgentDispatchHttpTransport,
   handleVaultHttpDispatch,
+  handleVaultAgentControlHttp,
 } from "../vault-ingress/index.js";
+/*
+ * Owner remote control is intentionally not re-exported right now.
+ * Restore `handleVaultOwnerControlHttp` here after owner remote auth exists.
+ */
 
 export { LocalVaultTransport } from "../vault-ingress/defaults.js";
 
@@ -141,6 +150,7 @@ export interface CbioRuntime {
   LocalVaultTransport: typeof import("../vault-ingress/defaults.js").LocalVaultTransport;
   AgentDispatchHttpTransport: typeof import("../vault-ingress/remote-transport.js").AgentDispatchHttpTransport;
   handleVaultHttpDispatch: typeof import("../vault-ingress/server-utils.js").handleVaultHttpDispatch;
+  handleVaultAgentControlHttp: typeof import("../vault-ingress/server-utils.js").handleVaultAgentControlHttp;
 }
 
 /**
