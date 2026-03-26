@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.52.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.53.0**](../README.md)
 
 ***
 
@@ -22,6 +22,22 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 #### Returns
 
 `Promise`\<`AgentCapability`\>
+
+***
+
+### ownerApproveDispatch()
+
+> **ownerApproveDispatch**(`input`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveDispatchInput`](VaultApproveDispatchInput.md)
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
 
 ***
 
@@ -132,6 +148,32 @@ Grants a specific capability to an agent.
 
 ***
 
+### ownerIssueAllSessionTokens()
+
+> **ownerIssueAllSessionTokens**(): `Promise`\<readonly `OwnerSessionToken`[]\>
+
+#### Returns
+
+`Promise`\<readonly `OwnerSessionToken`[]\>
+
+***
+
+### ownerIssueSessionToken()
+
+> **ownerIssueSessionToken**(`input`): `Promise`\<`OwnerSessionToken`\>
+
+#### Parameters
+
+##### input
+
+[`VaultIssueSessionTokenInput`](VaultIssueSessionTokenInput.md)
+
+#### Returns
+
+`Promise`\<`OwnerSessionToken`\>
+
+***
+
 ### ownerListAgents()
 
 > **ownerListAgents**(`input?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
@@ -178,6 +220,16 @@ Lists all active capabilities granted to agents.
 
 ***
 
+### ownerListPendingDispatches()
+
+> **ownerListPendingDispatches**(): `Promise`\<readonly `PendingDispatchRecord`[]\>
+
+#### Returns
+
+`Promise`\<readonly `PendingDispatchRecord`[]\>
+
+***
+
 ### ownerListSecrets()
 
 > **ownerListSecrets**(`input?`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
@@ -207,6 +259,38 @@ Lists all active capabilities granted to agents.
 #### Returns
 
 () => `void`
+
+***
+
+### ownerOnPendingDispatch()
+
+> **ownerOnPendingDispatch**(`callback`): () => `void`
+
+#### Parameters
+
+##### callback
+
+(`record`) => `void`
+
+#### Returns
+
+() => `void`
+
+***
+
+### ownerReadAgentPrivateKey()
+
+> **ownerReadAgentPrivateKey**(`input`): `Promise`\<`string`\>
+
+#### Parameters
+
+##### input
+
+[`VaultReadAgentPrivateKeyInput`](VaultReadAgentPrivateKeyInput.md)
+
+#### Returns
+
+`Promise`\<`string`\>
 
 ***
 
@@ -278,6 +362,22 @@ Registers a custom HTTP flow for complex secret usage.
 
 ***
 
+### ownerRejectDispatch()
+
+> **ownerRejectDispatch**(`requestId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### requestId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
 ### ownerRevokeCapability()
 
 > **ownerRevokeCapability**(`input`): `Promise`\<`void`\>
@@ -289,6 +389,22 @@ Revokes a previously granted capability.
 ##### input
 
 [`VaultRevokeCapabilityInput`](VaultRevokeCapabilityInput.md)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerRevokeSessionToken()
+
+> **ownerRevokeSessionToken**(`input`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### input
+
+[`VaultRevokeSessionTokenInput`](VaultRevokeSessionTokenInput.md)
 
 #### Returns
 
