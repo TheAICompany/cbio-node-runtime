@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.57.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.56.0...v1.57.0) (2026-03-26)
+
+
+### Features
+
+* Add owner session management and update API documentation for various interfaces and functions. ([404d9dd](https://github.com/TheAICompany/cbio-node-runtime/commit/404d9dd28fa5f70814885544a74df33910ab932d))
+
 ## [1.56.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.55.1...v1.56.0) (2026-03-26)
 
 
