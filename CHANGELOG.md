@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.54.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.53.0...v1.54.0) (2026-03-26)
+
+
+### Features
+
+* Implement a flat, versioned vault storage layout by removing the nested `vault/sealed/` directory and updating file paths. ([f7460b9](https://github.com/TheAICompany/cbio-node-runtime/commit/f7460b92757d612377df34327f931579b465be8e))
+* Update API documentation to v1.53.0 and adjust runtime surface, persistence, and client implementations. ([b468837](https://github.com/TheAICompany/cbio-node-runtime/commit/b46883706a4327f4dae214fec842cf9a7bcfd6eb))
+
 ## [1.53.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.52.1...v1.53.0) (2026-03-26)
 
 
