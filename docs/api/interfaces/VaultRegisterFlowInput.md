@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.50.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.51.0**](../README.md)
 
 ***
 
@@ -9,12 +9,6 @@
 - `OwnerHttpFlowBoundary`
 
 ## Properties
-
-### flowId
-
-> **flowId**: `string`
-
-***
 
 ### method
 

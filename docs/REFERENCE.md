@@ -51,10 +51,10 @@ The `VaultClient` provides the administrative interface for the vault.
 - `ownerCreateAgent(...)`: Generate and host a new agent identity, then return its public record plus a session token.
 - `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
 - `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
-- `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. 
+- `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
 - `ownerSubmitCapabilityRequest(...)`: Submit a broader pending capability request for later owner review.
 - `ownerListPendingCapabilityRequests()`: List proactive capability requests that are waiting for approval.
-- `ownerApproveCapabilityRequest({ requestId, capabilityId })`: Turn a pending capability request into a real stored capability.
+- `ownerApproveCapabilityRequest({ requestId })`: Turn a pending capability request into a real stored capability. Capability IDs are generated internally.
 - `ownerRejectCapabilityRequest(requestId)`: Deny a pending capability request.
 - `ownerOnPendingCapabilityRequest(callback)`: Register a real-time observer to receive proactive capability requests.
 - `ownerListPendingDispatches()`: List agent requests awaiting manual approval (HITL).

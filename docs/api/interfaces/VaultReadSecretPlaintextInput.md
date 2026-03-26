@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: OwnerDefineSecretTargetsInput
+# Interface: VaultReadSecretPlaintextInput
 
 ## Properties
 
@@ -12,12 +12,18 @@
 
 ***
 
+### password
+
+> **password**: `string`
+
+***
+
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
 
 ***
 
-### targetBindings
+### verificationCode?
 
-> **targetBindings**: readonly [`OwnerSecretTargetBinding`](OwnerSecretTargetBinding.md)[]
+> `optional` **verificationCode?**: `string`

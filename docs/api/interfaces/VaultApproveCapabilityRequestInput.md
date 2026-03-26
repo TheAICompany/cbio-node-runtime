@@ -1,16 +1,10 @@
-[**CBIO Node Runtime Agent API v1.50.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.51.0**](../README.md)
 
 ***
 
 # Interface: VaultApproveCapabilityRequestInput
 
 ## Properties
-
-### capabilityId?
-
-> `optional` **capabilityId?**: `string`
-
-***
 
 ### requestedAt?
 

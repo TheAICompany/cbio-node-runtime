@@ -49,14 +49,13 @@ assert.equal(pending[0].justification, "Need to read user resources without per-
 
 const approved = await ownerClient.ownerApproveCapabilityRequest({
   requestId: pending[0].requestId,
-  capabilityId: "cap-users-read",
 });
-assert.equal(approved.capabilityId, "cap-users-read");
+assert.equal(typeof approved.capabilityId, "string");
 assert.deepEqual(approved.methods, ["GET"]);
 assert.equal(approved.scope, "https://api.example.com/users/*");
 
 const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
-assert.ok(capabilities.some((cap) => cap.capabilityId === "cap-users-read"));
+assert.ok(capabilities.some((cap) => cap.capabilityId === approved.capabilityId));
 
 await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },

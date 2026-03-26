@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.50.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.51.0**](../README.md)
 
 ***
 
@@ -47,3 +47,23 @@
 #### Inherited from
 
 [`VaultObject`](VaultObject.md).[`vault`](VaultObject.md#vault)
+
+## Methods
+
+### verifyPassword()
+
+> **verifyPassword**(`password`): `Promise`\<`boolean`\>
+
+#### Parameters
+
+##### password
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+#### Inherited from
+
+[`VaultObject`](VaultObject.md).[`verifyPassword`](VaultObject.md#verifypassword)

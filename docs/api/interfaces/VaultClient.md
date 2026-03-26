@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.50.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.51.0**](../README.md)
 
 ***
 
@@ -100,7 +100,7 @@ Exports a secret's plaintext.
 
 ### ownerGrantCapability()
 
-> **ownerGrantCapability**(`input`): `Promise`\<`void`\>
+> **ownerGrantCapability**(`input`): `Promise`\<`AgentCapability`\>
 
 Grants a specific capability to an agent.
 
@@ -112,7 +112,7 @@ Grants a specific capability to an agent.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`AgentCapability`\>
 
 ***
 
@@ -228,9 +228,25 @@ Reads the tamper-evident audit log for the vault.
 
 ***
 
+### ownerReadSecretPlaintext()
+
+> **ownerReadSecretPlaintext**(`input`): `Promise`\<`string`\>
+
+#### Parameters
+
+##### input
+
+[`VaultReadSecretPlaintextInput`](VaultReadSecretPlaintextInput.md)
+
+#### Returns
+
+`Promise`\<`string`\>
+
+***
+
 ### ownerRegisterFlow()
 
-> **ownerRegisterFlow**(`input`): `Promise`\<`void`\>
+> **ownerRegisterFlow**(`input`): `Promise`\<`CustomHttpFlowDefinition`\>
 
 Registers a custom HTTP flow for complex secret usage.
 
@@ -242,7 +258,7 @@ Registers a custom HTTP flow for complex secret usage.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`CustomHttpFlowDefinition`\>
 
 ***
 

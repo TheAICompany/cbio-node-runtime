@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.50.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.51.0**](../README.md)
 
 ***
 
@@ -37,3 +37,21 @@ The anchored storage provider for this vault.
 > **vault**: `VaultService`
 
 The high-level service interface for dispatch and acquisition.
+
+## Methods
+
+### verifyPassword()
+
+> **verifyPassword**(`password`): `Promise`\<`boolean`\>
+
+Verifies whether a supplied password can unlock this vault.
+
+#### Parameters
+
+##### password
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>

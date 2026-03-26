@@ -2,13 +2,13 @@
 
 ***
 
-# Interface: VaultExportSecretInput
+# Interface: VaultReadAgentPrivateKeyInput
 
 ## Properties
 
-### alias
+### agentId
 
-> **alias**: `string`
+> **agentId**: `string`
 
 ***
 

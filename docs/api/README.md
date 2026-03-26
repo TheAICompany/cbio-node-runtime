@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.50.0**
+**CBIO Node Runtime Agent API v1.51.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.50.0
+# CBIO Node Runtime Agent API v1.51.0
 
 ## Enumerations
 
@@ -36,6 +36,8 @@
 - [OwnerAgentProvisionResult](interfaces/OwnerAgentProvisionResult.md)
 - [OwnerDefineSecretTargetsInput](interfaces/OwnerDefineSecretTargetsInput.md)
 - [OwnerSecretTargetBinding](interfaces/OwnerSecretTargetBinding.md)
+- [OwnerSensitiveActionConfirmation](interfaces/OwnerSensitiveActionConfirmation.md)
+- [OwnerSensitiveActionContext](interfaces/OwnerSensitiveActionContext.md)
 - [OwnerStoreSecretInput](interfaces/OwnerStoreSecretInput.md)
 - [OwnerWriteSecretInput](interfaces/OwnerWriteSecretInput.md)
 - [RecoveredVault](interfaces/RecoveredVault.md)
@@ -58,6 +60,8 @@
 - [VaultMetadata](interfaces/VaultMetadata.md)
 - [VaultObject](interfaces/VaultObject.md)
 - [VaultProfile](interfaces/VaultProfile.md)
+- [VaultReadAgentPrivateKeyInput](interfaces/VaultReadAgentPrivateKeyInput.md)
+- [VaultReadSecretPlaintextInput](interfaces/VaultReadSecretPlaintextInput.md)
 - [VaultRegisterFlowInput](interfaces/VaultRegisterFlowInput.md)
 - [VaultRevokeCapabilityInput](interfaces/VaultRevokeCapabilityInput.md)
 - [VaultSigner](interfaces/VaultSigner.md)

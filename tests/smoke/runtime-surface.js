@@ -174,8 +174,7 @@ assert.equal(result.status, "SUCCEEDED");
 assert.equal(seenAuthHeader, "Bearer super-secret");
 assert.equal(result.responseBody, "ok");
 
-await client.ownerRegisterFlow({
-  flowId: "flow-shape-only",
+const shapeOnlyFlow = await client.ownerRegisterFlow({
   mode: "send_secret",
   targetUrl: "https://api.example.com/custom-status",
   method: "POST",
@@ -186,7 +185,7 @@ const customCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-custom",
   agentId: importedAgentId,
-  customFlowId: "flow-shape-only",
+  customFlowId: shapeOnlyFlow.flowId,
   secretIds: [ownedRecord.secretId.value],
   operation: "custom_http",
   scope: "https://api.example.com/custom-status",
@@ -215,8 +214,7 @@ const customResult = await customAgent.agentDispatch({
 assert.equal(customResult.status, "SUCCEEDED");
 assert.equal(customResult.responseBody, JSON.stringify({ state: null, nested: { code: null } }));
 
-await client.ownerRegisterFlow({
-  flowId: "flow-custom-acquire",
+const customAcquireFlow = await client.ownerRegisterFlow({
   mode: "acquire_secret",
   targetUrl: "https://api.example.com/custom-acquire",
   method: "POST",
@@ -232,7 +230,7 @@ const customAcquireCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-custom-acquire",
   agentId: importedAgentId,
-  customFlowId: "flow-custom-acquire",
+  customFlowId: customAcquireFlow.flowId,
   operation: "custom_http",
   scope: "https://api.example.com/custom-acquire",
   methods: ["POST"],
@@ -389,10 +387,9 @@ try {
   assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
   const approvedCapability = await auditClient.ownerApproveCapabilityRequest({
     requestId: pendingCapabilityRequests[0].requestId,
-    capabilityId: "cap-users-read",
   });
   unsubscribeCapability();
-  assert.equal(approvedCapability.capabilityId, "cap-users-read");
+  assert.equal(typeof approvedCapability.capabilityId, "string");
   assert.equal(approvedCapability.scope, "https://api.example.com/users/*");
   const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
   assert.ok(capabilitiesAfterApproval.some((cap) => cap.capabilityId === "cap-users-read"), "Approved capability should be registered");

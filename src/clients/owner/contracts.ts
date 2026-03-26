@@ -84,13 +84,11 @@ export interface OwnerAgentProvisionResult {
 }
 
 export interface VaultRegisterFlowInput extends OwnerHttpFlowBoundary {
-  flowId: string;
   requestedAt?: string;
 }
 
 export interface VaultGrantCapabilityInput {
   agentId: string;
-  capabilityId?: string;
   operation?: string;
   secretAliases?: readonly string[];
   scope: string;
@@ -130,7 +128,6 @@ export interface VaultSubmitCapabilityRequestInput {
 
 export interface VaultApproveCapabilityRequestInput {
   requestId: string;
-  capabilityId?: string;
   requestedAt?: string;
 }
 
@@ -189,11 +186,11 @@ export interface VaultClient {
   ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
   ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string>;
   ownerReadAgentPrivateKey(input: VaultReadAgentPrivateKeyInput): Promise<string>;
-  ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void>;
+  ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability>;
   ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;
-  ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<void>;
+  ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition>;
   ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void>;
   ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
   ownerListCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;

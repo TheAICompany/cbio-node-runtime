@@ -66,7 +66,7 @@ export interface VaultClient {
   /**
    * Grants a specific capability to an agent.
    */
-  ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void>;
+  ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability>;
 
   /**
    * Reads the tamper-evident audit log for the vault.
@@ -84,7 +84,7 @@ export interface VaultClient {
   /**
    * Registers a custom HTTP flow for complex secret usage.
    */
-  ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<void>;
+  ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition>;
 
   /**
    * Permanently deletes a secret from the vault.
@@ -402,9 +402,9 @@ class DefaultVaultClient implements VaultClient {
     };
   }
 
-  async ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void> {
+  async ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<import("../../vault-core/index.js").AgentCapability> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const capabilityId = input.capabilityId ?? `cap_${crypto.randomUUID()}`;
+    const capabilityId = `vcap_${crypto.randomUUID()}`;
     const requestId = `${this._identityId}:${requestedAt}:${capabilityId}:register_capability`;
     
     const capability: import("../../vault-core/index.js").AgentCapability = {
@@ -430,13 +430,15 @@ class DefaultVaultClient implements VaultClient {
       capability,
       requestedAt,
     });
+    return capability;
   }
 
-  async ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<void> {
+  async ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = `${this._identityId}:${requestedAt}:${input.flowId}:register_custom_flow`;
+    const flowId = `vflow_${crypto.randomUUID()}`;
+    const requestId = `${this._identityId}:${requestedAt}:${flowId}:register_custom_flow`;
     const flow = {
-      flowId: input.flowId,
+      flowId,
       mode: input.mode,
       targetUrl: input.targetUrl,
       method: input.method,
@@ -454,6 +456,17 @@ class DefaultVaultClient implements VaultClient {
       flow,
       requestedAt,
     });
+    return {
+      vaultId: this._vault.vaultId,
+      flowId,
+      ownerId: this._identityId,
+      mode: input.mode,
+      targetUrl: input.targetUrl,
+      method: input.method,
+      responseVisibility: input.responseVisibility,
+      responseSecret: input.responseSecret,
+      createdAt: requestedAt,
+    };
   }
 
   async ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void> {
@@ -622,7 +635,6 @@ class DefaultVaultClient implements VaultClient {
     return this._vault.ownerApproveCapabilityRequest({
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
-      capabilityId: input.capabilityId,
       owner: { kind: "owner", id: this._identityId },
     });
   }

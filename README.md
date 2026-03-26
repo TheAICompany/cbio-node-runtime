@@ -153,8 +153,7 @@ const request = await client.ownerSubmitCapabilityRequest({
 const pendingRequests = await client.ownerListPendingCapabilityRequests();
 
 const capability = await client.ownerApproveCapabilityRequest({
-  requestId: pendingRequests[0].requestId,
-  capabilityId: 'cap-users-read'
+  requestId: pendingRequests[0].requestId
 });
 ```
 

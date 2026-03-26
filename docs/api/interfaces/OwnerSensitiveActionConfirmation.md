@@ -2,25 +2,13 @@
 
 ***
 
-# Interface: VaultExportSecretInput
+# Interface: OwnerSensitiveActionConfirmation
 
 ## Properties
-
-### alias
-
-> **alias**: `string`
-
-***
 
 ### password
 
 > **password**: `string`
-
-***
-
-### requestedAt?
-
-> `optional` **requestedAt?**: `string`
 
 ***
 
