@@ -51,6 +51,7 @@ try {
 
   const client = createVaultClient({
     vault,
+    passwordVerifier: async (password) => password === "policy-password",
   });
   const unscopedRecord = await client.ownerStoreSecret({
     alias: "unscoped-token",
@@ -203,7 +204,7 @@ try {
   const audit = await client.ownerReadAudit({ secretAlias: "restricted-token" });
   assert.ok(audit.length >= 1);
   assert.ok(audit.some((entry) => entry.outcome === "DENIED" && /target denied|record target denied/.test(entry.detail)));
-  const exportedRestrictedSecret = await client.ownerExportSecret({ alias: "restricted-token" });
+  const exportedRestrictedSecret = await client.ownerExportSecret({ alias: "restricted-token", password: "policy-password" });
   assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
   await assert.rejects(
@@ -297,6 +298,7 @@ try {
   const reloadedVault = wrapVaultCoreAsVaultService(reloadedAuthority);
   const reloadedClient = createVaultClient({
     vault: reloadedVault,
+    passwordVerifier: async (password) => password === "policy-password",
   });
   await reloadedClient.ownerImportAgent({
     agentId: "agent-restricted",
@@ -410,6 +412,7 @@ try {
   const restartedVault = wrapVaultCoreAsVaultService(restartedAuthority);
   const restartedClient = createVaultClient({
     vault: restartedVault,
+    passwordVerifier: async (password) => password === "policy-password",
   });
   await restartedClient.ownerImportAgent({
     agentId: "agent-restricted",

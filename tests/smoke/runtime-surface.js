@@ -107,6 +107,7 @@ const vault = wrapVaultCoreAsVaultService(authority, {
 
 const client = createVaultClient({
   vault,
+  passwordVerifier: async (password) => password === "runtime-surface-password",
 });
 assert.equal(typeof client.ownerStoreSecret, "function");
 assert.equal(typeof client.ownerDefineSecretTargets, "function");
@@ -134,9 +135,10 @@ const ownedRecord = await client.ownerWriteSecret({
   ],
 });
 
-const exportedSecret = await client.ownerExportSecret({ alias: "api-token" });
+const exportedSecret = await client.ownerExportSecret({ alias: "api-token", password: "runtime-surface-password" });
 assert.equal(exportedSecret.plaintext, "super-secret");
 assert.equal(exportedSecret.alias.value, "api-token");
+assert.equal(await client.ownerReadSecretPlaintext({ alias: "api-token", password: "runtime-surface-password" }), "super-secret");
 
 const dispatchCapability = {
   vaultId: authority.vaultId,
@@ -296,10 +298,10 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  const auditClient = createVaultClient({ vault: persistentVault });
+  const auditClient = createVaultClient({ vault: persistentVault, passwordVerifier: createdVault.verifyPassword });
   const audit = await auditClient.ownerReadAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
-  const persistentExport = await auditClient.ownerExportSecret({ alias: "issuer-token" });
+  const persistentExport = await auditClient.ownerExportSecret({ alias: "issuer-token", password: "password-1" });
   assert.equal(persistentExport.plaintext, "issuer-secret");
   const recoveredVaultInstance = await recoverVault(storage, {
     vaultId: "vault-runtime-persistent",
@@ -363,7 +365,8 @@ try {
   // Verify recovery after persistence
   const agentsInVault = await auditClient.ownerListAgents();
   const foundManaged = agentsInVault.find(a => a.agentId === managedRecord.agentId);
-  assert.equal(typeof foundManaged?.privateKey, "string", "Vault should persist the private key");
+  assert.equal(foundManaged?.privateKey, undefined, "Default owner agent listing should redact private keys");
+  assert.equal(typeof (await auditClient.ownerReadAgentPrivateKey({ agentId: managedRecord.agentId, password: "password-1" })), "string");
   console.log("   [OK] Agent creation and private key custody verification passed");
 
   console.log("-> Verifying Proactive Capability Request Flow...");
@@ -440,7 +443,7 @@ try {
   
   // Verify cannot retrieve after deletion
   await assert.rejects(
-    () => auditClient.ownerExportSecret({ alias: "issuer-token" }),
+    () => auditClient.ownerExportSecret({ alias: "issuer-token", password: "password-1" }),
     /SECRET_NOT_FOUND/
   );
   console.log("   [OK] Logical deletion and permission check successful");

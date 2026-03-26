@@ -36,7 +36,33 @@ export interface VaultAuditQueryInput {
 
 export interface VaultExportSecretInput {
   alias: string;
+  password: string;
+  verificationCode?: string;
   requestedAt?: string;
+}
+
+export interface VaultReadSecretPlaintextInput {
+  alias: string;
+  password: string;
+  verificationCode?: string;
+  requestedAt?: string;
+}
+
+export interface VaultReadAgentPrivateKeyInput {
+  agentId: string;
+  password: string;
+  verificationCode?: string;
+  requestedAt?: string;
+}
+
+export interface OwnerSensitiveActionConfirmation {
+  password: string;
+  verificationCode?: string;
+}
+
+export interface OwnerSensitiveActionContext {
+  action: "read_secret_plaintext" | "export_secret" | "read_agent_private_key";
+  subject: string;
 }
 
 export interface VaultImportAgentInput {
@@ -146,6 +172,11 @@ export interface CreateVaultClientOptions {
   ownerIdentity: { identityId: string };
   clock?: import("../../vault-core/index.js").Clock;
   skipWarmup?: boolean;
+  passwordVerifier?: (password: string) => Promise<boolean> | boolean;
+  sensitiveActionVerifier?: (
+    confirmation: OwnerSensitiveActionConfirmation,
+    context: OwnerSensitiveActionContext,
+  ) => Promise<boolean> | boolean;
 }
 
 /**
@@ -156,6 +187,8 @@ export interface VaultClient {
   ownerDefineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   ownerWriteSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+  ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string>;
+  ownerReadAgentPrivateKey(input: VaultReadAgentPrivateKeyInput): Promise<string>;
   ownerGrantCapability(input: VaultGrantCapabilityInput): Promise<void>;
   ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
   ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;

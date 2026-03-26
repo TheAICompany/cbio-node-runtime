@@ -12,7 +12,7 @@ The v1.48.4 runtime centers on a simplified, authority-centric model with manage
 - `recoverVault(...)` - Reopen an existing vault using its master password.
 - `listVaults(...)` - Scan the workspace for available vault IDs.
 - `updateVaultMetadata(...)` - Update the nickname or other metadata of an unlocked vault.
-- `createVaultClient(...)` - Create an administrative client for an unlocked vault.
+- `createVaultClient(...)` - Create an administrative client for an unlocked vault. For plaintext secret reads, configure `passwordVerifier`.
 - `createAgentClient(...)` - Create a delegated client for an agent.
 - `createIdentity(...)` - Generate a standalone cryptographic identity keypair.
 - `restoreIdentity(...)` - Restore an identity from a private key.
@@ -50,7 +50,7 @@ The `VaultClient` provides the administrative interface for the vault.
 - `ownerWriteSecret(...)`: Store a secret and bind it to specific targets in one step.
 - `ownerCreateAgent(...)`: Generate and host a new agent identity, then return its public record plus a session token.
 - `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
-- `ownerListAgents()`: Enumerate authorized agents and retrieve managed private keys.
+- `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. 
 - `ownerSubmitCapabilityRequest(...)`: Submit a broader pending capability request for later owner review.
 - `ownerListPendingCapabilityRequests()`: List proactive capability requests that are waiting for approval.
@@ -64,7 +64,9 @@ The `VaultClient` provides the administrative interface for the vault.
 - `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
 - `ownerIssueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
 - `ownerRevokeSessionToken({ token })`: Invalidate a specific session token.
-- `ownerExportSecret(...)`: Reveal a secret's plaintext (requires active authority).
+- `ownerReadSecretPlaintext({ alias, password })`: Read one secret's plaintext after re-entering the vault password.
+- `ownerExportSecret({ alias, password })`: Export a secret's full plaintext record after re-entering the vault password.
+- `ownerReadAgentPrivateKey({ agentId, password })`: Read one managed agent private key after re-entering the vault password.
 - `ownerReadAudit(...)`: Access the append-only record of all vault actions.
 
 ## Agent Client (Consumer)

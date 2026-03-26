@@ -65,7 +65,10 @@ You can generate and register agents directly within the vault. The vault holds 
 ```ts
 import { createVaultClient } from '@the-ai-company/cbio-node-runtime';
 
-const client = createVaultClient({ vault: vault.vault });
+const client = createVaultClient({
+  vault: vault.vault,
+  passwordVerifier: vault.verifyPassword
+});
 
 // Generate and register a new agent in one step
 const createdAgent = await client.ownerCreateAgent({
@@ -208,3 +211,8 @@ if (pending.length > 0) {
 npm run build
 npm test
 ```
+// Sensitive plaintext reads require the vault password again
+const plaintext = await client.ownerReadSecretPlaintext({
+  alias: 'api-token',
+  password: 'your-secure-password'
+});

@@ -6,6 +6,8 @@ import type {
   VaultAuditQueryInput,
   OwnerDefineSecretTargetsInput,
   VaultExportSecretInput,
+  VaultReadSecretPlaintextInput,
+  VaultReadAgentPrivateKeyInput,
   VaultGrantCapabilityInput,
   VaultRegisterFlowInput,
   VaultImportAgentInput,
@@ -23,6 +25,8 @@ import type {
   VaultSubmitCapabilityRequestInput,
   VaultApproveCapabilityRequestInput,
   VaultApproveDispatchInput,
+  OwnerSensitiveActionConfirmation,
+  OwnerSensitiveActionContext,
 } from "./contracts.js";
 
 export interface VaultIdentity {
@@ -57,6 +61,7 @@ export interface VaultClient {
    * Exports a secret's plaintext.
    */
   ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+  ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string>;
 
   /**
    * Grants a specific capability to an agent.
@@ -115,6 +120,11 @@ export interface CreateVaultClientOptions {
   signer?: VaultSigner;
   clock?: Clock;
   skipWarmup?: boolean;
+  passwordVerifier?: (password: string) => Promise<boolean> | boolean;
+  sensitiveActionVerifier?: (
+    confirmation: OwnerSensitiveActionConfirmation,
+    context: OwnerSensitiveActionContext,
+  ) => Promise<boolean> | boolean;
 }
 
 const VAULT_MASTER_ID = "vault-master";
@@ -129,8 +139,40 @@ class DefaultVaultClient implements VaultClient {
     private readonly _signer?: VaultSigner,
     private readonly _clock: Clock = new SystemClock(),
     private readonly _skipWarmup: boolean = false,
+    private readonly _passwordVerifier?: (password: string) => Promise<boolean> | boolean,
+    private readonly _sensitiveActionVerifier?: (
+      confirmation: OwnerSensitiveActionConfirmation,
+      context: OwnerSensitiveActionContext,
+    ) => Promise<boolean> | boolean,
   ) {
     this._identityId = _identity?.identityId ?? VAULT_MASTER_ID;
+  }
+
+  private async _confirmSensitiveAction(
+    confirmation: OwnerSensitiveActionConfirmation,
+    context: OwnerSensitiveActionContext,
+  ): Promise<void> {
+    const normalizedPassword = confirmation.password.trim();
+    if (!normalizedPassword) {
+      throw new Error("owner password is required");
+    }
+    if (this._sensitiveActionVerifier) {
+      const valid = await this._sensitiveActionVerifier({
+        password: normalizedPassword,
+        verificationCode: confirmation.verificationCode,
+      }, context);
+      if (!valid) {
+        throw new Error("sensitive action confirmation rejected");
+      }
+      return;
+    }
+    if (!this._passwordVerifier) {
+      throw new Error("VaultClient: sensitiveActionVerifier or passwordVerifier is required for sensitive reads");
+    }
+    const valid = await this._passwordVerifier(normalizedPassword);
+    if (!valid) {
+      throw new Error("invalid vault password");
+    }
   }
 
   private _newVaultAgentId(): string {
@@ -211,6 +253,13 @@ class DefaultVaultClient implements VaultClient {
   }
 
   async ownerExportSecret(input: VaultExportSecretInput) {
+    await this._confirmSensitiveAction({
+      password: input.password,
+      verificationCode: input.verificationCode,
+    }, {
+      action: "export_secret",
+      subject: input.alias,
+    });
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:${input.alias}:export_secret`;
     
@@ -224,6 +273,51 @@ class DefaultVaultClient implements VaultClient {
       requestId,
       requestedAt,
     });
+  }
+
+  async ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string> {
+    await this._confirmSensitiveAction({
+      password: input.password,
+      verificationCode: input.verificationCode,
+    }, {
+      action: "read_secret_plaintext",
+      subject: input.alias,
+    });
+    const exported = await this._vault.ownerExportSecret({
+      vaultId: this._vault.vaultId,
+      actor: {
+        kind: "owner",
+        id: this._identityId,
+      },
+      alias: input.alias,
+      requestId: `${this._identityId}:${input.requestedAt ?? this._clock.nowIso()}:${input.alias}:read_secret_plaintext`,
+      requestedAt: input.requestedAt ?? this._clock.nowIso(),
+    });
+    return exported.plaintext;
+  }
+
+  async ownerReadAgentPrivateKey(input: VaultReadAgentPrivateKeyInput): Promise<string> {
+    await this._confirmSensitiveAction({
+      password: input.password,
+      verificationCode: input.verificationCode,
+    }, {
+      action: "read_agent_private_key",
+      subject: input.agentId,
+    });
+    const agents = await this._vault.ownerListAgents({
+      vaultId: this._vault.vaultId,
+      requestId: `${this._identityId}:${input.requestedAt ?? this._clock.nowIso()}:${input.agentId}:read_agent_private_key`,
+      requestedAt: input.requestedAt ?? this._clock.nowIso(),
+      actor: {
+        kind: "owner",
+        id: this._identityId,
+      },
+    });
+    const agent = agents.find((record) => record.agentId === input.agentId);
+    if (!agent?.privateKey) {
+      throw new Error("agent private key not found");
+    }
+    return agent.privateKey;
   }
 
   private async _ownerRegisterManagedAgentIdentity(input: {
@@ -382,7 +476,7 @@ class DefaultVaultClient implements VaultClient {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = `${this._identityId}:${requestedAt}:list_agents`;
     
-    return this._vault.ownerListAgents({
+    const agents = await this._vault.ownerListAgents({
       vaultId: this._vault.vaultId,
       requestId,
       requestedAt,
@@ -391,6 +485,10 @@ class DefaultVaultClient implements VaultClient {
         id: this._identityId,
       },
     });
+    return agents.map((agent) => ({
+      ...agent,
+      privateKey: undefined,
+    }));
   }
 
   async ownerListCapabilities(input: VaultListCapabilitiesInput = {}) {
@@ -605,6 +703,8 @@ export function createVaultClient(options: CreateVaultClientOptions): VaultClien
     resolveVaultSigner(options.ownerIdentity, options.signer),
     options.clock ?? new SystemClock(),
     options.skipWarmup,
+    options.passwordVerifier,
+    options.sensitiveActionVerifier,
   );
 
   if (!options.skipWarmup) {

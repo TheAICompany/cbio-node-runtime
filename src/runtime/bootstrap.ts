@@ -52,6 +52,8 @@ export interface CreatedVault {
   nickname?: string;
   /** The anchored storage provider for this vault. */
   storage: IStorageProvider;
+  /** Verifies whether a supplied password can unlock this vault. */
+  verifyPassword(password: string): Promise<boolean>;
 }
 
 export interface VaultObject {
@@ -59,6 +61,7 @@ export interface VaultObject {
   vault: VaultService;
   nickname?: string;
   storage: IStorageProvider;
+  verifyPassword(password: string): Promise<boolean>;
 }
 
 export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
@@ -90,6 +93,16 @@ function resolveStorage(
     storage: createWorkspaceStorage(),
     options: storageOrOptions as CreateVaultOptions | RecoverVaultOptions,
   };
+}
+
+async function verifyVaultPassword(storage: IStorageProvider, vaultId: string, password: string): Promise<boolean> {
+  const normalizedPassword = password.trim();
+  if (!normalizedPassword) {
+    return false;
+  }
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(normalizedPassword, vaultId);
+  const profile = await readVaultProfile(storage, vaultWorkingKey, vaultId);
+  return profile !== null;
 }
 
 /**
@@ -148,6 +161,7 @@ export async function createVault(
     vault: wrapVaultCoreAsVaultService(core, options.vault),
     nickname,
     storage,
+    verifyPassword: async (password: string) => verifyVaultPassword(storage, vaultId, password),
   };
 }
 
@@ -199,6 +213,7 @@ export async function recoverVault(
     vault: wrapVaultCoreAsVaultService(core, options.vault),
     nickname: profile.nickname,
     storage,
+    verifyPassword: async (password: string) => verifyVaultPassword(storage, options.vaultId, password),
   };
 }
 
@@ -234,5 +249,4 @@ export async function updateVaultMetadata(
     ...(options.metadata ?? {}),
   }, vaultWorkingKey, vaultId);
 }
-
 
