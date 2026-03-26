@@ -764,6 +764,22 @@ export class VaultCore {
     };
   }
 
+  async issueAllAgentSessionTokens(actor: VaultPrincipal & { kind: "owner" }): Promise<OwnerSessionToken[]> {
+    const agents = await this._deps.agentIdentities.list(this._deps.vaultId);
+    const results: OwnerSessionToken[] = [];
+    const requestedAt = this._deps.clock.nowIso();
+    for (const agent of agents) {
+      results.push(await this.issueAgentSessionToken({
+        vaultId: this._deps.vaultId,
+        requestId: `warmup_${this._deps.ids.newVersion().value}`,
+        actor,
+        agentId: agent.agentId,
+        requestedAt,
+      }));
+    }
+    return results;
+  }
+
   async revokeAgentSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("session token vault mismatch", "VAULT_IDENTITY_DENIED");

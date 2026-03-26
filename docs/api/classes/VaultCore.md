@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.48.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.48.5**](../README.md)
 
 ***
 
@@ -202,6 +202,22 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`OwnerSessionToken`\>
+
+***
+
+### issueAllAgentSessionTokens()
+
+> **issueAllAgentSessionTokens**(`actor`): `Promise`\<`OwnerSessionToken`[]\>
+
+#### Parameters
+
+##### actor
+
+`VaultPrincipal` & `object`
+
+#### Returns
+
+`Promise`\<`OwnerSessionToken`[]\>
 
 ***
 

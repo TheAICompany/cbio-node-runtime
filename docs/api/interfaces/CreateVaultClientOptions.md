@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.48.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.48.5**](../README.md)
 
 ***
 
@@ -21,6 +21,12 @@
 ### signer?
 
 > `optional` **signer?**: [`VaultSigner`](VaultSigner.md)
+
+***
+
+### skipWarmup?
+
+> `optional` **skipWarmup?**: `boolean`
 
 ***
 

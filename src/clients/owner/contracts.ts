@@ -113,6 +113,13 @@ export interface VaultRevokeSessionTokenInput {
   token: string;
 }
 
+export interface CreateVaultClientOptions {
+  vault: import("../../vault-ingress/index.js").VaultService;
+  ownerIdentity: { identityId: string };
+  clock?: import("../../vault-core/index.js").Clock;
+  skipWarmup?: boolean;
+}
+
 /**
  * A client for vault owners to manage secrets, agents, and capabilities.
  */
@@ -131,6 +138,7 @@ export interface VaultClient {
   listCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
   revokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
   issueSessionToken(input: VaultIssueSessionTokenInput): Promise<import("../../vault-core/index.js").OwnerSessionToken>;
+  issueAllSessionTokens(): Promise<readonly import("../../vault-core/index.js").OwnerSessionToken[]>;
   revokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
   listPendingDispatches(): Promise<readonly import("../../vault-core/index.js").PendingDispatchRecord[]>;
   approveDispatch(input: VaultApproveDispatchInput): Promise<import("../../vault-core/index.js").DispatchResult>;

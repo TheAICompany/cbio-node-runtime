@@ -1,10 +1,10 @@
-# CBIO Vault Runtime Reference (v1.48.3)
+# CBIO Vault Runtime Reference (v1.48.4)
 
 This document describes the current implemented runtime surface for the **Sovereign Vault**. 
 
 ## Primary API Surface
 
-The v1.48.3 runtime centers on a simplified, authority-centric model with managed agency and session tokens, featuring a **Discovery-first** HITL workflow.
+The v1.48.4 runtime centers on a simplified, authority-centric model with managed agency and session tokens, featuring a **Discovery-first** HITL workflow and real-time observers.
 
 ### Main Constructors and Entrypoints
 
@@ -52,10 +52,12 @@ The `VaultClient` provides the administrative interface for the vault.
 - `listAgents()`: Enumerate authorized agents and retrieve managed private keys.
 - `grantCapability(...)`: Assign specific secret-use permissions to an agent. 
 - `listPendingDispatches()`: List agent requests awaiting manual approval (HITL).
-- `approveDispatch({ requestId, permanent, skipAudit })`: Grant a stalled request manual authorization. If `permanent` is true, a new capability is automatically granted to the agent.
+- `approveDispatch({ requestId, permanent, skipAudit })`: Grant a stalled request manual authorization.
+- `onPendingRequest(callback)`: Register a real-time observer to receive push notifications for discovery requests.
 - `rejectDispatch(requestId)`: Deny a stalled request.
-- `issueSessionToken(...)`: Generate a revocable session token for a managed agent.
-- `revokeSessionToken(...)`: Immediately invalidate a previously issued session token.
+- `issueSessionToken(input)`: Issue a session token for a specific agent.
+- `issueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
+- `revokeSessionToken({ token })`: Invalidate a specific session token.
 - `exportSecret(...)`: Reveal a secret's plaintext (requires active authority).
 - `readAudit(...)`: Access the append-only record of all vault actions.
 

@@ -83,6 +83,18 @@ if (result.status === 'PENDING') {
   console.log("触发发现流程：等待所有者审批...");
 }
 
+// 或者：使用观察者模式监听推送 (v1.48.4+)
+ownerClient.onPendingRequest((req) => {
+  console.log("收到新请求:", req.requestId);
+});
+
+// 或者：启动时自动发牌 (v1.48.4+ 默认行为)
+const client = createVaultClient({
+  vault,
+  ownerIdentity: { identityId: 'owner-1' }
+  // skipWarmup: true // 如果不想自动发牌，请传入此参数
+});
+
 // 所有者进程中 (GUI 或 脚本)
 const pending = await client.listPendingDispatches();
 if (pending.length > 0) {

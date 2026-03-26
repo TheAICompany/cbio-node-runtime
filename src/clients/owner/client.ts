@@ -103,6 +103,7 @@ export interface CreateVaultClientOptions {
   ownerIdentity?: CreatedIdentity | VaultIdentity;
   signer?: VaultSigner;
   clock?: Clock;
+  skipWarmup?: boolean;
 }
 
 const VAULT_MASTER_ID = "vault-master";
@@ -115,6 +116,7 @@ class DefaultVaultClient implements VaultClient {
     private readonly _identity?: VaultIdentity,
     private readonly _signer?: VaultSigner,
     private readonly _clock: Clock = new SystemClock(),
+    private readonly _skipWarmup: boolean = false,
   ) {
     this._identityId = _identity?.identityId ?? VAULT_MASTER_ID;
   }
@@ -230,6 +232,10 @@ class DefaultVaultClient implements VaultClient {
       agentIdentity,
       requestedAt,
     });
+
+    if (!this._skipWarmup) {
+      await this.issueSessionToken({ agentId: input.agentId, requestedAt });
+    }
   }
 
   async createAgent(input: VaultCreateAgentInput) {
@@ -400,6 +406,13 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
+  async issueAllSessionTokens() {
+    return this._vault.issueAllAgentSessionTokens({
+      vaultId: this._vault.vaultId,
+      actor: { kind: "owner", id: this._identityId },
+    });
+  }
+
   async approveDispatch(input: VaultApproveDispatchInput) {
     return this._vault.approveDispatch({
       vaultId: this._vault.vaultId,
@@ -468,10 +481,20 @@ export function createVaultClient(options: CreateVaultClientOptions): VaultClien
   if (!isCreateVaultClientOptions(options)) {
     throw new Error("createVaultClient() requires a single options object with 'vault'");
   }
-  return new DefaultVaultClient(
+  const client = new DefaultVaultClient(
     options.vault,
     resolveVaultIdentity(options),
     resolveVaultSigner(options.ownerIdentity, options.signer),
     options.clock ?? new SystemClock(),
+    options.skipWarmup,
   );
+
+  if (!options.skipWarmup) {
+    // Warmup session tokens by default unless explicitly skipped
+    client.issueAllSessionTokens().catch((err: unknown) => {
+      console.error("VaultClient: failed to warmup session tokens:", err);
+    });
+  }
+
+  return client;
 }

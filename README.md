@@ -77,9 +77,11 @@ console.log(`Agent public key: ${agentRecord.publicKey}`);
 // Private key is returned during creation and stored securely in the vault.
 
 // 4. Issue a Session Token (Optional but Recommended)
-// Avoid passing the raw private key to agent processes.
+// Avoid passing the raw private key to agent processes (v1.48+).
 const session = await client.issueSessionToken({ agentId: 'worker-1' });
-console.log(`Session Token: ${session.token}`);
+
+// RECOMENDED (v1.48.4+): Batch issue tokens for all agents at once
+const tokens = await client.issueAllSessionTokens();
 ```
 
 ### 5. Secret Management (Owner)
@@ -101,8 +103,15 @@ const record = await client.writeSecret({
 await client.grantCapability({
   agentId: 'worker-1',
   secretAliases: ['api-token'],
-  allowedTargets: ['https://api.example.com/*'],
-  skipAudit: false // Optional, defaults to false
+  allowedTargets: ['https://api.example.com/*']
+});
+
+// 5. Setup client with automatic warmup (v1.48.4+)
+const client = createVaultClient({
+  vault,
+  ownerIdentity: { identityId: 'owner-1' }
+  // warmup: true is now DEFAULT (v1.48.4+)
+  // skipWarmup: true // Optional: pass this to disable automatic token generation
 });
 ```
 
@@ -160,6 +169,11 @@ const result = await agent.dispatch({ ... });
 if (result.status === 'PENDING') {
   console.log("Discovery needed: Waiting for owner approval...");
 }
+
+// OR: Use the Observer for real-time push (v1.48.4+)
+ownerClient.onPendingRequest((req) => {
+  console.log("New discovery request:", req.requestId);
+});
 
 // In Owner process (GUI or Script)
 const pending = await client.listPendingDispatches();
