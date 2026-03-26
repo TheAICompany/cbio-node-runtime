@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.48.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.47.2...v1.48.0) (2026-03-26)
+
+
+### Features
+
+* add agent session token management capabilities and update related contracts. ([d3161bf](https://github.com/TheAICompany/cbio-node-runtime/commit/d3161bfda9e9ca5d7c200461a8e5f783a8dda4e8))
+
 ### [1.47.2](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.47.1...v1.47.2) (2026-03-25)
 
 ### [1.47.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.47.0...v1.47.1) (2026-03-25)
