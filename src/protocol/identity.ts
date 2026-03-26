@@ -6,10 +6,16 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
-import { deriveRootAgentId as protocolDeriveIdentityId } from '@the-ai-company/cbio-protocol';
+import {
+    createIdentity as protocolCreateIdentity,
+    deriveRootAgentId as protocolDeriveIdentityId,
+    type RootAgentIdentity,
+} from '@the-ai-company/cbio-protocol';
 import { getChildIdentitySecretName, CHILD_KEY_PREFIX } from './childSecretNaming.js';
 
 export { getChildIdentitySecretName, CHILD_KEY_PREFIX };
+export type { RootAgentIdentity };
+export const createIdentity = protocolCreateIdentity;
 
 export function deriveIdentityId(publicKey: string): string {
     return protocolDeriveIdentityId(publicKey);

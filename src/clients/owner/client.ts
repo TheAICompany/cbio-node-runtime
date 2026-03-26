@@ -1,6 +1,5 @@
 import { LocalSigner } from "../../protocol/crypto.js";
 import { createIdentity, restoreIdentity, type CreatedIdentity } from "../../runtime/identity.js";
-import { deriveIdentityId } from "../../protocol/identity.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {

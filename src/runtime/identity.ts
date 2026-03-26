@@ -1,5 +1,6 @@
 import { createHmac, createPrivateKey, createPublicKey } from "node:crypto";
-import { derivePublicKey, generateIdentityKeys } from "../protocol/crypto.js";
+import { derivePublicKey } from "../protocol/crypto.js";
+import { createIdentity as createProtocolIdentity, type RootAgentIdentity } from "../protocol/identity.js";
 import { deriveIdentityId } from "../protocol/identity.js";
 
 /**
@@ -52,13 +53,10 @@ function encodeEd25519PrivateKey(seed: Buffer): string {
 }
 
 function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentity {
-  const keyPair = generateIdentityKeys();
-  if (!keyPair.publicKey || !keyPair.privateKey) {
-    throw new Error("identity generation failed");
-  }
+  const keyPair: RootAgentIdentity = createProtocolIdentity();
   const nickname = normalizeNickname(options.nickname);
   return {
-    identityId: deriveIdentityId(keyPair.publicKey),
+    identityId: keyPair.identityId,
     nickname,
     publicKey: keyPair.publicKey,
     privateKey: keyPair.privateKey,
