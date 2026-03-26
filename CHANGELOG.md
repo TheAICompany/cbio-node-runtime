@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.49.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.6...v1.49.0) (2026-03-26)
+
+
+### Features
+
+* Refactor capability granting to use `scope` and `methods` and add capability request workflows. ([7acb59b](https://github.com/TheAICompany/cbio-node-runtime/commit/7acb59bd23bde9944f814ba656db53e8db7f948f))
+
 ### [1.48.6](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.5...v1.48.6) (2026-03-26)
 
 ### [1.48.5](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.4...v1.48.5) (2026-03-26)
