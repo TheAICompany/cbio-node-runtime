@@ -103,7 +103,8 @@ const record = await client.writeSecret({
 await client.grantCapability({
   agentId: 'worker-1',
   secretAliases: ['api-token'],
-  allowedTargets: ['https://api.example.com/*']
+  scope: 'https://api.example.com/*',
+  methods: ['POST']
 });
 
 // 5. Setup client with automatic warmup (v1.48.4+)
@@ -144,6 +145,34 @@ const agent = createAgentClient({
   vault: vault.vault
 });
 ```
+
+### 7. Proactive Capability Requests
+
+If an LLM or orchestration layer already knows it needs a broader scope, it can ask for that scope up front instead of triggering one pending dispatch per concrete URL.
+
+```ts
+const request = await client.submitCapabilityRequest({
+  requester: { kind: 'trusted_executor', id: 'llm-planner' },
+  agentId: 'worker-1',
+  secretAliases: ['api-token'],
+  scope: 'https://api.example.com/users/*',
+  methods: ['GET'],
+  justification: 'Need collection-level user read access'
+});
+
+const pendingRequests = await client.listPendingCapabilityRequests();
+
+const capability = await client.approveCapabilityRequest({
+  requestId: pendingRequests[0].requestId,
+  capabilityId: 'cap-users-read'
+});
+```
+
+This flow is separate from dispatch discovery:
+- `submitCapabilityRequest(...)` creates a pending capability request for owner review.
+- `onPendingCapabilityRequest(...)` pushes new requests to the owner UI or controller.
+- `approveCapabilityRequest(...)` turns the request into a real stored capability.
+- `rejectCapabilityRequest(...)` drops the request without granting access.
 
 ---
 

@@ -28,9 +28,12 @@ import {
   InMemoryAuditLog,
   InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
+  InMemoryPendingCapabilityRequestRegistry,
+  InMemoryPendingRequestRegistry,
   InMemoryReplayGuard,
   InMemorySecretCustody,
   InMemorySecretRepository,
+  InMemorySessionTokenRegistry,
   PersistentVaultAuditLog,
   PersistentVaultSecretCustody,
   PersistentVaultSecretRepository,
@@ -78,6 +81,7 @@ const runtimeSurfaceFetch = async (url, init) => {
 };
 const runtimeSurfaceAgentIdentities = new InMemoryAgentIdentityRegistry();
 const runtimeSurfaceCustomFlows = new InMemoryCustomHttpFlowRegistry();
+const runtimeSurfaceSessionTokens = new InMemorySessionTokenRegistry();
 const authority = createVaultCore({
   vaultId: { value: "vault-runtime-surface" },
   secrets: new InMemorySecretRepository(),
@@ -87,8 +91,11 @@ const authority = createVaultCore({
   executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
   agentIdentities: runtimeSurfaceAgentIdentities,
   capabilities: new InMemoryCapabilityRegistry(),
-  agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities),
+  agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokens),
   customFlows: runtimeSurfaceCustomFlows,
+  sessionTokens: runtimeSurfaceSessionTokens,
+  pendingRequests: new InMemoryPendingRequestRegistry(),
+  pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
   ids: new RandomIdGenerator(),
@@ -136,8 +143,8 @@ const dispatchCapability = {
   agentId: "agent-1",
   secretIds: [ownedRecord.secretId.value],
   operation: "dispatch_http",
-  allowedTargets: ["https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment"],
-  allowedMethods: ["POST"],
+  scope: "https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment",
+  methods: ["POST"],
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -178,8 +185,8 @@ const customCapability = {
   customFlowId: "flow-shape-only",
   secretIds: [ownedRecord.secretId.value],
   operation: "custom_http",
-  allowedTargets: ["https://api.example.com/custom-status"],
-  allowedMethods: ["POST"],
+  scope: "https://api.example.com/custom-status",
+  methods: ["POST"],
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -223,8 +230,8 @@ const customAcquireCapability = {
   agentId: "agent-1",
   customFlowId: "flow-custom-acquire",
   operation: "custom_http",
-  allowedTargets: ["https://api.example.com/custom-acquire"],
-  allowedMethods: ["POST"],
+  scope: "https://api.example.com/custom-acquire",
+  methods: ["POST"],
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -358,6 +365,35 @@ try {
   assert.equal(foundManaged?.privateKey, managedPrivateKey, "Vault should persist the private key");
   console.log("   [OK] Agent creation and private key custody verification passed");
 
+  console.log("-> Verifying Proactive Capability Request Flow...");
+  let pendingCapabilityRequest = null;
+  const unsubscribeCapability = auditClient.onPendingCapabilityRequest((record) => {
+    pendingCapabilityRequest = record;
+  });
+  const submittedCapabilityRequest = await auditClient.submitCapabilityRequest({
+    requester: { kind: "trusted_executor", id: "llm-planner" },
+    agentId: "agent-managed",
+    secretAliases: ["api-token"],
+    scope: "https://api.example.com/users/*",
+    methods: ["GET"],
+    justification: "Need collection-level user read access",
+  });
+  assert.equal(submittedCapabilityRequest.agentId, "agent-managed");
+  assert.equal(submittedCapabilityRequest.scope.scope, "https://api.example.com/users/*");
+  assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
+  const pendingCapabilityRequests = await auditClient.listPendingCapabilityRequests();
+  assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
+  const approvedCapability = await auditClient.approveCapabilityRequest({
+    requestId: pendingCapabilityRequests[0].requestId,
+    capabilityId: "cap-users-read",
+  });
+  unsubscribeCapability();
+  assert.equal(approvedCapability.capabilityId, "cap-users-read");
+  assert.equal(approvedCapability.scope, "https://api.example.com/users/*");
+  const capabilitiesAfterApproval = await auditClient.listCapabilities({ agentId: "agent-managed" });
+  assert.ok(capabilitiesAfterApproval.some((cap) => cap.capabilityId === "cap-users-read"), "Approved capability should be registered");
+  console.log("   [OK] Proactive capability request approval flow passed");
+
   const acquiredAgentIdentity = { publicKey: managedRecord.publicKey, privateKey: managedPrivateKey };
   const acquiredCapability = {
     vaultId: createdVault.core.vaultId,
@@ -365,8 +401,8 @@ try {
     agentId: "agent-acquired",
     secretAliases: ["issuer-token"],
     operation: "dispatch_http",
-    allowedTargets: ["https://issuer.example.com/other"],
-    allowedMethods: ["GET"],
+    scope: "https://issuer.example.com/other",
+    methods: ["GET"],
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
@@ -414,6 +450,7 @@ try {
   const rollbackCustody = await initializeVaultCustody(failingAuditStorage);
   const vaultWorkingKey = rollbackCustody.vaultWorkingKey;
   const rollbackAgentIdentities = new InMemoryAgentIdentityRegistry();
+  const rollbackSessionTokens = new InMemorySessionTokenRegistry();
   const bootstrapRollbackAuthority = createVaultCore({
     vaultId: { value: "vault-rollback" },
     secrets: new PersistentVaultSecretRepository(failingAuditStorage),
@@ -422,9 +459,12 @@ try {
     audit: new InMemoryAuditLog(),
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: rollbackAgentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities),
+    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
     capabilities: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
+    sessionTokens: rollbackSessionTokens,
+    pendingRequests: new InMemoryPendingRequestRegistry(),
+    pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),
@@ -444,9 +484,12 @@ try {
     },
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: rollbackAgentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities),
+    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
     capabilities: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
+    sessionTokens: rollbackSessionTokens,
+    pendingRequests: new InMemoryPendingRequestRegistry(),
+    pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),

@@ -65,9 +65,8 @@ export interface VaultGrantCapabilityInput {
   capabilityId?: string;
   operation?: string;
   secretAliases?: readonly string[];
-  allowedTargets?: readonly string[];
-  allowedMethods?: readonly string[];
-  allowedPaths?: readonly string[];
+  scope: string;
+  methods: readonly string[];
   expiresIn?: number;
   rateLimit?: {
     maxRequests: number;
@@ -81,6 +80,29 @@ export interface VaultApproveDispatchInput {
   requestId: string;
   permanent?: boolean;
   skipAudit?: boolean;
+  requestedAt?: string;
+}
+
+export interface VaultSubmitCapabilityRequestInput {
+  requester: import("../../vault-core/index.js").VaultPrincipal;
+  agentId: string;
+  operation?: string;
+  secretAliases?: readonly string[];
+  scope: string;
+  methods: readonly string[];
+  rateLimit?: {
+    maxRequests: number;
+    windowMs: number;
+  };
+  skipAudit?: boolean;
+  expiresAt?: string;
+  justification?: string;
+  requestedAt?: string;
+}
+
+export interface VaultApproveCapabilityRequestInput {
+  requestId: string;
+  capabilityId?: string;
   requestedAt?: string;
 }
 
@@ -140,8 +162,13 @@ export interface VaultClient {
   issueSessionToken(input: VaultIssueSessionTokenInput): Promise<import("../../vault-core/index.js").OwnerSessionToken>;
   issueAllSessionTokens(): Promise<readonly import("../../vault-core/index.js").OwnerSessionToken[]>;
   revokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
+  submitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
+  listPendingCapabilityRequests(): Promise<readonly import("../../vault-core/index.js").PendingCapabilityRequestRecord[]>;
+  approveCapabilityRequest(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").AgentCapability>;
+  rejectCapabilityRequest(requestId: string): Promise<void>;
   listPendingDispatches(): Promise<readonly import("../../vault-core/index.js").PendingDispatchRecord[]>;
   approveDispatch(input: VaultApproveDispatchInput): Promise<import("../../vault-core/index.js").DispatchResult>;
   rejectDispatch(requestId: string): Promise<void>;
   onPendingRequest(callback: (record: import("../../vault-core/index.js").PendingDispatchRecord) => void): () => void;
+  onPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
 }

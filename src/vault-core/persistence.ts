@@ -30,6 +30,7 @@ import {
   InMemoryAuditLog,
   InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
+  InMemoryPendingCapabilityRequestRegistry,
   InMemoryReplayGuard,
   InMemorySecretCustody,
   InMemorySecretRepository,
@@ -581,6 +582,7 @@ export function createPersistentVaultCoreDependencies(
   const agentIdentities = new FileAgentIdentityRegistry(storage, options.vaultWorkingKey);
   const sessionTokens = new InMemorySessionTokenRegistry(); // Session tokens are in-memory for now
   const pendingRequests = new InMemoryPendingRequestRegistry(); // Pending requests are in-memory
+  const pendingCapabilityRequests = new InMemoryPendingCapabilityRequestRegistry(); // Capability requests are in-memory for now
   const capabilityRevocations = new FileCapabilityRevocationRegistry(storage, options.vaultWorkingKey);
   const capabilities = new FileCapabilityRegistry(storage, options.vaultWorkingKey);
   const customFlows = new FileCustomHttpFlowRegistry(storage, options.vaultWorkingKey);
@@ -608,6 +610,7 @@ export function createPersistentVaultCoreDependencies(
     customFlows,
     sessionTokens,
     pendingRequests,
+    pendingCapabilityRequests,
     clock: defaults.clock,
     ids: defaults.ids,
     executor: defaults.executor,

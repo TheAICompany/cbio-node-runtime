@@ -122,10 +122,15 @@ export interface VaultService {
   issueSessionToken(request: import("../vault-core/index.js").OwnerIssueSessionTokenRequest): Promise<import("../vault-core/index.js").OwnerSessionToken>;
   issueAllAgentSessionTokens(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" } }): Promise<import("../vault-core/index.js").OwnerSessionToken[]>;
   revokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void>;
+  submitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord>;
+  listPendingCapabilityRequests(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingCapabilityRequestRecord[]>;
+  approveCapabilityRequest(request: import("../vault-core/index.js").OwnerApproveCapabilityRequestCommand): Promise<AgentCapability>;
+  rejectCapabilityRequest(request: import("../vault-core/index.js").OwnerRejectCapabilityRequestCommand): Promise<void>;
   listPendingDispatches(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingDispatchRecord[]>;
   approveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult>;
   rejectDispatch(request: import("../vault-core/index.js").OwnerRejectDispatchCommand): Promise<void>;
   onPendingRequest(callback: (record: import("../vault-core/index.js").PendingDispatchRecord) => void): () => void;
+  onPendingCapabilityRequest(callback: (record: import("../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
 }
 
 class LocalVaultService implements VaultService {
@@ -143,6 +148,10 @@ class LocalVaultService implements VaultService {
 
   onPendingRequest(callback: (record: import("../vault-core/index.js").PendingDispatchRecord) => void): () => void {
     return this._authority.onPendingRequest(callback);
+  }
+
+  onPendingCapabilityRequest(callback: (record: import("../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void {
+    return this._authority.onPendingCapabilityRequest(callback);
   }
 
   registerCapability(request: OwnerRegisterCapabilityCommand): Promise<void> {
@@ -503,6 +512,22 @@ class LocalVaultService implements VaultService {
 
   async revokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
     return this._authority.revokeAgentSessionToken(request);
+  }
+
+  submitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord> {
+    return this._authority.submitCapabilityRequest(request);
+  }
+
+  listPendingCapabilityRequests(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingCapabilityRequestRecord[]> {
+    return this._authority.listPendingCapabilityRequests(request);
+  }
+
+  approveCapabilityRequest(request: import("../vault-core/index.js").OwnerApproveCapabilityRequestCommand): Promise<AgentCapability> {
+    return this._authority.approveCapabilityRequest(request);
+  }
+
+  rejectCapabilityRequest(request: import("../vault-core/index.js").OwnerRejectCapabilityRequestCommand): Promise<void> {
+    return this._authority.rejectCapabilityRequest(request);
   }
 
   listPendingDispatches(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingDispatchRecord[]> {

@@ -5,7 +5,9 @@ import type {
   AgentIdentityRecord,
   AgentProof,
   OwnerDefineSecretTargetsCommand,
+  OwnerApproveCapabilityRequestCommand,
   OwnerDeleteSecretCommand,
+  OwnerRejectCapabilityRequestCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCapabilityCommand,
@@ -19,6 +21,7 @@ import type {
   SecretAlias,
   SecretId,
   SecretRecord,
+  SubmitCapabilityRequestCommand,
   VaultPrincipal,
   VaultWriteSecretCommand,
   VaultId,
@@ -118,6 +121,7 @@ export interface VaultCoreDependencies {
   replayGuard: ReplayGuard;
   sessionTokens: ISessionTokenRegistry;
   pendingRequests: IPendingRequestRegistry;
+  pendingCapabilityRequests: IPendingCapabilityRequestRegistry;
   clock: Clock;
   ids: IdGenerator;
 }
@@ -126,5 +130,12 @@ export interface IPendingRequestRegistry {
   save(record: import("./contracts.js").PendingDispatchRecord): Promise<void>;
   get(requestId: string): Promise<import("./contracts.js").PendingDispatchRecord | null>;
   list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingDispatchRecord[]>;
+  delete(requestId: string): Promise<void>;
+}
+
+export interface IPendingCapabilityRequestRegistry {
+  save(record: import("./contracts.js").PendingCapabilityRequestRecord): Promise<void>;
+  get(requestId: string): Promise<import("./contracts.js").PendingCapabilityRequestRecord | null>;
+  list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingCapabilityRequestRecord[]>;
   delete(requestId: string): Promise<void>;
 }

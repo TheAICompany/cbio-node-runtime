@@ -35,6 +35,7 @@ import {
   Clock,
   IdGenerator,
   IPendingRequestRegistry,
+  IPendingCapabilityRequestRegistry,
   ISessionTokenRegistry,
   ReplayGuard,
   SecretCustody,
@@ -101,6 +102,23 @@ function canonicalizeHttpTarget(targetUrl: string, method: string): CanonicalHtt
 
 function canonicalizeAllowedTarget(targetUrl: string): string {
   return canonicalizeHttpTarget(targetUrl, "GET").url;
+}
+
+function matchesScope(scope: string, targetUrl: string): boolean {
+  if (scope.endsWith("*")) {
+    return canonicalRequestPrefix(scope).startsWith("__INVALID__")
+      ? false
+      : canonicalizeHttpTarget(targetUrl, "GET").url.startsWith(canonicalRequestPrefix(scope));
+  }
+  return canonicalizeAllowedTarget(scope) === canonicalizeHttpTarget(targetUrl, "GET").url;
+}
+
+function canonicalRequestPrefix(scope: string): string {
+  try {
+    return canonicalizeAllowedTarget(scope.slice(0, -1));
+  } catch {
+    return "__INVALID__";
+  }
 }
 
 function createDispatchBinding(request: DispatchRequest): string {
@@ -465,14 +483,11 @@ export class DefaultPolicyEngine implements PolicyEngine {
         throw new VaultCoreError("secret scope denied", "VAULT_DISPATCH_DENIED");
       }
     }
-    if (!capability.allowedTargets.some((target) => canonicalizeAllowedTarget(target) === canonicalRequestTarget.url)) {
-      throw new VaultCoreError("target denied", "VAULT_DISPATCH_DENIED");
+    if (!matchesScope(capability.scope, request.targetUrl)) {
+      throw new VaultCoreError("scope denied", "VAULT_DISPATCH_DENIED");
     }
-    if (!capability.allowedMethods.includes(canonicalRequestTarget.method)) {
+    if (!capability.methods.includes(canonicalRequestTarget.method)) {
       throw new VaultCoreError("method denied", "VAULT_DISPATCH_DENIED");
-    }
-    if (capability.allowedPaths?.length && !capability.allowedPaths.includes(canonicalRequestTarget.path)) {
-      throw new VaultCoreError("path denied", "VAULT_DISPATCH_DENIED");
     }
     const currentRevocationVersion = this._options.capabilityRevocationRegistry
       ? await this._options.capabilityRevocationRegistry.get(
@@ -522,6 +537,27 @@ export class InMemoryPendingRequestRegistry implements IPendingRequestRegistry {
 
   async list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingDispatchRecord[]> {
     return Array.from(this._requests.values());
+  }
+
+  async delete(requestId: string): Promise<void> {
+    this._requests.delete(requestId);
+  }
+}
+
+export class InMemoryPendingCapabilityRequestRegistry implements IPendingCapabilityRequestRegistry {
+  private readonly _requests = new Map<string, import("./contracts.js").PendingCapabilityRequestRecord>();
+
+  async save(record: import("./contracts.js").PendingCapabilityRequestRecord): Promise<void> {
+    this._requests.set(record.requestId, record);
+  }
+
+  async get(requestId: string): Promise<import("./contracts.js").PendingCapabilityRequestRecord | null> {
+    return this._requests.get(requestId) ?? null;
+  }
+
+  async list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingCapabilityRequestRecord[]> {
+    return Array.from(this._requests.values())
+      .filter((record) => record.vaultId.value === vaultId.value);
   }
 
   async delete(requestId: string): Promise<void> {
@@ -724,6 +760,7 @@ export function createVaultCoreDependencies(
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
     sessionTokens: options.sessionTokens ?? new InMemorySessionTokenRegistry(),
     pendingRequests: new InMemoryPendingRequestRegistry(),
+    pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
     clock: options.clock ?? new SystemClock(),
     ids: new RandomIdGenerator(),
   };

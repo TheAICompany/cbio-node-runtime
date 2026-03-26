@@ -84,6 +84,8 @@ export {
   type VaultListAgentsInput,
   type VaultListCapabilitiesInput,
   type VaultRevokeCapabilityInput,
+  type VaultSubmitCapabilityRequestInput,
+  type VaultApproveCapabilityRequestInput,
 } from "../clients/owner/index.js";
 
 export {

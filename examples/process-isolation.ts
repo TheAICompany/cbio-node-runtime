@@ -132,8 +132,8 @@ async function main() {
     secretIds: [secret.secretId.value],
     secretAliases: ["api-token"],
     operation: "dispatch_http" as const,
-    allowedTargets: ["https://httpbin.org/post"],
-    allowedMethods: ["POST"],
+    scope: "https://httpbin.org/post",
+    methods: ["POST"],
     issuedAt: new Date().toISOString(),
   };
 

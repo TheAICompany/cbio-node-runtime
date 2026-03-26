@@ -155,9 +155,8 @@ export interface AgentCapability {
   secretAliases?: readonly string[];
   operation: "dispatch_http" | "custom_http";
   customFlowId?: string;
-  allowedTargets: readonly string[];
-  allowedMethods: readonly string[];
-  allowedPaths?: readonly string[];
+  scope: string;
+  methods: readonly string[];
   issuedAt: string;
   expiresAt?: string;
   revocationVersion?: number;
@@ -198,6 +197,52 @@ export interface OwnerApproveDispatchCommand {
 }
 
 export interface OwnerRejectDispatchCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
+}
+
+export interface CapabilityRequestScope {
+  operation: "dispatch_http" | "custom_http";
+  secretAliases?: readonly string[];
+  scope: string;
+  methods: readonly string[];
+  rateLimit?: {
+    maxRequests: number;
+    windowMs: number;
+  };
+  skipAudit?: boolean;
+  expiresAt?: string;
+}
+
+export interface SubmitCapabilityRequestCommand {
+  vaultId: VaultId;
+  requestId: string;
+  requester: VaultPrincipal;
+  agentId: string;
+  scope: CapabilityRequestScope;
+  justification?: string;
+  requestedAt: string;
+}
+
+export interface PendingCapabilityRequestRecord {
+  vaultId: VaultId;
+  requestId: string;
+  requester: VaultPrincipal;
+  agentId: string;
+  scope: CapabilityRequestScope;
+  justification?: string;
+  requestedAt: string;
+}
+
+export interface OwnerApproveCapabilityRequestCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
+  capabilityId?: string;
+}
+
+export interface OwnerRejectCapabilityRequestCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;
@@ -269,6 +314,9 @@ export enum AuditAction {
   REGISTER_AGENT_IDENTITY = "REGISTER_AGENT_IDENTITY",
   REGISTER_CUSTOM_FLOW = "REGISTER_CUSTOM_FLOW",
   REGISTER_CAPABILITY = "REGISTER_CAPABILITY",
+  SUBMIT_CAPABILITY_REQUEST = "SUBMIT_CAPABILITY_REQUEST",
+  APPROVE_CAPABILITY_REQUEST = "APPROVE_CAPABILITY_REQUEST",
+  REJECT_CAPABILITY_REQUEST = "REJECT_CAPABILITY_REQUEST",
   REVOKE_CAPABILITY = "REVOKE_CAPABILITY",
   WRITE_SECRET = "WRITE_SECRET",
   DEFINE_SECRET_TARGETS = "DEFINE_SECRET_TARGETS",

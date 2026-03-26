@@ -1,0 +1,75 @@
+import assert from "node:assert/strict";
+import {
+  createVaultClient,
+} from "../../dist/runtime/index.js";
+import {
+  createVaultCore,
+  createVaultCoreDependencies,
+} from "../../dist/vault-core/index.js";
+import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
+
+const deps = createVaultCoreDependencies({
+  vaultId: "vault-capability-requests",
+  fetchImpl: async () => new Response("ok", { status: 200 }),
+});
+const authority = createVaultCore(deps);
+const vault = wrapVaultCoreAsVaultService(authority);
+const ownerClient = createVaultClient({
+  vault,
+  skipWarmup: true,
+});
+
+await ownerClient.createAgent({
+  agentId: "agent-1",
+  nickname: "Planner",
+});
+
+let observed = null;
+const unsubscribe = ownerClient.onPendingCapabilityRequest((record) => {
+  observed = record;
+});
+
+const submitted = await ownerClient.submitCapabilityRequest({
+  requester: { kind: "trusted_executor", id: "llm-planner" },
+  agentId: "agent-1",
+  secretAliases: ["crm-token"],
+  scope: "https://api.example.com/users/*",
+  methods: ["GET"],
+  justification: "Need to read user resources without per-id approval",
+});
+
+assert.equal(submitted.agentId, "agent-1");
+assert.deepEqual(submitted.scope.methods, ["GET"]);
+assert.equal(submitted.scope.scope, "https://api.example.com/users/*");
+assert.ok(observed, "pending capability request observer should fire");
+
+const pending = await ownerClient.listPendingCapabilityRequests();
+assert.equal(pending.length, 1);
+assert.equal(pending[0].justification, "Need to read user resources without per-id approval");
+
+const approved = await ownerClient.approveCapabilityRequest({
+  requestId: pending[0].requestId,
+  capabilityId: "cap-users-read",
+});
+assert.equal(approved.capabilityId, "cap-users-read");
+assert.deepEqual(approved.methods, ["GET"]);
+assert.equal(approved.scope, "https://api.example.com/users/*");
+
+const capabilities = await ownerClient.listCapabilities({ agentId: "agent-1" });
+assert.ok(capabilities.some((cap) => cap.capabilityId === "cap-users-read"));
+
+await ownerClient.submitCapabilityRequest({
+  requester: { kind: "trusted_executor", id: "llm-planner" },
+  agentId: "agent-1",
+  secretAliases: ["crm-token"],
+  scope: "https://api.example.com/admin/*",
+  methods: ["POST"],
+});
+const pendingAfterSecondSubmit = await ownerClient.listPendingCapabilityRequests();
+assert.equal(pendingAfterSecondSubmit.length, 1);
+await ownerClient.rejectCapabilityRequest(pendingAfterSecondSubmit[0].requestId);
+assert.equal((await ownerClient.listPendingCapabilityRequests()).length, 0);
+
+unsubscribe();
+
+console.log("Capability request flow OK");

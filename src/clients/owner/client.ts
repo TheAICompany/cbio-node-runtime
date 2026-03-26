@@ -18,6 +18,8 @@ import type {
   VaultRevokeCapabilityInput,
   VaultIssueSessionTokenInput,
   VaultRevokeSessionTokenInput,
+  VaultSubmitCapabilityRequestInput,
+  VaultApproveCapabilityRequestInput,
   VaultApproveDispatchInput,
 } from "./contracts.js";
 
@@ -96,6 +98,12 @@ export interface VaultClient {
    * Revokes a previously granted capability.
    */
   revokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
+
+  submitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
+  listPendingCapabilityRequests(): Promise<readonly import("../../vault-core/index.js").PendingCapabilityRequestRecord[]>;
+  approveCapabilityRequest(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").AgentCapability>;
+  rejectCapabilityRequest(requestId: string): Promise<void>;
+  onPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
 }
 
 export interface CreateVaultClientOptions {
@@ -264,9 +272,8 @@ class DefaultVaultClient implements VaultClient {
       capabilityId,
       operation: (input.operation as any) ?? "dispatch_http",
       secretAliases: input.secretAliases ? [...input.secretAliases] : [],
-      allowedTargets: input.allowedTargets ? [...input.allowedTargets] : [],
-      allowedMethods: input.allowedMethods ? [...input.allowedMethods] : [],
-      allowedPaths: input.allowedPaths ? [...input.allowedPaths] : [],
+      scope: input.scope,
+      methods: [...input.methods],
       rateLimit: input.rateLimit,
       skipAudit: input.skipAudit,
       issuedAt: requestedAt,
@@ -399,6 +406,36 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
+  async submitCapabilityRequest(input: VaultSubmitCapabilityRequestInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = `${input.requester.id}:${requestedAt}:${input.agentId}:submit_capability_request`;
+
+    return this._vault.submitCapabilityRequest({
+      vaultId: this._vault.vaultId,
+      requestId,
+      requester: input.requester,
+      agentId: input.agentId,
+      scope: {
+        operation: (input.operation as any) ?? "dispatch_http",
+        secretAliases: input.secretAliases ? [...input.secretAliases] : [],
+        scope: input.scope,
+        methods: [...input.methods],
+        rateLimit: input.rateLimit,
+        skipAudit: input.skipAudit,
+        expiresAt: input.expiresAt,
+      },
+      justification: input.justification,
+      requestedAt,
+    });
+  }
+
+  async listPendingCapabilityRequests() {
+    return this._vault.listPendingCapabilityRequests({
+      vaultId: this._vault.vaultId,
+      owner: { kind: "owner", id: this._identityId },
+    });
+  }
+
   async listPendingDispatches() {
     return this._vault.listPendingDispatches({
       vaultId: this._vault.vaultId,
@@ -423,6 +460,15 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
+  async approveCapabilityRequest(input: VaultApproveCapabilityRequestInput) {
+    return this._vault.approveCapabilityRequest({
+      vaultId: this._vault.vaultId,
+      requestId: input.requestId,
+      capabilityId: input.capabilityId,
+      owner: { kind: "owner", id: this._identityId },
+    });
+  }
+
   async rejectDispatch(requestId: string) {
     return this._vault.rejectDispatch({
       vaultId: this._vault.vaultId,
@@ -431,8 +477,20 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
+  async rejectCapabilityRequest(requestId: string) {
+    return this._vault.rejectCapabilityRequest({
+      vaultId: this._vault.vaultId,
+      requestId,
+      owner: { kind: "owner", id: this._identityId },
+    });
+  }
+
   onPendingRequest(callback: (record: import("../../vault-core/index.js").PendingDispatchRecord) => void): () => void {
     return this._vault.onPendingRequest(callback);
+  }
+
+  onPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void {
+    return this._vault.onPendingCapabilityRequest(callback);
   }
 }
 

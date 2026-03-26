@@ -11,7 +11,10 @@ import {
   InMemoryAuditLog,
   InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
+  InMemoryPendingCapabilityRequestRegistry,
+  InMemoryPendingRequestRegistry,
   InMemoryReplayGuard,
+  InMemorySessionTokenRegistry,
   InMemorySecretCustody,
   InMemorySecretRepository,
   RandomIdGenerator,
@@ -24,6 +27,7 @@ import { LocalSigner } from "../../dist/protocol/crypto.js";
 const agentIdentity = createIdentity();
 const signer = new LocalSigner(agentIdentity);
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
+const replaySessionTokens = new InMemorySessionTokenRegistry();
 const authority = createVaultCore({
   vaultId: { value: "vault-replay" },
   secrets: new InMemorySecretRepository(),
@@ -32,9 +36,12 @@ const authority = createVaultCore({
   audit: new InMemoryAuditLog(),
   executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
   agentIdentities: replayAgentIdentities,
-  agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities),
+  agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities, replaySessionTokens),
   capabilities: new InMemoryCapabilityRegistry(),
   customFlows: new InMemoryCustomHttpFlowRegistry(),
+  sessionTokens: replaySessionTokens,
+  pendingRequests: new InMemoryPendingRequestRegistry(),
+  pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
   ids: new RandomIdGenerator(),
@@ -43,6 +50,7 @@ const vault = wrapVaultCoreAsVaultService(authority);
 
 const client = createVaultClient({
   vault,
+  skipWarmup: true,
 });
 await client.registerAgent({
   agentId: "agent-replay",
@@ -61,6 +69,13 @@ const replayRecord = await client.writeSecret({
     },
   ],
   requestedAt: new Date().toISOString(),
+});
+
+await client.grantCapability({
+  agentId: "agent-replay",
+  secretAliases: ["replay-token"],
+  scope: "https://allowed.example.com/replay",
+  methods: ["POST"],
 });
 
 const requestId = "replay-request";
@@ -88,8 +103,8 @@ const request = {
     agentId: "agent-replay",
     secretIds: [replayRecord.secretId.value],
     operation: "dispatch_http",
-    allowedTargets: ["https://allowed.example.com/replay"],
-    allowedMethods: ["POST"],
+    scope: "https://allowed.example.com/replay",
+    methods: ["POST"],
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   },

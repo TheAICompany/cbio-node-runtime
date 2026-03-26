@@ -22,4 +22,6 @@ export type {
   VaultListAgentsInput,
   VaultListCapabilitiesInput,
   VaultRevokeCapabilityInput,
+  VaultSubmitCapabilityRequestInput,
+  VaultApproveCapabilityRequestInput,
 } from "./contracts.js";

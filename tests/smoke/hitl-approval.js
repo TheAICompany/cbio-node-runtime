@@ -30,7 +30,8 @@ async function testHitlApproval() {
   await ownerClient.grantCapability({
     agentId: 'agent-1',
     secretAliases: ['top-secret'],
-    allowedTargets: ['https://api.example.com/*'],
+    scope: 'https://api.example.com/*',
+    methods: ['GET'],
     // requiresApproval: true removed
   });
 
