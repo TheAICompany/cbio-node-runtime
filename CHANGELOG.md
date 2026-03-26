@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.51.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.50.0...v1.51.0) (2026-03-26)
+
+
+### Features
+
+* Introduce password-protected sensitive owner actions and new methods for reading secret plaintexts and agent private keys. ([0babc67](https://github.com/TheAICompany/cbio-node-runtime/commit/0babc6797cf7a5f0acc2e5dc813184daf058386c))
+* Update API to v1.50.0, modifying `ownerImportAgent` to generate agent IDs upon import. ([a96113c](https://github.com/TheAICompany/cbio-node-runtime/commit/a96113cc63168b162e356c1270812de6eb44b30d))
+
 ## [1.50.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.49.0...v1.50.0) (2026-03-26)
 
 
