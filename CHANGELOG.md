@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.50.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.49.0...v1.50.0) (2026-03-26)
+
+
+### Features
+
+* Introduce agent capability approval and secret listing features, and update documentation. ([a0e9eb2](https://github.com/TheAICompany/cbio-node-runtime/commit/a0e9eb23ae6841da708bab63f8df63ebb6425b25))
+
 ## [1.49.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.6...v1.49.0) (2026-03-26)
 
 
