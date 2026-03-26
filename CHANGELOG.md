@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.48.4](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.3...v1.48.4) (2026-03-26)
+
 ### [1.48.3](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.2...v1.48.3) (2026-03-26)
 
 ### [1.48.2](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.1...v1.48.2) (2026-03-26)
