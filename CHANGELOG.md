@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.56.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.55.1...v1.56.0) (2026-03-26)
+
+
+### Features
+
+* Introduce vault core tool metadata, add owner secret retirement and agent discovery smoke tests, and update client implementations with regenerated API documentation. ([8d8824a](https://github.com/TheAICompany/cbio-node-runtime/commit/8d8824ad532da4a0d650140d144086240eed1d11))
+
 ### [1.55.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.55.0...v1.55.1) (2026-03-26)
 
 ## [1.55.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.54.0...v1.55.0) (2026-03-26)
