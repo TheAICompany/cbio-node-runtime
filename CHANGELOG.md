@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.52.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.51.0...v1.52.0) (2026-03-26)
+
+
+### Features
+
+* Add owner sensitive action context and vault read agent private key/secret plaintext capabilities, and update `ownerGrantCapability` return type. ([1cb274e](https://github.com/TheAICompany/cbio-node-runtime/commit/1cb274e8b761566191952e4affd59598006a8a8c))
+
 ## [1.51.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.50.0...v1.51.0) (2026-03-26)
 
 
