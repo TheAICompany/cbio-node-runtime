@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.53.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.52.1...v1.53.0) (2026-03-26)
+
+
+### Features
+
+* Add owner agent identity update, session token management, and owner client error handling. ([941d3b0](https://github.com/TheAICompany/cbio-node-runtime/commit/941d3b021ed422eef14924af7a89b4f7d93c3f30))
+
 ### [1.52.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.52.0...v1.52.1) (2026-03-26)
 
 ## [1.52.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.51.0...v1.52.0) (2026-03-26)
