@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
 
 ***
 
@@ -12,6 +12,18 @@
 
 ***
 
+### password
+
+> **password**: `string`
+
+***
+
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
+
+***
+
+### verificationCode?
+
+> `optional` **verificationCode?**: `string`

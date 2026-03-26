@@ -39,6 +39,11 @@ export interface AgentClient {
   agentDispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
   agentListCapabilities(): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
   agentListSecrets(): Promise<readonly AgentVisibleSecretRecord[]>;
+  /**
+   * Introspects the current runtime environment, providing identity, capabilities, and a toolbox manifest.
+   * Equivalent to '--help' or 'llms.txt' for the agent.
+   */
+  agentIntrospect(): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
   agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
 }
 
@@ -136,6 +141,18 @@ class DefaultAgentClient implements AgentClient {
       requestedAt,
       agent: { kind: "agent", id: this._identity.agentId },
       proof: await this._createProof(requestId, requestedAt, "list_secrets"),
+    });
+  }
+
+  async agentIntrospect() {
+    const requestedAt = this._clock.nowIso();
+    const requestId = createRequestIdValue("get_manifest");
+    return this._transport.agentGetRuntimeManifest({
+      vaultId: this._capability.vaultId,
+      requestId,
+      requestedAt,
+      agent: { kind: "agent", id: this._identity.agentId },
+      proof: await this._createProof(requestId, requestedAt, "get_manifest"),
     });
   }
 

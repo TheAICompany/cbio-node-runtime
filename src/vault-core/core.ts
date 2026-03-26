@@ -7,6 +7,8 @@ import type {
   CapabilityRequestScope,
   AgentListCapabilitiesRequest,
   AgentListSecretsRequest,
+  AgentGetRuntimeManifestCommand,
+  AgentRuntimeManifest,
   AgentSubmitCapabilityRequestCommand,
   AgentVisibleSecretRecord,
   AuditEntry,
@@ -44,6 +46,8 @@ import type {
 import type { VaultCoreDependencies } from "./ports.js";
 import { VaultCoreError } from "./errors.js";
 import { verifySignature } from "../protocol/crypto.js";
+import { getAgentToolbox } from "./tool-metadata.js";
+
 
 function toAuditEntry(
   deps: VaultCoreDependencies,
@@ -614,11 +618,15 @@ export class VaultCore {
       throw new VaultCoreError(`secret not found: ${command.alias}`, "VAULT_SECRET_NOT_FOUND");
     }
 
-    await this._deps.secrets.delete(record.secretId);
-    await this._deps.custody.delete(record.secretId);
+    const retiredAt = this._deps.clock.nowIso();
+    await this._deps.secrets.save({
+      ...record,
+      updatedAt: retiredAt,
+      retiredAt,
+    });
     
     await this._appendAudit(
-      toAuditEntry(this._deps, command.owner, AuditAction.DELETE_SECRET, AuditOutcome.SUCCEEDED, `deleted secret ${command.alias}`, {
+      toAuditEntry(this._deps, command.owner, AuditAction.DELETE_SECRET, AuditOutcome.SUCCEEDED, `retired secret ${command.alias}`, {
         requestId: command.requestId,
         secretAlias: command.alias,
         secretId: record.secretId.value,
@@ -974,6 +982,23 @@ export class VaultCore {
     }
     await this._verifyAgentControlProof(request, "list_secrets");
     return this._listVisibleSecretsForAgent(request.agent.id);
+  }
+
+  async agentGetRuntimeManifest(command: AgentGetRuntimeManifestCommand): Promise<AgentRuntimeManifest> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
+    }
+    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, command.agent.id);
+    const vaultNickname = "CBIO Vault"; // TODO: Pull from profile if available
+    
+    return {
+      agentId: command.agent.id,
+      vaultId: this._deps.vaultId.value,
+      vaultNickname,
+      issuedAt: this._deps.clock.nowIso(),
+      capabilities,
+      tools: getAgentToolbox(),
+    };
   }
 
   async agentSubmitCapabilityRequest(command: AgentSubmitCapabilityRequestCommand): Promise<PendingCapabilityRequestRecord> {

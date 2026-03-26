@@ -79,6 +79,18 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     return payload as readonly import("../vault-core/index.js").AgentVisibleSecretRecord[];
   }
 
+  async agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest> {
+    const payload = await this._postControl({
+      action: "get_manifest",
+      vaultId: request.vaultId.value,
+      requestId: request.requestId,
+      requestedAt: request.requestedAt,
+      agentId: request.agent.id,
+      proof: { token: request.proof.token },
+    });
+    return payload as import("../vault-core/index.js").AgentRuntimeManifest;
+  }
+
   async agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord> {
     const payload = await this._postControl({
       action: "submit_capability_request",

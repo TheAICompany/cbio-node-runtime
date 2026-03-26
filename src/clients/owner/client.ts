@@ -518,6 +518,13 @@ class DefaultVaultClient implements VaultClient {
   }
 
   async ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void> {
+    await this._confirmSensitiveAction({
+      password: input.password,
+      verificationCode: input.verificationCode,
+    }, {
+      action: "delete_secret",
+      subject: input.alias,
+    });
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = createRequestIdValue("delete_secret");
     

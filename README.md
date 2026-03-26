@@ -12,6 +12,7 @@ Node.js vault runtime with a **Sovereign Vault** architecture: authority is root
 - **Authority-centric**: Administrative control is tied to the vault's master password, not an external identity.
 - **Managed Agent Custody**: Generate and store agent private keys securely inside the vault.
 - **Agent Session Tokens**: Issue revocable, short-lived (or long-lived) tokens for agents to avoid handling raw private keys.
+- **Zero-Configuration Discovery**: Agents can self-introspect to discover their identity, capabilities, and toolset (v1.56.0+).
 - **Process Isolation**: Hard separation between the Security Process (Master) and Agent Processes (Consumers).
 - **Zero-Leak Discovery**: Vault metadata is fully encrypted and hidden until unlocked.
 
@@ -162,6 +163,20 @@ This flow is separate from dispatch discovery:
 - `ownerApproveCapabilityRequest(...)` turns the request into a real stored capability.
 - `ownerRejectCapabilityRequest(...)` drops the request without granting access.
 
+### 8. Zero-Configuration Agent Discovery (v1.56.0+)
+
+Instead of hard-coding the agent's capabilities or tools, the agent can self-introspect at runtime. This is the "--help" and "llms.txt" for your agent.
+
+```ts
+const manifest = await agent.agentIntrospect();
+
+console.log(manifest.agentId);      // The agent's identity in the vault
+console.log(manifest.capabilities); // List of granted permissions
+console.log(manifest.tools);        // List of available API tools with JSON-Schema
+```
+
+This manifest can be directly fed into an LLM's system prompt or tool-calling configuration to enable fully autonomous, zero-config integration.
+
 ---
 
 ## Documentation
@@ -209,8 +224,11 @@ if (pending.length > 0) {
 npm run build
 npm test
 ```
-// Sensitive plaintext reads require the vault password again
+```ts
+// 9. Sensitive actions (v1.55.0+)
+// Sensitive reads require the vault password again for verification
 const plaintext = await client.ownerReadSecretPlaintext({
   alias: 'api-token',
   password: 'your-secure-password'
 });
+```

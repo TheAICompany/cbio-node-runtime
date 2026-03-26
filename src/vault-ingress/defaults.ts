@@ -37,6 +37,10 @@ export class LocalVaultTransport implements AgentDispatchTransport {
     return this._vault.agentListSecrets(request);
   }
 
+  async agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest) {
+    return this._vault.agentGetRuntimeManifest(request);
+  }
+
   async agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand) {
     return this._vault.agentSubmitCapabilityRequest(request);
   }

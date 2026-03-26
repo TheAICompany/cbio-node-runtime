@@ -34,6 +34,7 @@ export interface SecretRecord {
   targetBindings: VaultTargetBinding[];
   createdAt: string;
   updatedAt: string;
+  retiredAt?: string;
 }
 
 export interface VaultTargetBinding {
@@ -199,6 +200,36 @@ export interface AgentVisibleSecretRecord {
     scope: string;
     methods: readonly string[];
   }[];
+}
+
+export interface AgentGetRuntimeManifestRequest {
+  vaultId: VaultId;
+  requestId: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  proof: AgentProof;
+  requestedAt: string;
+}
+
+export interface AgentGetRuntimeManifestCommand {
+  vaultId: VaultId;
+  requestId: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  requestedAt: string;
+}
+
+export interface AgentRuntimeManifest {
+  agentId: string;
+  vaultId: string;
+  vaultNickname?: string;
+  issuedAt: string;
+  capabilities: readonly AgentCapability[];
+  tools: readonly VaultToolDefinition[];
+}
+
+export interface VaultToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, any>; // JSON-Schema
 }
 
 export interface AgentListCapabilitiesRequest {

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
 
 ***
 
@@ -39,6 +39,19 @@ const result = await agent.agentDispatch({
   body: JSON.stringify({ key: 'value' })
 });
 ```
+
+***
+
+### agentIntrospect()
+
+> **agentIntrospect**(): `Promise`\<`AgentRuntimeManifest`\>
+
+Introspects the current runtime environment, providing identity, capabilities, and a toolbox manifest.
+Equivalent to '--help' or 'llms.txt' for the agent.
+
+#### Returns
+
+`Promise`\<`AgentRuntimeManifest`\>
 
 ***
 

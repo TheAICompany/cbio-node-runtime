@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
 
 ***
 
@@ -114,6 +114,22 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`DispatchResult`\>
+
+***
+
+### agentGetRuntimeManifest()
+
+> **agentGetRuntimeManifest**(`command`): `Promise`\<`AgentRuntimeManifest`\>
+
+#### Parameters
+
+##### command
+
+`AgentGetRuntimeManifestCommand`
+
+#### Returns
+
+`Promise`\<`AgentRuntimeManifest`\>
 
 ***
 

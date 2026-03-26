@@ -61,7 +61,7 @@ export interface OwnerSensitiveActionConfirmation {
 }
 
 export interface OwnerSensitiveActionContext {
-  action: "read_secret_plaintext" | "export_secret" | "read_agent_private_key";
+  action: "read_secret_plaintext" | "export_secret" | "read_agent_private_key" | "delete_secret";
   subject: string;
 }
 
@@ -133,6 +133,8 @@ export interface VaultApproveCapabilityRequestInput {
 
 export interface VaultDeleteSecretInput {
   alias: string;
+  password: string;
+  verificationCode?: string;
   requestedAt?: string;
 }
 

@@ -200,7 +200,7 @@ export class FileSecretRepository implements SecretRepository {
 
   async getByAlias(alias: SecretAlias): Promise<SecretRecord | null> {
     const state = await this.loadState();
-    return state.records.find((record) => record.alias.value === alias.value) ?? null;
+    return state.records.find((record) => record.alias.value === alias.value && !record.retiredAt) ?? null;
   }
 
   async getById(secretId: SecretId): Promise<SecretRecord | null> {
@@ -210,7 +210,7 @@ export class FileSecretRepository implements SecretRepository {
 
   async list(vaultId: VaultId): Promise<readonly SecretRecord[]> {
     const state = await this.loadState();
-    return state.records.filter((record) => record.vaultId.value === vaultId.value);
+    return state.records.filter((record) => record.vaultId.value === vaultId.value && !record.retiredAt);
   }
 }
 

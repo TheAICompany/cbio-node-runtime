@@ -133,6 +133,14 @@ export type VaultAgentControlRequest =
       operation?: "dispatch_http" | "custom_http";
       secretAliases?: string[];
       justification?: string;
+    }
+  | {
+      action: "get_manifest";
+      vaultId: string;
+      requestId: string;
+      requestedAt: string;
+      agentId: string;
+      proof: VaultAgentControlProof;
     };
 
 export interface VaultAgentControlResponse {
@@ -252,6 +260,7 @@ export interface VaultService {
   ownerOnPendingCapabilityRequest(callback: (record: import("../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
   agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly AgentCapability[]>;
   agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
+  agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest>;
   agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord>;
   agentHandleControl(request: VaultAgentControlRequest): Promise<VaultAgentControlResponse | VaultAgentControlErrorResponse>;
   ownerHandleControl(request: VaultOwnerControlRequest): Promise<VaultOwnerControlResponse | VaultOwnerControlErrorResponse>;
@@ -682,6 +691,10 @@ class LocalVaultService implements VaultService {
     return this._authority.agentListSecrets(request);
   }
 
+  agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest> {
+    return this._authority.agentGetRuntimeManifest(request);
+  }
+
   agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord> {
     return this._authority.agentSubmitCapabilityRequest(request);
   }
@@ -706,6 +719,8 @@ class LocalVaultService implements VaultService {
           return { ok: true, result: await this.agentListCapabilities(base) };
         case "list_secrets":
           return { ok: true, result: await this.agentListSecrets(base) };
+        case "get_manifest":
+          return { ok: true, result: await this.agentGetRuntimeManifest(base) };
         case "submit_capability_request":
           return {
             ok: true,

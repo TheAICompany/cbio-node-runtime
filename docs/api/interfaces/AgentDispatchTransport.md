@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.55.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.55.1**](../README.md)
 
 ***
 
@@ -19,6 +19,22 @@
 #### Returns
 
 `Promise`\<`DispatchResult`\>
+
+***
+
+### agentGetRuntimeManifest()
+
+> **agentGetRuntimeManifest**(`request`): `Promise`\<`AgentRuntimeManifest`\>
+
+#### Parameters
+
+##### request
+
+`AgentGetRuntimeManifestRequest`
+
+#### Returns
+
+`Promise`\<`AgentRuntimeManifest`\>
 
 ***
 

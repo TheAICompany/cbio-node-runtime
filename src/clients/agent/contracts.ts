@@ -27,5 +27,6 @@ export interface AgentDispatchTransport {
   agentDispatch(request: import("../../vault-core/index.js").DispatchRequest): Promise<import("../../vault-core/index.js").DispatchResult>;
   agentListCapabilities(request: import("../../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
   agentListSecrets(request: import("../../vault-core/index.js").AgentListSecretsRequest): Promise<readonly AgentVisibleSecretRecord[]>;
+  agentGetRuntimeManifest(request: import("../../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
   agentSubmitCapabilityRequest(request: import("../../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
 }

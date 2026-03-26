@@ -109,6 +109,7 @@ The following owner operations are sensitive actions:
 - `ownerReadSecretPlaintext(...)`
 - `ownerExportSecret(...)`
 - `ownerReadAgentPrivateKey(...)`
+- `ownerDeleteSecret(...)`
 
 All three require:
 

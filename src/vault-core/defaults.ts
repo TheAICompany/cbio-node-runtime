@@ -208,7 +208,8 @@ export class InMemorySecretRepository implements SecretRepository {
   }
 
   async getByAlias(alias: SecretAlias): Promise<SecretRecord | null> {
-    return this._byAlias.get(alias.value) ?? null;
+    const record = this._byAlias.get(alias.value) ?? null;
+    return record?.retiredAt ? null : record;
   }
 
   async getById(secretId: SecretId): Promise<SecretRecord | null> {
@@ -216,7 +217,7 @@ export class InMemorySecretRepository implements SecretRepository {
   }
 
   async list(vaultId: VaultId): Promise<readonly SecretRecord[]> {
-    return Array.from(this._byId.values()).filter((record) => record.vaultId.value === vaultId.value);
+    return Array.from(this._byId.values()).filter((record) => record.vaultId.value === vaultId.value && !record.retiredAt);
   }
 }
 
