@@ -24,11 +24,11 @@ const importedAgent = await ownerClient.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
 const vaultAgentId = importedAgent.agent.agentId;
-const crmRecord = await ownerClient.ownerWriteSecret({
+const crmRecord = await ownerClient.ownerCreateSecret({
   alias: "crm-token",
   plaintext: "secret-crm-token",
 });
-await ownerClient.ownerWriteSecret({
+await ownerClient.ownerCreateSecret({
   alias: "payroll-token",
   plaintext: "secret-payroll-token",
 });

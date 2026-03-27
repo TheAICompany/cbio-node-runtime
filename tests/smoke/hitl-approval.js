@@ -21,7 +21,7 @@ async function testHitlApproval() {
   const vaultAgentId = provisionedAgent.agent.agentId;
 
   // 3. Register a Secret
-  const secretRecord = await ownerClient.ownerWriteSecret({
+  const secretRecord = await ownerClient.ownerCreateSecret({
     alias: 'top-secret',
     plaintext: 'shhh!',
   });

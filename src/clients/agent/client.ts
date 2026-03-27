@@ -19,6 +19,9 @@ export interface AgentIdentity {
 /**
  * A client for agents to perform authorized operations (e.g., dispatch HTTP requests with secrets).
  * This client uses a delegated capability granted by the owner.
+ * Agents can use secrets and request broader access, but they do not directly manage
+ * the secret lifecycle inside the vault. Newly obtained credentials are persisted only
+ * through owner actions or owner-configured vault flows that explicitly capture them.
  */
 export interface AgentClient {
   /**
@@ -45,6 +48,9 @@ export interface AgentClient {
   /**
    * Introspects the current runtime environment, providing identity, capabilities, and a toolbox manifest.
    * Equivalent to '--help' or 'llms.txt' for the agent.
+   * This is the primary place where an agent should learn its operational boundary:
+   * it can use existing secrets and request more permission, but it cannot directly
+   * create, update, or remove secrets in the vault.
    */
   agentIntrospect(): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
   agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;

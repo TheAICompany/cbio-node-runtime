@@ -20,9 +20,9 @@ import type {
   VaultImportAgentInput,
   VaultCreateAgentInput,
   OwnerAgentProvisionResult,
-  OwnerStoreSecretInput,
-  OwnerWriteSecretInput,
-  VaultDeleteSecretInput,
+  OwnerCreateSecretInput,
+  OwnerUpdateSecretInput,
+  OwnerRemoveSecretInput,
   VaultUpdateAgentInput,
   VaultListAgentsInput,
   VaultListCapabilitiesInput,
@@ -51,14 +51,14 @@ export interface VaultSigner {
  */
 export interface VaultClient {
   /**
-   * Securely stores a new secret in the vault.
+   * Inserts a new active secret into the vault.
    */
-  ownerStoreSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  ownerCreateSecret(input: OwnerCreateSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
 
   /**
-   * Stores a manually provided secret in the vault.
+   * Inserts a new successor secret and marks the previous active version as superseded.
    */
-  ownerWriteSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  ownerUpdateSecret(input: OwnerUpdateSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
 
   /**
    * Exports a secret's plaintext.
@@ -92,9 +92,9 @@ export interface VaultClient {
   ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition>;
 
   /**
-   * Permanently deletes a secret from the vault.
+   * Logically removes the current active secret.
    */
-  ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void>;
+  ownerRemoveSecret(input: OwnerRemoveSecretInput): Promise<void>;
 
   /**
    * Lists all agents registered in the vault.
@@ -242,12 +242,12 @@ class DefaultVaultClient implements VaultClient {
     };
   }
 
-  async ownerStoreSecret(input: OwnerStoreSecretInput) {
+  async ownerCreateSecret(input: OwnerCreateSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("write_secret");
+    const requestId = createRequestIdValue("create_secret");
     
-    return this._vault.ownerWriteSecret({
-      kind: "owner.write_secret",
+    return this._vault.ownerCreateSecret({
+      kind: "owner.create_secret",
       vaultId: this._vault.vaultId,
       requestId,
       owner: {
@@ -261,12 +261,12 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async ownerWriteSecret(input: OwnerWriteSecretInput) {
+  async ownerUpdateSecret(input: OwnerUpdateSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("write_secret");
+    const requestId = createRequestIdValue("update_secret");
     
-    return this._vault.ownerWriteSecret({
-      kind: "owner.write_secret",
+    return this._vault.ownerUpdateSecret({
+      kind: "owner.update_secret",
       vaultId: this._vault.vaultId,
       requestId,
       owner: {
@@ -551,7 +551,7 @@ class DefaultVaultClient implements VaultClient {
     };
   }
 
-  async ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void> {
+  async ownerRemoveSecret(input: OwnerRemoveSecretInput): Promise<void> {
     await this._confirmSensitiveAction({
       password: input.password,
       verificationCode: input.verificationCode,
@@ -560,9 +560,10 @@ class DefaultVaultClient implements VaultClient {
       subject: input.alias,
     });
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("delete_secret");
+    const requestId = createRequestIdValue("remove_secret");
     
-    await this._vault.ownerDeleteSecret({
+    await this._vault.ownerRemoveSecret({
+      kind: "owner.remove_secret",
       vaultId: this._vault.vaultId,
       requestId,
       owner: {

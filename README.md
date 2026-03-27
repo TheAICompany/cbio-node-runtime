@@ -114,8 +114,8 @@ const tokens = await client.ownerIssueAllSessionTokens();
 ### 5. Secret Management (Owner)
 
 ```ts
-// Write a secret. Source metadata is recorded by the vault.
-const record = await client.ownerWriteSecret({
+// Create a secret. Active aliases must stay unique.
+const record = await client.ownerCreateSecret({
   alias: 'api-token',
   plaintext: 'super-secret-value'
 });

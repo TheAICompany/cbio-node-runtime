@@ -65,7 +65,8 @@ The `VaultClient` provides the administrative interface for the vault.
 
 The following owner-side methods are part of the supported public surface and are intended to be called through an owner session or a short-lived owner client:
 
-- `ownerWriteSecret(...)`
+- `ownerCreateSecret(...)`
+- `ownerUpdateSecret(...)`
 - `ownerReadSecretPlaintext(...)`
 - `ownerExportSecret(...)`
 - `ownerCreateAgent(...)`
@@ -92,7 +93,8 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerReadAudit(...)`
 
 ### Core Operations
-- `ownerWriteSecret(...)`: Store a secret and record its source metadata.
+- `ownerCreateSecret(...)`: Insert a new active secret. The call fails if the alias already has an active record.
+- `ownerUpdateSecret(...)`: Insert a new successor version for the active alias and mark the previous version as superseded.
 - `ownerCreateAgent(...)`: Generate and host a new agent identity, then return its public record plus a session token.
 - `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
 - `ownerUpdateAgent(...)`: Update an agent's stored nickname and metadata.
@@ -121,9 +123,9 @@ The following owner operations are sensitive actions:
 - `ownerReadSecretPlaintext(...)`
 - `ownerExportSecret(...)`
 - `ownerReadAgentPrivateKey(...)`
-- `ownerDeleteSecret(...)`
+- `ownerRemoveSecret(...)`
 
-All three require:
+All four require:
 
 - `password`
 - optional `verificationCode`

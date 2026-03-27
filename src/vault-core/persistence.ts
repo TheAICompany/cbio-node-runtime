@@ -186,6 +186,10 @@ export class FileSecretRepository implements SecretRepository {
     return this._repo.read({ records: [] });
   }
 
+  private isActive(record: SecretRecord): boolean {
+    return record.lifecycleStatus ? record.lifecycleStatus === "ACTIVE" : !record.retiredAt;
+  }
+
   async save(record: SecretRecord): Promise<void> {
     await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
@@ -205,17 +209,17 @@ export class FileSecretRepository implements SecretRepository {
 
   async getByAlias(alias: SecretAlias): Promise<SecretRecord | null> {
     const state = await this.loadState();
-    return state.records.find((record) => record.alias.value === alias.value && !record.retiredAt) ?? null;
+    return state.records.find((record) => record.alias.value === alias.value && this.isActive(record)) ?? null;
   }
 
   async getById(secretId: SecretId): Promise<SecretRecord | null> {
     const state = await this.loadState();
-    return state.records.find((record) => record.secretId.value === secretId.value) ?? null;
+    return state.records.find((record) => record.secretId.value === secretId.value && this.isActive(record)) ?? null;
   }
 
   async list(vaultId: VaultId): Promise<readonly SecretRecord[]> {
     const state = await this.loadState();
-    return state.records.filter((record) => record.vaultId.value === vaultId.value && !record.retiredAt);
+    return state.records.filter((record) => record.vaultId.value === vaultId.value && this.isActive(record));
   }
 }
 

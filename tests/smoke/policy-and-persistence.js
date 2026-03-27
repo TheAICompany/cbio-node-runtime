@@ -53,25 +53,25 @@ try {
     vault,
     passwordVerifier: async (password) => password === "policy-password",
   });
-  const unscopedRecord = await client.ownerStoreSecret({
+  const unscopedRecord = await client.ownerCreateSecret({
     alias: "unscoped-token",
     plaintext: "secret-0",
   });
   assert.deepEqual(unscopedRecord.source, { kind: "manual" });
 
-  const unscopedArrayRecord = await client.ownerStoreSecret({
+  const unscopedArrayRecord = await client.ownerCreateSecret({
     alias: "unscoped-array-token",
     plaintext: "secret-0b",
   });
   assert.deepEqual(unscopedArrayRecord.source, { kind: "manual" });
 
-  const storedThenDefinedRecord = await client.ownerStoreSecret({
+  const storedThenDefinedRecord = await client.ownerCreateSecret({
     alias: "stored-then-defined-token",
     plaintext: "secret-1",
   });
   assert.deepEqual(storedThenDefinedRecord.source, { kind: "manual" });
 
-  const restrictedRecord = await client.ownerWriteSecret({
+  const restrictedRecord = await client.ownerCreateSecret({
     alias: "restricted-token",
     plaintext: "secret-2",
   });
@@ -221,7 +221,7 @@ try {
   );
 
   await assert.rejects(
-    () => client.ownerWriteSecret({
+    () => client.ownerCreateSecret({
       alias: "restricted-token",
       plaintext: "replacement-secret",
     }),

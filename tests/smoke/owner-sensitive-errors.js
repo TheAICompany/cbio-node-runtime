@@ -17,7 +17,7 @@ async function main() {
     skipWarmup: true,
   });
 
-  await client.ownerWriteSecret({
+  await client.ownerCreateSecret({
     alias: "demo",
     plaintext: "value",
   });

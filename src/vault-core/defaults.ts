@@ -193,6 +193,10 @@ export class InMemorySecretRepository implements SecretRepository {
   private readonly _byAlias = new Map<string, SecretRecord>();
   private readonly _byId = new Map<string, SecretRecord>();
 
+  private isActive(record: SecretRecord): boolean {
+    return record.lifecycleStatus ? record.lifecycleStatus === "ACTIVE" : !record.retiredAt;
+  }
+
   async save(record: SecretRecord): Promise<void> {
     this._byAlias.set(record.alias.value, record);
     this._byId.set(record.secretId.value, record);
@@ -209,15 +213,16 @@ export class InMemorySecretRepository implements SecretRepository {
 
   async getByAlias(alias: SecretAlias): Promise<SecretRecord | null> {
     const record = this._byAlias.get(alias.value) ?? null;
-    return record?.retiredAt ? null : record;
+    return record && this.isActive(record) ? record : null;
   }
 
   async getById(secretId: SecretId): Promise<SecretRecord | null> {
-    return this._byId.get(secretId.value) ?? null;
+    const record = this._byId.get(secretId.value) ?? null;
+    return record && this.isActive(record) ? record : null;
   }
 
   async list(vaultId: VaultId): Promise<readonly SecretRecord[]> {
-    return Array.from(this._byId.values()).filter((record) => record.vaultId.value === vaultId.value && !record.retiredAt);
+    return Array.from(this._byId.values()).filter((record) => record.vaultId.value === vaultId.value && this.isActive(record));
   }
 }
 
@@ -457,7 +462,7 @@ export class DefaultPolicyEngine implements PolicyEngine {
       throw new VaultCoreError("secret plaintext required", "VAULT_WRITE_DENIED");
     }
     this.validateRequestedAt(command.requestedAt, "requestedAt");
-    if (command.kind === "owner.write_secret") return;
+    if (command.kind === "owner.create_secret" || command.kind === "owner.update_secret") return;
     if (command.issuer.id !== command.issuerSiteId) {
       throw new VaultCoreError("issuer identity mismatch", "VAULT_WRITE_DENIED");
     }

@@ -314,6 +314,9 @@ export interface VaultService {
   ownerRegisterAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void>;
   ownerUpdateAgentIdentity(request: import("../vault-core/index.js").OwnerUpdateAgentIdentityCommand): Promise<AgentIdentityRecord>;
   ownerRegisterCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
+  ownerCreateSecret(request: import("../vault-core/index.js").OwnerCreateSecretCommand): Promise<SecretRecord>;
+  ownerUpdateSecret(request: import("../vault-core/index.js").OwnerUpdateSecretCommand): Promise<SecretRecord>;
+  ownerRemoveSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void>;
   ownerWriteSecret(request: import("../vault-core/index.js").VaultWriteSecretCommand): Promise<SecretRecord>;
   acquireSecret(request: VaultAcquireSecretInput): Promise<VaultAcquireSecretResult>;
   agentDispatch(request: DispatchRequest): Promise<DispatchResult>;
@@ -390,6 +393,18 @@ class LocalVaultService implements VaultService {
 
   ownerRegisterCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void> {
     return this._authority.ownerRegisterCustomFlow(request);
+  }
+
+  ownerCreateSecret(request: import("../vault-core/index.js").OwnerCreateSecretCommand): Promise<SecretRecord> {
+    return this._authority.ownerCreateSecret(request);
+  }
+
+  ownerUpdateSecret(request: import("../vault-core/index.js").OwnerUpdateSecretCommand): Promise<SecretRecord> {
+    return this._authority.ownerUpdateSecret(request);
+  }
+
+  ownerRemoveSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void> {
+    return this._authority.ownerRemoveSecret(request);
   }
 
   ownerWriteSecret(request: import("../vault-core/index.js").VaultWriteSecretCommand): Promise<SecretRecord> {
@@ -700,7 +715,7 @@ class LocalVaultService implements VaultService {
   }
 
   ownerDeleteSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void> {
-    return this._authority.ownerDeleteSecret(request);
+    return this._authority.ownerRemoveSecret(request);
   }
 
   async ownerListAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]> {

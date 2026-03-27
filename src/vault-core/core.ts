@@ -26,6 +26,7 @@ import type {
   OwnerAllowOnceCommand,
   OwnerIssueSessionTokenRequest,
   OwnerDenyCommand,
+  OwnerCreateSecretCommand,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
@@ -97,21 +98,33 @@ function toAuditEntry(
 function buildSecretRecord(
   deps: VaultCoreDependencies,
   command: VaultWriteSecretCommand,
+  previousRecord?: SecretRecord,
 ): SecretRecord {
   const now = deps.clock.nowIso();
   const source: SecretSource = command.source?.kind === "request" && command.source.requestId
     ? { kind: "request", requestId: command.source.requestId }
     : { kind: "manual" };
+  const previousVersion = previousRecord ? Number.parseInt(previousRecord.version.value, 10) : 0;
+  const nextVersion = Number.isFinite(previousVersion) ? previousVersion + 1 : 1;
   return {
     vaultId: deps.vaultId,
     secretId: deps.ids.newSecretId(),
     alias: { value: command.alias },
-    version: deps.ids.newVersion(),
+    version: { value: String(nextVersion) },
+    lifecycleStatus: "ACTIVE",
+    previousSecretId: previousRecord?.secretId,
     issuerId: command.kind === "issuer.write_secret" ? command.issuerSiteId : null,
     source,
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function isSecretActive(record: SecretRecord): boolean {
+  if (record.lifecycleStatus) {
+    return record.lifecycleStatus === "ACTIVE";
+  }
+  return !record.retiredAt;
 }
 
 function normalizeScopeTarget(targetUrl: string): string | null {
@@ -430,7 +443,10 @@ export class VaultCore {
       const authorizedCapabilities = capabilityMap.get(record.secretId.value) ?? [];
       return {
         vaultId: record.vaultId,
+        secretId: record.secretId,
         alias: record.alias,
+        version: record.version,
+        lifecycleStatus: record.lifecycleStatus ?? "ACTIVE",
         issuerId: record.issuerId,
         source: record.source,
         createdAt: record.createdAt,
@@ -774,7 +790,7 @@ export class VaultCore {
       throw new VaultCoreError("alias already bound to existing secret", "VAULT_WRITE_DENIED");
     }
     const record = buildSecretRecord(this._deps, {
-      kind: "owner.write_secret",
+      kind: "owner.create_secret",
       vaultId: this._deps.vaultId,
       requestId,
       owner: actor,
@@ -805,51 +821,26 @@ export class VaultCore {
     return record;
   }
 
-  async ownerWriteSecret(command: VaultWriteSecretCommand): Promise<SecretRecord> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+  private async _getActiveSecretByAlias(alias: string): Promise<SecretRecord | null> {
+    const matches = (await this._deps.secrets.list(this._deps.vaultId))
+      .filter((record) => record.alias.value === alias && isSecretActive(record));
+    if (matches.length > 1) {
+      throw new VaultCoreError(`multiple active secrets found for alias: ${alias}`, "VAULT_WRITE_DENIED");
     }
+    return matches[0] ?? null;
+  }
+
+  private async _persistNewSecretRecord(
+    record: SecretRecord,
+    plaintext: string,
+    actor: VaultPrincipal,
+    successDetail: string,
+  ): Promise<SecretRecord> {
     try {
-      await this._deps.policy.authorizeWrite(command);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      await this._appendAudit(
-        toAuditEntry(
-          this._deps,
-          command.kind === "owner.write_secret" ? command.owner : command.issuer,
-          AuditAction.WRITE_SECRET,
-          AuditOutcome.DENIED,
-          detail,
-          {
-            secretAlias: command.alias,
-          },
-        ),
-      );
-      throw error;
-    }
-    const existing = await this._deps.secrets.getByAlias({ value: command.alias });
-    if (existing) {
-      await this._appendAudit(
-        toAuditEntry(
-          this._deps,
-          command.kind === "owner.write_secret" ? command.owner : command.issuer,
-          AuditAction.REASSIGN_ALIAS,
-          AuditOutcome.DENIED,
-          "alias already bound to existing secret; explicit alias lifecycle required",
-          {
-            secretAlias: existing.alias.value,
-            secretId: existing.secretId.value,
-          },
-        ),
-      );
-      throw new VaultCoreError("alias already bound to existing secret", "VAULT_WRITE_DENIED");
-    }
-    const record = buildSecretRecord(this._deps, command);
-    try {
-      await this._deps.custody.store(record.secretId, command.plaintext);
+      await this._deps.custody.store(record.secretId, plaintext);
       await this._deps.secrets.save(record);
       await this._appendAudit(
-        toAuditEntry(this._deps, command.kind === "owner.write_secret" ? command.owner : command.issuer, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, "secret stored", {
+        toAuditEntry(this._deps, actor, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, successDetail, {
           secretAlias: record.alias.value,
           secretId: record.secretId.value,
         }),
@@ -864,17 +855,132 @@ export class VaultCore {
     return record;
   }
 
-  async ownerDeleteSecret(command: OwnerDeleteSecretCommand): Promise<void> {
-    const record = await this._deps.secrets.getByAlias({ value: command.alias });
+  async ownerCreateSecret(command: OwnerCreateSecretCommand): Promise<SecretRecord> {
+    return this.ownerWriteSecret(command);
+  }
+
+  async ownerUpdateSecret(command: import("./contracts.js").OwnerUpdateSecretCommand): Promise<SecretRecord> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+    }
+    try {
+      await this._deps.policy.authorizeWrite(command);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      await this._appendAudit(
+        toAuditEntry(this._deps, command.owner, AuditAction.WRITE_SECRET, AuditOutcome.DENIED, detail, {
+          secretAlias: command.alias,
+        }),
+      );
+      throw error;
+    }
+
+    const existing = await this._getActiveSecretByAlias(command.alias);
+    if (!existing) {
+      throw new VaultCoreError(`secret not found: ${command.alias}`, "VAULT_SECRET_NOT_FOUND");
+    }
+
+    const record = buildSecretRecord(this._deps, command, existing);
+    const supersededAt = this._deps.clock.nowIso();
+    const superseded = {
+      ...existing,
+      lifecycleStatus: "SUPERSEDED" as const,
+      supersededBySecretId: record.secretId,
+      supersededAt,
+      retiredAt: supersededAt,
+      updatedAt: supersededAt,
+    };
+
+    let custodyStored = false;
+    let previousSuperseded = false;
+    let newRecordSaved = false;
+    try {
+      await this._deps.custody.store(record.secretId, command.plaintext);
+      custodyStored = true;
+      await this._deps.secrets.save(superseded);
+      previousSuperseded = true;
+      await this._deps.secrets.save(record);
+      newRecordSaved = true;
+      await this._appendAudit(
+        toAuditEntry(this._deps, command.owner, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, "secret updated", {
+          secretAlias: record.alias.value,
+          secretId: record.secretId.value,
+        }),
+      );
+      return record;
+    } catch (error) {
+      if (previousSuperseded) {
+        await Promise.allSettled([this._deps.secrets.save(existing)]);
+      }
+      await Promise.allSettled([
+        newRecordSaved ? this._deps.secrets.delete(record.secretId) : Promise.resolve(),
+        custodyStored ? this._deps.custody.delete(record.secretId) : Promise.resolve(),
+      ]);
+      throw error;
+    }
+  }
+
+  async ownerWriteSecret(command: VaultWriteSecretCommand): Promise<SecretRecord> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+    }
+    try {
+      await this._deps.policy.authorizeWrite(command);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.kind === "issuer.write_secret" ? command.issuer : command.owner,
+          AuditAction.WRITE_SECRET,
+          AuditOutcome.DENIED,
+          detail,
+          {
+            secretAlias: command.alias,
+          },
+        ),
+      );
+      throw error;
+    }
+    const existing = await this._getActiveSecretByAlias(command.alias);
+    if (existing) {
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.kind === "issuer.write_secret" ? command.issuer : command.owner,
+          AuditAction.REASSIGN_ALIAS,
+          AuditOutcome.DENIED,
+          "alias already bound to existing secret; explicit alias lifecycle required",
+          {
+            secretAlias: existing.alias.value,
+            secretId: existing.secretId.value,
+          },
+        ),
+      );
+      throw new VaultCoreError("alias already bound to existing secret", "VAULT_WRITE_DENIED");
+    }
+    const record = buildSecretRecord(this._deps, command);
+    return this._persistNewSecretRecord(
+      record,
+      command.plaintext,
+      command.kind === "issuer.write_secret" ? command.issuer : command.owner,
+      "secret created",
+    );
+  }
+
+  async ownerRemoveSecret(command: OwnerDeleteSecretCommand): Promise<void> {
+    const record = await this._getActiveSecretByAlias(command.alias);
     if (!record) {
       throw new VaultCoreError(`secret not found: ${command.alias}`, "VAULT_SECRET_NOT_FOUND");
     }
 
-    const retiredAt = this._deps.clock.nowIso();
+    const removedAt = this._deps.clock.nowIso();
     await this._deps.secrets.save({
       ...record,
-      updatedAt: retiredAt,
-      retiredAt,
+      lifecycleStatus: "REMOVED",
+      updatedAt: removedAt,
+      removedAt,
+      retiredAt: removedAt,
     });
     
     await this._appendAudit(
@@ -884,6 +990,10 @@ export class VaultCore {
         secretId: record.secretId.value,
       }),
     );
+  }
+
+  async ownerDeleteSecret(command: OwnerDeleteSecretCommand): Promise<void> {
+    return this.ownerRemoveSecret(command);
   }
 
   async agentAuthorizeDispatch(request: DispatchRequest): Promise<DispatchAuthorization> {
@@ -1200,7 +1310,10 @@ export class VaultCore {
     );
     return records.map((record) => ({
       vaultId: record.vaultId,
+      secretId: record.secretId,
       alias: record.alias,
+      version: record.version,
+      lifecycleStatus: record.lifecycleStatus ?? "ACTIVE",
       issuerId: record.issuerId,
       source: record.source,
       createdAt: record.createdAt,

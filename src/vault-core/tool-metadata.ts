@@ -2,14 +2,14 @@ import type { VaultToolDefinition } from "./contracts.js";
 
 export const AGENT_TOOL_METADATA: Record<string, { description: string; parameters: Record<string, any> }> = {
   agentIntrospect: {
-    description: "Get a manifest of your identity, capabilities, and all available tools. This is your '--help' and 'llms.txt'.",
+    description: "Get a manifest of your identity, capabilities, and all available tools. This is your '--help' and 'llms.txt'. Important boundary: agents can use secrets and request more access, but they do not directly create, update, or remove vault secrets. If you obtain a new API key, JWT, refresh token, or similar credential during a website registration or login flow, it is not automatically stored just because you saw it. New secret material is stored only when the owner performs a secret lifecycle action or when an owner-configured vault acquisition/custom flow captures and stores the response for you.",
     parameters: {
       type: "object",
       properties: {},
     },
   },
   agentDispatch: {
-    description: "Execute a real outbound request with a vault-managed secret. If write permission is missing, the request will not be sent and a pending approval carrier will be created instead.",
+    description: "Execute a real outbound request with a vault-managed secret. Use this when you already have a vault secret and permission to use it against a target URL. This tool does not create or store new secrets in the vault. If write permission is missing, the request will not be sent and a pending approval carrier will be created instead.",
     parameters: {
       type: "object",
       properties: {
@@ -30,7 +30,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     },
   },
   agentListSecrets: {
-    description: "List all secrets in the vault. Includes metadata about whether you are authorized to use each secret.",
+    description: "List secrets currently active in the vault, including metadata about whether you are authorized to use each one. This is a discovery/introspection tool only. It does not create, update, remove, or automatically persist newly obtained credentials.",
     parameters: {
       type: "object",
       properties: {},
@@ -54,7 +54,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     },
   },
   agentSubmitCapabilityRequest: {
-    description: "Ask the owner for broader permission without executing any request. This creates an approval carrier only; it does not send network traffic.",
+    description: "Ask the owner for broader permission without executing any request. This creates an approval carrier only; it does not send network traffic and it does not store secret material. Use this when you need access you do not currently have. If a workflow needs to capture and persist a newly issued API key, JWT, or token, that persistence must happen through an owner action or an owner-configured vault acquisition/custom flow.",
     parameters: {
       type: "object",
       properties: {

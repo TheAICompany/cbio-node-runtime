@@ -23,7 +23,7 @@ const provisionedAgent = await ownerClient.ownerCreateAgent({
   nickname: "Planner",
 });
 const vaultAgentId = provisionedAgent.agent.agentId;
-const crmSecret = await ownerClient.ownerWriteSecret({
+const crmSecret = await ownerClient.ownerCreateSecret({
   alias: "crm-token",
   plaintext: "secret",
 });

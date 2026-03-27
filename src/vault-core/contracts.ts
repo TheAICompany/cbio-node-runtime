@@ -25,15 +25,25 @@ export interface SecretVersion {
   readonly value: string;
 }
 
+export type SecretLifecycleStatus =
+  | "ACTIVE"
+  | "SUPERSEDED"
+  | "REMOVED";
+
 export interface SecretRecord {
   vaultId: VaultId;
   secretId: SecretId;
   alias: SecretAlias;
   version: SecretVersion;
+  lifecycleStatus: SecretLifecycleStatus;
+  previousSecretId?: SecretId;
+  supersededBySecretId?: SecretId;
   issuerId: string | null;
   source: SecretSource;
   createdAt: string;
   updatedAt: string;
+  supersededAt?: string;
+  removedAt?: string;
   retiredAt?: string;
 }
 
@@ -49,8 +59,19 @@ export interface SecretSourceInput {
   requestId?: string;
 }
 
-export interface OwnerWriteSecretCommand {
-  kind: "owner.write_secret";
+export interface OwnerCreateSecretCommand {
+  kind: "owner.create_secret";
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal & { kind: "owner" };
+  alias: string;
+  plaintext: string;
+  source?: SecretSourceInput;
+  requestedAt: string;
+}
+
+export interface OwnerUpdateSecretCommand {
+  kind: "owner.update_secret";
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal & { kind: "owner" };
@@ -72,6 +93,7 @@ export interface IssuerWriteSecretCommand {
 }
 
 export interface OwnerDeleteSecretCommand {
+  kind: "owner.remove_secret";
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal & { kind: "owner" };
@@ -80,7 +102,8 @@ export interface OwnerDeleteSecretCommand {
 }
 
 export type VaultWriteSecretCommand =
-  | OwnerWriteSecretCommand
+  | OwnerCreateSecretCommand
+  | OwnerUpdateSecretCommand
   | IssuerWriteSecretCommand;
 
 export interface OwnerRegisterAgentIdentityCommand {
@@ -192,7 +215,10 @@ export interface AgentProof {
 
 export interface AgentVisibleSecretRecord {
   vaultId: VaultId;
+  secretId: SecretId;
   alias: SecretAlias;
+  version: SecretVersion;
+  lifecycleStatus: SecretLifecycleStatus;
   issuerId: string | null;
   source: SecretSource;
   createdAt: string;

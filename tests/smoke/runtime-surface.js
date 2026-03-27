@@ -107,22 +107,32 @@ const client = createVaultClient({
   vault,
   passwordVerifier: async (password) => password === "runtime-surface-password",
 });
-assert.equal(typeof client.ownerStoreSecret, "function");
+assert.equal(typeof client.ownerCreateSecret, "function");
 await client.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
 const importedAgentId = (await client.ownerListAgents()).find((agent) => agent.identityId === agentIdentity.identityId)?.agentId;
 assert.equal(typeof importedAgentId, "string");
-const ownedRecord = await client.ownerWriteSecret({
+const ownedRecord = await client.ownerCreateSecret({
   alias: "api-token",
   plaintext: "super-secret",
 });
 assert.deepEqual(ownedRecord.source, { kind: "manual" });
+assert.equal(ownedRecord.lifecycleStatus, "ACTIVE");
+assert.equal(ownedRecord.version.value, "1");
+
+const updatedRecord = await client.ownerUpdateSecret({
+  alias: "api-token",
+  plaintext: "super-secret-v2",
+});
+assert.equal(updatedRecord.previousSecretId?.value, ownedRecord.secretId.value);
+assert.equal(updatedRecord.lifecycleStatus, "ACTIVE");
+assert.equal(updatedRecord.version.value, "2");
 
 const exportedSecret = await client.ownerExportSecret({ alias: "api-token", password: "runtime-surface-password" });
-assert.equal(exportedSecret.plaintext, "super-secret");
+assert.equal(exportedSecret.plaintext, "super-secret-v2");
 assert.equal(exportedSecret.alias.value, "api-token");
-assert.equal(await client.ownerReadSecretPlaintext({ alias: "api-token", password: "runtime-surface-password" }), "super-secret");
+assert.equal(await client.ownerReadSecretPlaintext({ alias: "api-token", password: "runtime-surface-password" }), "super-secret-v2");
 
 const dispatchCapability = {
   vaultId: authority.vaultId,
@@ -130,7 +140,7 @@ const dispatchCapability = {
   agentId: importedAgentId,
   operation: "dispatch_http",
   write: {
-    secretIds: [ownedRecord.secretId.value],
+    secretIds: [updatedRecord.secretId.value],
     scope: "https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment",
     methods: ["POST"],
   },
@@ -158,7 +168,7 @@ const result = await agent.agentDispatch({
 });
 
 assert.equal(result.status, "SUCCEEDED");
-assert.equal(seenAuthHeader, "Bearer super-secret");
+assert.equal(seenAuthHeader, "Bearer super-secret-v2");
 assert.equal(result.responseBody, undefined);
 const requestHistory = await agent.agentListRequests();
 const dispatchedRequest = requestHistory.find((entry) => entry.requestId === result.requestId);
@@ -182,7 +192,7 @@ const customCapability = {
   customFlowId: shapeOnlyFlow.flowId,
   operation: "custom_http",
   write: {
-    secretIds: [ownedRecord.secretId.value],
+    secretIds: [updatedRecord.secretId.value],
     scope: "https://api.example.com/custom-status",
     methods: ["POST"],
   },
@@ -390,7 +400,7 @@ try {
     requester: { kind: "trusted_executor", id: "llm-planner" },
     agentId: managedRecord.agentId,
     write: {
-      secretIds: [ownedRecord.secretId.value],
+      secretIds: [updatedRecord.secretId.value],
       scope: "https://api.example.com/users/*",
       methods: ["GET"],
     },
@@ -476,7 +486,7 @@ try {
 
   console.log("-> Verifying Secret Physical Deletion...");
   // Use ownerClient for deletion to verify high-level API loop
-  await auditClient.ownerDeleteSecret({ alias: "issuer-token", password: "password-1" });
+  await auditClient.ownerRemoveSecret({ alias: "issuer-token", password: "password-1" });
   
   // Verify cannot retrieve after deletion
   await assert.rejects(
@@ -538,7 +548,7 @@ try {
   const custodyDir = join(tempDir, "vaults/vault-runtime-persistent_v1");
   const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.filter((entry) => entry.startsWith("secret-")).length).catch(() => 0);
   await assert.rejects(
-    () => rollbackClient.ownerWriteSecret({
+    () => rollbackClient.ownerCreateSecret({
       alias: "should-rollback",
       plaintext: "rollback-secret",
     }),

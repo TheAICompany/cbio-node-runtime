@@ -21,7 +21,7 @@ const client = createVaultClient({
   skipWarmup: true,
 });
 
-await client.ownerWriteSecret({
+await client.ownerCreateSecret({
   alias: "demo-secret",
   plaintext: "shh",
 });
@@ -30,7 +30,7 @@ const beforeEntries = await readdir(join(tempDir, "vaults", `${created.core.vaul
 const secretFilesBefore = beforeEntries.filter((entry) => entry.startsWith("secret-"));
 assert.ok(secretFilesBefore.length >= 1, "expected physical secret material before retire");
 
-await client.ownerDeleteSecret({
+await client.ownerRemoveSecret({
   alias: "demo-secret",
   password: "pw-retire-secret",
 });

@@ -28,7 +28,7 @@ const importedAgent = await client.ownerImportAgent({
 });
 const vaultAgentId = importedAgent.agent.agentId;
 
-const guardedRecord = await client.ownerWriteSecret({
+const guardedRecord = await client.ownerCreateSecret({
   alias: "guarded-token",
   plaintext: "guarded-secret",
 });

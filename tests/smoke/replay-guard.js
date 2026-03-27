@@ -53,7 +53,7 @@ const importedAgent = await client.ownerImportAgent({
 });
 const vaultAgentId = importedAgent.agent.agentId;
 
-const replayRecord = await client.ownerWriteSecret({
+const replayRecord = await client.ownerCreateSecret({
   alias: "replay-token",
   plaintext: "replay-secret",
   requestedAt: new Date().toISOString(),
