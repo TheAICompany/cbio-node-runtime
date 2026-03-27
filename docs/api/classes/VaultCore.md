@@ -213,6 +213,38 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### ownerAllowAlways()
+
+> **ownerAllowAlways**(`command`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### command
+
+`OwnerAllowAlwaysCommand`
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
+### ownerAllowOnce()
+
+> **ownerAllowOnce**(`command`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### command
+
+`OwnerAllowOnceCommand`
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
 ### ownerApproveCapabilityRead()
 
 > **ownerApproveCapabilityRead**(`command`): `Promise`\<`CapabilityStateRecord`\>
@@ -261,35 +293,19 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerExecuteCapabilityStateAndGrant()
+### ownerDeny()
 
-> **ownerExecuteCapabilityStateAndGrant**(`command`): `Promise`\<`DispatchResult`\>
-
-#### Parameters
-
-##### command
-
-`OwnerExecuteCapabilityStateCommand`
-
-#### Returns
-
-`Promise`\<`DispatchResult`\>
-
-***
-
-### ownerExecuteCapabilityStateOnce()
-
-> **ownerExecuteCapabilityStateOnce**(`command`): `Promise`\<`DispatchResult`\>
+> **ownerDeny**(`command`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
 ##### command
 
-`OwnerExecuteCapabilityStateCommand`
+`OwnerDenyCommand`
 
 #### Returns
 
-`Promise`\<`DispatchResult`\>
+`Promise`\<`CapabilityStateRecord`\>
 
 ***
 
@@ -516,22 +532,6 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`void`\>
-
-***
-
-### ownerRejectCapabilityState()
-
-> **ownerRejectCapabilityState**(`command`): `Promise`\<`CapabilityStateRecord`\>
-
-#### Parameters
-
-##### command
-
-`OwnerRejectCapabilityStateCommand`
-
-#### Returns
-
-`Promise`\<`CapabilityStateRecord`\>
 
 ***
 

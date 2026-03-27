@@ -119,9 +119,9 @@ export interface VaultClient {
   ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityWrite(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityRead(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
-  ownerExecuteCapabilityStateOnce(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
-  ownerExecuteCapabilityStateAndGrant(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
-  ownerRejectCapabilityState(requestId: string): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
+  ownerAllowOnce(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
+  ownerAllowAlways(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
+  ownerDeny(requestId: string): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerOnCapabilityState(callback: (record: import("../../vault-core/index.js").CapabilityStateRecord) => void): () => void;
 }
 
@@ -728,24 +728,24 @@ class DefaultVaultClient implements VaultClient {
     });
   }
 
-  async ownerExecuteCapabilityStateOnce(input: VaultApproveCapabilityRequestInput) {
-    return this._vault.ownerExecuteCapabilityStateOnce({
+  async ownerAllowOnce(input: VaultApproveCapabilityRequestInput) {
+    return this._vault.ownerAllowOnce({
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
       owner: { kind: "owner", id: this._identityId },
     });
   }
 
-  async ownerExecuteCapabilityStateAndGrant(input: VaultApproveCapabilityRequestInput) {
-    return this._vault.ownerExecuteCapabilityStateAndGrant({
+  async ownerAllowAlways(input: VaultApproveCapabilityRequestInput) {
+    return this._vault.ownerAllowAlways({
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
       owner: { kind: "owner", id: this._identityId },
     });
   }
 
-  async ownerRejectCapabilityState(requestId: string) {
-    return this._vault.ownerRejectCapabilityState({
+  async ownerDeny(requestId: string) {
+    return this._vault.ownerDeny({
       vaultId: this._vault.vaultId,
       requestId,
       owner: { kind: "owner", id: this._identityId },

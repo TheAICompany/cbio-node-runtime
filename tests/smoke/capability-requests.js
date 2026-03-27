@@ -62,7 +62,7 @@ const writeApproved = await ownerClient.ownerApproveCapabilityWrite({
 assert.equal(writeApproved.actions.write.status, "APPROVED");
 assert.equal(writeApproved.actions.read.status, "PENDING");
 
-const approved = await ownerClient.ownerExecuteCapabilityStateAndGrant({
+const approved = await ownerClient.ownerAllowAlways({
   requestId: pending[0].requestId,
 });
 assert.equal(approved.status, "SUCCEEDED");
@@ -93,7 +93,7 @@ await ownerClient.ownerSubmitCapabilityRequest({
 });
 const pendingAfterSecondSubmit = await ownerClient.ownerListCapabilityStates({ writeStatus: "PENDING" });
 assert.equal(pendingAfterSecondSubmit.length, 1);
-await ownerClient.ownerRejectCapabilityState(pendingAfterSecondSubmit[0].requestId);
+await ownerClient.ownerDeny(pendingAfterSecondSubmit[0].requestId);
 assert.equal((await ownerClient.ownerListCapabilityStates({ writeStatus: "PENDING" })).length, 0);
 
 unsubscribe();

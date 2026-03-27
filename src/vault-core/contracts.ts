@@ -402,7 +402,7 @@ export interface OwnerListCapabilityStatesRequest {
   readStatus?: CapabilityApprovalStatus;
 }
 
-export interface OwnerExecuteCapabilityStateCommand {
+export interface OwnerAllowOnceCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;
@@ -420,7 +420,13 @@ export interface OwnerApproveCapabilityReadCommand {
   owner: VaultPrincipal;
 }
 
-export interface OwnerRejectCapabilityStateCommand {
+export interface OwnerAllowAlwaysCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
+}
+
+export interface OwnerDenyCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;

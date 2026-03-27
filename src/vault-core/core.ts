@@ -22,9 +22,10 @@ import type {
   DispatchAuthorization,
   DispatchRequest,
   DispatchResult,
-  OwnerExecuteCapabilityStateCommand,
+  OwnerAllowAlwaysCommand,
+  OwnerAllowOnceCommand,
   OwnerIssueSessionTokenRequest,
-  OwnerRejectCapabilityStateCommand,
+  OwnerDenyCommand,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
@@ -245,7 +246,7 @@ export class VaultCore {
   }
 
   private async _executePendingCapabilityState(
-    command: OwnerExecuteCapabilityStateCommand,
+    command: OwnerAllowOnceCommand | OwnerAllowAlwaysCommand,
     mode: "once" | "grant",
   ): Promise<DispatchResult> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
@@ -1483,15 +1484,15 @@ export class VaultCore {
     return next;
   }
 
-  async ownerExecuteCapabilityStateOnce(command: OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
+  async ownerAllowOnce(command: OwnerAllowOnceCommand): Promise<DispatchResult> {
     return this._executePendingCapabilityState(command, "once");
   }
 
-  async ownerExecuteCapabilityStateAndGrant(command: OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
+  async ownerAllowAlways(command: OwnerAllowAlwaysCommand): Promise<DispatchResult> {
     return this._executePendingCapabilityState(command, "grant");
   }
 
-  async ownerRejectCapabilityState(command: OwnerRejectCapabilityStateCommand): Promise<CapabilityStateRecord> {
+  async ownerDeny(command: OwnerDenyCommand): Promise<CapabilityStateRecord> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }

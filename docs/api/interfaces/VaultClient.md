@@ -9,6 +9,38 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 
 ## Methods
 
+### ownerAllowAlways()
+
+> **ownerAllowAlways**(`input`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
+### ownerAllowOnce()
+
+> **ownerAllowOnce**(`input`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
 ### ownerApproveCapabilityRead()
 
 > **ownerApproveCapabilityRead**(`input`): `Promise`\<`CapabilityStateRecord`\>
@@ -78,35 +110,19 @@ Permanently deletes a secret from the vault.
 
 ***
 
-### ownerExecuteCapabilityStateAndGrant()
+### ownerDeny()
 
-> **ownerExecuteCapabilityStateAndGrant**(`input`): `Promise`\<`DispatchResult`\>
-
-#### Parameters
-
-##### input
-
-[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
-
-#### Returns
-
-`Promise`\<`DispatchResult`\>
-
-***
-
-### ownerExecuteCapabilityStateOnce()
-
-> **ownerExecuteCapabilityStateOnce**(`input`): `Promise`\<`DispatchResult`\>
+> **ownerDeny**(`requestId`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
-##### input
+##### requestId
 
-[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+`string`
 
 #### Returns
 
-`Promise`\<`DispatchResult`\>
+`Promise`\<`CapabilityStateRecord`\>
 
 ***
 
@@ -337,22 +353,6 @@ Registers a reusable HTTP request template for complex secret exchange patterns.
 #### Returns
 
 `Promise`\<`CustomHttpFlowDefinition`\>
-
-***
-
-### ownerRejectCapabilityState()
-
-> **ownerRejectCapabilityState**(`requestId`): `Promise`\<`CapabilityStateRecord`\>
-
-#### Parameters
-
-##### requestId
-
-`string`
-
-#### Returns
-
-`Promise`\<`CapabilityStateRecord`\>
 
 ***
 

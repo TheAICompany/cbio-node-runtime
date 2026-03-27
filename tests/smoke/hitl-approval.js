@@ -90,7 +90,7 @@ async function testHitlApproval() {
   });
   assert.strictEqual(writeApproved.actions.write.status, 'APPROVED');
   assert.strictEqual(writeApproved.actions.read.status, 'PENDING');
-  const approveResult = await ownerClient.ownerExecuteCapabilityStateAndGrant({
+  const approveResult = await ownerClient.ownerAllowAlways({
     requestId: pending[0].requestId,
   });
   console.log('Approval result status:', approveResult.status);

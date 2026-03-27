@@ -166,7 +166,7 @@ if (pending.length > 0) {
   await client.ownerApproveCapabilityWrite({
     requestId: pending[0].requestId
   });
-  await client.ownerExecuteCapabilityStateAndGrant({
+  await client.ownerAllowAlways({
     requestId: pending[0].requestId
   });
   await client.ownerApproveCapabilityRead({

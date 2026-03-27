@@ -214,8 +214,8 @@ export interface VaultClient {
   ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityWrite(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityRead(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
-  ownerExecuteCapabilityStateOnce(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
-  ownerExecuteCapabilityStateAndGrant(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
-  ownerRejectCapabilityState(requestId: string): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
+  ownerAllowOnce(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
+  ownerAllowAlways(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
+  ownerDeny(requestId: string): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerOnCapabilityState(callback: (record: import("../../vault-core/index.js").CapabilityStateRecord) => void): () => void;
 }

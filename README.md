@@ -182,7 +182,7 @@ await client.ownerApproveCapabilityWrite({
   requestId: pendingRequests[0].requestId
 });
 
-await client.ownerExecuteCapabilityStateAndGrant({
+await client.ownerAllowAlways({
   requestId: pendingRequests[0].requestId
 });
 
@@ -195,10 +195,10 @@ This uses the same carrier model as dispatch discovery:
 - `ownerSubmitCapabilityRequest(...)` creates a capability carrier for owner review.
 - `ownerOnCapabilityState(...)` pushes new carrier changes to the owner UI or controller.
 - `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
-- `ownerExecuteCapabilityStateAndGrant(...)` executes the approved write action and persists the carrier as an active capability.
-- `ownerExecuteCapabilityStateOnce(...)` executes the approved write action once and then deletes the carrier record. This option is only valid for dispatch discovery carriers that already contain a concrete blocked request.
+- `ownerAllowAlways(...)` persists the carrier as an active capability. For dispatch discovery it also executes the blocked request; for explicit requests it grants the capability without sending network traffic.
+- `ownerAllowOnce(...)` executes the approved write action once and then deletes the carrier record. This option is only valid for dispatch discovery carriers that already contain a concrete blocked request.
 - `ownerApproveCapabilityRead(...)` approves response release separately on the same carrier record.
-- `ownerRejectCapabilityState(...)` rejects the currently pending action on the carrier.
+- `ownerDeny(...)` rejects the currently pending action on the carrier.
 
 ### 8. Zero-Configuration Agent Discovery (v1.56.0+)
 
@@ -256,7 +256,7 @@ if (pending.length > 0) {
   await client.ownerApproveCapabilityWrite({
     requestId: pending[0].requestId
   });
-  await client.ownerExecuteCapabilityStateAndGrant({
+  await client.ownerAllowAlways({
     requestId: pending[0].requestId
   });
   await client.ownerApproveCapabilityRead({

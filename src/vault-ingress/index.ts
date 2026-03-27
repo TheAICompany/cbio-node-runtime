@@ -257,19 +257,19 @@ export type VaultOwnerControlRequest =
       ownerId?: string;
     }
   | {
-      action: "execute_capability_state_once";
+      action: "allow_once";
       vaultId: string;
       requestId: string;
       ownerId?: string;
     }
   | {
-      action: "execute_capability_state_and_grant";
+      action: "allow_always";
       vaultId: string;
       requestId: string;
       ownerId?: string;
     }
   | {
-      action: "reject_capability_state";
+      action: "deny";
       vaultId: string;
       requestId: string;
       ownerId?: string;
@@ -332,9 +332,9 @@ export interface VaultService {
   ownerSubmitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityWrite(request: import("../vault-core/index.js").OwnerApproveCapabilityWriteCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityRead(request: import("../vault-core/index.js").OwnerApproveCapabilityReadCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
-  ownerExecuteCapabilityStateOnce(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult>;
-  ownerExecuteCapabilityStateAndGrant(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult>;
-  ownerRejectCapabilityState(request: import("../vault-core/index.js").OwnerRejectCapabilityStateCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
+  ownerAllowOnce(request: import("../vault-core/index.js").OwnerAllowOnceCommand): Promise<DispatchResult>;
+  ownerAllowAlways(request: import("../vault-core/index.js").OwnerAllowAlwaysCommand): Promise<DispatchResult>;
+  ownerDeny(request: import("../vault-core/index.js").OwnerDenyCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
   ownerOnCapabilityState(callback: (record: import("../vault-core/index.js").CapabilityStateRecord) => void): () => void;
   agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../vault-core/index.js").AgentCapabilityState[]>;
   agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
@@ -747,16 +747,16 @@ class LocalVaultService implements VaultService {
     return this._authority.ownerListCapabilityStates(request);
   }
 
-  ownerExecuteCapabilityStateOnce(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
-    return this._authority.ownerExecuteCapabilityStateOnce(request);
+  ownerAllowOnce(request: import("../vault-core/index.js").OwnerAllowOnceCommand): Promise<DispatchResult> {
+    return this._authority.ownerAllowOnce(request);
   }
 
-  ownerExecuteCapabilityStateAndGrant(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
-    return this._authority.ownerExecuteCapabilityStateAndGrant(request);
+  ownerAllowAlways(request: import("../vault-core/index.js").OwnerAllowAlwaysCommand): Promise<DispatchResult> {
+    return this._authority.ownerAllowAlways(request);
   }
 
-  ownerRejectCapabilityState(request: import("../vault-core/index.js").OwnerRejectCapabilityStateCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
-    return this._authority.ownerRejectCapabilityState(request);
+  ownerDeny(request: import("../vault-core/index.js").OwnerDenyCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
+    return this._authority.ownerDeny(request);
   }
 
   agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../vault-core/index.js").AgentCapabilityState[]> {
@@ -853,12 +853,12 @@ class LocalVaultService implements VaultService {
           return { ok: true, result: await this.ownerApproveCapabilityWrite({ vaultId, requestId: request.requestId, owner }) };
         case "approve_capability_read":
           return { ok: true, result: await this.ownerApproveCapabilityRead({ vaultId, requestId: request.requestId, owner }) };
-        case "execute_capability_state_once":
-          return { ok: true, result: await this.ownerExecuteCapabilityStateOnce({ vaultId, requestId: request.requestId, owner }) };
-        case "execute_capability_state_and_grant":
-          return { ok: true, result: await this.ownerExecuteCapabilityStateAndGrant({ vaultId, requestId: request.requestId, owner }) };
-        case "reject_capability_state":
-          return { ok: true, result: await this.ownerRejectCapabilityState({ vaultId, requestId: request.requestId, owner }) };
+        case "allow_once":
+          return { ok: true, result: await this.ownerAllowOnce({ vaultId, requestId: request.requestId, owner }) };
+        case "allow_always":
+          return { ok: true, result: await this.ownerAllowAlways({ vaultId, requestId: request.requestId, owner }) };
+        case "deny":
+          return { ok: true, result: await this.ownerDeny({ vaultId, requestId: request.requestId, owner }) };
         case "list_agents":
           return { ok: true, result: await this.ownerListAgents({ vaultId, actor: owner, requestId: `owner:list_agents:${Date.now()}`, requestedAt: this._clock?.nowIso?.() ?? new Date().toISOString() }) };
         case "list_capabilities":

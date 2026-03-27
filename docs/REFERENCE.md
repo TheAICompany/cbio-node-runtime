@@ -82,9 +82,9 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerListCapabilityStates(...)`
 - `ownerApproveCapabilityWrite(...)`
 - `ownerApproveCapabilityRead(...)`
-- `ownerExecuteCapabilityStateOnce(...)`
-- `ownerExecuteCapabilityStateAndGrant(...)`
-- `ownerRejectCapabilityState(...)`
+- `ownerAllowOnce(...)`
+- `ownerAllowAlways(...)`
+- `ownerDeny(...)`
 - `ownerOnCapabilityState(...)`
 - `ownerIssueSessionToken(...)`
 - `ownerIssueAllSessionTokens()`
@@ -102,9 +102,9 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerListCapabilityStates(...)`: Read capability carriers, optionally filtered by `agentId`, `writeStatus`, or `readStatus`.
 - `ownerApproveCapabilityWrite({ requestId })`: Approve the outbound write action on a pending capability carrier.
 - `ownerApproveCapabilityRead({ requestId })`: Approve the inbound read action separately on the same carrier after write approval.
-- `ownerExecuteCapabilityStateOnce({ requestId })`: Execute a write-approved pending request once, then delete the carrier. This is only valid for dispatch-discovery carriers with a concrete blocked request.
-- `ownerExecuteCapabilityStateAndGrant({ requestId })`: Execute a write-approved pending request and persist the carrier as an active capability. Capability IDs are generated internally.
-- `ownerRejectCapabilityState(requestId)`: Reject the currently pending action on the carrier.
+- `ownerAllowOnce({ requestId })`: Execute a write-approved pending request once, then delete the carrier. This is only valid for dispatch-discovery carriers with a concrete blocked request.
+- `ownerAllowAlways({ requestId })`: Persist the carrier as an active capability. For dispatch discovery this also executes the blocked request; for explicit requests it grants the capability without sending network traffic. Capability IDs are generated internally.
+- `ownerDeny(requestId)`: Reject the currently pending action on the carrier.
 - `ownerOnCapabilityState(callback)`: Register a real-time observer for capability-carrier changes.
 - `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
 - `ownerIssueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
@@ -185,10 +185,10 @@ The carrier remains actionable until the owner approves or rejects its pending a
 - `ownerSubmitCapabilityRequest(...)` creates the carrier.
 - `ownerListCapabilityStates({ writeStatus: "PENDING" })` reads the current queue.
 - `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
-- `ownerExecuteCapabilityStateOnce(...)` executes a write-approved discovery request once and removes the pending carrier.
-- `ownerExecuteCapabilityStateAndGrant(...)` executes a write-approved request and persists a real capability carrier.
+- `ownerAllowOnce(...)` executes a write-approved discovery request once and removes the pending carrier.
+- `ownerAllowAlways(...)` persists a real capability carrier and also executes the blocked request when the carrier came from dispatch discovery.
 - `ownerApproveCapabilityRead(...)` can be applied later on the same carrier to release response visibility.
-- `ownerRejectCapabilityState(...)` marks the state rejected.
+- `ownerDeny(...)` marks the currently pending action rejected.
 - `ownerOnCapabilityState(...)` supports push-style owner interfaces.
 
 The proactive request flow does not replace dispatch discovery. Both flows now produce the same carrier shape with independent write/read action states.

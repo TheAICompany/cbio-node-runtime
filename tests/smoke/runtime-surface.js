@@ -409,7 +409,7 @@ try {
   });
   assert.equal(writeApprovedCapability.actions.write.status, "APPROVED");
   assert.equal(writeApprovedCapability.actions.read.status, "PENDING");
-  const approvedCapability = await auditClient.ownerExecuteCapabilityStateAndGrant({
+  const approvedCapability = await auditClient.ownerAllowAlways({
     requestId: pendingCapabilityRequests[0].requestId,
   });
   unsubscribeCapability();
