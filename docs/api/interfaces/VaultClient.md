@@ -57,22 +57,6 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 
 ***
 
-### ownerApproveCapabilityWrite()
-
-> **ownerApproveCapabilityWrite**(`input`): `Promise`\<`CapabilityStateRecord`\>
-
-#### Parameters
-
-##### input
-
-[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
-
-#### Returns
-
-`Promise`\<`CapabilityStateRecord`\>
-
-***
-
 ### ownerCreateAgent()
 
 > **ownerCreateAgent**(`input`): `Promise`\<[`OwnerAgentProvisionResult`](OwnerAgentProvisionResult.md)\>

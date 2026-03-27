@@ -180,11 +180,7 @@ const request = await client.ownerSubmitCapabilityRequest({
   reason: 'Need collection-level user read access'
 });
 
-const pendingRequests = await client.ownerListCapabilityStates({ writeStatus: 'PENDING' });
-
-await client.ownerApproveCapabilityWrite({
-  requestId: pendingRequests[0].requestId
-});
+const pendingRequests = await client.ownerListCapabilityStates({ writeGranted: false });
 
 await client.ownerAllowAlways({
   requestId: pendingRequests[0].requestId
@@ -199,7 +195,6 @@ await client.ownerApproveCapabilityRead({
 This uses the same carrier model as dispatch discovery:
 - `ownerSubmitCapabilityRequest(...)` creates a capability carrier for owner review.
 - `ownerOnCapabilityState(...)` pushes new carrier changes to the owner UI or controller.
-- `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
 - `ownerAllowAlways(...)` persists the carrier as an active capability. For dispatch discovery it also executes the blocked request; for explicit requests it grants the capability without sending network traffic.
 - `ownerAllowOnce(...)` executes the approved write action once and then deletes the carrier record. This option is only valid for dispatch discovery carriers that already contain a concrete blocked request.
 - `ownerApproveCapabilityRead(...)` approves response release separately on the same carrier record and may replace the pending `read` policy with a narrower `paths` whitelist.
@@ -251,17 +246,14 @@ if (result.status === 'PENDING') {
 
 // OR: Use the observer for real-time push
 client.ownerOnCapabilityState((state) => {
-  if (state.actions.write.status === 'PENDING') {
+  if (state.writeGrant === null) {
     console.log("New pending capability carrier:", state.requestId);
   }
 });
 
 // In Owner process (GUI or Script)
-const pending = await client.ownerListCapabilityStates({ writeStatus: 'PENDING' });
+const pending = await client.ownerListCapabilityStates({ writeGranted: false });
 if (pending.length > 0) {
-  await client.ownerApproveCapabilityWrite({
-    requestId: pending[0].requestId
-  });
   await client.ownerAllowAlways({
     requestId: pending[0].requestId
   });

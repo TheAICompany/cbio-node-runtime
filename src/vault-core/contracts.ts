@@ -254,14 +254,7 @@ export interface AgentSelfContext {
 }
 
 export type AgentCapabilityStateSource = "owner_grant" | "explicit_request" | "dispatch_discovery";
-export type CapabilityApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
-export type CapabilityActionKind = "write" | "read";
-
-export interface CapabilityActionState {
-  action: CapabilityActionKind;
-  status: CapabilityApprovalStatus;
-  decidedAt?: string;
-}
+export type CapabilityWriteGrant = "none" | "once" | "always";
 
 export interface AgentCapabilityState {
   source: AgentCapabilityStateSource;
@@ -280,13 +273,13 @@ export interface AgentCapabilityState {
     windowMs: number;
   };
   skipAudit?: boolean;
+  writeGrant: CapabilityWriteGrant | null;
+  writeGrantedAt?: string;
+  readGrant: readonly string[] | null;
+  readGrantedAt?: string;
   reason?: string;
   secretId?: string;
   targetUrl?: string;
-  actions: {
-    write: CapabilityActionState;
-    read: CapabilityActionState;
-  };
 }
 
 export interface CapabilityStateRecord extends AgentCapabilityState {
@@ -344,7 +337,7 @@ export interface AgentVisibleRequestRecord {
   executionStatus: DispatchStatus;
   responseStatus?: number;
   error?: string;
-  readStatus: CapabilityApprovalStatus;
+  readGrant: readonly string[] | null;
   hasResponseBody: boolean;
   resultVisible: boolean;
 }
@@ -361,8 +354,8 @@ export interface OwnerVisibleRequestRecord {
   executionStatus: DispatchStatus;
   responseStatus?: number;
   error?: string;
-  writeStatus: CapabilityApprovalStatus;
-  readStatus: CapabilityApprovalStatus;
+  writeGrant: CapabilityWriteGrant | null;
+  readGrant: readonly string[] | null;
   hasResponseBody: boolean;
 }
 
@@ -386,10 +379,10 @@ export interface OwnerRequestRecord {
     body?: string;
     error?: string;
   };
-  actions: {
-    write: CapabilityActionState;
-    read: CapabilityActionState;
-  };
+  writeGrant: CapabilityWriteGrant | null;
+  writeGrantedAt?: string;
+  readGrant: readonly string[] | null;
+  readGrantedAt?: string;
   executionStatus: DispatchStatus;
 }
 
@@ -485,20 +478,8 @@ export interface OwnerListCapabilityStatesRequest {
   vaultId: VaultId;
   owner: VaultPrincipal;
   agentId?: string;
-  writeStatus?: CapabilityApprovalStatus;
-  readStatus?: CapabilityApprovalStatus;
-}
-
-export interface OwnerAllowOnceCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
-}
-
-export interface OwnerApproveCapabilityWriteCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
+  writeGranted?: boolean;
+  readGranted?: boolean;
 }
 
 export interface OwnerApproveCapabilityReadCommand {
@@ -506,6 +487,12 @@ export interface OwnerApproveCapabilityReadCommand {
   requestId: string;
   owner: VaultPrincipal;
   read?: CapabilityReadPolicy;
+}
+
+export interface OwnerAllowOnceCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
 }
 
 export interface OwnerAllowAlwaysCommand {

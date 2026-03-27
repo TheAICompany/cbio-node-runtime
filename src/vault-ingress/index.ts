@@ -195,14 +195,8 @@ export type VaultOwnerControlRequest =
       vaultId: string;
       ownerId?: string;
       agentId?: string;
-      writeStatus?: "PENDING" | "APPROVED" | "REJECTED";
-      readStatus?: "PENDING" | "APPROVED" | "REJECTED";
-    }
-  | {
-      action: "approve_capability_write";
-      vaultId: string;
-      requestId: string;
-      ownerId?: string;
+      writeGranted?: boolean;
+      readGranted?: boolean;
     }
   | {
       action: "approve_capability_read";
@@ -302,7 +296,6 @@ export interface VaultService {
   ownerIssueAllAgentSessionTokens(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" } }): Promise<import("../vault-core/index.js").OwnerSessionToken[]>;
   ownerRevokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void>;
   ownerSubmitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
-  ownerApproveCapabilityWrite(request: import("../vault-core/index.js").OwnerApproveCapabilityWriteCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityRead(request: import("../vault-core/index.js").OwnerApproveCapabilityReadCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
   ownerAllowOnce(request: import("../vault-core/index.js").OwnerAllowOnceCommand): Promise<DispatchResult>;
   ownerAllowAlways(request: import("../vault-core/index.js").OwnerAllowAlwaysCommand): Promise<DispatchResult>;
@@ -736,10 +729,6 @@ class LocalVaultService implements VaultService {
     return this._authority.ownerSubmitCapabilityRequest(request);
   }
 
-  ownerApproveCapabilityWrite(request: import("../vault-core/index.js").OwnerApproveCapabilityWriteCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
-    return this._authority.ownerApproveCapabilityWrite(request);
-  }
-
   ownerApproveCapabilityRead(request: import("../vault-core/index.js").OwnerApproveCapabilityReadCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
     return this._authority.ownerApproveCapabilityRead(request);
   }
@@ -848,9 +837,7 @@ class LocalVaultService implements VaultService {
     try {
       switch (request.action) {
         case "list_capability_states":
-          return { ok: true, result: await this.ownerListCapabilityStates({ vaultId, owner, agentId: request.agentId, writeStatus: request.writeStatus, readStatus: request.readStatus }) };
-        case "approve_capability_write":
-          return { ok: true, result: await this.ownerApproveCapabilityWrite({ vaultId, requestId: request.requestId, owner }) };
+          return { ok: true, result: await this.ownerListCapabilityStates({ vaultId, owner, agentId: request.agentId, writeGranted: request.writeGranted, readGranted: request.readGranted }) };
         case "approve_capability_read":
           return {
             ok: true,

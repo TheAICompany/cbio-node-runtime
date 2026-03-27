@@ -208,9 +208,7 @@ export class VaultCore {
         scope: state.write.scope,
         methods: [...state.write.methods],
       },
-      read: state.actions.read.status === "APPROVED"
-        ? { paths: [...state.read.paths] }
-        : { paths: [] },
+      read: { paths: [...(state.readGrant ?? [])] },
       issuedAt: state.issuedAt ?? state.requestedAt,
       expiresAt: state.expiresAt,
       rateLimit: state.rateLimit,
@@ -239,13 +237,13 @@ export class VaultCore {
       expiresAt: state.expiresAt,
       rateLimit: state.rateLimit,
       skipAudit: state.skipAudit,
+      writeGrant: state.writeGrant,
+      writeGrantedAt: state.writeGrantedAt,
+      readGrant: state.readGrant ? [...state.readGrant] : null,
+      readGrantedAt: state.readGrantedAt,
       reason: state.reason,
       secretId: state.secretId,
       targetUrl: state.targetUrl,
-      actions: {
-        write: { ...state.actions.write },
-        read: { ...state.actions.read },
-      },
     }));
   }
 
@@ -279,8 +277,8 @@ export class VaultCore {
     if (!pending) {
       throw new VaultCoreError("capability action record not found", "VAULT_REQUEST_NOT_FOUND");
     }
-    if (pending.actions.write.status !== "APPROVED") {
-      throw new VaultCoreError("write approval required before execution", "VAULT_WRITE_DENIED");
+    if (pending.writeGrant !== "once" && pending.writeGrant !== "always") {
+      throw new VaultCoreError("write grant required before execution", "VAULT_WRITE_DENIED");
     }
     if (mode === "once" && pending.source !== "dispatch_discovery") {
       throw new VaultCoreError("one-time execution is only available for dispatch discovery requests", "VAULT_WRITE_DENIED");
@@ -297,9 +295,7 @@ export class VaultCore {
         scope: pending.targetUrl ?? pending.write.scope,
         methods: [...pending.write.methods],
       },
-      read: {
-        paths: [...pending.read.paths],
-      },
+      read: { paths: [...(pending.readGrant ?? [])] },
       issuedAt,
       expiresAt: pending.expiresAt,
       rateLimit: pending.rateLimit,
@@ -341,6 +337,8 @@ export class VaultCore {
         source: "owner_grant",
         issuedAt,
         decidedAt: issuedAt,
+        writeGrant: "always",
+        writeGrantedAt: pending.writeGrantedAt ?? issuedAt,
       });
     } else {
       await this._deps.capabilityStates.deleteByRequestId(command.vaultId, command.requestId);
@@ -424,7 +422,7 @@ export class VaultCore {
 
   private async _listVisibleSecretsForAgent(agentId: string): Promise<readonly AgentVisibleSecretRecord[]> {
     const capabilities = (await this._deps.capabilityStates.list(this._deps.vaultId, agentId))
-      .filter((state) => !!state.capabilityId && !!state.issuedAt && state.actions.write.status === "APPROVED")
+      .filter((state) => !!state.capabilityId && !!state.issuedAt && state.writeGrant === "always")
       .map((state) => this._stateToGrantedCapability(state));
     const capabilityMap = new Map<string, {
       capabilityId: string;
@@ -495,7 +493,7 @@ export class VaultCore {
   }
 
   private toVisibleRequestRecord(record: RequestRecord, state: CapabilityStateRecord | null): AgentVisibleRequestRecord {
-    const readStatus = state?.actions.read.status ?? "PENDING";
+    const readGrant = state?.readGrant ?? null;
     return {
       requestId: record.requestId,
       createdAt: record.createdAt,
@@ -507,9 +505,9 @@ export class VaultCore {
       executionStatus: record.execution.status,
       responseStatus: record.response?.status,
       error: record.response?.error,
-      readStatus,
+      readGrant,
       hasResponseBody: typeof record.response?.body === "string" && record.response.body.length > 0,
-      resultVisible: readStatus === "APPROVED",
+      resultVisible: typeof record.response?.body === "string" && record.response.body.length > 0,
     };
   }
 
@@ -526,8 +524,8 @@ export class VaultCore {
       executionStatus: record.execution.status,
       responseStatus: record.response?.status,
       error: record.response?.error,
-      writeStatus: state?.actions.write.status ?? "PENDING",
-      readStatus: state?.actions.read.status ?? "PENDING",
+      writeGrant: state?.writeGrant ?? null,
+      readGrant: state?.readGrant ?? null,
       hasResponseBody: typeof record.response?.body === "string" && record.response.body.length > 0,
     };
   }
@@ -555,10 +553,10 @@ export class VaultCore {
             error: record.response.error,
           }
         : undefined,
-      actions: {
-        write: state?.actions.write ?? { action: "write", status: "PENDING" },
-        read: state?.actions.read ?? { action: "read", status: "PENDING" },
-      },
+      writeGrant: state?.writeGrant ?? null,
+      writeGrantedAt: state?.writeGrantedAt,
+      readGrant: state?.readGrant ?? null,
+      readGrantedAt: state?.readGrantedAt,
       executionStatus: record.execution.status,
     };
   }
@@ -672,10 +670,10 @@ export class VaultCore {
         source: "owner_grant",
         requestId: undefined,
         requestedAt: command.capability.issuedAt,
-        actions: {
-          write: { action: "write", status: "APPROVED", decidedAt: command.capability.issuedAt },
-          read: { action: "read", status: "APPROVED", decidedAt: command.capability.issuedAt },
-        },
+        writeGrant: "always",
+        writeGrantedAt: command.capability.issuedAt,
+        readGrant: [...command.capability.read.paths],
+        readGrantedAt: command.capability.issuedAt,
       });
       await this._appendAudit(
         toAuditEntry(
@@ -741,10 +739,8 @@ export class VaultCore {
       expiresAt: command.capability.expiresAt,
       reason: command.reason,
       requestedAt: command.requestedAt,
-      actions: {
-        write: { action: "write", status: "PENDING" },
-        read: { action: "read", status: "PENDING" },
-      },
+      writeGrant: null,
+      readGrant: null,
     };
     await this._deps.capabilityStates.upsert(pendingRecord);
 
@@ -779,7 +775,7 @@ export class VaultCore {
       throw new VaultCoreError("capability lookup vault mismatch", "VAULT_IDENTITY_DENIED");
     }
     const state = await this._deps.capabilityStates.getByCapabilityId(vaultId, agentId, capabilityId);
-    return state && state.capabilityId && state.issuedAt && state.actions.write.status === "APPROVED"
+    return state && state.capabilityId && state.issuedAt && state.writeGrant === "always"
       ? this._stateToGrantedCapability(state)
       : null;
   }
@@ -1099,7 +1095,7 @@ export class VaultCore {
     }
 
     const capabilities = (await this._deps.capabilityStates.list(this._deps.vaultId, request.agent.id))
-      .filter((state) => !!state.capabilityId && !!state.issuedAt && state.actions.write.status === "APPROVED")
+      .filter((state) => !!state.capabilityId && !!state.issuedAt && state.writeGrant === "always")
       .map((state) => this._stateToGrantedCapability(state));
     const requestedCapabilityId = request.capability?.capabilityId;
     const candidateCapabilities = requestedCapabilityId
@@ -1131,10 +1127,8 @@ export class VaultCore {
         headers: request.headers,
         body: request.body,
         proof: request.proof,
-        actions: {
-          write: { action: "write", status: "PENDING" },
-          read: { action: "read", status: "PENDING" },
-        },
+        writeGrant: null,
+        readGrant: null,
       };
       await this._deps.capabilityStates.upsert(pendingRecord);
 
@@ -1354,7 +1348,7 @@ export class VaultCore {
     request?: Omit<OwnerListCapabilitiesRequest, "actor" | "agentId" | "vaultId">,
   ): Promise<readonly AgentCapability[]> {
     const capabilities = (await this._deps.capabilityStates.list(this._deps.vaultId, agentId))
-      .filter((state) => !!state.capabilityId && !!state.issuedAt && state.actions.write.status === "APPROVED")
+      .filter((state) => !!state.capabilityId && !!state.issuedAt && state.writeGrant === "always")
       .map((state) => this._stateToGrantedCapability(state));
     await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_CAPABILITIES, AuditOutcome.ALLOWED, "capabilities listed", {
@@ -1457,10 +1451,7 @@ export class VaultCore {
       throw new VaultCoreError("request record not found", "VAULT_READ_DENIED");
     }
     const state = await this._resolveRequestState(record);
-    const readApproved = state?.actions.read.status === "APPROVED";
-    const responseBody = readApproved
-      ? applyResponseReadPolicy(record.response?.body, state?.read ?? { paths: [] })
-      : undefined;
+    const responseBody = applyResponseReadPolicy(record.response?.body, { paths: [...(state?.readGrant ?? [])] });
     return {
       requestId: record.requestId,
       executionStatus: record.execution.status,
@@ -1532,10 +1523,10 @@ export class VaultCore {
     await this._deps.capabilityStates.upsert({
       ...existing,
       decidedAt,
-      actions: {
-        write: { action: "write", status: "REJECTED", decidedAt },
-        read: { action: "read", status: "REJECTED", decidedAt },
-      },
+      writeGrant: "none",
+      writeGrantedAt: decidedAt,
+      readGrant: [],
+      readGrantedAt: decidedAt,
     });
     await this._appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.REVOKE_CAPABILITY, AuditOutcome.SUCCEEDED, "capability revoked", {
@@ -1611,50 +1602,8 @@ export class VaultCore {
       throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
     }
     return (await this._deps.capabilityStates.list(command.vaultId, command.agentId))
-      .filter((state) => !command.writeStatus || state.actions.write.status === command.writeStatus)
-      .filter((state) => !command.readStatus || state.actions.read.status === command.readStatus);
-  }
-
-  async ownerApproveCapabilityWrite(command: import("./contracts.js").OwnerApproveCapabilityWriteCommand): Promise<CapabilityStateRecord> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
-    }
-    const pending = await this._deps.capabilityStates.getByRequestId(command.vaultId, command.requestId);
-    if (!pending) {
-      throw new VaultCoreError("capability action record not found", "VAULT_REQUEST_NOT_FOUND");
-    }
-    if (pending.actions.write.status !== "PENDING") {
-      throw new VaultCoreError("write approval not pending", "VAULT_WRITE_DENIED");
-    }
-    const decidedAt = this._deps.clock.nowIso();
-    const next: CapabilityStateRecord = {
-      ...pending,
-      decidedAt,
-      actions: {
-        ...pending.actions,
-        write: {
-          action: "write",
-          status: "APPROVED",
-          decidedAt,
-        },
-      },
-    };
-    await this._deps.capabilityStates.upsert(next);
-    await this._appendAudit(
-      toAuditEntry(
-        this._deps,
-        command.owner,
-        AuditAction.APPROVE_CAPABILITY_WRITE,
-        AuditOutcome.SUCCEEDED,
-        `approved write policy for capability request ${command.requestId}`,
-        {
-          requestId: command.requestId,
-          agentId: pending.agentId,
-          operation: pending.operation,
-        },
-      ),
-    );
-    return next;
+      .filter((state) => command.writeGranted === undefined || (command.writeGranted ? state.writeGrant != null : state.writeGrant == null))
+      .filter((state) => command.readGranted === undefined || (command.readGranted ? state.readGrant != null : state.readGrant == null));
   }
 
   async ownerApproveCapabilityRead(command: import("./contracts.js").OwnerApproveCapabilityReadCommand): Promise<CapabilityStateRecord> {
@@ -1665,27 +1614,18 @@ export class VaultCore {
     if (!pending) {
       throw new VaultCoreError("capability action record not found", "VAULT_REQUEST_NOT_FOUND");
     }
-    if (pending.actions.write.status !== "APPROVED") {
-      throw new VaultCoreError("write approval required before read approval", "VAULT_WRITE_DENIED");
+    if (pending.writeGrant == null) {
+      throw new VaultCoreError("write decision required before read grant", "VAULT_WRITE_DENIED");
     }
-    if (pending.actions.read.status !== "PENDING") {
-      throw new VaultCoreError("read approval not pending", "VAULT_WRITE_DENIED");
+    if (pending.readGrant != null) {
+      throw new VaultCoreError("read grant already decided", "VAULT_WRITE_DENIED");
     }
     const decidedAt = this._deps.clock.nowIso();
     const next: CapabilityStateRecord = {
       ...pending,
-      read: command.read
-        ? { paths: [...command.read.paths] }
-        : pending.read,
+      readGrant: [...(command.read?.paths ?? [])],
+      readGrantedAt: decidedAt,
       decidedAt,
-      actions: {
-        ...pending.actions,
-        read: {
-          action: "read",
-          status: "APPROVED",
-          decidedAt,
-        },
-      },
     };
     await this._deps.capabilityStates.upsert(next);
     await this._appendAudit(
@@ -1706,10 +1646,22 @@ export class VaultCore {
   }
 
   async ownerAllowOnce(command: OwnerAllowOnceCommand): Promise<DispatchResult> {
+    const pending = await this._deps.capabilityStates.getByRequestId(command.vaultId, command.requestId);
+    if (!pending) {
+      throw new VaultCoreError("capability action record not found", "VAULT_REQUEST_NOT_FOUND");
+    }
+    const decidedAt = this._deps.clock.nowIso();
+    await this._deps.capabilityStates.upsert({ ...pending, writeGrant: "once", writeGrantedAt: decidedAt, decidedAt });
     return this._executePendingCapabilityState(command, "once");
   }
 
   async ownerAllowAlways(command: OwnerAllowAlwaysCommand): Promise<DispatchResult> {
+    const pending = await this._deps.capabilityStates.getByRequestId(command.vaultId, command.requestId);
+    if (!pending) {
+      throw new VaultCoreError("capability action record not found", "VAULT_REQUEST_NOT_FOUND");
+    }
+    const decidedAt = this._deps.clock.nowIso();
+    await this._deps.capabilityStates.upsert({ ...pending, writeGrant: "always", writeGrantedAt: decidedAt, decidedAt });
     return this._executePendingCapabilityState(command, "grant");
   }
 
@@ -1722,22 +1674,18 @@ export class VaultCore {
       throw new VaultCoreError("capability action record not found", "VAULT_REQUEST_NOT_FOUND");
     }
     const decidedAt = this._deps.clock.nowIso();
-    const rejectWrite = pending.actions.write.status === "PENDING";
-    const rejectRead = !rejectWrite && pending.actions.read.status === "PENDING";
+    const rejectWrite = pending.writeGrant == null;
+    const rejectRead = !rejectWrite && pending.readGrant == null;
     if (!rejectWrite && !rejectRead) {
       throw new VaultCoreError("no capability action approval is pending", "VAULT_WRITE_DENIED");
     }
     const rejectedState: CapabilityStateRecord = {
       ...pending,
       decidedAt,
-      actions: {
-        write: rejectWrite
-          ? { action: "write", status: "REJECTED", decidedAt }
-          : { ...pending.actions.write },
-        read: rejectRead
-          ? { action: "read", status: "REJECTED", decidedAt }
-          : { ...pending.actions.read },
-      },
+      writeGrant: rejectWrite ? "none" : pending.writeGrant,
+      writeGrantedAt: rejectWrite ? decidedAt : pending.writeGrantedAt,
+      readGrant: rejectRead ? [] : pending.readGrant,
+      readGrantedAt: rejectRead ? decidedAt : pending.readGrantedAt,
     };
     await this._deps.capabilityStates.upsert(rejectedState);
     await this._appendAudit(

@@ -161,16 +161,13 @@ if (result.status === 'PENDING') {
 }
 
 client.ownerOnCapabilityState((state) => {
-  if (state.actions.write.status === 'PENDING') {
+  if (state.writeGrant === null) {
     console.log('收到新的待审批能力状态:', state.requestId);
   }
 });
 
-const pending = await client.ownerListCapabilityStates({ writeStatus: 'PENDING' });
+const pending = await client.ownerListCapabilityStates({ writeGranted: false });
 if (pending.length > 0) {
-  await client.ownerApproveCapabilityWrite({
-    requestId: pending[0].requestId
-  });
   await client.ownerAllowAlways({
     requestId: pending[0].requestId
   });

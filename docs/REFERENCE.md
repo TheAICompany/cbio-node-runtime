@@ -81,7 +81,6 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerRegisterFlow(...)`
 - `ownerSubmitCapabilityRequest(...)`
 - `ownerListCapabilityStates(...)`
-- `ownerApproveCapabilityWrite(...)`
 - `ownerApproveCapabilityRead(...)`
 - `ownerAllowOnce(...)`
 - `ownerAllowAlways(...)`
@@ -101,8 +100,7 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
 - `ownerSubmitCapabilityRequest(...)`: Create a capability carrier for later owner review.
-- `ownerListCapabilityStates(...)`: Read capability carriers, optionally filtered by `agentId`, `writeStatus`, or `readStatus`.
-- `ownerApproveCapabilityWrite({ requestId })`: Approve the outbound write action on a pending capability carrier.
+- `ownerListCapabilityStates(...)`: Read capability carriers, optionally filtered by `agentId`, `writeGranted`, or `readGranted`.
 - `ownerApproveCapabilityRead({ requestId, read? })`: Approve the inbound read action separately on the same carrier after write approval. Pass `read` to replace the pending read policy at approval time with a `paths` whitelist. Response shape is always visible; `read.paths` only unlocks values, and `['$']` unlocks the full body.
 - `ownerAllowOnce({ requestId })`: Execute a write-approved pending request once, then delete the carrier. This is only valid for dispatch-discovery carriers with a concrete blocked request.
 - `ownerAllowAlways({ requestId })`: Persist the carrier as an active capability. For dispatch discovery this also executes the blocked request; for explicit requests it grants the capability without sending network traffic. Capability IDs are generated internally.
@@ -188,8 +186,7 @@ This is useful for LLM-driven planners that can infer the needed scope ahead of 
 
 The carrier remains actionable until the owner approves or rejects its pending actions:
 - `ownerSubmitCapabilityRequest(...)` creates the carrier.
-- `ownerListCapabilityStates({ writeStatus: "PENDING" })` reads the current queue.
-- `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
+- `ownerListCapabilityStates({ writeGranted: false })` reads the current queue.
 - `ownerAllowOnce(...)` executes a write-approved discovery request once and removes the pending carrier.
 - `ownerAllowAlways(...)` persists a real capability carrier and also executes the blocked request when the carrier came from dispatch discovery.
 - `ownerApproveCapabilityRead(...)` can be applied later on the same carrier to release response visibility.

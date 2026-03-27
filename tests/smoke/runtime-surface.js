@@ -182,7 +182,7 @@ assert.equal(hiddenResult.responseBody, "ok");
 const ownerRequestHistory = await client.ownerListRequests({ agentId: importedAgentId });
 const ownerRequestSummary = ownerRequestHistory.find((entry) => entry.requestId === result.requestId);
 assert.ok(ownerRequestSummary);
-assert.equal(ownerRequestSummary.readStatus, "APPROVED");
+assert.deepEqual(ownerRequestSummary.readGrant, ["$"]);
 const ownerRequest = await client.ownerGetRequest({ requestId: result.requestId });
 assert.equal(ownerRequest.request.secretId, updatedRecord.secretId.value);
 assert.equal(ownerRequest.response?.body, "ok");
@@ -233,12 +233,11 @@ await runtimeSurfaceCapabilityStates.upsert({
   read: { paths: [] },
   requestedAt: new Date().toISOString(),
   issuedAt: customStatusCapability.issuedAt,
+  writeGrant: "always",
+  writeGrantedAt: customStatusCapability.issuedAt,
+  readGrant: null,
   secretId: updatedRecord.secretId.value,
   targetUrl: "https://api.example.com/custom-status",
-  actions: {
-    write: { action: "write", status: "APPROVED" },
-    read: { action: "read", status: "PENDING" },
-  },
 });
 const filteredOwnerView = await client.ownerGetRequest({ requestId: filteredDispatch.requestId });
 assert.equal(filteredOwnerView.response?.body, JSON.stringify({ state: "ok", nested: { code: 200 } }));
@@ -482,31 +481,26 @@ try {
   });
   assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
   assert.equal(submittedCapabilityRequest.write.scope, "https://api.example.com/users/*");
-  assert.equal(submittedCapabilityRequest.actions.write.status, "PENDING");
-  assert.equal(submittedCapabilityRequest.actions.read.status, "PENDING");
+  assert.equal(submittedCapabilityRequest.writeGrant, null);
+  assert.equal(submittedCapabilityRequest.readGrant, null);
   assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
-  const pendingCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeStatus: "PENDING" });
+  const pendingCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeGranted: false });
   assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
-  const writeApprovedCapability = await auditClient.ownerApproveCapabilityWrite({
-    requestId: pendingCapabilityRequests[0].requestId,
-  });
-  assert.equal(writeApprovedCapability.actions.write.status, "APPROVED");
-  assert.equal(writeApprovedCapability.actions.read.status, "PENDING");
   const approvedCapability = await auditClient.ownerAllowAlways({
     requestId: pendingCapabilityRequests[0].requestId,
   });
   unsubscribeCapability();
   assert.equal(approvedCapability.status, "SUCCEEDED");
-  const grantedCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeStatus: "APPROVED" });
+  const grantedCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeGranted: true });
   const grantedCapabilityRequest = grantedCapabilityRequests.find((record) => record.requestId === pendingCapabilityRequests[0].requestId);
   assert.ok(grantedCapabilityRequest, "Granted capability request should remain queryable");
-  assert.equal(grantedCapabilityRequest.actions.write.status, "APPROVED");
-  assert.equal(grantedCapabilityRequest.actions.read.status, "PENDING");
+  assert.equal(grantedCapabilityRequest.writeGrant, "always");
+  assert.equal(grantedCapabilityRequest.readGrant, null);
   const readApprovedCapability = await auditClient.ownerApproveCapabilityRead({
     requestId: grantedCapabilityRequest.requestId,
   });
-  assert.equal(readApprovedCapability.actions.write.status, "APPROVED");
-  assert.equal(readApprovedCapability.actions.read.status, "APPROVED");
+  assert.equal(readApprovedCapability.writeGrant, "always");
+  assert.deepEqual(readApprovedCapability.readGrant, []);
   const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
   assert.ok(
     capabilitiesAfterApproval.some((cap) => cap.write.scope === "https://api.example.com/users/*"),

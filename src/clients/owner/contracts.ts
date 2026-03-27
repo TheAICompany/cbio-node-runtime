@@ -136,8 +136,8 @@ export interface VaultApproveCapabilityRequestInput {
 
 export interface VaultListCapabilityStatesInput {
   agentId?: string;
-  writeStatus?: import("../../vault-core/index.js").CapabilityApprovalStatus;
-  readStatus?: import("../../vault-core/index.js").CapabilityApprovalStatus;
+  writeGranted?: boolean;
+  readGranted?: boolean;
   requestedAt?: string;
 }
 
@@ -225,7 +225,6 @@ export interface VaultClient {
   ownerIssueAllSessionTokens(): Promise<readonly import("../../vault-core/index.js").OwnerSessionToken[]>;
   ownerRevokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
   ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
-  ownerApproveCapabilityWrite(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerApproveCapabilityRead(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerAllowOnce(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
   ownerAllowAlways(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;

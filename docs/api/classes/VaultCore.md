@@ -261,22 +261,6 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerApproveCapabilityWrite()
-
-> **ownerApproveCapabilityWrite**(`command`): `Promise`\<`CapabilityStateRecord`\>
-
-#### Parameters
-
-##### command
-
-`OwnerApproveCapabilityWriteCommand`
-
-#### Returns
-
-`Promise`\<`CapabilityStateRecord`\>
-
-***
-
 ### ownerCreateSecret()
 
 > **ownerCreateSecret**(`command`): `Promise`\<`SecretRecord`\>

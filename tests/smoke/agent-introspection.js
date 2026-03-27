@@ -82,7 +82,7 @@ const httpResult = await handleVaultAgentControlHttp(vault, {
 });
 
 assert.equal(httpResult.ok, true);
-const pending = await ownerClient.ownerListCapabilityStates({ writeStatus: "PENDING" });
+const pending = await ownerClient.ownerListCapabilityStates({ writeGranted: false });
 assert.equal(pending.length, 1);
 assert.equal(pending[0].write.scope, "https://api.example.com/admin/*");
 
@@ -90,10 +90,10 @@ const manifest = await agentClient.agentIntrospect();
 assert.equal(manifest.agent.agentId, vaultAgentId);
 assert.equal(manifest.agent.identityId, importedAgent.agent.identityId);
 assert.equal(manifest.agent.publicKey, importedAgent.agent.publicKey);
-assert.equal(manifest.capabilities.some((entry) => entry.actions.write.status === "APPROVED" && entry.write.scope === "https://api.example.com/users/*"), true);
+assert.equal(manifest.capabilities.some((entry) => entry.writeGrant === "always" && entry.write.scope === "https://api.example.com/users/*"), true);
 assert.equal(
   manifest.capabilities.some((entry) =>
-    entry.actions.write.status === "PENDING"
+    entry.writeGrant === null
     && entry.source === "explicit_request"
     && entry.write.scope === "https://api.example.com/admin/*"
   ),
@@ -102,7 +102,7 @@ assert.equal(
 
 const capabilityView = await agentClient.agentListCapabilities();
 assert.equal(
-  capabilityView.some((entry) => entry.actions.write.status === "PENDING" && entry.write.scope === "https://api.example.com/admin/*"),
+  capabilityView.some((entry) => entry.writeGrant === null && entry.write.scope === "https://api.example.com/admin/*"),
   true,
 );
 
