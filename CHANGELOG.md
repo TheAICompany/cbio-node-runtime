@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.58.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.57.0...v1.58.0) (2026-03-27)
+
+
+### Features
+
+* Refactor capability management in API, replacing pending request methods with a unified capability state model, and update documentation to reflect changes in version 1.57.0. ([75d61e0](https://github.com/TheAICompany/cbio-node-runtime/commit/75d61e047ebfdc8469c36a70fce9c3cc9c321b08))
+
 ## [1.57.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.56.0...v1.57.0) (2026-03-26)
 
 
