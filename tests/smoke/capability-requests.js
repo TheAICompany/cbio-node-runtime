@@ -42,7 +42,7 @@ const submitted = await ownerClient.ownerSubmitCapabilityRequest({
     methods: ["GET"],
   },
   read: { mode: "full" },
-  justification: "Need to read user resources without per-id approval",
+  reason: "Need to read user resources without per-id approval",
 });
 
 assert.equal(submitted.agentId, vaultAgentId);
@@ -52,7 +52,7 @@ assert.ok(observed, "pending capability request observer should fire");
 
 const pending = await ownerClient.ownerListCapabilityStates({ writeStatus: "PENDING" });
 assert.equal(pending.length, 1);
-assert.equal(pending[0].justification, "Need to read user resources without per-id approval");
+assert.equal(pending[0].reason, "Need to read user resources without per-id approval");
 assert.equal(pending[0].actions.write.status, "PENDING");
 assert.equal(pending[0].actions.read.status, "PENDING");
 

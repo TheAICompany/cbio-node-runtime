@@ -18,15 +18,15 @@
 
 ***
 
-### justification
-
-> **justification**: `string`
-
-***
-
 ### method
 
 > **method**: `string`
+
+***
+
+### reason
+
+> **reason**: `string`
 
 ***
 

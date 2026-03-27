@@ -124,7 +124,7 @@ export interface VaultSubmitCapabilityRequestInput {
   };
   skipAudit?: boolean;
   expiresAt?: string;
-  justification?: string;
+  reason?: string;
   requestedAt?: string;
 }
 

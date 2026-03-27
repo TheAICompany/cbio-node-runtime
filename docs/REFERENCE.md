@@ -161,7 +161,7 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 - `agentDispatch(...)`: Use a granted capability to send a secret to an authorized target.
   - **Status**: Returns `SUCCEEDED`, `FAILED`, or `PENDING`.
   - **Execution Semantics**: This is the method that attempts the real task immediately.
-  - **Owner Context**: A non-empty `justification` string is required and is recorded for owner review.
+  - **Owner Context**: A non-empty `reason` string is required and is recorded for owner review.
   - **Result Delivery**: The full result is stored in a sealed request record; use `agentListRequests()` and `agentGetRequest(...)` to inspect it later.
   - **Discovery Flow**: If an agent attempts an action not explicitly in its white-list, the request is automatically stalled as `PENDING` for owner review. 
 - `agentListCapabilities()`: Read the agent's capability carriers, including current `write` and `read` action states.
@@ -171,7 +171,7 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 - `ownerListRequests()`: Read request history as owner, including approval states.
 - `ownerGetRequest(...)`: Read the full sealed request record as owner, including response content before read release.
 - `agentIntrospect()`: Read the vault-known self context (`agentId`, `identityId`, `nickname`, `metadata`) plus capability carriers and the tool manifest.
-- `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant without executing any request. A non-empty `justification` string is required for owner review.
+- `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant without executing any request. A non-empty `reason` string is required for owner review.
 - **Security**: The agent never handles the vault's master password. Agent execution uses **Session Tokens** rather than raw private-key dispatch.
 - **Auditing**: Dispatches are audited by default. Set `skipAudit: true` in the capability (or during approval) to disable logging for specific actions.
 

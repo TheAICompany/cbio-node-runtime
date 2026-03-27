@@ -737,7 +737,7 @@ class DefaultVaultClient implements VaultClient {
         skipAudit: input.skipAudit,
         expiresAt: input.expiresAt,
       },
-      justification: input.justification,
+      reason: input.reason,
       requestedAt,
     });
   }

@@ -22,7 +22,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       requestId: request.requestId,
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
-      justification: request.justification,
+      reason: request.reason,
       capabilityId: request.capability?.capabilityId,
       secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
@@ -135,7 +135,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
         mode: request.capability.read.mode,
         paths: request.capability.read.paths ? [...request.capability.read.paths] : undefined,
       },
-      justification: request.justification,
+      reason: request.reason,
     });
     return payload as import("../vault-core/index.js").CapabilityStateRecord;
   }

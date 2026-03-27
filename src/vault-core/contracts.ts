@@ -281,7 +281,7 @@ export interface AgentCapabilityState {
     windowMs: number;
   };
   skipAudit?: boolean;
-  justification?: string;
+  reason?: string;
   secretId?: string;
   targetUrl?: string;
   actions: {
@@ -312,7 +312,7 @@ export interface RequestRecord {
   vaultId: VaultId;
   requestId: string;
   agentId: string;
-  justification: string;
+  reason: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   createdAt: string;
@@ -337,7 +337,7 @@ export interface RequestRecord {
 export interface AgentVisibleRequestRecord {
   requestId: string;
   createdAt: string;
-  justification: string;
+  reason: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   targetUrl: string;
@@ -354,7 +354,7 @@ export interface OwnerVisibleRequestRecord {
   requestId: string;
   createdAt: string;
   agentId: string;
-  justification: string;
+  reason: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   targetUrl: string;
@@ -371,7 +371,7 @@ export interface OwnerRequestRecord {
   requestId: string;
   createdAt: string;
   agentId: string;
-  justification: string;
+  reason: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   request: {
@@ -457,7 +457,7 @@ export interface AgentSubmitCapabilityRequestCommand {
   proof: AgentProof;
   capability: CapabilityRequestScope;
   secretAliases?: readonly string[];
-  justification: string;
+  reason: string;
 }
 
 export interface CapabilityRequestScope {
@@ -478,7 +478,7 @@ export interface SubmitCapabilityRequestCommand {
   requester: VaultPrincipal;
   agentId: string;
   capability: CapabilityRequestScope;
-  justification?: string;
+  reason?: string;
   requestedAt: string;
 }
 
@@ -531,7 +531,7 @@ export interface DispatchRequest {
   proof: AgentProof;
   secretAlias?: string;
   secretId?: string;
-  justification: string;
+  reason: string;
   targetUrl: string;
   method: string;
   headers?: Record<string, string>;

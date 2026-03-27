@@ -165,7 +165,7 @@ const result = await agent.agentDispatch({
   secretAlias: "api-token",
   targetUrl: "https://api.example.com/endpoint",
   method: "POST",
-  justification: "Need to send the primary API request for the current task.",
+  reason: "Need to send the primary API request for the current task.",
   body: '{"hello":"world"}',
 });
 
@@ -214,7 +214,7 @@ const filteredDispatch = await standardCustomStatusAgent.agentDispatch({
   secretAlias: "api-token",
   targetUrl: "https://api.example.com/custom-status",
   method: "POST",
-  justification: "Need to fetch the custom status payload for the current task.",
+  reason: "Need to fetch the custom status payload for the current task.",
   body: '{"mode":"discover"}',
 });
 assert.equal(filteredDispatch.status, "SUCCEEDED");
@@ -289,7 +289,7 @@ const customResult = await customAgent.agentDispatch({
   secretAlias: "api-token",
   targetUrl: "https://api.example.com/custom-status",
   method: "POST",
-  justification: "Need to run the custom status request through the request template.",
+  reason: "Need to run the custom status request through the request template.",
   body: '{"mode":"custom"}',
 });
 
@@ -336,7 +336,7 @@ const customAcquireAgent = createAgentClient({
 const customAcquireResult = await customAcquireAgent.agentDispatch({
   targetUrl: "https://api.example.com/custom-acquire",
   method: "POST",
-  justification: "Need to acquire the custom token for the workflow.",
+  reason: "Need to acquire the custom token for the workflow.",
 });
 
 assert.equal(customAcquireResult.status, "SUCCEEDED");
@@ -481,7 +481,7 @@ try {
       methods: ["GET"],
     },
     read: { mode: "full" },
-    justification: "Need collection-level user read access",
+    reason: "Need collection-level user read access",
   });
   assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
   assert.equal(submittedCapabilityRequest.write.scope, "https://api.example.com/users/*");
@@ -547,7 +547,7 @@ try {
       secretAlias: "issuer-token",
       targetUrl: "https://issuer.example.com/other",
       method: "GET",
-      justification: "Need to verify the acquired secret cannot be reused here.",
+      reason: "Need to verify the acquired secret cannot be reused here.",
     }),
     /VAULT_AGENT_DISPATCH_REJECTED|VAULT_DISPATCH_DENIED/,
   );

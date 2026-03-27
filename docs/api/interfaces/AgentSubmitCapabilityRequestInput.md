@@ -6,12 +6,6 @@
 
 ## Properties
 
-### justification
-
-> **justification**: `string`
-
-***
-
 ### operation?
 
 > `optional` **operation?**: `"dispatch_http"` \| `"custom_http"`
@@ -21,6 +15,12 @@
 ### read
 
 > **read**: `CapabilityReadPolicy`
+
+***
+
+### reason
+
+> **reason**: `string`
 
 ***
 

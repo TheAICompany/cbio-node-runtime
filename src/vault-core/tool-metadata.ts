@@ -9,18 +9,18 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     },
   },
   agentDispatch: {
-    description: "Execute a real outbound request with a vault-managed secret. Use this when you already have a vault secret and permission to use it against a target URL. You must provide a one-sentence justification for the owner explaining why this request should be sent. This tool does not create or store new secrets in the vault. If write permission is missing, the request will not be sent and a pending approval carrier will be created instead.",
+    description: "Execute a real outbound request with a vault-managed secret. Use this when you already have a vault secret and permission to use it against a target URL. You must provide a one-sentence reason for the owner explaining why this request should be sent. This tool does not create or store new secrets in the vault. If write permission is missing, the request will not be sent and a pending approval carrier will be created instead.",
     parameters: {
       type: "object",
       properties: {
         secretAlias: { type: "string", description: "The human-readable secret name to use." },
         targetUrl: { type: "string", description: "The destination URL for the outbound request." },
         method: { type: "string", description: "The HTTP method (e.g., POST, GET)." },
-        justification: { type: "string", description: "Required. One concise sentence for the owner explaining why this exact request should be sent." },
+        reason: { type: "string", description: "Required. One concise sentence for the owner explaining why this exact request should be sent." },
         body: { type: "string", description: "Optional request body." },
         headers: { type: "object", description: "Optional request headers." },
       },
-      required: ["secretAlias", "targetUrl", "method", "justification"],
+      required: ["secretAlias", "targetUrl", "method", "reason"],
     },
   },
   agentListCapabilities: {
@@ -55,7 +55,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     },
   },
   agentSubmitCapabilityRequest: {
-    description: "Ask the owner for broader permission without executing any request. This creates an approval carrier only; it does not send network traffic and it does not store secret material. You must provide a one-sentence justification for the owner explaining why this approval is needed. Use this when you need access you do not currently have. If a workflow needs to capture and persist a newly issued API key, JWT, or token, that persistence must happen through an owner action or an owner-configured vault acquisition/custom flow.",
+    description: "Ask the owner for broader permission without executing any request. This creates an approval carrier only; it does not send network traffic and it does not store secret material. You must provide a one-sentence reason for the owner explaining why this approval is needed. Use this when you need access you do not currently have. If a workflow needs to capture and persist a newly issued API key, JWT, or token, that persistence must happen through an owner action or an owner-configured vault acquisition/custom flow.",
     parameters: {
       type: "object",
       properties: {
@@ -63,9 +63,9 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
         write: { type: "object", description: "Outbound request policy including URL scope and methods." },
         read: { type: "object", description: "Inbound response visibility policy." },
         operation: { type: "string", description: "The operation type, usually 'dispatch_http'." },
-        justification: { type: "string", description: "Required. One concise sentence for the owner explaining why this capability is needed." },
+        reason: { type: "string", description: "Required. One concise sentence for the owner explaining why this capability is needed." },
       },
-      required: ["write", "read", "justification"],
+      required: ["write", "read", "reason"],
     },
   },
 };

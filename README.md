@@ -157,9 +157,9 @@ The agent process does not execute directly with its raw private key. If it has 
 
 LLM-facing rule of thumb:
 - `agentDispatch(...)` means "do the task now". It attempts real execution immediately.
-- `agentDispatch(...)` requires a one-sentence `justification` for the owner explaining why this exact request should be sent.
+- `agentDispatch(...)` requires a one-sentence `reason` for the owner explaining why this exact request should be sent.
 - `agentSubmitCapabilityRequest(...)` means "ask for permission". It never executes the task by itself.
-- `agentSubmitCapabilityRequest(...)` also requires a one-sentence `justification` so the owner understands why the broader permission is needed.
+- `agentSubmitCapabilityRequest(...)` also requires a one-sentence `reason` so the owner understands why the broader permission is needed.
 - `agentListRequests()` / `agentGetRequest(...)` are how the agent checks asynchronous results after execution.
 - `ownerListRequests()` / `ownerGetRequest(...)` are how the owner reviews the full sealed request record before approving read.
 
@@ -177,7 +177,7 @@ const request = await client.ownerSubmitCapabilityRequest({
     methods: ['GET']
   },
   read: { mode: 'full' },
-  justification: 'Need collection-level user read access'
+  reason: 'Need collection-level user read access'
 });
 
 const pendingRequests = await client.ownerListCapabilityStates({ writeStatus: 'PENDING' });

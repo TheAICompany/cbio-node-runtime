@@ -18,12 +18,6 @@
 
 ***
 
-### justification?
-
-> `optional` **justification?**: `string`
-
-***
-
 ### operation?
 
 > `optional` **operation?**: `string`
@@ -47,6 +41,12 @@
 ### read
 
 > **read**: `CapabilityReadPolicy`
+
+***
+
+### reason?
+
+> `optional` **reason?**: `string`
 
 ***
 

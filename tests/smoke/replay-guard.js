@@ -107,6 +107,7 @@ const request = {
   secretId: replayRecord.secretId.value,
   targetUrl: "https://allowed.example.com/replay",
   method: "POST",
+  reason: "Need to verify replay protection on repeated dispatch.",
 };
 
 const first = await authority.agentDispatchSecret(request);

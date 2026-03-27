@@ -77,6 +77,7 @@ await assert.rejects(
     secretId: guardedRecord.secretId.value,
     targetUrl: "https://guarded.example.com/endpoint",
     method: "POST",
+    reason: "Need to verify expired capability rejection.",
   }),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);
@@ -129,6 +130,7 @@ await assert.rejects(
     targetUrl: "https://guarded.example.com/endpoint",
     method: "POST",
     body: null,
+    reason: "Need to verify signature mismatch rejection.",
   }),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);

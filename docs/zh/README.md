@@ -132,9 +132,9 @@ Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身�
 
 给 LLM 的直白规则：
 - `agentDispatch(...)` = 立刻尝试执行真实任务
-- `agentDispatch(...)` 必须带一条给 owner 看的 `justification`，说明为什么要发这个请求
+- `agentDispatch(...)` 必须带一条给 owner 看的 `reason`，说明为什么要发这个请求
 - `agentSubmitCapabilityRequest(...)` = 只申请权限，不会执行任务
-- `agentSubmitCapabilityRequest(...)` 也必须带 `justification`，说明为什么需要这项权限
+- `agentSubmitCapabilityRequest(...)` 也必须带 `reason`，说明为什么需要这项权限
 - `agentListRequests()` / `agentGetRequest(...)` = 在请求执行后查看异步结果
 - `ownerListRequests()` / `ownerGetRequest(...)` = owner 查看完整请求记录，用于决定是否放行 read
 

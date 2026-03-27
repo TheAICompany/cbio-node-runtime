@@ -78,7 +78,7 @@ const httpResult = await handleVaultAgentControlHttp(vault, {
     methods: ["POST"],
   },
   read: { mode: "full" },
-  justification: "Need admin write access",
+  reason: "Need admin write access",
 });
 
 assert.equal(httpResult.ok, true);

@@ -312,7 +312,7 @@ export class VaultCore {
       expiresAt: state.expiresAt,
       rateLimit: state.rateLimit,
       skipAudit: state.skipAudit,
-      justification: state.justification,
+      reason: state.reason,
       secretId: state.secretId,
       targetUrl: state.targetUrl,
       actions: {
@@ -382,7 +382,7 @@ export class VaultCore {
         proof: pending.proof,
         requestId: pending.requestId,
         requestedAt: pending.requestedAt,
-        justification: pending.justification ?? "Approved previously requested dispatch.",
+        reason: pending.reason ?? "Approved previously requested dispatch.",
         skipReplayGuard: true,
       });
     } else if (mode === "grant") {
@@ -536,7 +536,7 @@ export class VaultCore {
       vaultId: this._deps.vaultId,
       requestId: request.requestId,
       agentId: request.agent.id,
-      justification: request.justification,
+      reason: request.reason,
       capabilityId: capability?.capabilityId,
       operation: capability?.operation ?? "dispatch_http",
       createdAt: this._deps.clock.nowIso(),
@@ -563,7 +563,7 @@ export class VaultCore {
     return {
       requestId: record.requestId,
       createdAt: record.createdAt,
-      justification: record.justification,
+      reason: record.reason,
       capabilityId: record.capabilityId,
       operation: record.operation,
       targetUrl: record.request.targetUrl,
@@ -582,7 +582,7 @@ export class VaultCore {
       requestId: record.requestId,
       createdAt: record.createdAt,
       agentId: record.agentId,
-      justification: record.justification,
+      reason: record.reason,
       capabilityId: record.capabilityId,
       operation: record.operation,
       targetUrl: record.request.targetUrl,
@@ -601,7 +601,7 @@ export class VaultCore {
       requestId: record.requestId,
       createdAt: record.createdAt,
       agentId: record.agentId,
-      justification: record.justification,
+      reason: record.reason,
       capabilityId: record.capabilityId,
       operation: record.operation,
       request: {
@@ -804,7 +804,7 @@ export class VaultCore {
       rateLimit: command.capability.rateLimit,
       skipAudit: command.capability.skipAudit,
       expiresAt: command.capability.expiresAt,
-      justification: command.justification,
+      reason: command.reason,
       requestedAt: command.requestedAt,
       actions: {
         write: { action: "write", status: "PENDING" },
@@ -1126,8 +1126,8 @@ export class VaultCore {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("request vault mismatch", "VAULT_DISPATCH_DENIED");
     }
-    if (!request.justification?.trim()) {
-      throw new VaultCoreError("dispatch justification is required", "VAULT_DISPATCH_DENIED");
+    if (!request.reason?.trim()) {
+      throw new VaultCoreError("dispatch reason is required", "VAULT_DISPATCH_DENIED");
     }
     const record = request.secretId
       ? await this._deps.secrets.getById({ value: request.secretId })
@@ -1190,7 +1190,7 @@ export class VaultCore {
           mode: "none",
         },
         requestedAt: request.requestedAt,
-        justification: request.justification,
+        reason: request.reason,
         secretId: request.secretId,
         targetUrl: request.targetUrl,
         headers: request.headers,
@@ -1572,14 +1572,14 @@ export class VaultCore {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
-    if (!command.justification?.trim()) {
-      throw new VaultCoreError("capability request justification is required", "VAULT_WRITE_DENIED");
+    if (!command.reason?.trim()) {
+      throw new VaultCoreError("capability request reason is required", "VAULT_WRITE_DENIED");
     }
     await this._verifyAgentControlProof(command, "submit_capability_request", {
       write: command.capability.write,
       read: command.capability.read,
       operation: command.capability.operation,
-      justification: command.justification,
+      reason: command.reason,
     });
     return this.ownerSubmitCapabilityRequest({
       vaultId: command.vaultId,
@@ -1587,7 +1587,7 @@ export class VaultCore {
       requester: command.agent,
       agentId: command.agent.id,
       capability: command.capability,
-      justification: command.justification,
+      reason: command.reason,
       requestedAt: command.requestedAt,
     });
   }
