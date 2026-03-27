@@ -156,6 +156,16 @@ export interface VaultListCapabilitiesInput {
   requestedAt?: string;
 }
 
+export interface VaultListRequestsInput {
+  agentId?: string;
+  requestedAt?: string;
+}
+
+export interface VaultGetRequestInput {
+  requestId: string;
+  requestedAt?: string;
+}
+
 export interface VaultListSecretsInput {
   requestedAt?: string;
 }
@@ -205,6 +215,8 @@ export interface VaultClient {
   ownerRemoveSecret(input: OwnerRemoveSecretInput): Promise<void>;
   ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
   ownerListCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  ownerListRequests(input?: VaultListRequestsInput): Promise<readonly import("../../vault-core/index.js").OwnerVisibleRequestRecord[]>;
+  ownerGetRequest(input: VaultGetRequestInput): Promise<import("../../vault-core/index.js").OwnerRequestRecord>;
   ownerListCapabilityStates(input?: VaultListCapabilityStatesInput): Promise<readonly import("../../vault-core/index.js").CapabilityStateRecord[]>;
   ownerListSecrets(input?: VaultListSecretsInput): Promise<readonly import("../../vault-core/index.js").AgentVisibleSecretRecord[]>;
   ownerRevokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;

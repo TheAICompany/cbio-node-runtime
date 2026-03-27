@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: OwnerStoreSecretInput
+# Interface: OwnerUpdateSecretInput
 
 ## Properties
 

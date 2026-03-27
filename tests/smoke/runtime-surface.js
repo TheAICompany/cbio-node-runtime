@@ -177,6 +177,13 @@ assert.equal(dispatchedRequest.resultVisible, false);
 assert.equal(dispatchedRequest.executionStatus, "SUCCEEDED");
 const hiddenResult = await agent.agentGetRequest(result.requestId);
 assert.equal(hiddenResult.responseBody, undefined);
+const ownerRequestHistory = await client.ownerListRequests({ agentId: importedAgentId });
+const ownerRequestSummary = ownerRequestHistory.find((entry) => entry.requestId === result.requestId);
+assert.ok(ownerRequestSummary);
+assert.equal(ownerRequestSummary.readStatus, "PENDING");
+const ownerRequest = await client.ownerGetRequest({ requestId: result.requestId });
+assert.equal(ownerRequest.request.secretId, updatedRecord.secretId.value);
+assert.equal(ownerRequest.response?.body, "ok");
 
 const shapeOnlyFlow = await client.ownerRegisterFlow({
   mode: "send_secret",

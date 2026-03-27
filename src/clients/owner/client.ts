@@ -26,6 +26,8 @@ import type {
   VaultUpdateAgentInput,
   VaultListAgentsInput,
   VaultListCapabilitiesInput,
+  VaultListRequestsInput,
+  VaultGetRequestInput,
   VaultListCapabilityStatesInput,
   VaultListSecretsInput,
   VaultRevokeCapabilityInput,
@@ -105,6 +107,8 @@ export interface VaultClient {
    * Lists all active capabilities granted to agents.
    */
   ownerListCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  ownerListRequests(input?: VaultListRequestsInput): Promise<readonly import("../../vault-core/index.js").OwnerVisibleRequestRecord[]>;
+  ownerGetRequest(input: VaultGetRequestInput): Promise<import("../../vault-core/index.js").OwnerRequestRecord>;
   ownerListCapabilityStates(input?: VaultListCapabilityStatesInput): Promise<readonly import("../../vault-core/index.js").CapabilityStateRecord[]>;
   ownerListSecrets(input?: VaultListSecretsInput): Promise<readonly import("../../vault-core/index.js").AgentVisibleSecretRecord[]>;
 
@@ -607,6 +611,38 @@ class DefaultVaultClient implements VaultClient {
         id: this._identityId,
       },
       agentId: input.agentId,
+    });
+  }
+
+  async ownerListRequests(input: VaultListRequestsInput = {}) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = createRequestIdValue("list_requests");
+
+    return this._vault.ownerListRequests({
+      vaultId: this._vault.vaultId,
+      requestId,
+      requestedAt,
+      actor: {
+        kind: "owner",
+        id: this._identityId,
+      },
+      agentId: input.agentId,
+    });
+  }
+
+  async ownerGetRequest(input: VaultGetRequestInput) {
+    const requestedAt = input.requestedAt ?? this._clock.nowIso();
+    const requestId = createRequestIdValue("get_request");
+
+    return this._vault.ownerGetRequest({
+      vaultId: this._vault.vaultId,
+      requestId,
+      requestedAt,
+      actor: {
+        kind: "owner",
+        id: this._identityId,
+      },
+      targetRequestId: input.requestId,
     });
   }
 

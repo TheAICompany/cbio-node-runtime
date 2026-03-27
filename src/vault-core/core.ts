@@ -14,6 +14,8 @@ import type {
   AgentRuntimeManifest,
   AgentSubmitCapabilityRequestCommand,
   AgentVisibleRequestRecord,
+  OwnerVisibleRequestRecord,
+  OwnerRequestRecord,
   AgentVisibleSecretRecord,
   AuditEntry,
   AuditQuery,
@@ -36,6 +38,8 @@ import type {
   OwnerRevokeCapabilityCommand,
   OwnerListAgentsRequest,
   OwnerListCapabilitiesRequest,
+  OwnerListRequestsRequest,
+  OwnerGetRequestRequest,
   OwnerListCapabilityStatesRequest,
   OwnerSecretExport,
   OwnerSessionToken,
@@ -498,6 +502,54 @@ export class VaultCore {
       readStatus,
       hasResponseBody: typeof record.response?.body === "string" && record.response.body.length > 0,
       resultVisible: readStatus === "APPROVED",
+    };
+  }
+
+  private toOwnerVisibleRequestRecord(record: RequestRecord, state: CapabilityStateRecord | null): OwnerVisibleRequestRecord {
+    return {
+      requestId: record.requestId,
+      createdAt: record.createdAt,
+      agentId: record.agentId,
+      capabilityId: record.capabilityId,
+      operation: record.operation,
+      targetUrl: record.request.targetUrl,
+      method: record.request.method,
+      executionStatus: record.execution.status,
+      responseStatus: record.response?.status,
+      error: record.response?.error,
+      writeStatus: state?.actions.write.status ?? "PENDING",
+      readStatus: state?.actions.read.status ?? "PENDING",
+      hasResponseBody: typeof record.response?.body === "string" && record.response.body.length > 0,
+    };
+  }
+
+  private toOwnerRequestRecord(record: RequestRecord, state: CapabilityStateRecord | null): OwnerRequestRecord {
+    return {
+      requestId: record.requestId,
+      createdAt: record.createdAt,
+      agentId: record.agentId,
+      capabilityId: record.capabilityId,
+      operation: record.operation,
+      request: {
+        targetUrl: record.request.targetUrl,
+        method: record.request.method,
+        headers: record.request.headers ? { ...record.request.headers } : undefined,
+        body: record.request.body,
+        secretId: record.request.secretId,
+      },
+      response: record.response
+        ? {
+            status: record.response.status,
+            headers: record.response.headers ? { ...record.response.headers } : undefined,
+            body: record.response.body,
+            error: record.response.error,
+          }
+        : undefined,
+      actions: {
+        write: state?.actions.write ?? { action: "write", status: "PENDING" },
+        read: state?.actions.read ?? { action: "read", status: "PENDING" },
+      },
+      executionStatus: record.execution.status,
     };
   }
 
@@ -1296,6 +1348,42 @@ export class VaultCore {
       }),
     );
     return capabilities;
+  }
+
+  async ownerListRequests(
+    actor: VaultPrincipal & { kind: "owner" },
+    agentId?: string,
+    request?: Omit<OwnerListRequestsRequest, "actor" | "agentId" | "vaultId">,
+  ): Promise<readonly OwnerVisibleRequestRecord[]> {
+    const records = await this._deps.requests.list(this._deps.vaultId, agentId);
+    const states = await this._deps.capabilityStates.list(this._deps.vaultId, agentId);
+    const stateByRequestId = new Map(states.filter((state) => state.requestId).map((state) => [state.requestId as string, state]));
+    await this._appendAudit(
+      toAuditEntry(this._deps, actor, AuditAction.LIST_REQUESTS, AuditOutcome.ALLOWED, "request records listed", {
+        requestId: request?.requestId,
+        agentId,
+      }),
+    );
+    return records.map((record) => this.toOwnerVisibleRequestRecord(record, stateByRequestId.get(record.requestId) ?? null));
+  }
+
+  async ownerGetRequest(
+    actor: VaultPrincipal & { kind: "owner" },
+    targetRequestId: string,
+    request?: Omit<OwnerGetRequestRequest, "actor" | "targetRequestId" | "vaultId">,
+  ): Promise<OwnerRequestRecord> {
+    const record = await this._deps.requests.get(this._deps.vaultId, targetRequestId);
+    if (!record) {
+      throw new VaultCoreError("request record not found", "VAULT_READ_DENIED");
+    }
+    const state = await this._deps.capabilityStates.getByRequestId(this._deps.vaultId, targetRequestId);
+    await this._appendAudit(
+      toAuditEntry(this._deps, actor, AuditAction.READ_REQUEST, AuditOutcome.ALLOWED, "request record read", {
+        requestId: request?.requestId,
+        agentId: record.agentId,
+      }),
+    );
+    return this.toOwnerRequestRecord(record, state);
   }
 
   async ownerListSecrets(

@@ -92,21 +92,21 @@ The private key is stored in the vault for managed custody.
 
 ***
 
-### ownerDeleteSecret()
+### ownerCreateSecret()
 
-> **ownerDeleteSecret**(`input`): `Promise`\<`void`\>
+> **ownerCreateSecret**(`input`): `Promise`\<`SecretRecord`\>
 
-Permanently deletes a secret from the vault.
+Inserts a new active secret into the vault.
 
 #### Parameters
 
 ##### input
 
-[`VaultDeleteSecretInput`](VaultDeleteSecretInput.md)
+[`OwnerCreateSecretInput`](OwnerCreateSecretInput.md)
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`SecretRecord`\>
 
 ***
 
@@ -141,6 +141,22 @@ Exports a secret's plaintext.
 #### Returns
 
 `Promise`\<`OwnerSecretExport`\>
+
+***
+
+### ownerGetRequest()
+
+> **ownerGetRequest**(`input`): `Promise`\<`OwnerRequestRecord`\>
+
+#### Parameters
+
+##### input
+
+`VaultGetRequestInput`
+
+#### Returns
+
+`Promise`\<`OwnerRequestRecord`\>
 
 ***
 
@@ -256,6 +272,22 @@ Lists all active capabilities granted to agents.
 
 ***
 
+### ownerListRequests()
+
+> **ownerListRequests**(`input?`): `Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
+
+#### Parameters
+
+##### input?
+
+`VaultListRequestsInput`
+
+#### Returns
+
+`Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
+
+***
+
 ### ownerListSecrets()
 
 > **ownerListSecrets**(`input?`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
@@ -356,6 +388,24 @@ Registers a reusable HTTP request template for complex secret exchange patterns.
 
 ***
 
+### ownerRemoveSecret()
+
+> **ownerRemoveSecret**(`input`): `Promise`\<`void`\>
+
+Logically removes the current active secret.
+
+#### Parameters
+
+##### input
+
+[`OwnerRemoveSecretInput`](OwnerRemoveSecretInput.md)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
 ### ownerRevokeCapability()
 
 > **ownerRevokeCapability**(`input`): `Promise`\<`void`\>
@@ -387,24 +437,6 @@ Revokes a previously granted capability.
 #### Returns
 
 `Promise`\<`void`\>
-
-***
-
-### ownerStoreSecret()
-
-> **ownerStoreSecret**(`input`): `Promise`\<`SecretRecord`\>
-
-Securely stores a new secret in the vault.
-
-#### Parameters
-
-##### input
-
-[`OwnerStoreSecretInput`](OwnerStoreSecretInput.md)
-
-#### Returns
-
-`Promise`\<`SecretRecord`\>
 
 ***
 
@@ -440,17 +472,17 @@ Securely stores a new secret in the vault.
 
 ***
 
-### ownerWriteSecret()
+### ownerUpdateSecret()
 
-> **ownerWriteSecret**(`input`): `Promise`\<`SecretRecord`\>
+> **ownerUpdateSecret**(`input`): `Promise`\<`SecretRecord`\>
 
-Stores a manually provided secret in the vault.
+Inserts a new successor secret and marks the previous active version as superseded.
 
 #### Parameters
 
 ##### input
 
-[`OwnerWriteSecretInput`](OwnerWriteSecretInput.md)
+[`OwnerUpdateSecretInput`](OwnerUpdateSecretInput.md)
 
 #### Returns
 

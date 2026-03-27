@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: VaultDeleteSecretInput
+# Interface: OwnerRemoveSecretInput
 
 ## Properties
 

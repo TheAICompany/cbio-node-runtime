@@ -125,6 +125,7 @@ const agent = createAgentClient({
 const result = await agent.agentDispatch({ ... });
 const requests = await agent.agentListRequests();
 const request = await agent.agentGetRequest(result.requestId);
+const ownerView = await client.ownerGetRequest({ requestId: result.requestId });
 ```
 
 Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身份材料，也应先换取 session token，再进行 dispatch。
@@ -133,6 +134,7 @@ Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身�
 - `agentDispatch(...)` = 立刻尝试执行真实任务
 - `agentSubmitCapabilityRequest(...)` = 只申请权限，不会执行任务
 - `agentListRequests()` / `agentGetRequest(...)` = 在请求执行后查看异步结果
+- `ownerListRequests()` / `ownerGetRequest(...)` = owner 查看完整请求记录，用于决定是否放行 read
 
 ```ts
 const manifest = await agent.agentIntrospect();

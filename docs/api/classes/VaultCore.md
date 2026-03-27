@@ -277,6 +277,22 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### ownerCreateSecret()
+
+> **ownerCreateSecret**(`command`): `Promise`\<`SecretRecord`\>
+
+#### Parameters
+
+##### command
+
+`OwnerCreateSecretCommand`
+
+#### Returns
+
+`Promise`\<`SecretRecord`\>
+
+***
+
 ### ownerDeleteSecret()
 
 > **ownerDeleteSecret**(`command`): `Promise`\<`void`\>
@@ -330,6 +346,30 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`OwnerSecretExport`\>
+
+***
+
+### ownerGetRequest()
+
+> **ownerGetRequest**(`actor`, `targetRequestId`, `request?`): `Promise`\<`OwnerRequestRecord`\>
+
+#### Parameters
+
+##### actor
+
+`VaultPrincipal` & `object`
+
+##### targetRequestId
+
+`string`
+
+##### request?
+
+`Omit`\<`OwnerGetRequestRequest`, `"vaultId"` \| `"actor"` \| `"targetRequestId"`\>
+
+#### Returns
+
+`Promise`\<`OwnerRequestRecord`\>
 
 ***
 
@@ -422,6 +462,30 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<readonly `CapabilityStateRecord`[]\>
+
+***
+
+### ownerListRequests()
+
+> **ownerListRequests**(`actor`, `agentId?`, `request?`): `Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
+
+#### Parameters
+
+##### actor
+
+`VaultPrincipal` & `object`
+
+##### agentId?
+
+`string`
+
+##### request?
+
+`Omit`\<`OwnerListRequestsRequest`, `"agentId"` \| `"vaultId"` \| `"actor"`\>
+
+#### Returns
+
+`Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
 
 ***
 
@@ -535,6 +599,22 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### ownerRemoveSecret()
+
+> **ownerRemoveSecret**(`command`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### command
+
+`OwnerDeleteSecretCommand`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
 ### ownerRevokeCapability()
 
 > **ownerRevokeCapability**(`command`): `Promise`\<`void`\>
@@ -606,6 +686,22 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`AgentIdentityRecord`\>
+
+***
+
+### ownerUpdateSecret()
+
+> **ownerUpdateSecret**(`command`): `Promise`\<`SecretRecord`\>
+
+#### Parameters
+
+##### command
+
+`OwnerUpdateSecretCommand`
+
+#### Returns
+
+`Promise`\<`SecretRecord`\>
 
 ***
 

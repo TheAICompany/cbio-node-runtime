@@ -150,6 +150,7 @@ const agent = createAgentClient({
 const result = await agent.agentDispatch({ ... });
 const requests = await agent.agentListRequests();
 const request = await agent.agentGetRequest(result.requestId);
+const ownerView = await client.ownerGetRequest({ requestId: result.requestId });
 ```
 
 The agent process does not execute directly with its raw private key. If it has an identity key, it still needs to exchange that trust for a session token before dispatching.
@@ -158,6 +159,7 @@ LLM-facing rule of thumb:
 - `agentDispatch(...)` means "do the task now". It attempts real execution immediately.
 - `agentSubmitCapabilityRequest(...)` means "ask for permission". It never executes the task by itself.
 - `agentListRequests()` / `agentGetRequest(...)` are how the agent checks asynchronous results after execution.
+- `ownerListRequests()` / `ownerGetRequest(...)` are how the owner reviews the full sealed request record before approving read.
 
 ### 7. Proactive Capability Requests
 

@@ -348,6 +348,48 @@ export interface AgentVisibleRequestRecord {
   resultVisible: boolean;
 }
 
+export interface OwnerVisibleRequestRecord {
+  requestId: string;
+  createdAt: string;
+  agentId: string;
+  capabilityId?: string;
+  operation: "dispatch_http" | "custom_http";
+  targetUrl: string;
+  method: string;
+  executionStatus: DispatchStatus;
+  responseStatus?: number;
+  error?: string;
+  writeStatus: CapabilityApprovalStatus;
+  readStatus: CapabilityApprovalStatus;
+  hasResponseBody: boolean;
+}
+
+export interface OwnerRequestRecord {
+  requestId: string;
+  createdAt: string;
+  agentId: string;
+  capabilityId?: string;
+  operation: "dispatch_http" | "custom_http";
+  request: {
+    targetUrl: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+    secretId?: string;
+  };
+  response?: {
+    status?: number;
+    headers?: Record<string, string>;
+    body?: string;
+    error?: string;
+  };
+  actions: {
+    write: CapabilityActionState;
+    read: CapabilityActionState;
+  };
+  executionStatus: DispatchStatus;
+}
+
 export interface VaultToolDefinition {
   name: string;
   description: string;
@@ -385,6 +427,22 @@ export interface AgentGetRequestRequest {
   agent: VaultPrincipal & { kind: "agent" };
   proof: AgentProof;
   targetRequestId: string;
+}
+
+export interface OwnerListRequestsRequest {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  agentId?: string;
+  requestedAt: string;
+}
+
+export interface OwnerGetRequestRequest {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  targetRequestId: string;
+  requestedAt: string;
 }
 
 export interface AgentSubmitCapabilityRequestCommand {
@@ -547,6 +605,8 @@ export enum AuditAction {
   DISPATCH_SECRET = "DISPATCH_SECRET",
   LIST_AGENTS = "LIST_AGENTS",
   LIST_CAPABILITIES = "LIST_CAPABILITIES",
+  LIST_REQUESTS = "LIST_REQUESTS",
+  READ_REQUEST = "READ_REQUEST",
   READ_AUDIT = "READ_AUDIT",
   ISSUE_SESSION_TOKEN = "ISSUE_SESSION_TOKEN",
   REVOKE_SESSION_TOKEN = "REVOKE_SESSION_TOKEN",

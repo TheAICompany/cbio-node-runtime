@@ -167,6 +167,8 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 - `agentListSecrets()`: Read all secret metadata in the vault, with per-secret authorization markers showing which entries the agent can currently use.
 - `agentListRequests()`: Read the agent's request history with partially redacted metadata.
 - `agentGetRequest(...)`: Read one request record and receive the result body only if the corresponding read action has been approved.
+- `ownerListRequests()`: Read request history as owner, including approval states.
+- `ownerGetRequest(...)`: Read the full sealed request record as owner, including response content before read release.
 - `agentIntrospect()`: Read the vault-known self context (`agentId`, `identityId`, `nickname`, `metadata`) plus capability carriers and the tool manifest.
 - `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant without executing any request.
 - **Security**: The agent never handles the vault's master password. Agent execution uses **Session Tokens** rather than raw private-key dispatch.

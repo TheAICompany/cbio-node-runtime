@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: OwnerWriteSecretInput
+# Interface: OwnerCreateSecretInput
 
 ## Properties
 

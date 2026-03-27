@@ -286,6 +286,18 @@ export type VaultOwnerControlRequest =
       agentId?: string;
     }
   | {
+      action: "list_requests";
+      vaultId: string;
+      ownerId?: string;
+      agentId?: string;
+    }
+  | {
+      action: "get_request";
+      vaultId: string;
+      ownerId?: string;
+      requestId: string;
+    }
+  | {
       action: "list_secrets";
       vaultId: string;
       ownerId?: string;
@@ -326,6 +338,8 @@ export interface VaultService {
   ownerDeleteSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void>;
   ownerListAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]>;
   ownerListCapabilities(request: OwnerListCapabilitiesRequest): Promise<readonly AgentCapability[]>;
+  ownerListRequests(request: import("../vault-core/index.js").OwnerListRequestsRequest): Promise<readonly import("../vault-core/index.js").OwnerVisibleRequestRecord[]>;
+  ownerGetRequest(request: import("../vault-core/index.js").OwnerGetRequestRequest): Promise<import("../vault-core/index.js").OwnerRequestRecord>;
   ownerListCapabilityStates(request: import("../vault-core/index.js").OwnerListCapabilityStatesRequest): Promise<readonly import("../vault-core/index.js").CapabilityStateRecord[]>;
   ownerListSecrets(request: { vaultId: VaultId; owner: VaultPrincipal; requestId?: string }): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
   ownerRevokeCapability(request: OwnerRevokeCapabilityCommand): Promise<void>;
@@ -726,6 +740,14 @@ class LocalVaultService implements VaultService {
     return await this._authority.ownerListCapabilities(request.actor, request.agentId, request);
   }
 
+  async ownerListRequests(request: import("../vault-core/index.js").OwnerListRequestsRequest): Promise<readonly import("../vault-core/index.js").OwnerVisibleRequestRecord[]> {
+    return await this._authority.ownerListRequests(request.actor, request.agentId, request);
+  }
+
+  async ownerGetRequest(request: import("../vault-core/index.js").OwnerGetRequestRequest): Promise<import("../vault-core/index.js").OwnerRequestRecord> {
+    return await this._authority.ownerGetRequest(request.actor, request.targetRequestId, request);
+  }
+
   async ownerListSecrets(request: { vaultId: VaultId; owner: VaultPrincipal; requestId?: string }): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]> {
     return await this._authority.ownerListSecrets(request.owner as VaultPrincipal & { kind: "owner" }, request);
   }
@@ -878,6 +900,10 @@ class LocalVaultService implements VaultService {
           return { ok: true, result: await this.ownerListAgents({ vaultId, actor: owner, requestId: `owner:list_agents:${Date.now()}`, requestedAt: this._clock?.nowIso?.() ?? new Date().toISOString() }) };
         case "list_capabilities":
           return { ok: true, result: await this.ownerListCapabilities({ vaultId, actor: owner, agentId: request.agentId, requestId: `owner:list_capabilities:${Date.now()}`, requestedAt: this._clock?.nowIso?.() ?? new Date().toISOString() }) };
+        case "list_requests":
+          return { ok: true, result: await this.ownerListRequests({ vaultId, actor: owner, agentId: request.agentId, requestId: `owner:list_requests:${Date.now()}`, requestedAt: this._clock?.nowIso?.() ?? new Date().toISOString() }) };
+        case "get_request":
+          return { ok: true, result: await this.ownerGetRequest({ vaultId, actor: owner, targetRequestId: request.requestId, requestId: `owner:get_request:${Date.now()}`, requestedAt: this._clock?.nowIso?.() ?? new Date().toISOString() }) };
         case "list_secrets":
           return { ok: true, result: await this.ownerListSecrets({ vaultId, owner, requestId: `owner:list_secrets:${Date.now()}` }) };
       }
