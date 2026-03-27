@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.62.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.61.0...v1.62.0) (2026-03-27)
+
+
+### Features
+
+* Require justifications for agentDispatch and agentSubmitCapabilityRequest, enhancing accountability and clarity in request handling. ([47130fe](https://github.com/TheAICompany/cbio-node-runtime/commit/47130febd9af84b8c7868e577c4a6e4f18641745))
+
 ## [1.61.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.60.0...v1.61.0) (2026-03-27)
 
 
