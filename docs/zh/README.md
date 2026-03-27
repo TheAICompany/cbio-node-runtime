@@ -67,6 +67,7 @@ const createdAgent = await session.withClient((client) =>
 
 const ownerClient = await session.client();
 const agents = await ownerClient.ownerListAgents();
+// ownerListAgents() 会直接返回每个 agent 当前的 sessionTokens
 
 session.invalidate();
 ```

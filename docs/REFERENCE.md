@@ -18,6 +18,28 @@ The v1.48.4 runtime centers on a simplified, authority-centric model with manage
 - `createIdentity(...)` - Generate a standalone cryptographic identity keypair.
 - `restoreIdentity(...)` - Restore an identity from a private key.
 
+### Recommended Type Imports
+
+For downstream application code, import public runtime types from the package root:
+
+- `@the-ai-company/cbio-node-runtime`
+
+Recommended stable names:
+
+- `OwnerClient`
+- `CreateOwnerClientOptions`
+- `AgentClient`
+- `CreateAgentClientOptions`
+- `OwnerAgentView`
+- `OwnerSecretView`
+- `OwnerPendingApprovalView`
+- `OwnerRequestSummaryView`
+- `OwnerRequestDetailView`
+
+Legacy protocol-oriented names such as `VaultClient`, `CapabilityStateRecord`, and `OwnerRequestRecord`
+remain supported, but application code is encouraged to prefer the public aliases above when defining its
+own service and UI boundaries.
+
 ### Vault Lifecycle
 
 #### `createVault(storage, { password, nickname, metadata })`
@@ -151,6 +173,8 @@ Recommended GUI behavior:
 - Always collect the password
 - Optionally collect a second factor such as a 6-digit verification code
 - Branch UI behavior on `OwnerClientError.code` rather than parsing error strings
+- Normalize SDK records into app-owned view models at your own service boundary instead of passing runtime
+  records directly into UI components
 
 ## Agent Client (Consumer)
 

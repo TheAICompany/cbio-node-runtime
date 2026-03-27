@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.63.2**
+**CBIO Node Runtime Agent API v1.63.3**
 
 ***
 
-# CBIO Node Runtime Agent API v1.63.2
+# CBIO Node Runtime Agent API v1.63.3
 
 ## Enumerations
 
@@ -79,7 +79,14 @@
 - [AgentCapabilityEnvelope](type-aliases/AgentCapabilityEnvelope.md)
 - [AgentVisibleSecretRecord](type-aliases/AgentVisibleSecretRecord.md)
 - [CbioRuntimeModule](type-aliases/CbioRuntimeModule.md)
+- [CreateOwnerClientOptions](type-aliases/CreateOwnerClientOptions.md)
+- [OwnerAgentView](type-aliases/OwnerAgentView.md)
+- [OwnerClient](type-aliases/OwnerClient.md)
 - [OwnerGrantCapabilityInput](type-aliases/OwnerGrantCapabilityInput.md)
+- [OwnerPendingApprovalView](type-aliases/OwnerPendingApprovalView.md)
+- [OwnerRequestDetailView](type-aliases/OwnerRequestDetailView.md)
+- [OwnerRequestSummaryView](type-aliases/OwnerRequestSummaryView.md)
+- [OwnerSecretView](type-aliases/OwnerSecretView.md)
 
 ## Variables
 

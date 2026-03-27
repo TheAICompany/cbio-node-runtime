@@ -116,6 +116,16 @@ export {
   type AgentVisibleSecretRecord,
 } from "../clients/agent/index.js";
 
+export type {
+  OwnerClient,
+  CreateOwnerClientOptions,
+  OwnerAgentView,
+  OwnerSecretView,
+  OwnerPendingApprovalView,
+  OwnerRequestSummaryView,
+  OwnerRequestDetailView,
+} from "../public-types.js";
+
 export {
   createVaultService,
   wrapVaultCoreAsVaultService,
