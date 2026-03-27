@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.63.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.62.2...v1.63.0) (2026-03-27)
+
+
+### Features
+
+* Enhance ownerListAgents to include current session tokens for each agent and update related documentation. Refactor session token handling in the VaultCore and ISessionTokenRegistry interfaces. ([c467543](https://github.com/TheAICompany/cbio-node-runtime/commit/c467543cd8459fcfbe4dc28a0095af7cf9a52fcd))
+
 ### [1.62.2](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.62.1...v1.62.2) (2026-03-27)
 
 ### [1.62.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.62.0...v1.62.1) (2026-03-27)
