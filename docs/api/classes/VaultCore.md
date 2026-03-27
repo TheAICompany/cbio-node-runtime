@@ -181,6 +181,38 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### ownerApproveCapabilityRead()
+
+> **ownerApproveCapabilityRead**(`command`): `Promise`\<`CapabilityStateRecord`\>
+
+#### Parameters
+
+##### command
+
+`OwnerApproveCapabilityReadCommand`
+
+#### Returns
+
+`Promise`\<`CapabilityStateRecord`\>
+
+***
+
+### ownerApproveCapabilityWrite()
+
+> **ownerApproveCapabilityWrite**(`command`): `Promise`\<`CapabilityStateRecord`\>
+
+#### Parameters
+
+##### command
+
+`OwnerApproveCapabilityWriteCommand`
+
+#### Returns
+
+`Promise`\<`CapabilityStateRecord`\>
+
+***
+
 ### ownerDeleteSecret()
 
 > **ownerDeleteSecret**(`command`): `Promise`\<`void`\>

@@ -80,6 +80,8 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerRegisterFlow(...)`
 - `ownerSubmitCapabilityRequest(...)`
 - `ownerListCapabilityStates(...)`
+- `ownerApproveCapabilityWrite(...)`
+- `ownerApproveCapabilityRead(...)`
 - `ownerExecuteCapabilityStateOnce(...)`
 - `ownerExecuteCapabilityStateAndGrant(...)`
 - `ownerRejectCapabilityState(...)`
@@ -90,7 +92,7 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerReadAudit(...)`
 
 ### Core Operations
-- `ownerWriteSecret(...)`: Store a secret and bind it to specific targets in one step.
+- `ownerWriteSecret(...)`: Store a secret and record its source metadata.
 - `ownerCreateAgent(...)`: Generate and host a new agent identity, then return its public record plus a session token.
 - `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
 - `ownerUpdateAgent(...)`: Update an agent's stored nickname and metadata.
@@ -98,8 +100,10 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
 - `ownerSubmitCapabilityRequest(...)`: Create a `PENDING` capability state for later owner review.
 - `ownerListCapabilityStates(...)`: Read the unified capability-state table, optionally filtered by `agentId` or status.
-- `ownerExecuteCapabilityStateOnce({ requestId })`: Execute a concrete `PENDING` request once, then delete the state.
-- `ownerExecuteCapabilityStateAndGrant({ requestId })`: Execute a `PENDING` request and convert it to `GRANTED`. Capability IDs are generated internally.
+- `ownerApproveCapabilityWrite({ requestId })`: Approve the outbound write action on a pending capability carrier.
+- `ownerApproveCapabilityRead({ requestId })`: Approve the inbound read action separately on the same carrier after write approval.
+- `ownerExecuteCapabilityStateOnce({ requestId })`: Execute a write-approved pending request once, then delete the carrier.
+- `ownerExecuteCapabilityStateAndGrant({ requestId })`: Execute a write-approved pending request and convert the carrier to `GRANTED`. Capability IDs are generated internally.
 - `ownerRejectCapabilityState(requestId)`: Turn a `PENDING` state into `REJECTED`.
 - `ownerOnCapabilityState(callback)`: Register a real-time observer for capability-state changes.
 - `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
@@ -177,9 +181,11 @@ This is useful for LLM-driven planners that can infer the needed scope ahead of 
 
 The state stays pending until the owner approves or rejects it:
 - `ownerSubmitCapabilityRequest(...)` creates the request record.
-- `ownerListCapabilityStates({ status: "PENDING" })` reads the current queue.
-- `ownerExecuteCapabilityStateOnce(...)` executes once and removes the pending state.
-- `ownerExecuteCapabilityStateAndGrant(...)` executes and persists a real capability.
+- `ownerListCapabilityStates({ writeStatus: "PENDING" })` reads the current queue.
+- `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
+- `ownerExecuteCapabilityStateOnce(...)` executes a write-approved request once and removes the pending carrier.
+- `ownerExecuteCapabilityStateAndGrant(...)` executes a write-approved request and persists a real capability carrier.
+- `ownerApproveCapabilityRead(...)` can be applied later on the same carrier to release response visibility.
 - `ownerRejectCapabilityState(...)` marks the state rejected.
 - `ownerOnCapabilityState(...)` supports push-style owner interfaces.
 
@@ -192,7 +198,7 @@ The vault uses a unified encrypted partition:
 - `vaults/<vaultId>_v1/secrets.sealed`: Secret registry.
 - `vaults/<vaultId>_v1/agents.sealed`: Agent identity registry.
 - `vaults/<vaultId>_v1/capabilities.sealed`: Capability registry.
-- `vaults/<vaultId>_v1/custom-flows.sealed`: Custom flow registry.
+- `vaults/<vaultId>_v1/custom-flows.sealed`: Owner-defined HTTP request template registry.
 - `vaults/<vaultId>_v1/audit.jsonl`: Tamper-evident audit log.
 - `vaults/<vaultId>_v1/working-key.sealed`: Sealed working-key custody blob.
 - `vaults/<vaultId>_v1/secret-<secretId>.sealed`: Encrypted secret material.

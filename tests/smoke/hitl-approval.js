@@ -78,16 +78,35 @@ async function testHitlApproval() {
   unsubscribe();
 
   // 7. Owner lists pending capability states (to get the object for approval)
-  const pending = await ownerClient.ownerListCapabilityStates({ status: 'PENDING' });
+  const pending = await ownerClient.ownerListCapabilityStates({ writeStatus: 'PENDING' });
   assert.strictEqual(pending.length, 1);
+  assert.strictEqual(pending[0].actions.write.status, 'PENDING');
+  assert.strictEqual(pending[0].actions.read.status, 'PENDING');
 
-  // 8. Owner executes once and grants
+  // 8. Owner approves the write action, then executes and grants
   console.log('Owner executing request and granting capability...');
+  const writeApproved = await ownerClient.ownerApproveCapabilityWrite({
+    requestId: pending[0].requestId,
+  });
+  assert.strictEqual(writeApproved.actions.write.status, 'APPROVED');
+  assert.strictEqual(writeApproved.actions.read.status, 'PENDING');
   const approveResult = await ownerClient.ownerExecuteCapabilityStateAndGrant({
     requestId: pending[0].requestId,
   });
   console.log('Approval result status:', approveResult.status);
   assert.strictEqual(approveResult.status, 'SUCCEEDED', 'Approved discovery should execute immediately');
+
+  const granted = await ownerClient.ownerListCapabilityStates({ writeStatus: 'APPROVED' });
+  const grantedDiscovery = granted.find((record) => record.requestId === pending[0].requestId);
+  assert.ok(grantedDiscovery, 'Discovery grant should remain queryable');
+  assert.strictEqual(grantedDiscovery.actions.write.status, 'APPROVED');
+  assert.strictEqual(grantedDiscovery.actions.read.status, 'PENDING');
+
+  const readApproved = await ownerClient.ownerApproveCapabilityRead({
+    requestId: grantedDiscovery.requestId,
+  });
+  assert.strictEqual(readApproved.actions.write.status, 'APPROVED');
+  assert.strictEqual(readApproved.actions.read.status, 'APPROVED');
 
   // 9. Verify new capability is granted
   const finalCapabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });

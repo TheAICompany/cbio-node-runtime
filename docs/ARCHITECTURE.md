@@ -32,7 +32,7 @@ All vault data is stored under a flat versioned prefix: `vaults/<vault-id>_v1/`.
 - **`secrets.sealed`**: Contains the encrypted secret registry.
 - **`agents.sealed`**: Contains the agent identity registry (including managed private keys).
 - **`capabilities.sealed`**: Contains granted capabilities.
-- **`custom-flows.sealed`**: Contains registered custom flow definitions.
+- **`custom-flows.sealed`**: Contains registered owner-defined HTTP request templates.
 - **`audit.jsonl`**: Contains the tamper-evident audit log.
 - **`working-key.sealed`**: Contains the sealed vault working key custody blob.
 - **`secret-<secret-id>.sealed`**: Contains encrypted secret material blobs.

@@ -169,9 +169,17 @@ const request = await client.ownerSubmitCapabilityRequest({
   justification: 'Need collection-level user read access'
 });
 
-const pendingRequests = await client.ownerListCapabilityStates({ status: 'PENDING' });
+const pendingRequests = await client.ownerListCapabilityStates({ writeStatus: 'PENDING' });
+
+await client.ownerApproveCapabilityWrite({
+  requestId: pendingRequests[0].requestId
+});
 
 await client.ownerExecuteCapabilityStateAndGrant({
+  requestId: pendingRequests[0].requestId
+});
+
+await client.ownerApproveCapabilityRead({
   requestId: pendingRequests[0].requestId
 });
 ```
@@ -179,8 +187,10 @@ await client.ownerExecuteCapabilityStateAndGrant({
 This uses the same capability-state model as dispatch discovery:
 - `ownerSubmitCapabilityRequest(...)` creates a `PENDING` capability state for owner review.
 - `ownerOnCapabilityState(...)` pushes new capability-state changes to the owner UI or controller.
-- `ownerExecuteCapabilityStateAndGrant(...)` executes the pending request and turns the state into `GRANTED`.
-- `ownerExecuteCapabilityStateOnce(...)` executes the pending request once and then deletes the state.
+- `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
+- `ownerExecuteCapabilityStateAndGrant(...)` executes the approved write action and turns the carrier record into `GRANTED`.
+- `ownerExecuteCapabilityStateOnce(...)` executes the approved write action once and then deletes the carrier record.
+- `ownerApproveCapabilityRead(...)` approves response release separately on the same carrier record.
 - `ownerRejectCapabilityState(...)` turns the state into `REJECTED`.
 
 ### 8. Zero-Configuration Agent Discovery (v1.56.0+)
@@ -234,9 +244,15 @@ client.ownerOnCapabilityState((state) => {
 });
 
 // In Owner process (GUI or Script)
-const pending = await client.ownerListCapabilityStates({ status: 'PENDING' });
+const pending = await client.ownerListCapabilityStates({ writeStatus: 'PENDING' });
 if (pending.length > 0) {
+  await client.ownerApproveCapabilityWrite({
+    requestId: pending[0].requestId
+  });
   await client.ownerExecuteCapabilityStateAndGrant({
+    requestId: pending[0].requestId
+  });
+  await client.ownerApproveCapabilityRead({
     requestId: pending[0].requestId
   });
 }

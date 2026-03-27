@@ -30,6 +30,12 @@
 
 ***
 
+### secretAliases?
+
+> `optional` **secretAliases?**: readonly `string`[]
+
+***
+
 ### write
 
-> **write**: `CapabilityWritePolicy`
+> **write**: `Omit`\<`CapabilityWritePolicy`, `"secretIds"`\>

@@ -228,11 +228,17 @@ export interface AgentSelfContext {
   metadata?: Record<string, any>;
 }
 
-export type AgentCapabilityStateStatus = "GRANTED" | "PENDING" | "REJECTED";
 export type AgentCapabilityStateSource = "owner_grant" | "explicit_request" | "dispatch_discovery";
+export type CapabilityApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type CapabilityActionKind = "write" | "read";
+
+export interface CapabilityActionState {
+  action: CapabilityActionKind;
+  status: CapabilityApprovalStatus;
+  decidedAt?: string;
+}
 
 export interface AgentCapabilityState {
-  status: AgentCapabilityStateStatus;
   source: AgentCapabilityStateSource;
   agentId: string;
   requestId?: string;
@@ -252,6 +258,10 @@ export interface AgentCapabilityState {
   justification?: string;
   secretId?: string;
   targetUrl?: string;
+  actions: {
+    write: CapabilityActionState;
+    read: CapabilityActionState;
+  };
 }
 
 export interface CapabilityStateRecord extends AgentCapabilityState {
@@ -331,10 +341,23 @@ export interface OwnerListCapabilityStatesRequest {
   vaultId: VaultId;
   owner: VaultPrincipal;
   agentId?: string;
-  status?: AgentCapabilityStateStatus;
+  writeStatus?: CapabilityApprovalStatus;
+  readStatus?: CapabilityApprovalStatus;
 }
 
 export interface OwnerExecuteCapabilityStateCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
+}
+
+export interface OwnerApproveCapabilityWriteCommand {
+  vaultId: VaultId;
+  requestId: string;
+  owner: VaultPrincipal;
+}
+
+export interface OwnerApproveCapabilityReadCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;

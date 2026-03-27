@@ -87,7 +87,7 @@ export interface VaultClient {
   ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord>;
 
   /**
-   * Registers a custom HTTP flow for complex secret usage.
+   * Registers a reusable HTTP request template for complex secret exchange patterns.
    */
   ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition>;
 
@@ -117,6 +117,8 @@ export interface VaultClient {
   ownerRevokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
 
   ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
+  ownerApproveCapabilityWrite(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
+  ownerApproveCapabilityRead(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
   ownerExecuteCapabilityStateOnce(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
   ownerExecuteCapabilityStateAndGrant(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
   ownerRejectCapabilityState(requestId: string): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
@@ -612,7 +614,8 @@ class DefaultVaultClient implements VaultClient {
       vaultId: this._vault.vaultId,
       owner: { kind: "owner", id: this._identityId },
       agentId: input.agentId,
-      status: input.status,
+      writeStatus: input.writeStatus,
+      readStatus: input.readStatus,
     });
   }
 
@@ -706,6 +709,22 @@ class DefaultVaultClient implements VaultClient {
     return this._vault.ownerIssueAllAgentSessionTokens({
       vaultId: this._vault.vaultId,
       actor: { kind: "owner", id: this._identityId },
+    });
+  }
+
+  async ownerApproveCapabilityWrite(input: VaultApproveCapabilityRequestInput) {
+    return this._vault.ownerApproveCapabilityWrite({
+      vaultId: this._vault.vaultId,
+      requestId: input.requestId,
+      owner: { kind: "owner", id: this._identityId },
+    });
+  }
+
+  async ownerApproveCapabilityRead(input: VaultApproveCapabilityRequestInput) {
+    return this._vault.ownerApproveCapabilityRead({
+      vaultId: this._vault.vaultId,
+      requestId: input.requestId,
+      owner: { kind: "owner", id: this._identityId },
     });
   }
 

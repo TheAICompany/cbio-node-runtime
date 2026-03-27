@@ -21,7 +21,7 @@ Dispatches a session-token-authenticated request to a target using a vault secre
 
 [`AgentDispatchIntent`](AgentDispatchIntent.md)
 
-The destination, method, and secret ID to use.
+The destination, method, and secret alias to use.
 
 #### Returns
 
@@ -35,7 +35,7 @@ The result of the remote operation.
 const result = await agent.agentDispatch({
   targetUrl: 'https://api.example.com/data',
   method: 'POST',
-  secretId: 'secret_123',
+  secretAlias: 'api-token',
   body: JSON.stringify({ key: 'value' })
 });
 ```

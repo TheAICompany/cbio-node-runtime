@@ -9,9 +9,9 @@ In the current first version:
 - `send_secret` dispatch may return response bodies to the agent
 - `acquire_secret` does not return raw response values; it returns protocol metadata plus a redacted response shape
 - `acquire_secret` currently supports only built-in standard extraction flows, not caller-defined extractors
-- owner-defined HTTP boundaries are created through `createOwnerHttpFlowBoundary(...)`
+- owner-defined HTTP request templates are created through `createOwnerHttpFlowBoundary(...)`
 - `createStandardAcquireBoundary(...)` and `createStandardDispatchBoundary(...)` derive the two built-in default boundaries
-- `custom_http` exists as an owner-defined exception path with fixed mode/target/method/response visibility
+- `custom_http` exists as an owner-defined request-template path with fixed mode/target/method/response visibility
 
 That split is intentional:
 

@@ -440,7 +440,10 @@ export class FileCapabilityRegistry implements CapabilityStateRegistry {
         !(
           candidate.vaultId.value === capability.vaultId.value
           && candidate.agentId === capability.agentId
-          && candidate.capabilityId === capability.capabilityId
+          && (
+            (!!capability.capabilityId && candidate.capabilityId === capability.capabilityId)
+            || (!!capability.requestId && candidate.requestId === capability.requestId)
+          )
         )
       );
       next.push(capability);

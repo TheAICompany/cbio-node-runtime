@@ -392,14 +392,31 @@ try {
   });
   assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
   assert.equal(submittedCapabilityRequest.write.scope, "https://api.example.com/users/*");
+  assert.equal(submittedCapabilityRequest.actions.write.status, "PENDING");
+  assert.equal(submittedCapabilityRequest.actions.read.status, "PENDING");
   assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
-  const pendingCapabilityRequests = await auditClient.ownerListCapabilityStates({ status: "PENDING" });
+  const pendingCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeStatus: "PENDING" });
   assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
+  const writeApprovedCapability = await auditClient.ownerApproveCapabilityWrite({
+    requestId: pendingCapabilityRequests[0].requestId,
+  });
+  assert.equal(writeApprovedCapability.actions.write.status, "APPROVED");
+  assert.equal(writeApprovedCapability.actions.read.status, "PENDING");
   const approvedCapability = await auditClient.ownerExecuteCapabilityStateAndGrant({
     requestId: pendingCapabilityRequests[0].requestId,
   });
   unsubscribeCapability();
   assert.equal(approvedCapability.status, "SUCCEEDED");
+  const grantedCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeStatus: "APPROVED" });
+  const grantedCapabilityRequest = grantedCapabilityRequests.find((record) => record.requestId === pendingCapabilityRequests[0].requestId);
+  assert.ok(grantedCapabilityRequest, "Granted capability request should remain queryable");
+  assert.equal(grantedCapabilityRequest.actions.write.status, "APPROVED");
+  assert.equal(grantedCapabilityRequest.actions.read.status, "PENDING");
+  const readApprovedCapability = await auditClient.ownerApproveCapabilityRead({
+    requestId: grantedCapabilityRequest.requestId,
+  });
+  assert.equal(readApprovedCapability.actions.write.status, "APPROVED");
+  assert.equal(readApprovedCapability.actions.read.status, "APPROVED");
   const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
   assert.ok(
     capabilitiesAfterApproval.some((cap) => cap.write.scope === "https://api.example.com/users/*"),

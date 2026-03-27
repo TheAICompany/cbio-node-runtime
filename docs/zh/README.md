@@ -154,9 +154,15 @@ client.ownerOnCapabilityState((state) => {
   }
 });
 
-const pending = await client.ownerListCapabilityStates({ status: 'PENDING' });
+const pending = await client.ownerListCapabilityStates({ writeStatus: 'PENDING' });
 if (pending.length > 0) {
+  await client.ownerApproveCapabilityWrite({
+    requestId: pending[0].requestId
+  });
   await client.ownerExecuteCapabilityStateAndGrant({
+    requestId: pending[0].requestId
+  });
+  await client.ownerApproveCapabilityRead({
     requestId: pending[0].requestId
   });
 }

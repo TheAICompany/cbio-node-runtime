@@ -322,6 +322,13 @@ export class InMemoryCapabilityRegistry implements CapabilityStateRegistry {
   private readonly _capabilities = new Map<string, CapabilityStateRecord>();
 
   async upsert(capability: CapabilityStateRecord): Promise<void> {
+    for (const [key, candidate] of this._capabilities.entries()) {
+      const sameRequest = capability.requestId && candidate.requestId === capability.requestId;
+      const sameCapability = capability.capabilityId && candidate.capabilityId === capability.capabilityId;
+      if (candidate.vaultId.value === capability.vaultId.value && candidate.agentId === capability.agentId && (sameRequest || sameCapability)) {
+        this._capabilities.delete(key);
+      }
+    }
     this._capabilities.set(
       `${capability.vaultId.value}:${capability.agentId}:${capability.capabilityId ?? capability.requestId ?? "state"}`,
       capability,

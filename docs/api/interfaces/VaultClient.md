@@ -9,6 +9,38 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 
 ## Methods
 
+### ownerApproveCapabilityRead()
+
+> **ownerApproveCapabilityRead**(`input`): `Promise`\<`CapabilityStateRecord`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`CapabilityStateRecord`\>
+
+***
+
+### ownerApproveCapabilityWrite()
+
+> **ownerApproveCapabilityWrite**(`input`): `Promise`\<`CapabilityStateRecord`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`CapabilityStateRecord`\>
+
+***
+
 ### ownerCreateAgent()
 
 > **ownerCreateAgent**(`input`): `Promise`\<[`OwnerAgentProvisionResult`](OwnerAgentProvisionResult.md)\>
@@ -294,7 +326,7 @@ Reads the tamper-evident audit log for the vault.
 
 > **ownerRegisterFlow**(`input`): `Promise`\<`CustomHttpFlowDefinition`\>
 
-Registers a custom HTTP flow for complex secret usage.
+Registers a reusable HTTP request template for complex secret exchange patterns.
 
 #### Parameters
 

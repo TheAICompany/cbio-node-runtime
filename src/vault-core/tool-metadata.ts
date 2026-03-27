@@ -9,12 +9,12 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     },
   },
   agentDispatch: {
-    description: "Use a granted capability to dispatch a secret to a pre-defined target. If not pre-authorized, it will create a pending request for owner approval.",
+    description: "Use a granted capability to perform an outbound request with a vault-managed secret. If not pre-authorized, it will create a pending request for owner approval.",
     parameters: {
       type: "object",
       properties: {
         secretAlias: { type: "string", description: "The human-readable secret name to use." },
-        targetUrl: { type: "string", description: "The destination URL for the secret." },
+        targetUrl: { type: "string", description: "The destination URL for the outbound request." },
         method: { type: "string", description: "The HTTP method (e.g., POST, GET)." },
         body: { type: "string", description: "Optional request body." },
         headers: { type: "object", description: "Optional request headers." },

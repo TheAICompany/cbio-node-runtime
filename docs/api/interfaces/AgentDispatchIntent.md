@@ -30,9 +30,9 @@
 
 ***
 
-### secretId?
+### secretAlias?
 
-> `optional` **secretId?**: `string`
+> `optional` **secretAlias?**: `string`
 
 ***
 
