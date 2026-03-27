@@ -172,7 +172,8 @@ if (pending.length > 0) {
     requestId: pending[0].requestId
   });
   await client.ownerApproveCapabilityRead({
-    requestId: pending[0].requestId
+    requestId: pending[0].requestId,
+    read: { mode: 'custom', paths: ['data.id', 'data.status'] }
   });
 }
 ```

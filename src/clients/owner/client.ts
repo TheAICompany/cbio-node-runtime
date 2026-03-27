@@ -762,6 +762,12 @@ class DefaultVaultClient implements VaultClient {
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
       owner: { kind: "owner", id: this._identityId },
+      read: input.read
+        ? {
+            mode: input.read.mode,
+            paths: input.read.paths ? [...input.read.paths] : undefined,
+          }
+        : undefined,
     });
   }
 

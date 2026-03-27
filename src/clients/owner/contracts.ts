@@ -130,6 +130,7 @@ export interface VaultSubmitCapabilityRequestInput {
 
 export interface VaultApproveCapabilityRequestInput {
   requestId: string;
+  read?: import("../../vault-core/index.js").CapabilityReadPolicy;
   requestedAt?: string;
 }
 

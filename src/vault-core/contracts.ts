@@ -502,6 +502,7 @@ export interface OwnerApproveCapabilityReadCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;
+  read?: CapabilityReadPolicy;
 }
 
 export interface OwnerAllowAlwaysCommand {
@@ -530,6 +531,7 @@ export interface DispatchRequest {
   method: string;
   headers?: Record<string, string>;
   body?: string;
+  skipReplayGuard?: boolean;
 }
 
 export type DispatchDecision = "allow" | "deny" | "pending";

@@ -255,6 +255,7 @@ export type VaultOwnerControlRequest =
       vaultId: string;
       requestId: string;
       ownerId?: string;
+      read?: import("../vault-core/index.js").CapabilityReadPolicy;
     }
   | {
       action: "allow_once";
@@ -889,7 +890,20 @@ class LocalVaultService implements VaultService {
         case "approve_capability_write":
           return { ok: true, result: await this.ownerApproveCapabilityWrite({ vaultId, requestId: request.requestId, owner }) };
         case "approve_capability_read":
-          return { ok: true, result: await this.ownerApproveCapabilityRead({ vaultId, requestId: request.requestId, owner }) };
+          return {
+            ok: true,
+            result: await this.ownerApproveCapabilityRead({
+              vaultId,
+              requestId: request.requestId,
+              owner,
+              read: request.read
+                ? {
+                    mode: request.read.mode,
+                    paths: request.read.paths ? [...request.read.paths] : undefined,
+                  }
+                : undefined,
+            }),
+          };
         case "allow_once":
           return { ok: true, result: await this.ownerAllowOnce({ vaultId, requestId: request.requestId, owner }) };
         case "allow_always":

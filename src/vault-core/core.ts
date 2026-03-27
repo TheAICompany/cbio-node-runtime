@@ -64,6 +64,74 @@ import { InMemoryRequestRecordRegistry } from "./defaults.js";
 
 const VAULT_MASTER_ID = "vault-master";
 
+type RedactedResponseShape =
+  | null
+  | RedactedResponseShape[]
+  | { [key: string]: RedactedResponseShape };
+
+function redactResponseShapeValue(value: unknown): RedactedResponseShape {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactResponseShapeValue(entry));
+  }
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, redactResponseShapeValue(entry)]),
+    );
+  }
+  return null;
+}
+
+function applyResponseReadPolicy(
+  body: string | undefined,
+  policy: import("./contracts.js").CapabilityReadPolicy,
+): string | undefined {
+  if (body === undefined) return body;
+  if (policy.mode === "full") return body;
+  if (policy.mode === "none") return undefined;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return policy.mode === "shape_only" ? JSON.stringify(null) : undefined;
+  }
+
+  if (policy.mode === "shape_only") {
+    return JSON.stringify(redactResponseShapeValue(parsed));
+  }
+  if (policy.mode !== "custom") {
+    return body;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const path of policy.paths ?? []) {
+    const segments = path.split(".").filter(Boolean);
+    if (!segments.length) continue;
+    let source: any = parsed;
+    let valid = true;
+    for (const segment of segments) {
+      if (source && typeof source === "object" && segment in source) {
+        source = source[segment];
+      } else {
+        valid = false;
+        break;
+      }
+    }
+    if (!valid) continue;
+    let target: any = result;
+    for (let index = 0; index < segments.length - 1; index += 1) {
+      const segment = segments[index]!;
+      target[segment] ??= {};
+      target = target[segment];
+    }
+    target[segments[segments.length - 1]!] = source;
+  }
+  return JSON.stringify(result);
+}
+
 
 function toAuditEntry(
   deps: VaultCoreDependencies,
@@ -314,6 +382,7 @@ export class VaultCore {
         proof: pending.proof,
         requestId: pending.requestId,
         requestedAt: pending.requestedAt,
+        skipReplayGuard: true,
       });
     } else if (mode === "grant") {
       result = {
@@ -1066,7 +1135,9 @@ export class VaultCore {
     }
 
     try {
-      await this._deps.replayGuard.assertNotReplayed(request);
+      if (!request.skipReplayGuard) {
+        await this._deps.replayGuard.assertNotReplayed(request);
+      }
       await this._deps.agentProofVerifier.verify(request);
       // Removed direct policy.authorizeDispatch here to handle discovery
     } catch (error) {
@@ -1447,11 +1518,14 @@ export class VaultCore {
     }
     const state = await this._deps.capabilityStates.getByRequestId(this._deps.vaultId, request.targetRequestId);
     const readApproved = state?.actions.read.status === "APPROVED";
+    const responseBody = readApproved
+      ? applyResponseReadPolicy(record.response?.body, state?.read ?? { mode: "full" })
+      : undefined;
     return {
       requestId: record.requestId,
       executionStatus: record.execution.status,
       responseStatus: record.response?.status,
-      responseBody: readApproved ? record.response?.body : undefined,
+      responseBody,
       error: record.response?.error,
     };
   }
@@ -1657,6 +1731,12 @@ export class VaultCore {
     const decidedAt = this._deps.clock.nowIso();
     const next: CapabilityStateRecord = {
       ...pending,
+      read: command.read
+        ? {
+            mode: command.read.mode,
+            paths: command.read.paths ? [...command.read.paths] : undefined,
+          }
+        : pending.read,
       decidedAt,
       actions: {
         ...pending.actions,

@@ -82,6 +82,7 @@ const runtimeSurfaceFetch = async (url, init) => {
 const runtimeSurfaceAgentIdentities = new InMemoryAgentIdentityRegistry();
 const runtimeSurfaceCustomFlows = new InMemoryCustomHttpFlowRegistry();
 const runtimeSurfaceSessionTokens = new InMemorySessionTokenRegistry();
+const runtimeSurfaceCapabilityStates = new InMemoryCapabilityRegistry();
 const authority = createVaultCore({
   vaultId: { value: "vault-runtime-surface" },
   secrets: new InMemorySecretRepository(),
@@ -90,7 +91,7 @@ const authority = createVaultCore({
   audit: new InMemoryAuditLog(),
   executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
   agentIdentities: runtimeSurfaceAgentIdentities,
-  capabilityStates: new InMemoryCapabilityRegistry(),
+  capabilityStates: runtimeSurfaceCapabilityStates,
   agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokens),
   customFlows: runtimeSurfaceCustomFlows,
   sessionTokens: runtimeSurfaceSessionTokens,
@@ -184,6 +185,70 @@ assert.equal(ownerRequestSummary.readStatus, "PENDING");
 const ownerRequest = await client.ownerGetRequest({ requestId: result.requestId });
 assert.equal(ownerRequest.request.secretId, updatedRecord.secretId.value);
 assert.equal(ownerRequest.response?.body, "ok");
+
+const customStatusCapability = {
+  vaultId: authority.vaultId,
+  capabilityId: "cap-custom-status-standard",
+  agentId: importedAgentId,
+  operation: "dispatch_http",
+  write: {
+    secretIds: [updatedRecord.secretId.value],
+    scope: "https://api.example.com/custom-status",
+    methods: ["POST"],
+  },
+  read: { mode: "full" },
+  issuedAt: new Date().toISOString(),
+  auditRequired: true,
+};
+await client.ownerGrantCapability({ capability: customStatusCapability });
+const standardCustomStatusAgent = createAgentClient({
+  agentIdentity: { agentId: importedAgentId },
+  capability: {
+    ...customStatusCapability,
+  },
+  vault,
+  token: agent1Session.token,
+});
+const filteredDispatch = await standardCustomStatusAgent.agentDispatch({
+  secretAlias: "api-token",
+  targetUrl: "https://api.example.com/custom-status",
+  method: "POST",
+  body: '{"mode":"discover"}',
+});
+assert.equal(filteredDispatch.status, "SUCCEEDED");
+await runtimeSurfaceCapabilityStates.upsert({
+  source: "owner_grant",
+  vaultId: authority.vaultId,
+  requestId: filteredDispatch.requestId,
+  capabilityId: customStatusCapability.capabilityId,
+  agentId: importedAgentId,
+  operation: "dispatch_http",
+  write: {
+    secretIds: [updatedRecord.secretId.value],
+    scope: "https://api.example.com/custom-status",
+    methods: ["POST"],
+  },
+  read: { mode: "none" },
+  requestedAt: new Date().toISOString(),
+  issuedAt: customStatusCapability.issuedAt,
+  secretId: updatedRecord.secretId.value,
+  targetUrl: "https://api.example.com/custom-status",
+  actions: {
+    write: { action: "write", status: "APPROVED" },
+    read: { action: "read", status: "PENDING" },
+  },
+});
+const filteredOwnerView = await client.ownerGetRequest({ requestId: filteredDispatch.requestId });
+assert.equal(filteredOwnerView.response?.body, JSON.stringify({ state: "ok", nested: { code: 200 } }));
+await client.ownerApproveCapabilityRead({
+  requestId: filteredDispatch.requestId,
+  read: {
+    mode: "custom",
+    paths: ["nested.code"],
+  },
+});
+const filteredAgentView = await standardCustomStatusAgent.agentGetRequest(filteredDispatch.requestId);
+assert.equal(filteredAgentView.responseBody, JSON.stringify({ nested: { code: 200 } }));
 
 const shapeOnlyFlow = await client.ownerRegisterFlow({
   mode: "send_secret",

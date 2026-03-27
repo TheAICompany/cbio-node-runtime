@@ -6,6 +6,12 @@
 
 ## Properties
 
+### read?
+
+> `optional` **read?**: `CapabilityReadPolicy`
+
+***
+
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
