@@ -20,6 +20,7 @@ import type {
   SecretAlias,
   SecretId,
   SecretRecord,
+  StoredSessionToken,
   SubmitCapabilityRequestCommand,
   VaultPrincipal,
   VaultWriteSecretCommand,
@@ -77,6 +78,7 @@ export interface ISessionTokenRegistry {
   issue(agentId: string): Promise<string>;
   verify(token: string, agentId: string): Promise<boolean>;
   revoke(token: string): Promise<void>;
+  list(agentId?: string): Promise<readonly StoredSessionToken[]>;
 }
 
 export interface AgentIdentityRegistry {

@@ -98,6 +98,7 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
 - `ownerUpdateAgent(...)`: Update an agent's stored nickname and metadata.
 - `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
+- Each listed agent also includes its current `sessionTokens`.
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
 - `ownerSubmitCapabilityRequest(...)`: Create a capability carrier for later owner review.
 - `ownerListCapabilityStates(...)`: Read capability carriers, optionally filtered by `agentId`, `writeGranted`, or `readGranted`.
@@ -107,7 +108,7 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerDeny(requestId)`: Reject the currently pending action on the carrier.
 - `ownerOnCapabilityState(callback)`: Register a real-time observer for capability-carrier changes.
 - `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
-- `ownerIssueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
+- `ownerIssueAllSessionTokens()`: Batch-issue session tokens for all registered agents.
 - `ownerRevokeSessionToken({ token })`: Invalidate a specific session token.
 - `ownerReadSecretPlaintext({ alias, password })`: Read one secret's plaintext after re-entering the vault password.
 - `ownerExportSecret({ alias, password })`: Export a secret's full plaintext record after re-entering the vault password.

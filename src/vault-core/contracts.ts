@@ -641,6 +641,7 @@ export interface AgentIdentityRecord {
   privateKey?: string;
   metadata?: Record<string, any>;
   nickname?: string;
+  sessionTokens?: readonly StoredSessionToken[];
 }
 
 export interface StoredSessionToken {

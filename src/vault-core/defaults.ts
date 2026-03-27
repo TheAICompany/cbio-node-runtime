@@ -564,6 +564,11 @@ export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
   async revoke(token: string): Promise<void> {
     this._tokens.delete(token);
   }
+
+  async list(agentId?: string): Promise<readonly StoredSessionToken[]> {
+    const tokens = [...this._tokens.values()];
+    return agentId ? tokens.filter((token) => token.agentId === agentId) : tokens;
+  }
 }
 
 export interface SignatureAgentProofVerifierOptions {

@@ -47,6 +47,7 @@ import type {
   SecretId,
   SecretRecord,
   SecretSource,
+  StoredSessionToken,
   SubmitCapabilityRequestCommand,
   RequestRecord,
   VaultId,
@@ -1334,12 +1335,22 @@ export class VaultCore {
     request?: Omit<OwnerListAgentsRequest, "actor" | "vaultId">,
   ): Promise<readonly AgentIdentityRecord[]> {
     const identities = await this._deps.agentIdentities.list(this._deps.vaultId);
+    const sessionTokens = await this._deps.sessionTokens.list();
+    const sessionTokensByAgentId = new Map<string, StoredSessionToken[]>();
+    for (const token of sessionTokens) {
+      const existing = sessionTokensByAgentId.get(token.agentId) ?? [];
+      existing.push(token);
+      sessionTokensByAgentId.set(token.agentId, existing);
+    }
     await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_AGENTS, AuditOutcome.ALLOWED, "agent identities listed", {
         requestId: request?.requestId,
       }),
     );
-    return identities;
+    return identities.map((identity) => ({
+      ...identity,
+      sessionTokens: sessionTokensByAgentId.get(identity.agentId) ?? [],
+    }));
   }
 
   async ownerListCapabilities(

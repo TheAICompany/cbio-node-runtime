@@ -839,7 +839,6 @@ export function createVaultClient(options: CreateVaultClientOptions): VaultClien
   );
 
   if (!options.skipWarmup) {
-    // Warmup session tokens by default unless explicitly skipped
     client.ownerIssueAllSessionTokens().catch((err: unknown) => {
       console.error("VaultClient: failed to warmup session tokens:", err);
     });

@@ -109,6 +109,9 @@ const session = createdAgent.sessionToken;
 
 // RECOMENDED (v1.48.4+): Batch issue tokens for all agents at once
 const tokens = await client.ownerIssueAllSessionTokens();
+
+// ownerListAgents() also includes current session tokens for each agent
+const agents = await client.ownerListAgents();
 ```
 
 ### 5. Secret Management (Owner)
