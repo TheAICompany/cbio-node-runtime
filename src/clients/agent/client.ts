@@ -8,6 +8,7 @@ import type {
   AgentDispatchIntent,
   AgentDispatchTransport,
   AgentSubmitCapabilityRequestInput,
+  AgentVisibleRequestRecord,
   AgentVisibleSecretRecord,
 } from "./contracts.js";
 
@@ -39,6 +40,8 @@ export interface AgentClient {
   agentDispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
   agentListCapabilities(): Promise<readonly import("../../vault-core/index.js").AgentCapabilityState[]>;
   agentListSecrets(): Promise<readonly AgentVisibleSecretRecord[]>;
+  agentListRequests(): Promise<readonly AgentVisibleRequestRecord[]>;
+  agentGetRequest(requestId: string): Promise<import("../../vault-core/index.js").AgentRequestResult>;
   /**
    * Introspects the current runtime environment, providing identity, capabilities, and a toolbox manifest.
    * Equivalent to '--help' or 'llms.txt' for the agent.
@@ -152,6 +155,31 @@ class DefaultAgentClient implements AgentClient {
       requestedAt,
       agent: { kind: "agent", id: this._identity.agentId },
       proof: await this._createProof(requestId, requestedAt, "get_manifest"),
+    });
+  }
+
+  async agentListRequests() {
+    const requestedAt = this._clock.nowIso();
+    const requestId = createRequestIdValue("list_requests");
+    return this._transport.agentListRequests({
+      vaultId: this._capability.vaultId,
+      requestId,
+      requestedAt,
+      agent: { kind: "agent", id: this._identity.agentId },
+      proof: await this._createProof(requestId, requestedAt, "list_requests"),
+    });
+  }
+
+  async agentGetRequest(targetRequestId: string) {
+    const requestedAt = this._clock.nowIso();
+    const requestId = createRequestIdValue("read_request_result");
+    return this._transport.agentGetRequest({
+      vaultId: this._capability.vaultId,
+      requestId,
+      requestedAt,
+      targetRequestId,
+      agent: { kind: "agent", id: this._identity.agentId },
+      proof: await this._createProof(requestId, requestedAt, "read_request_result", { targetRequestId }),
     });
   }
 

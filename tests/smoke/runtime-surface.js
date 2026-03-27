@@ -159,7 +159,14 @@ const result = await agent.agentDispatch({
 
 assert.equal(result.status, "SUCCEEDED");
 assert.equal(seenAuthHeader, "Bearer super-secret");
-assert.equal(result.responseBody, "ok");
+assert.equal(result.responseBody, undefined);
+const requestHistory = await agent.agentListRequests();
+const dispatchedRequest = requestHistory.find((entry) => entry.requestId === result.requestId);
+assert.ok(dispatchedRequest);
+assert.equal(dispatchedRequest.resultVisible, false);
+assert.equal(dispatchedRequest.executionStatus, "SUCCEEDED");
+const hiddenResult = await agent.agentGetRequest(result.requestId);
+assert.equal(hiddenResult.responseBody, undefined);
 
 const shapeOnlyFlow = await client.ownerRegisterFlow({
   mode: "send_secret",
@@ -202,7 +209,7 @@ const customResult = await customAgent.agentDispatch({
 });
 
 assert.equal(customResult.status, "SUCCEEDED");
-assert.equal(customResult.responseBody, JSON.stringify({ state: null, nested: { code: null } }));
+assert.equal(customResult.responseBody, "null");
 
 const customAcquireFlow = await client.ownerRegisterFlow({
   mode: "acquire_secret",

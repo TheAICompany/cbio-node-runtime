@@ -7,9 +7,13 @@ import type {
   CapabilityRequestScope,
   AgentListCapabilitiesRequest,
   AgentListSecretsRequest,
+  AgentListRequestsRequest,
+  AgentGetRequestRequest,
+  AgentRequestResult,
   AgentGetRuntimeManifestRequest,
   AgentRuntimeManifest,
   AgentSubmitCapabilityRequestCommand,
+  AgentVisibleRequestRecord,
   AgentVisibleSecretRecord,
   AuditEntry,
   AuditQuery,
@@ -38,6 +42,7 @@ import type {
   SecretRecord,
   SecretSource,
   SubmitCapabilityRequestCommand,
+  RequestRecord,
   VaultId,
   VaultPrincipal,
   VaultWriteSecretCommand,
@@ -49,6 +54,7 @@ import type { VaultCoreDependencies } from "./ports.js";
 import { VaultCoreError } from "./errors.js";
 import { verifySignature } from "../protocol/crypto.js";
 import { getAgentToolbox } from "./tool-metadata.js";
+import { InMemoryRequestRecordRegistry } from "./defaults.js";
 
 const VAULT_MASTER_ID = "vault-master";
 
@@ -252,6 +258,9 @@ export class VaultCore {
     if (pending.actions.write.status !== "APPROVED") {
       throw new VaultCoreError("write approval required before execution", "VAULT_WRITE_DENIED");
     }
+    if (mode === "once" && pending.source !== "dispatch_discovery") {
+      throw new VaultCoreError("one-time execution is only available for dispatch discovery requests", "VAULT_WRITE_DENIED");
+    }
     const issuedAt = this._deps.clock.nowIso();
     const capability: AgentCapability = {
       vaultId: this._deps.vaultId,
@@ -429,6 +438,50 @@ export class VaultCore {
         authorizedCapabilities,
       };
     });
+  }
+
+  private async _recordRequestExecution(request: DispatchRequest, capability: AgentCapability | undefined, result: DispatchResult): Promise<void> {
+    await this._deps.requests.save({
+      vaultId: this._deps.vaultId,
+      requestId: request.requestId,
+      agentId: request.agent.id,
+      capabilityId: capability?.capabilityId,
+      operation: capability?.operation ?? "dispatch_http",
+      createdAt: this._deps.clock.nowIso(),
+      request: {
+        targetUrl: request.targetUrl,
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        secretId: request.secretId,
+      },
+      response: {
+        status: result.responseStatus,
+        body: result.responseBody,
+        error: result.error,
+      },
+      execution: {
+        status: result.status,
+      },
+    });
+  }
+
+  private toVisibleRequestRecord(record: RequestRecord, state: CapabilityStateRecord | null): AgentVisibleRequestRecord {
+    const readStatus = state?.actions.read.status ?? "PENDING";
+    return {
+      requestId: record.requestId,
+      createdAt: record.createdAt,
+      capabilityId: record.capabilityId,
+      operation: record.operation,
+      targetUrl: record.request.targetUrl,
+      method: record.request.method,
+      executionStatus: record.execution.status,
+      responseStatus: record.response?.status,
+      error: record.response?.error,
+      readStatus,
+      hasResponseBody: typeof record.response?.body === "string" && record.response.body.length > 0,
+      resultVisible: readStatus === "APPROVED",
+    };
   }
 
 
@@ -1021,9 +1074,12 @@ export class VaultCore {
       ),
     );
 
+    await this._recordRequestExecution(request, authorization.capability, result);
+
     return {
       ...result,
       vaultId: this._deps.vaultId,
+      responseBody: undefined,
     };
   }
 
@@ -1165,6 +1221,37 @@ export class VaultCore {
     }
     await this._verifyAgentControlProof(request, "list_secrets");
     return this._listVisibleSecretsForAgent(request.agent.id);
+  }
+
+  async agentListRequests(request: AgentListRequestsRequest): Promise<readonly AgentVisibleRequestRecord[]> {
+    if (request.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
+    }
+    await this._verifyAgentControlProof(request, "list_requests");
+    const records = await this._deps.requests.list(this._deps.vaultId, request.agent.id);
+    const states = await this._deps.capabilityStates.list(this._deps.vaultId, request.agent.id);
+    const stateByRequestId = new Map(states.filter((state) => state.requestId).map((state) => [state.requestId as string, state]));
+    return records.map((record) => this.toVisibleRequestRecord(record, stateByRequestId.get(record.requestId) ?? null));
+  }
+
+  async agentGetRequest(request: AgentGetRequestRequest): Promise<AgentRequestResult> {
+    if (request.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
+    }
+    await this._verifyAgentControlProof(request, "read_request_result", { targetRequestId: request.targetRequestId });
+    const record = await this._deps.requests.get(this._deps.vaultId, request.targetRequestId);
+    if (!record || record.agentId !== request.agent.id) {
+      throw new VaultCoreError("request record not found", "VAULT_READ_DENIED");
+    }
+    const state = await this._deps.capabilityStates.getByRequestId(this._deps.vaultId, request.targetRequestId);
+    const readApproved = state?.actions.read.status === "APPROVED";
+    return {
+      requestId: record.requestId,
+      executionStatus: record.execution.status,
+      responseStatus: record.response?.status,
+      responseBody: readApproved ? record.response?.body : undefined,
+      error: record.response?.error,
+    };
   }
 
   async agentGetRuntimeManifest(command: AgentGetRuntimeManifestRequest): Promise<AgentRuntimeManifest> {
@@ -1450,5 +1537,8 @@ export class VaultCore {
 }
 
 export function createVaultCore(deps: VaultCoreDependencies): VaultCore {
-  return new VaultCore(deps);
+  return new VaultCore({
+    ...deps,
+    requests: (deps as VaultCoreDependencies & { requests?: VaultCoreDependencies["requests"] }).requests ?? new InMemoryRequestRecordRegistry(),
+  });
 }

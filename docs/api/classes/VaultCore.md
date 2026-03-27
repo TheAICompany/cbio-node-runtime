@@ -117,6 +117,22 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### agentGetRequest()
+
+> **agentGetRequest**(`request`): `Promise`\<`AgentRequestResult`\>
+
+#### Parameters
+
+##### request
+
+`AgentGetRequestRequest`
+
+#### Returns
+
+`Promise`\<`AgentRequestResult`\>
+
+***
+
 ### agentGetRuntimeManifest()
 
 > **agentGetRuntimeManifest**(`command`): `Promise`\<`AgentRuntimeManifest`\>
@@ -146,6 +162,22 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<readonly `AgentCapabilityState`[]\>
+
+***
+
+### agentListRequests()
+
+> **agentListRequests**(`request`): `Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+
+#### Parameters
+
+##### request
+
+`AgentListRequestsRequest`
+
+#### Returns
+
+`Promise`\<readonly `AgentVisibleRequestRecord`[]\>
 
 ***
 

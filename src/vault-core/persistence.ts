@@ -4,6 +4,7 @@ import type { IStorageProvider } from "../storage/provider.js";
 import type {
   AgentCapability,
   CapabilityStateRecord,
+  RequestRecord,
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
@@ -20,6 +21,7 @@ import type {
   CapabilityStateRegistry,
   CapabilityRevocationRegistry,
   CustomHttpFlowRegistry,
+  RequestRecordRegistry,
   RateLimitStore,
   ReplayGuard,
   SecretCustody,
@@ -68,6 +70,10 @@ interface CustomFlowState {
 
 interface CapabilityState {
   capabilities: CapabilityStateRecord[];
+}
+
+interface RequestRecordState {
+  records: RequestRecord[];
 }
 
 interface AgentIdentityState {
@@ -488,6 +494,48 @@ export class FileCapabilityRegistry implements CapabilityStateRegistry {
   }
 }
 
+export class FileRequestRecordRegistry implements RequestRecordRegistry {
+  private readonly _repo: SealedJsonRepository<RequestRecordState>;
+
+  constructor(
+    storage: IStorageProvider,
+    vaultWorkingKey: string,
+    key = "requests.sealed",
+    private readonly _lockKey = "lock-requests",
+  ) {
+    this._repo = new SealedJsonRepository(storage, key, vaultWorkingKey);
+  }
+
+  private async loadState(): Promise<RequestRecordState> {
+    return this._repo.read({ records: [] });
+  }
+
+  async save(record: RequestRecord): Promise<void> {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
+      const state = await this.loadState();
+      const next = state.records.filter((candidate) =>
+        !(candidate.vaultId.value === record.vaultId.value && candidate.requestId === record.requestId)
+      );
+      next.push(record);
+      await this._repo.write({ records: next }, "request_record_state");
+    });
+  }
+
+  async get(vaultId: VaultId, requestId: string): Promise<RequestRecord | null> {
+    const state = await this.loadState();
+    return state.records.find((record) => record.vaultId.value === vaultId.value && record.requestId === requestId) ?? null;
+  }
+
+  async list(vaultId: VaultId, agentId?: string): Promise<readonly RequestRecord[]> {
+    const state = await this.loadState();
+    return state.records.filter((record) => {
+      if (record.vaultId.value !== vaultId.value) return false;
+      if (agentId && record.agentId !== agentId) return false;
+      return true;
+    });
+  }
+}
+
 /**
  * @internal
  */
@@ -608,6 +656,7 @@ export function createPersistentVaultCoreDependencies(
   const sessionTokens = new InMemorySessionTokenRegistry(); // Session tokens are in-memory for now
   const capabilityRevocations = new FileCapabilityRevocationRegistry(storage, options.vaultWorkingKey);
   const capabilities = new FileCapabilityRegistry(storage, options.vaultWorkingKey);
+  const requests = new FileRequestRecordRegistry(storage, options.vaultWorkingKey);
   const customFlows = new FileCustomHttpFlowRegistry(storage, options.vaultWorkingKey);
 
   return {
@@ -630,6 +679,7 @@ export function createPersistentVaultCoreDependencies(
     ),
     agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
     capabilityStates: capabilities,
+    requests,
     customFlows,
     sessionTokens,
     clock: defaults.clock,

@@ -19,6 +19,7 @@ import type {
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
+  RequestRecord,
   SecretAlias,
   SecretId,
   SecretRecord,
@@ -44,6 +45,7 @@ import {
   Clock,
   IdGenerator,
   ISessionTokenRegistry,
+  RequestRecordRegistry,
   ReplayGuard,
   SecretCustody,
   SecretRepository,
@@ -359,6 +361,26 @@ export class InMemoryCapabilityRegistry implements CapabilityStateRegistry {
     return Array.from(this._capabilities.entries())
       .filter(([key]) => key.startsWith(agentPrefix))
       .map(([, capability]) => capability);
+  }
+}
+
+export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
+  private readonly _records = new Map<string, RequestRecord>();
+
+  async save(record: RequestRecord): Promise<void> {
+    this._records.set(`${record.vaultId.value}:${record.requestId}`, record);
+  }
+
+  async get(vaultId: VaultId, requestId: string): Promise<RequestRecord | null> {
+    return this._records.get(`${vaultId.value}:${requestId}`) ?? null;
+  }
+
+  async list(vaultId: VaultId, agentId?: string): Promise<readonly RequestRecord[]> {
+    return Array.from(this._records.values()).filter((record) => {
+      if (record.vaultId.value !== vaultId.value) return false;
+      if (agentId && record.agentId !== agentId) return false;
+      return true;
+    });
   }
 }
 
@@ -706,6 +728,7 @@ export function createVaultCoreDependencies(
     agentIdentities,
     agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
     capabilityStates: new InMemoryCapabilityRegistry(),
+    requests: new InMemoryRequestRecordRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
     sessionTokens: options.sessionTokens ?? new InMemorySessionTokenRegistry(),

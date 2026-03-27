@@ -9,7 +9,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     },
   },
   agentDispatch: {
-    description: "Use a granted capability to perform an outbound request with a vault-managed secret. If not pre-authorized, it will create a pending request for owner approval.",
+    description: "Execute a real outbound request with a vault-managed secret. If write permission is missing, the request will not be sent and a pending approval carrier will be created instead.",
     parameters: {
       type: "object",
       properties: {
@@ -36,8 +36,25 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
       properties: {},
     },
   },
+  agentListRequests: {
+    description: "List your request history with partially redacted metadata. Results remain hidden until the read action is approved.",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+  },
+  agentGetRequest: {
+    description: "Get one executed request record. The result payload is returned only after the owner approves the read action for that request.",
+    parameters: {
+      type: "object",
+      properties: {
+        requestId: { type: "string", description: "The request identifier returned when the request was executed." },
+      },
+      required: ["requestId"],
+    },
+  },
   agentSubmitCapabilityRequest: {
-    description: "Proactively request a new capability (set of permissions) from the vault owner.",
+    description: "Ask the owner for broader permission without executing any request. This creates an approval carrier only; it does not send network traffic.",
     parameters: {
       type: "object",
       properties: {

@@ -282,6 +282,46 @@ export interface AgentRuntimeManifest {
   tools: readonly VaultToolDefinition[];
 }
 
+export interface RequestRecord {
+  vaultId: VaultId;
+  requestId: string;
+  agentId: string;
+  capabilityId?: string;
+  operation: "dispatch_http" | "custom_http";
+  createdAt: string;
+  request: {
+    targetUrl: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+    secretId?: string;
+  };
+  response?: {
+    status?: number;
+    headers?: Record<string, string>;
+    body?: string;
+    error?: string;
+  };
+  execution: {
+    status: DispatchStatus;
+  };
+}
+
+export interface AgentVisibleRequestRecord {
+  requestId: string;
+  createdAt: string;
+  capabilityId?: string;
+  operation: "dispatch_http" | "custom_http";
+  targetUrl: string;
+  method: string;
+  executionStatus: DispatchStatus;
+  responseStatus?: number;
+  error?: string;
+  readStatus: CapabilityApprovalStatus;
+  hasResponseBody: boolean;
+  resultVisible: boolean;
+}
+
 export interface VaultToolDefinition {
   name: string;
   description: string;
@@ -302,6 +342,23 @@ export interface AgentListSecretsRequest {
   requestedAt: string;
   agent: VaultPrincipal & { kind: "agent" };
   proof: AgentProof;
+}
+
+export interface AgentListRequestsRequest {
+  vaultId: VaultId;
+  requestId: string;
+  requestedAt: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  proof: AgentProof;
+}
+
+export interface AgentGetRequestRequest {
+  vaultId: VaultId;
+  requestId: string;
+  requestedAt: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  proof: AgentProof;
+  targetRequestId: string;
 }
 
 export interface AgentSubmitCapabilityRequestCommand {
@@ -419,6 +476,14 @@ export interface DispatchResult {
   status: DispatchStatus;
   targetUrl: string;
   method: string;
+  responseStatus?: number;
+  responseBody?: string;
+  error?: string;
+}
+
+export interface AgentRequestResult {
+  requestId: string;
+  executionStatus: DispatchStatus;
   responseStatus?: number;
   responseBody?: string;
   error?: string;

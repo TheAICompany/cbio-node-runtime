@@ -123,9 +123,16 @@ const agent = createAgentClient({
 });
 
 const result = await agent.agentDispatch({ ... });
+const requests = await agent.agentListRequests();
+const request = await agent.agentGetRequest(result.requestId);
 ```
 
 Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身份材料，也应先换取 session token，再进行 dispatch。
+
+给 LLM 的直白规则：
+- `agentDispatch(...)` = 立刻尝试执行真实任务
+- `agentSubmitCapabilityRequest(...)` = 只申请权限，不会执行任务
+- `agentListRequests()` / `agentGetRequest(...)` = 在请求执行后查看异步结果
 
 ```ts
 const manifest = await agent.agentIntrospect();
@@ -133,14 +140,14 @@ const manifest = await agent.agentIntrospect();
 console.log(manifest.agent.agentId);
 console.log(manifest.agent.identityId);
 console.log(manifest.agent.nickname);
-console.log(manifest.capabilities); // 同一张能力状态表里同时包含 GRANTED 和 PENDING
+console.log(manifest.capabilities); // 同一组能力载体里包含 write/read 动作状态
 ```
 
-`agentListCapabilities()` 现在返回的也是同一张统一能力状态表，因此调度器或 Agent 重启后，不需要分别拼“已授权能力”和“待审批能力”。
+`agentListCapabilities()` 返回能力载体视图，`agentListRequests()` / `agentGetRequest()` 则负责暴露请求历史和按权限裁剪后的结果。
 
 ### 7. 人机协同（HITL）工作流
 
-系统采用统一的 **能力状态（capability state）** 模型。如果 Agent 尝试执行的动作不在白名单内，dispatch 会返回 `PENDING`，同时运行时会写入一条 `PENDING` 能力状态，等待 Owner 审批。
+如果 Agent 尝试执行的动作不在白名单内，dispatch 会返回 `PENDING`，同时运行时会写入一条能力载体记录，其 `write` 动作等待 Owner 审批。
 
 ```ts
 const result = await agent.agentDispatch({ ... });
@@ -149,7 +156,7 @@ if (result.status === 'PENDING') {
 }
 
 client.ownerOnCapabilityState((state) => {
-  if (state.status === 'PENDING') {
+  if (state.actions.write.status === 'PENDING') {
     console.log('收到新的待审批能力状态:', state.requestId);
   }
 });

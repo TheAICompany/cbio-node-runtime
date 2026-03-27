@@ -98,14 +98,14 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerUpdateAgent(...)`: Update an agent's stored nickname and metadata.
 - `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
-- `ownerSubmitCapabilityRequest(...)`: Create a `PENDING` capability state for later owner review.
-- `ownerListCapabilityStates(...)`: Read the unified capability-state table, optionally filtered by `agentId` or status.
+- `ownerSubmitCapabilityRequest(...)`: Create a capability carrier for later owner review.
+- `ownerListCapabilityStates(...)`: Read capability carriers, optionally filtered by `agentId`, `writeStatus`, or `readStatus`.
 - `ownerApproveCapabilityWrite({ requestId })`: Approve the outbound write action on a pending capability carrier.
 - `ownerApproveCapabilityRead({ requestId })`: Approve the inbound read action separately on the same carrier after write approval.
-- `ownerExecuteCapabilityStateOnce({ requestId })`: Execute a write-approved pending request once, then delete the carrier.
-- `ownerExecuteCapabilityStateAndGrant({ requestId })`: Execute a write-approved pending request and convert the carrier to `GRANTED`. Capability IDs are generated internally.
-- `ownerRejectCapabilityState(requestId)`: Turn a `PENDING` state into `REJECTED`.
-- `ownerOnCapabilityState(callback)`: Register a real-time observer for capability-state changes.
+- `ownerExecuteCapabilityStateOnce({ requestId })`: Execute a write-approved pending request once, then delete the carrier. This is only valid for dispatch-discovery carriers with a concrete blocked request.
+- `ownerExecuteCapabilityStateAndGrant({ requestId })`: Execute a write-approved pending request and persist the carrier as an active capability. Capability IDs are generated internally.
+- `ownerRejectCapabilityState(requestId)`: Reject the currently pending action on the carrier.
+- `ownerOnCapabilityState(callback)`: Register a real-time observer for capability-carrier changes.
 - `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
 - `ownerIssueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
 - `ownerRevokeSessionToken({ token })`: Invalidate a specific session token.
@@ -158,38 +158,40 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 ### Core Operations
 - `agentDispatch(...)`: Use a granted capability to send a secret to an authorized target.
   - **Status**: Returns `SUCCEEDED`, `FAILED`, or `PENDING`.
+  - **Execution Semantics**: This is the method that attempts the real task immediately.
+  - **Result Delivery**: The full result is stored in a sealed request record; use `agentListRequests()` and `agentGetRequest(...)` to inspect it later.
   - **Discovery Flow**: If an agent attempts an action not explicitly in its white-list, the request is automatically stalled as `PENDING` for owner review. 
-- `agentListCapabilities()`: Read the agent's unified capability-state table.
-  - Includes both `GRANTED` and `PENDING` entries.
-  - Pending rows cover both proactive requests and dispatch-discovery requests.
+- `agentListCapabilities()`: Read the agent's capability carriers, including current `write` and `read` action states.
 - `agentListSecrets()`: Read all secret metadata in the vault, with per-secret authorization markers showing which entries the agent can currently use.
-- `agentIntrospect()`: Read the vault-known self context (`agentId`, `identityId`, `nickname`, `metadata`) plus the unified capability-state table and tool manifest.
-- `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant before dispatching.
+- `agentListRequests()`: Read the agent's request history with partially redacted metadata.
+- `agentGetRequest(...)`: Read one request record and receive the result body only if the corresponding read action has been approved.
+- `agentIntrospect()`: Read the vault-known self context (`agentId`, `identityId`, `nickname`, `metadata`) plus capability carriers and the tool manifest.
+- `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant without executing any request.
 - **Security**: The agent never handles the vault's master password. Agent execution uses **Session Tokens** rather than raw private-key dispatch.
 - **Auditing**: Dispatches are audited by default. Set `skipAudit: true` in the capability (or during approval) to disable logging for specific actions.
 
-## Capability State Approval
+## Capability Action Approval
 
-The runtime uses one unified capability-state model:
+The runtime uses capability carriers with two independently approved actions:
 
-- **Dispatch discovery**: A concrete dispatch misses existing capability coverage and creates a `PENDING` state.
-- **Capability request**: An external planner or controller creates a broader `PENDING` state before any dispatch is attempted.
+- **Dispatch discovery**: A concrete dispatch misses existing capability coverage and creates a carrier with `write.status = PENDING`.
+- **Capability request**: An external planner or controller creates a broader carrier before any dispatch is attempted.
 
 This is useful for LLM-driven planners that can infer the needed scope ahead of time, for example:
 - scope `https://api.example.com/users/*`
 - methods `["GET"]`
 
-The state stays pending until the owner approves or rejects it:
-- `ownerSubmitCapabilityRequest(...)` creates the request record.
+The carrier remains actionable until the owner approves or rejects its pending actions:
+- `ownerSubmitCapabilityRequest(...)` creates the carrier.
 - `ownerListCapabilityStates({ writeStatus: "PENDING" })` reads the current queue.
 - `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
-- `ownerExecuteCapabilityStateOnce(...)` executes a write-approved request once and removes the pending carrier.
+- `ownerExecuteCapabilityStateOnce(...)` executes a write-approved discovery request once and removes the pending carrier.
 - `ownerExecuteCapabilityStateAndGrant(...)` executes a write-approved request and persists a real capability carrier.
 - `ownerApproveCapabilityRead(...)` can be applied later on the same carrier to release response visibility.
 - `ownerRejectCapabilityState(...)` marks the state rejected.
 - `ownerOnCapabilityState(...)` supports push-style owner interfaces.
 
-The proactive request flow does not replace dispatch discovery. Both flows now produce the same `PENDING` capability-state object.
+The proactive request flow does not replace dispatch discovery. Both flows now produce the same carrier shape with independent write/read action states.
 
 ## Storage Layout
 
@@ -198,6 +200,7 @@ The vault uses a unified encrypted partition:
 - `vaults/<vaultId>_v1/secrets.sealed`: Secret registry.
 - `vaults/<vaultId>_v1/agents.sealed`: Agent identity registry.
 - `vaults/<vaultId>_v1/capabilities.sealed`: Capability registry.
+- `vaults/<vaultId>_v1/requests.sealed`: Sealed request-record registry.
 - `vaults/<vaultId>_v1/custom-flows.sealed`: Owner-defined HTTP request template registry.
 - `vaults/<vaultId>_v1/audit.jsonl`: Tamper-evident audit log.
 - `vaults/<vaultId>_v1/working-key.sealed`: Sealed working-key custody blob.

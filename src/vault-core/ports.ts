@@ -16,6 +16,7 @@ import type {
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
+  RequestRecord,
   SecretAlias,
   SecretId,
   SecretRecord,
@@ -111,6 +112,12 @@ export interface CapabilityStateRegistry {
   list(vaultId: VaultId, agentId?: string): Promise<readonly CapabilityStateRecord[]>;
 }
 
+export interface RequestRecordRegistry {
+  save(record: RequestRecord): Promise<void>;
+  get(vaultId: VaultId, requestId: string): Promise<RequestRecord | null>;
+  list(vaultId: VaultId, agentId?: string): Promise<readonly RequestRecord[]>;
+}
+
 export interface VaultCoreDependencies {
   vaultId: VaultId;
   secrets: SecretRepository;
@@ -120,6 +127,7 @@ export interface VaultCoreDependencies {
   executor: TrustedExecutor;
   agentIdentities: AgentIdentityRegistry;
   capabilityStates: CapabilityStateRegistry;
+  requests: RequestRecordRegistry;
   customFlows: CustomHttpFlowRegistry;
   agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;

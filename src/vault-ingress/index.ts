@@ -184,6 +184,23 @@ export type VaultAgentControlRequest =
       proof: VaultAgentControlProof;
     }
   | {
+      action: "list_requests";
+      vaultId: string;
+      requestId: string;
+      requestedAt: string;
+      agentId: string;
+      proof: VaultAgentControlProof;
+    }
+  | {
+      action: "read_request_result";
+      vaultId: string;
+      requestId: string;
+      requestedAt: string;
+      targetRequestId: string;
+      agentId: string;
+      proof: VaultAgentControlProof;
+    }
+  | {
       action: "submit_capability_request";
       vaultId: string;
       requestId: string;
@@ -321,6 +338,8 @@ export interface VaultService {
   ownerOnCapabilityState(callback: (record: import("../vault-core/index.js").CapabilityStateRecord) => void): () => void;
   agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../vault-core/index.js").AgentCapabilityState[]>;
   agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
+  agentListRequests(request: import("../vault-core/index.js").AgentListRequestsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleRequestRecord[]>;
+  agentGetRequest(request: import("../vault-core/index.js").AgentGetRequestRequest): Promise<import("../vault-core/index.js").AgentRequestResult>;
   agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest>;
   agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
   agentHandleControl(request: VaultAgentControlRequest): Promise<VaultAgentControlResponse | VaultAgentControlErrorResponse>;
@@ -748,6 +767,14 @@ class LocalVaultService implements VaultService {
     return this._authority.agentListSecrets(request);
   }
 
+  agentListRequests(request: import("../vault-core/index.js").AgentListRequestsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleRequestRecord[]> {
+    return this._authority.agentListRequests(request);
+  }
+
+  agentGetRequest(request: import("../vault-core/index.js").AgentGetRequestRequest): Promise<import("../vault-core/index.js").AgentRequestResult> {
+    return this._authority.agentGetRequest(request);
+  }
+
   agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest> {
     return this._authority.agentGetRuntimeManifest(request);
   }
@@ -776,6 +803,10 @@ class LocalVaultService implements VaultService {
           return { ok: true, result: await this.agentListCapabilities(base) };
         case "list_secrets":
           return { ok: true, result: await this.agentListSecrets(base) };
+        case "list_requests":
+          return { ok: true, result: await this.agentListRequests(base) };
+        case "read_request_result":
+          return { ok: true, result: await this.agentGetRequest({ ...base, targetRequestId: request.targetRequestId }) };
         case "get_manifest":
           return { ok: true, result: await this.agentGetRuntimeManifest(base) };
         case "submit_capability_request":

@@ -79,6 +79,31 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     return payload as readonly import("../vault-core/index.js").AgentVisibleSecretRecord[];
   }
 
+  async agentListRequests(request: import("../vault-core/index.js").AgentListRequestsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleRequestRecord[]> {
+    const payload = await this._postControl({
+      action: "list_requests",
+      vaultId: request.vaultId.value,
+      requestId: request.requestId,
+      requestedAt: request.requestedAt,
+      agentId: request.agent.id,
+      proof: { token: request.proof.token },
+    });
+    return payload as readonly import("../vault-core/index.js").AgentVisibleRequestRecord[];
+  }
+
+  async agentGetRequest(request: import("../vault-core/index.js").AgentGetRequestRequest): Promise<import("../vault-core/index.js").AgentRequestResult> {
+    const payload = await this._postControl({
+      action: "read_request_result",
+      vaultId: request.vaultId.value,
+      requestId: request.requestId,
+      requestedAt: request.requestedAt,
+      targetRequestId: request.targetRequestId,
+      agentId: request.agent.id,
+      proof: { token: request.proof.token },
+    });
+    return payload as import("../vault-core/index.js").AgentRequestResult;
+  }
+
   async agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest> {
     const payload = await this._postControl({
       action: "get_manifest",

@@ -22,6 +22,22 @@
 
 ***
 
+### agentGetRequest()
+
+> **agentGetRequest**(`request`): `Promise`\<`AgentRequestResult`\>
+
+#### Parameters
+
+##### request
+
+`AgentGetRequestRequest`
+
+#### Returns
+
+`Promise`\<`AgentRequestResult`\>
+
+***
+
 ### agentGetRuntimeManifest()
 
 > **agentGetRuntimeManifest**(`request`): `Promise`\<`AgentRuntimeManifest`\>
@@ -51,6 +67,22 @@
 #### Returns
 
 `Promise`\<readonly `AgentCapabilityState`[]\>
+
+***
+
+### agentListRequests()
+
+> **agentListRequests**(`request`): `Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+
+#### Parameters
+
+##### request
+
+`AgentListRequestsRequest`
+
+#### Returns
+
+`Promise`\<readonly `AgentVisibleRequestRecord`[]\>
 
 ***
 

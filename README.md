@@ -148,13 +148,20 @@ const agent = createAgentClient({
 });
 
 const result = await agent.agentDispatch({ ... });
+const requests = await agent.agentListRequests();
+const request = await agent.agentGetRequest(result.requestId);
 ```
 
 The agent process does not execute directly with its raw private key. If it has an identity key, it still needs to exchange that trust for a session token before dispatching.
 
+LLM-facing rule of thumb:
+- `agentDispatch(...)` means "do the task now". It attempts real execution immediately.
+- `agentSubmitCapabilityRequest(...)` means "ask for permission". It never executes the task by itself.
+- `agentListRequests()` / `agentGetRequest(...)` are how the agent checks asynchronous results after execution.
+
 ### 7. Proactive Capability Requests
 
-If an LLM or orchestration layer already knows it needs a broader scope, it can create a `PENDING` capability state up front instead of discovering one URL at a time through failed dispatch attempts.
+If an LLM or orchestration layer already knows it needs a broader scope, it can create a capability carrier up front instead of discovering one URL at a time through failed dispatch attempts.
 
 ```ts
 const request = await client.ownerSubmitCapabilityRequest({
@@ -184,14 +191,14 @@ await client.ownerApproveCapabilityRead({
 });
 ```
 
-This uses the same capability-state model as dispatch discovery:
-- `ownerSubmitCapabilityRequest(...)` creates a `PENDING` capability state for owner review.
-- `ownerOnCapabilityState(...)` pushes new capability-state changes to the owner UI or controller.
+This uses the same carrier model as dispatch discovery:
+- `ownerSubmitCapabilityRequest(...)` creates a capability carrier for owner review.
+- `ownerOnCapabilityState(...)` pushes new carrier changes to the owner UI or controller.
 - `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
-- `ownerExecuteCapabilityStateAndGrant(...)` executes the approved write action and turns the carrier record into `GRANTED`.
-- `ownerExecuteCapabilityStateOnce(...)` executes the approved write action once and then deletes the carrier record.
+- `ownerExecuteCapabilityStateAndGrant(...)` executes the approved write action and persists the carrier as an active capability.
+- `ownerExecuteCapabilityStateOnce(...)` executes the approved write action once and then deletes the carrier record. This option is only valid for dispatch discovery carriers that already contain a concrete blocked request.
 - `ownerApproveCapabilityRead(...)` approves response release separately on the same carrier record.
-- `ownerRejectCapabilityState(...)` turns the state into `REJECTED`.
+- `ownerRejectCapabilityState(...)` rejects the currently pending action on the carrier.
 
 ### 8. Zero-Configuration Agent Discovery (v1.56.0+)
 
@@ -203,13 +210,13 @@ const manifest = await agent.agentIntrospect();
 console.log(manifest.agent.agentId);      // Vault-known agent ID
 console.log(manifest.agent.identityId);   // Stable identity ID
 console.log(manifest.agent.nickname);     // Optional nickname
-console.log(manifest.capabilities);       // Unified capability view: GRANTED + PENDING
+console.log(manifest.capabilities);       // Capability carriers with write/read action states
 console.log(manifest.tools);              // List of available API tools with JSON-Schema
 ```
 
 This manifest can be directly fed into an LLM's system prompt or tool-calling configuration to enable fully autonomous, zero-config integration.
 
-`agentListCapabilities()` now returns the same unified capability-state view used by the manifest, so agents and schedulers can see both granted and pending entries through one table.
+`agentListCapabilities()` returns the same carrier view used by the manifest, and `agentListRequests()` / `agentGetRequest()` expose sealed request history and per-request results through controlled interfaces.
 
 ---
 
@@ -227,7 +234,7 @@ This manifest can be directly fed into an LLM's system prompt or tool-calling co
 
 ### Human-in-the-Loop (HITL) Workflow
 
-The system uses a unified capability-state model. If an agent attempts an action not explicitly in its white-list (the "Iron Triangle" of Agent-Key-Action), the dispatch returns `PENDING` and the runtime records a `PENDING` capability state:
+If an agent attempts an action not explicitly in its white-list, the dispatch returns `PENDING` and the runtime records a capability carrier whose `write` action is still pending owner approval:
 
 ```ts
 // In Agent process
@@ -238,8 +245,8 @@ if (result.status === 'PENDING') {
 
 // OR: Use the observer for real-time push
 client.ownerOnCapabilityState((state) => {
-  if (state.status === 'PENDING') {
-    console.log("New pending capability state:", state.requestId);
+  if (state.actions.write.status === 'PENDING') {
+    console.log("New pending capability carrier:", state.requestId);
   }
 });
 

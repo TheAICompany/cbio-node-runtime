@@ -42,6 +42,22 @@ const result = await agent.agentDispatch({
 
 ***
 
+### agentGetRequest()
+
+> **agentGetRequest**(`requestId`): `Promise`\<`AgentRequestResult`\>
+
+#### Parameters
+
+##### requestId
+
+`string`
+
+#### Returns
+
+`Promise`\<`AgentRequestResult`\>
+
+***
+
 ### agentIntrospect()
 
 > **agentIntrospect**(): `Promise`\<`AgentRuntimeManifest`\>
@@ -62,6 +78,16 @@ Equivalent to '--help' or 'llms.txt' for the agent.
 #### Returns
 
 `Promise`\<readonly `AgentCapabilityState`[]\>
+
+***
+
+### agentListRequests()
+
+> **agentListRequests**(): `Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+
+#### Returns
+
+`Promise`\<readonly `AgentVisibleRequestRecord`[]\>
 
 ***
 
