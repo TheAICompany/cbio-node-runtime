@@ -5,7 +5,6 @@ import type {
   CapabilityStateRecord,
   AgentIdentityRecord,
   AgentProof,
-  OwnerDefineSecretTargetsCommand,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
@@ -42,7 +41,6 @@ export interface SecretCustody {
 
 export interface PolicyEngine {
   authorizeWrite(command: VaultWriteSecretCommand): Promise<void>;
-  authorizeDefineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<void>;
   authorizeDispatch(request: DispatchRequest, record?: SecretRecord | null): Promise<void>;
   revokeCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number>;
 }

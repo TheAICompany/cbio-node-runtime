@@ -16,7 +16,6 @@ import type {
   AuditEntry,
   AuditQuery,
   CustomHttpFlowDefinition,
-  VaultTargetBinding,
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
@@ -108,10 +107,6 @@ function canonicalizeHttpTarget(targetUrl: string, method: string): CanonicalHtt
   };
 }
 
-function canonicalizeAllowedTarget(targetUrl: string): string {
-  return canonicalizeHttpTarget(targetUrl, "GET").url;
-}
-
 function matchesScope(scope: string, targetUrl: string): boolean {
   if (scope.endsWith("*")) {
     return canonicalRequestPrefix(scope).startsWith("__INVALID__")
@@ -119,6 +114,10 @@ function matchesScope(scope: string, targetUrl: string): boolean {
       : canonicalizeHttpTarget(targetUrl, "GET").url.startsWith(canonicalRequestPrefix(scope));
   }
   return canonicalizeAllowedTarget(scope) === canonicalizeHttpTarget(targetUrl, "GET").url;
+}
+
+function canonicalizeAllowedTarget(targetUrl: string): string {
+  return canonicalizeHttpTarget(targetUrl, "GET").url;
 }
 
 function canonicalRequestPrefix(scope: string): string {
@@ -405,29 +404,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
     return false;
   }
 
-  private validateTargetBindings(bindings: readonly VaultTargetBinding[], code: "VAULT_WRITE_DENIED" | "VAULT_DISPATCH_DENIED"): void {
-    if (bindings.length === 0) {
-      throw new VaultCoreError("target bindings required", code);
-    }
-    for (const binding of bindings) {
-      if (!binding.targetId?.trim()) {
-        throw new VaultCoreError("target binding id required", code);
-      }
-      if (binding.kind === "site") {
-        if (!binding.targetUrl) {
-          throw new VaultCoreError("site target url required", code);
-        }
-        canonicalizeAllowedTarget(binding.targetUrl);
-      }
-      if (binding.methods?.length === 0) {
-        throw new VaultCoreError("empty target methods denied", code);
-      }
-      if (binding.paths?.length === 0) {
-        throw new VaultCoreError("empty target paths denied", code);
-      }
-    }
-  }
-
   private async assertCapabilityRateLimit(request: DispatchRequest): Promise<void> {
     const rateLimit = request.capability?.rateLimit;
     if (!rateLimit) {
@@ -452,31 +428,12 @@ export class DefaultPolicyEngine implements PolicyEngine {
       throw new VaultCoreError("secret plaintext required", "VAULT_WRITE_DENIED");
     }
     this.validateRequestedAt(command.requestedAt, "requestedAt");
-    if (command.kind === "owner.write_secret") {
-      if (command.targetBindings?.length) {
-        this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
-      }
-      return;
-    }
+    if (command.kind === "owner.write_secret") return;
     if (command.issuer.id !== command.issuerSiteId) {
       throw new VaultCoreError("issuer identity mismatch", "VAULT_WRITE_DENIED");
     }
     if (!await this.isTrustedIssuer(command.issuer.id)) {
       throw new VaultCoreError("trusted issuer required", "VAULT_WRITE_DENIED");
-    }
-    if (!command.targetBindings?.length) {
-      throw new VaultCoreError("trusted issuer target bindings required", "VAULT_WRITE_DENIED");
-    }
-    this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
-  }
-
-  async authorizeDefineSecretTargets(command: import("./contracts.js").OwnerDefineSecretTargetsCommand): Promise<void> {
-    if (!command.alias.trim()) {
-      throw new VaultCoreError("secret alias required", "VAULT_WRITE_DENIED");
-    }
-    this.validateRequestedAt(command.requestedAt, "requestedAt");
-    if (command.targetBindings.length > 0) {
-      this.validateTargetBindings(command.targetBindings, "VAULT_WRITE_DENIED");
     }
   }
 
@@ -541,20 +498,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
       : 0;
     if ((capability.revocationVersion ?? 0) < currentRevocationVersion) {
       throw new VaultCoreError("capability revoked", "VAULT_DISPATCH_DENIED");
-    }
-    if (record) {
-      const targetAllowed = record.targetBindings.some((binding) => {
-        if (binding.kind === "owner") {
-          return binding.targetId === canonicalRequestTarget.url;
-        }
-        if (binding.targetUrl && canonicalizeAllowedTarget(binding.targetUrl) !== canonicalRequestTarget.url) return false;
-        if (binding.methods?.length && !binding.methods.includes(canonicalRequestTarget.method)) return false;
-        if (binding.paths?.length && !binding.paths.includes(canonicalRequestTarget.path)) return false;
-        return true;
-      });
-      if (!targetAllowed) {
-        throw new VaultCoreError("record target denied", "VAULT_DISPATCH_DENIED");
-      }
     }
     await this.assertCapabilityRateLimit(request);
   }

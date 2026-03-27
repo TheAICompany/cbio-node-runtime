@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.57.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.58.0**](../README.md)
 
 ***
 
@@ -25,24 +25,6 @@ The private key is stored in the vault for managed custody.
 #### Returns
 
 `Promise`\<[`OwnerAgentProvisionResult`](OwnerAgentProvisionResult.md)\>
-
-***
-
-### ownerDefineSecretTargets()
-
-> **ownerDefineSecretTargets**(`input`): `Promise`\<`SecretRecord`\>
-
-Refines the allowed targets for an existing secret.
-
-#### Parameters
-
-##### input
-
-[`OwnerDefineSecretTargetsInput`](OwnerDefineSecretTargetsInput.md)
-
-#### Returns
-
-`Promise`\<`SecretRecord`\>
 
 ***
 
@@ -430,7 +412,7 @@ Securely stores a new secret in the vault.
 
 > **ownerWriteSecret**(`input`): `Promise`\<`SecretRecord`\>
 
-Atomic operation to store a secret and define its targets in one step.
+Stores a manually provided secret in the vault.
 
 #### Parameters
 

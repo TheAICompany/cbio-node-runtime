@@ -20,7 +20,6 @@ async function main() {
   await client.ownerWriteSecret({
     alias: "demo",
     plaintext: "value",
-    targetBindings: [],
   });
 
   let invalidPasswordCode;

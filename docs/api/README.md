@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.57.0**
+**CBIO Node Runtime Agent API v1.58.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.57.0
+# CBIO Node Runtime Agent API v1.58.0
 
 ## Enumerations
 
@@ -37,8 +37,6 @@
 - [InitializeVaultCustodyOptions](interfaces/InitializeVaultCustodyOptions.md)
 - [IStorageProvider](interfaces/IStorageProvider.md)
 - [OwnerAgentProvisionResult](interfaces/OwnerAgentProvisionResult.md)
-- [OwnerDefineSecretTargetsInput](interfaces/OwnerDefineSecretTargetsInput.md)
-- [OwnerSecretTargetBinding](interfaces/OwnerSecretTargetBinding.md)
 - [OwnerSensitiveActionConfirmation](interfaces/OwnerSensitiveActionConfirmation.md)
 - [OwnerSensitiveActionContext](interfaces/OwnerSensitiveActionContext.md)
 - [OwnerSession](interfaces/OwnerSession.md)

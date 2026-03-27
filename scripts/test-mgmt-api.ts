@@ -34,7 +34,6 @@ async function main() {
   await client1.writeSecret({
     alias: "mgmt-test-secret",
     plaintext: "Initial secret value",
-    targetBindings: [],
   });
 
   console.log("Recovering vault with recoverVault()...");

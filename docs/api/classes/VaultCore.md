@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.57.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.58.0**](../README.md)
 
 ***
 
@@ -178,22 +178,6 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`CapabilityStateRecord`\>
-
-***
-
-### ownerDefineSecretTargets()
-
-> **ownerDefineSecretTargets**(`command`): `Promise`\<`SecretRecord`\>
-
-#### Parameters
-
-##### command
-
-`OwnerDefineSecretTargetsCommand`
-
-#### Returns
-
-`Promise`\<`SecretRecord`\>
 
 ***
 

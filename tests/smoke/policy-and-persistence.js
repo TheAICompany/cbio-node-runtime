@@ -57,61 +57,25 @@ try {
     alias: "unscoped-token",
     plaintext: "secret-0",
   });
-  assert.equal(unscopedRecord.targetBindings.length, 0);
+  assert.deepEqual(unscopedRecord.source, { kind: "manual" });
 
   const unscopedArrayRecord = await client.ownerStoreSecret({
     alias: "unscoped-array-token",
     plaintext: "secret-0b",
   });
-  assert.equal(unscopedArrayRecord.targetBindings.length, 0);
+  assert.deepEqual(unscopedArrayRecord.source, { kind: "manual" });
 
   const storedThenDefinedRecord = await client.ownerStoreSecret({
     alias: "stored-then-defined-token",
     plaintext: "secret-1",
   });
-  assert.equal(storedThenDefinedRecord.targetBindings.length, 0);
-
-  const definedRecord = await client.ownerDefineSecretTargets({
-    alias: "stored-then-defined-token",
-    targetBindings: [
-      {
-        kind: "site",
-        targetId: "allowed-site",
-        targetUrl: "https://allowed.example.com/resource",
-        methods: ["POST"],
-      },
-    ],
-  });
-  assert.equal(definedRecord.targetBindings.length, 1);
-
-  await assert.rejects(
-    () => client.ownerWriteSecret({
-      alias: "malformed-token",
-      plaintext: "secret-bad",
-      targetBindings: [
-        {
-          kind: "site",
-          targetId: "bad-site",
-          targetUrl: "https://bad.example.com/endpoint",
-          methods: [],
-        },
-      ],
-    }),
-    (error) => error instanceof VaultCoreError && error.code === "VAULT_WRITE_DENIED",
-  );
+  assert.deepEqual(storedThenDefinedRecord.source, { kind: "manual" });
 
   const restrictedRecord = await client.ownerWriteSecret({
     alias: "restricted-token",
     plaintext: "secret-2",
-    targetBindings: [
-      {
-        kind: "site",
-        targetId: "allowed-site",
-        targetUrl: "https://allowed.example.com/resource",
-        methods: ["POST"],
-      },
-    ],
   });
+  assert.deepEqual(restrictedRecord.source, { kind: "manual" });
 
   const agentIdentity = createIdentity();
   const importedAgent = await client.ownerImportAgent({
@@ -175,20 +139,6 @@ try {
     method: "POST",
   });
   assert.equal(storedThenDefinedResult.status, "SUCCEEDED");
-
-  const clearedRecord = await client.ownerDefineSecretTargets({
-    alias: "stored-then-defined-token",
-    targetBindings: [],
-  });
-  assert.equal(clearedRecord.targetBindings.length, 0);
-  await assert.rejects(
-    () => storedThenDefinedAgent.agentDispatch({
-      secretAlias: "stored-then-defined-token",
-      targetUrl: "https://allowed.example.com/resource",
-      method: "POST",
-    }),
-    /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
-  );
 
   const deniedSiteResult = await agent.agentDispatch({
     secretAlias: "restricted-token",
@@ -265,14 +215,6 @@ try {
     () => client.ownerWriteSecret({
       alias: "restricted-token",
       plaintext: "replacement-secret",
-      targetBindings: [
-        {
-          kind: "site",
-          targetId: "allowed-site",
-          targetUrl: "https://allowed.example.com/resource",
-          methods: ["POST"],
-        },
-      ],
     }),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_WRITE_DENIED",
   );
@@ -500,7 +442,7 @@ try {
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "DENIED" && /capability revoked/.test(entry.detail)));
   assert.ok(reloadedAudit.some((entry) => entry.outcome === "DENIED" && /path denied|capability rate limit exceeded/.test(entry.detail)));
   const storedThenDefinedAudit = await client.ownerReadAudit({ secretAlias: "stored-then-defined-token" });
-  assert.ok(storedThenDefinedAudit.some((entry) => entry.action === "DEFINE_SECRET_TARGETS" && entry.outcome === "SUCCEEDED"));
+  assert.ok(storedThenDefinedAudit.some((entry) => entry.action === "WRITE_SECRET" && entry.outcome === "SUCCEEDED"));
 
   console.log("policy and persistence smoke test passed");
 } finally {

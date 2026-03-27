@@ -31,14 +31,6 @@ const vaultAgentId = importedAgent.agent.agentId;
 const guardedRecord = await client.ownerWriteSecret({
   alias: "guarded-token",
   plaintext: "guarded-secret",
-  targetBindings: [
-    {
-      kind: "site",
-      targetId: "guarded-site",
-      targetUrl: "https://guarded.example.com/endpoint",
-      methods: ["POST"],
-    },
-  ],
 });
 
 const expiredRequestedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();

@@ -108,7 +108,6 @@ const client = createVaultClient({
   passwordVerifier: async (password) => password === "runtime-surface-password",
 });
 assert.equal(typeof client.ownerStoreSecret, "function");
-assert.equal(typeof client.ownerDefineSecretTargets, "function");
 await client.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
@@ -117,21 +116,8 @@ assert.equal(typeof importedAgentId, "string");
 const ownedRecord = await client.ownerWriteSecret({
   alias: "api-token",
   plaintext: "super-secret",
-  targetBindings: [
-    {
-      kind: "site",
-      targetId: "api.example.com",
-      targetUrl: "https://api.example.com/endpoint",
-      methods: ["POST"],
-    },
-    {
-      kind: "site",
-      targetId: "api.example.com",
-      targetUrl: "https://api.example.com/custom-status",
-      methods: ["POST"],
-    },
-  ],
 });
+assert.deepEqual(ownedRecord.source, { kind: "manual" });
 
 const exportedSecret = await client.ownerExportSecret({ alias: "api-token", password: "runtime-surface-password" });
 assert.equal(exportedSecret.plaintext, "super-secret");
@@ -516,14 +502,6 @@ try {
     () => rollbackClient.ownerWriteSecret({
       alias: "should-rollback",
       plaintext: "rollback-secret",
-      targetBindings: [
-        {
-          kind: "site",
-          targetId: "rollback-site",
-          targetUrl: "https://rollback.example.com/endpoint",
-          methods: ["POST"],
-        },
-      ],
     }),
     (error) => error instanceof VaultCoreError && error.code === "VAULT_AUDIT_FAILED",
   );

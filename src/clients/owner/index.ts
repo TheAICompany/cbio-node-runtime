@@ -10,7 +10,6 @@ export type {
 
 export type {
   VaultAuditQueryInput,
-  OwnerDefineSecretTargetsInput,
   VaultExportSecretInput,
   VaultReadSecretPlaintextInput,
   VaultReadAgentPrivateKeyInput,
@@ -23,7 +22,6 @@ export type {
   VaultImportAgentInput,
   VaultCreateAgentInput,
   OwnerAgentProvisionResult,
-  OwnerSecretTargetBinding,
   OwnerStoreSecretInput,
   OwnerWriteSecretInput,
   VaultDeleteSecretInput,

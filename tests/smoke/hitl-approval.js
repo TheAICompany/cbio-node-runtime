@@ -24,7 +24,6 @@ async function testHitlApproval() {
   await ownerClient.ownerWriteSecret({
     alias: 'top-secret',
     plaintext: 'shhh!',
-    targetBindings: [{ kind: 'site', targetId: 'mock-api', targetUrl: 'https://api.example.com/*' }]
   });
 
   // 4. Grant Capability (NO LONGER REQUIRES EXPLICIT FLAG)

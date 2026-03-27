@@ -96,13 +96,7 @@ const sessionToken = createdAgent.sessionToken;
 ```ts
 const record = await client.ownerWriteSecret({
   alias: 'api-token',
-  plaintext: 'secret-value',
-  targetBindings: [{
-    kind: 'site',
-    targetId: 'my-api',
-    targetUrl: 'https://api.example.com/endpoint',
-    methods: ['POST']
-  }]
+  plaintext: 'secret-value'
 });
 
 await client.ownerGrantCapability({

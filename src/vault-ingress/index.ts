@@ -1,7 +1,6 @@
 import {
   createVaultCore,
   type AgentCapability,
-  type VaultTargetBinding,
   type VaultCore,
   type VaultCoreDependencies,
   type DispatchRequest,
@@ -223,7 +222,6 @@ export interface VaultService {
   ownerUpdateAgentIdentity(request: import("../vault-core/index.js").OwnerUpdateAgentIdentityCommand): Promise<AgentIdentityRecord>;
   ownerRegisterCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
   ownerWriteSecret(request: import("../vault-core/index.js").VaultWriteSecretCommand): Promise<SecretRecord>;
-  ownerDefineSecretTargets(request: import("../vault-core/index.js").OwnerDefineSecretTargetsCommand): Promise<SecretRecord>;
   acquireSecret(request: VaultAcquireSecretInput): Promise<VaultAcquireSecretResult>;
   agentDispatch(request: DispatchRequest): Promise<DispatchResult>;
   agentHandleDispatch(request: VaultAgentDispatchRequest): Promise<VaultAgentDispatchResponse | VaultAgentDispatchErrorResponse>;
@@ -286,10 +284,6 @@ class LocalVaultService implements VaultService {
 
   ownerWriteSecret(request: import("../vault-core/index.js").VaultWriteSecretCommand): Promise<SecretRecord> {
     return this._authority.ownerWriteSecret(request);
-  }
-
-  ownerDefineSecretTargets(request: import("../vault-core/index.js").OwnerDefineSecretTargetsCommand): Promise<SecretRecord> {
-    return this._authority.ownerDefineSecretTargets(request);
   }
 
   private redactResponseShape(value: unknown): RedactedResponseShape {
@@ -423,13 +417,7 @@ class LocalVaultService implements VaultService {
       storeAlias: request.alias,
     });
     const payload = await this.fetchAndParse(request);
-    const targetBindings: readonly VaultTargetBinding[] = [{
-      kind: "site",
-      targetId: request.issuerId,
-      targetUrl: standardBoundary.targetUrl,
-      methods: [standardBoundary.method],
-      paths: [new URL(standardBoundary.targetUrl).pathname || "/"],
-    }];
+    const requestId = `acquire_secret:${Date.now()}:${request.alias}`;
 
     await this._authority.ownerWriteSecret({
       kind: "issuer.write_secret",
@@ -441,7 +429,7 @@ class LocalVaultService implements VaultService {
       alias: request.alias,
       plaintext: this.extractSecretForFlow(request.flow, payload.parsedBody),
       issuerSiteId: request.issuerId,
-      targetBindings,
+      source: { kind: "request", requestId },
       requestedAt: request.requestedAt ?? (this._clock?.nowIso() ?? new Date().toISOString()),
     });
     return {

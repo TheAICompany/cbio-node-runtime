@@ -31,18 +31,22 @@ export interface SecretRecord {
   alias: SecretAlias;
   version: SecretVersion;
   issuerId: string | null;
-  targetBindings: VaultTargetBinding[];
+  source: SecretSource;
   createdAt: string;
   updatedAt: string;
   retiredAt?: string;
 }
 
-export interface VaultTargetBinding {
-  kind: "owner" | "site";
-  targetId: string;
-  targetUrl?: string;
-  methods?: readonly string[];
-  paths?: readonly string[];
+export type SecretSource =
+  | { kind: "manual" }
+  | {
+      kind: "request";
+      requestId: string;
+    };
+
+export interface SecretSourceInput {
+  kind: "manual" | "request";
+  requestId?: string;
 }
 
 export interface OwnerWriteSecretCommand {
@@ -52,16 +56,7 @@ export interface OwnerWriteSecretCommand {
   owner: VaultPrincipal & { kind: "owner" };
   alias: string;
   plaintext: string;
-  targetBindings?: readonly VaultTargetBinding[];
-  requestedAt: string;
-}
-
-export interface OwnerDefineSecretTargetsCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal & { kind: "owner" };
-  alias: string;
-  targetBindings: readonly VaultTargetBinding[];
+  source?: SecretSourceInput;
   requestedAt: string;
 }
 
@@ -72,7 +67,7 @@ export interface IssuerWriteSecretCommand {
   alias: string;
   plaintext: string;
   issuerSiteId: string;
-  targetBindings?: readonly VaultTargetBinding[];
+  source?: SecretSourceInput;
   requestedAt: string;
 }
 
@@ -191,7 +186,7 @@ export interface AgentVisibleSecretRecord {
   secretId: SecretId;
   alias: SecretAlias;
   issuerId: string | null;
-  targetBindings: VaultTargetBinding[];
+  source: SecretSource;
   createdAt: string;
   updatedAt: string;
   isAuthorizedForAgent?: boolean;
@@ -367,7 +362,6 @@ export interface DispatchAuthorization {
   decision: DispatchDecision;
   reason: string | null;
   secretId: SecretId | null;
-  executorTarget: VaultTargetBinding | null;
   capability?: AgentCapability;
 }
 
@@ -417,7 +411,6 @@ export enum AuditAction {
   REJECT_CAPABILITY_REQUEST = "REJECT_CAPABILITY_REQUEST",
   REVOKE_CAPABILITY = "REVOKE_CAPABILITY",
   WRITE_SECRET = "WRITE_SECRET",
-  DEFINE_SECRET_TARGETS = "DEFINE_SECRET_TARGETS",
   EXPORT_SECRET = "EXPORT_SECRET",
   REASSIGN_ALIAS = "REASSIGN_ALIAS",
   DELETE_SECRET = "DELETE_SECRET",

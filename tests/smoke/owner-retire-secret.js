@@ -24,7 +24,6 @@ const client = createVaultClient({
 await client.ownerWriteSecret({
   alias: "demo-secret",
   plaintext: "shh",
-  targetBindings: [],
 });
 
 const beforeEntries = await readdir(join(tempDir, "vaults", `${created.core.vaultId.value}_v1`));

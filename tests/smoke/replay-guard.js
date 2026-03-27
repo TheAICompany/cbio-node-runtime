@@ -56,14 +56,6 @@ const vaultAgentId = importedAgent.agent.agentId;
 const replayRecord = await client.ownerWriteSecret({
   alias: "replay-token",
   plaintext: "replay-secret",
-  targetBindings: [
-    {
-      kind: "site",
-      targetId: "allowed",
-      targetUrl: "https://allowed.example.com/replay",
-      methods: ["POST"],
-    },
-  ],
   requestedAt: new Date().toISOString(),
 });
 

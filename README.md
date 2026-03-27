@@ -114,16 +114,10 @@ const tokens = await client.ownerIssueAllSessionTokens();
 ### 5. Secret Management (Owner)
 
 ```ts
-// Write a secret and bind it to a target site
+// Write a secret. Source metadata is recorded by the vault.
 const record = await client.ownerWriteSecret({
   alias: 'api-token',
-  plaintext: 'super-secret-value',
-  targetBindings: [{
-    kind: 'site',
-    targetId: 'my-api',
-    targetUrl: 'https://api.example.com/endpoint',
-    methods: ['POST']
-  }]
+  plaintext: 'super-secret-value'
 });
 
 // 4. Grant agent capabilities

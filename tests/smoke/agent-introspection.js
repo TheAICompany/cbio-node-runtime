@@ -27,22 +27,10 @@ const vaultAgentId = importedAgent.agent.agentId;
 await ownerClient.ownerWriteSecret({
   alias: "crm-token",
   plaintext: "secret-crm-token",
-  targetBindings: [{
-    kind: "site",
-    targetId: "crm",
-    targetUrl: "https://api.example.com/users/*",
-    methods: ["GET"],
-  }],
 });
 await ownerClient.ownerWriteSecret({
   alias: "payroll-token",
   plaintext: "secret-payroll-token",
-  targetBindings: [{
-    kind: "site",
-    targetId: "payroll",
-    targetUrl: "https://api.example.com/payroll/*",
-    methods: ["GET"],
-  }],
 });
 await ownerClient.ownerGrantCapability({
   agentId: vaultAgentId,

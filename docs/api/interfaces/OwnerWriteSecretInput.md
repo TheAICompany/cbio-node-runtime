@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.57.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.58.0**](../README.md)
 
 ***
 
@@ -21,9 +21,3 @@
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
-
-***
-
-### targetBindings
-
-> **targetBindings**: readonly [`OwnerSecretTargetBinding`](OwnerSecretTargetBinding.md)[]

@@ -1,29 +1,14 @@
 import type { OwnerHttpFlowBoundary } from "../../vault-ingress/flow-factories.js";
 
-export interface OwnerSecretTargetBinding {
-  kind: "owner" | "site";
-  targetId: string;
-  targetUrl?: string;
-  methods?: readonly string[];
-  paths?: readonly string[];
-}
-
 export interface OwnerWriteSecretInput {
   alias: string;
   plaintext: string;
-  targetBindings: readonly OwnerSecretTargetBinding[];
   requestedAt?: string;
 }
 
 export interface OwnerStoreSecretInput {
   alias: string;
   plaintext: string;
-  requestedAt?: string;
-}
-
-export interface OwnerDefineSecretTargetsInput {
-  alias: string;
-  targetBindings: readonly OwnerSecretTargetBinding[];
   requestedAt?: string;
 }
 
@@ -209,7 +194,6 @@ export interface CreateVaultClientOptions {
  */
 export interface VaultClient {
   ownerStoreSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
-  ownerDefineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   ownerWriteSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
   ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string>;

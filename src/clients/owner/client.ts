@@ -11,7 +11,6 @@ import { SystemClock, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
   VaultAuditQueryInput,
-  OwnerDefineSecretTargetsInput,
   VaultExportSecretInput,
   VaultReadSecretPlaintextInput,
   VaultReadAgentPrivateKeyInput,
@@ -57,12 +56,7 @@ export interface VaultClient {
   ownerStoreSecret(input: OwnerStoreSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
 
   /**
-   * Refines the allowed targets for an existing secret.
-   */
-  ownerDefineSecretTargets(input: OwnerDefineSecretTargetsInput): Promise<import("../../vault-core/index.js").SecretRecord>;
-
-  /**
-   * Atomic operation to store a secret and define its targets in one step.
+   * Stores a manually provided secret in the vault.
    */
   ownerWriteSecret(input: OwnerWriteSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
 
@@ -264,25 +258,7 @@ class DefaultVaultClient implements VaultClient {
       },
       alias: input.alias,
       plaintext: input.plaintext,
-      targetBindings: [],
-      requestedAt,
-    });
-  }
-
-  async ownerDefineSecretTargets(input: OwnerDefineSecretTargetsInput) {
-    const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("define_secret_targets");
-    const targetBindings = [...input.targetBindings];
-    
-    return this._vault.ownerDefineSecretTargets({
-      vaultId: this._vault.vaultId,
-      requestId,
-      owner: {
-        kind: "owner",
-        id: this._identityId,
-      },
-      alias: input.alias,
-      targetBindings,
+      source: { kind: "manual" },
       requestedAt,
     });
   }
@@ -290,7 +266,6 @@ class DefaultVaultClient implements VaultClient {
   async ownerWriteSecret(input: OwnerWriteSecretInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = createRequestIdValue("write_secret");
-    const targetBindings = [...input.targetBindings];
     
     return this._vault.ownerWriteSecret({
       kind: "owner.write_secret",
@@ -302,7 +277,7 @@ class DefaultVaultClient implements VaultClient {
       },
       alias: input.alias,
       plaintext: input.plaintext,
-      targetBindings,
+      source: { kind: "manual" },
       requestedAt,
     });
   }

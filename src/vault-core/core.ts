@@ -19,7 +19,6 @@ import type {
   DispatchRequest,
   DispatchResult,
   OwnerExecuteCapabilityStateCommand,
-  OwnerDefineSecretTargetsCommand,
   OwnerIssueSessionTokenRequest,
   OwnerRejectCapabilityStateCommand,
   OwnerDeleteSecretCommand,
@@ -37,6 +36,7 @@ import type {
   SecretAlias,
   SecretId,
   SecretRecord,
+  SecretSource,
   SubmitCapabilityRequestCommand,
   VaultId,
   VaultPrincipal,
@@ -92,15 +92,16 @@ function buildSecretRecord(
   command: VaultWriteSecretCommand,
 ): SecretRecord {
   const now = deps.clock.nowIso();
+  const source: SecretSource = command.source?.kind === "request" && command.source.requestId
+    ? { kind: "request", requestId: command.source.requestId }
+    : { kind: "manual" };
   return {
     vaultId: deps.vaultId,
     secretId: deps.ids.newSecretId(),
     alias: { value: command.alias },
     version: deps.ids.newVersion(),
     issuerId: command.kind === "issuer.write_secret" ? command.issuerSiteId : null,
-    targetBindings: command.kind === "issuer.write_secret"
-      ? [...(command.targetBindings ?? [{ kind: "site", targetId: command.issuerSiteId }])]
-      : [...(command.targetBindings ?? [])],
+    source,
     createdAt: now,
     updatedAt: now,
   };
@@ -422,7 +423,7 @@ export class VaultCore {
         secretId: record.secretId,
         alias: record.alias,
         issuerId: record.issuerId,
-        targetBindings: [...record.targetBindings],
+        source: record.source,
         createdAt: record.createdAt,
         updatedAt: record.updatedAt,
         isAuthorizedForAgent: authorizedCapabilities.length > 0,
@@ -687,13 +688,7 @@ export class VaultCore {
 
   async _storeCustomFlowSecret(flow: CustomHttpFlowDefinition, alias: string, plaintext: string): Promise<SecretRecord> {
     const actor: VaultPrincipal & { kind: "owner" } = { kind: "owner", id: flow.ownerId };
-    const targetBindings = [{
-      kind: "site" as const,
-      targetId: flow.flowId,
-      targetUrl: flow.targetUrl,
-      methods: [flow.method],
-      paths: [new URL(flow.targetUrl).pathname || "/"],
-    }];
+    const requestId = this._deps.ids.newRequestId("custom_flow_store");
     const existing = await this._deps.secrets.getByAlias({ value: alias });
     if (existing) {
       await this._appendAudit(
@@ -714,11 +709,14 @@ export class VaultCore {
     const record = buildSecretRecord(this._deps, {
       kind: "owner.write_secret",
       vaultId: this._deps.vaultId,
-      requestId: this._deps.ids.newRequestId("custom_flow_store"),
+      requestId,
       owner: actor,
       alias,
       plaintext,
-      targetBindings,
+      source: {
+        kind: "request",
+        requestId,
+      },
       requestedAt: this._deps.clock.nowIso(),
     });
     try {
@@ -821,56 +819,6 @@ export class VaultCore {
     );
   }
 
-  async ownerDefineSecretTargets(command: OwnerDefineSecretTargetsCommand): Promise<SecretRecord> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
-    }
-    try {
-      await this._deps.policy.authorizeDefineSecretTargets(command);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      await this._appendAudit(
-        toAuditEntry(
-          this._deps,
-          command.owner,
-          AuditAction.DEFINE_SECRET_TARGETS,
-          AuditOutcome.DENIED,
-          detail,
-          {
-            secretAlias: command.alias,
-          },
-        ),
-      );
-      throw error;
-    }
-
-    const existing = await this._deps.secrets.getByAlias({ value: command.alias });
-    if (!existing) {
-      const error = new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
-      await this._appendAudit(
-        toAuditEntry(this._deps, command.owner, AuditAction.DEFINE_SECRET_TARGETS, AuditOutcome.DENIED, error.message, {
-          secretAlias: command.alias,
-        }),
-      );
-      throw error;
-    }
-
-    const nextRecord: SecretRecord = {
-      ...existing,
-      targetBindings: [...command.targetBindings],
-      updatedAt: this._deps.clock.nowIso(),
-    };
-    await this._deps.secrets.save(nextRecord);
-    await this._appendAudit(
-      toAuditEntry(this._deps, command.owner, AuditAction.DEFINE_SECRET_TARGETS, AuditOutcome.SUCCEEDED, "secret targets defined", {
-        requestId: command.requestId,
-        secretAlias: nextRecord.alias.value,
-        secretId: nextRecord.secretId.value,
-      }),
-    );
-    return nextRecord;
-  }
-
   async agentAuthorizeDispatch(request: DispatchRequest): Promise<DispatchAuthorization> {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("request vault mismatch", "VAULT_DISPATCH_DENIED");
@@ -885,7 +833,6 @@ export class VaultCore {
         decision: "deny",
         reason: "secret not found",
         secretId: null,
-        executorTarget: null,
       };
     }
 
@@ -905,7 +852,7 @@ export class VaultCore {
     // DISCOVERY LOGIC: Find best matching capability
     const agentRecord = await this._deps.agentIdentities.get(this._deps.vaultId, request.agent.id);
     if (!agentRecord) {
-       return { vaultId: this._deps.vaultId, decision: "deny", reason: "agent not found", secretId: null, executorTarget: null };
+       return { vaultId: this._deps.vaultId, decision: "deny", reason: "agent not found", secretId: null };
     }
 
     const capabilities = (await this._deps.capabilityStates.list(this._deps.vaultId, request.agent.id))
@@ -916,12 +863,6 @@ export class VaultCore {
       ? capabilities.filter((cap) => cap.capabilityId === requestedCapabilityId)
       : capabilities;
     const capability = candidateCapabilities.find((cap) => this.isCapabilityMatch(cap, request, record?.secretId.value));
-
-    const executorTarget = record
-      ? record.targetBindings.find((binding) => binding.targetUrl === request.targetUrl)
-        ?? record.targetBindings.find((binding) => binding.targetId === request.targetUrl)
-        ?? null
-      : null;
 
     if (!capability) {
       // It's a discovery case if the agent and secret exist but no capability matches
@@ -964,7 +905,6 @@ export class VaultCore {
         decision: "pending",
         reason: "no matching capability found (discovery needed)",
         secretId: record?.secretId ?? null,
-        executorTarget,
       };
     }
 
@@ -984,7 +924,6 @@ export class VaultCore {
         decision: "deny",
         reason: detail,
         secretId: record?.secretId ?? null,
-        executorTarget,
       };
     }
 
@@ -1001,7 +940,6 @@ export class VaultCore {
       decision: "allow",
       reason: null,
       secretId: record?.secretId ?? null,
-      executorTarget,
       capability, // Expose the found capability for subsequent steps
     };
   }
@@ -1189,7 +1127,7 @@ export class VaultCore {
       secretId: record.secretId,
       alias: record.alias,
       issuerId: record.issuerId,
-      targetBindings: [...record.targetBindings],
+      source: record.source,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     }));

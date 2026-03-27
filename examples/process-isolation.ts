@@ -120,7 +120,7 @@ async function main() {
     owner: { kind: "owner", id: ownerIdentity.identityId },
     alias: "api-token",
     plaintext: "SK-PROD-12345",
-    targetBindings: [{ kind: "site", targetId: "httpbin.org", targetUrl: "https://httpbin.org/post", methods: ["POST"] }],
+    source: { kind: "manual" },
     requestedAt: new Date().toISOString(),
   });
 
