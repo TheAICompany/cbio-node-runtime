@@ -18,6 +18,12 @@
 
 ***
 
+### justification
+
+> **justification**: `string`
+
+***
+
 ### method
 
 > **method**: `string`

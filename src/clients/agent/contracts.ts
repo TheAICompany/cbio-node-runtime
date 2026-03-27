@@ -2,6 +2,7 @@ export interface AgentDispatchIntent {
   secretAlias?: string;
   targetUrl: string;
   method: string;
+  justification: string;
   headers?: Record<string, string>;
   body?: string;
   requestedAt?: string;
@@ -12,7 +13,7 @@ export interface AgentSubmitCapabilityRequestInput {
   secretAliases?: readonly string[];
   write: Omit<import("../../vault-core/index.js").CapabilityWritePolicy, "secretIds">;
   read: import("../../vault-core/index.js").CapabilityReadPolicy;
-  justification?: string;
+  justification: string;
   requestedAt?: string;
 }
 

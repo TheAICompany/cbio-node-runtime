@@ -382,6 +382,7 @@ export class VaultCore {
         proof: pending.proof,
         requestId: pending.requestId,
         requestedAt: pending.requestedAt,
+        justification: pending.justification ?? "Approved previously requested dispatch.",
         skipReplayGuard: true,
       });
     } else if (mode === "grant") {
@@ -535,6 +536,7 @@ export class VaultCore {
       vaultId: this._deps.vaultId,
       requestId: request.requestId,
       agentId: request.agent.id,
+      justification: request.justification,
       capabilityId: capability?.capabilityId,
       operation: capability?.operation ?? "dispatch_http",
       createdAt: this._deps.clock.nowIso(),
@@ -561,6 +563,7 @@ export class VaultCore {
     return {
       requestId: record.requestId,
       createdAt: record.createdAt,
+      justification: record.justification,
       capabilityId: record.capabilityId,
       operation: record.operation,
       targetUrl: record.request.targetUrl,
@@ -579,6 +582,7 @@ export class VaultCore {
       requestId: record.requestId,
       createdAt: record.createdAt,
       agentId: record.agentId,
+      justification: record.justification,
       capabilityId: record.capabilityId,
       operation: record.operation,
       targetUrl: record.request.targetUrl,
@@ -597,6 +601,7 @@ export class VaultCore {
       requestId: record.requestId,
       createdAt: record.createdAt,
       agentId: record.agentId,
+      justification: record.justification,
       capabilityId: record.capabilityId,
       operation: record.operation,
       request: {
@@ -1121,6 +1126,9 @@ export class VaultCore {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("request vault mismatch", "VAULT_DISPATCH_DENIED");
     }
+    if (!request.justification?.trim()) {
+      throw new VaultCoreError("dispatch justification is required", "VAULT_DISPATCH_DENIED");
+    }
     const record = request.secretId
       ? await this._deps.secrets.getById({ value: request.secretId })
       : null;
@@ -1182,6 +1190,7 @@ export class VaultCore {
           mode: "none",
         },
         requestedAt: request.requestedAt,
+        justification: request.justification,
         secretId: request.secretId,
         targetUrl: request.targetUrl,
         headers: request.headers,
@@ -1563,11 +1572,14 @@ export class VaultCore {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
+    if (!command.justification?.trim()) {
+      throw new VaultCoreError("capability request justification is required", "VAULT_WRITE_DENIED");
+    }
     await this._verifyAgentControlProof(command, "submit_capability_request", {
       write: command.capability.write,
       read: command.capability.read,
       operation: command.capability.operation,
-      justification: command.justification ?? null,
+      justification: command.justification,
     });
     return this.ownerSubmitCapabilityRequest({
       vaultId: command.vaultId,

@@ -6,9 +6,9 @@
 
 ## Properties
 
-### justification?
+### justification
 
-> `optional` **justification?**: `string`
+> **justification**: `string`
 
 ***
 

@@ -52,6 +52,7 @@ async function testHitlApproval() {
     targetUrl: 'https://api.example.com/data',
     method: 'POST',
     secretAlias: 'top-secret',
+    justification: 'Need to send the test request to the whitelisted endpoint.',
     body: 'ping'
   });
 
@@ -70,6 +71,7 @@ async function testHitlApproval() {
     targetUrl: 'https://other-api.example.com/data',
     method: 'GET',
     secretAlias: 'top-secret',
+    justification: 'Need to query the secondary API for this task.',
   });
 
   console.log('Result status:', unknownResult.status);

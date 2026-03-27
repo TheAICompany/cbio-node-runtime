@@ -312,6 +312,7 @@ export interface RequestRecord {
   vaultId: VaultId;
   requestId: string;
   agentId: string;
+  justification: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   createdAt: string;
@@ -336,6 +337,7 @@ export interface RequestRecord {
 export interface AgentVisibleRequestRecord {
   requestId: string;
   createdAt: string;
+  justification: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   targetUrl: string;
@@ -352,6 +354,7 @@ export interface OwnerVisibleRequestRecord {
   requestId: string;
   createdAt: string;
   agentId: string;
+  justification: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   targetUrl: string;
@@ -368,6 +371,7 @@ export interface OwnerRequestRecord {
   requestId: string;
   createdAt: string;
   agentId: string;
+  justification: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
   request: {
@@ -453,7 +457,7 @@ export interface AgentSubmitCapabilityRequestCommand {
   proof: AgentProof;
   capability: CapabilityRequestScope;
   secretAliases?: readonly string[];
-  justification?: string;
+  justification: string;
 }
 
 export interface CapabilityRequestScope {
@@ -527,6 +531,7 @@ export interface DispatchRequest {
   proof: AgentProof;
   secretAlias?: string;
   secretId?: string;
+  justification: string;
   targetUrl: string;
   method: string;
   headers?: Record<string, string>;

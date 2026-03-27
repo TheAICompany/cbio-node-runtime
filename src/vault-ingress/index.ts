@@ -109,6 +109,7 @@ export interface VaultAgentDispatchRequest {
   requestId: string;
   requestedAt: string;
   agentId: string;
+  justification: string;
   capabilityId?: string;
   secretAlias?: string;
   targetUrl: string;
@@ -211,7 +212,7 @@ export type VaultAgentControlRequest =
       secretAliases?: string[];
       write: import("../vault-core/index.js").CapabilityWritePolicy;
       read: import("../vault-core/index.js").CapabilityReadPolicy;
-      justification?: string;
+      justification: string;
     }
   | {
       action: "get_manifest";
@@ -619,6 +620,7 @@ class LocalVaultService implements VaultService {
             requestedAt: request.requestedAt,
           },
           secretId: undefined,
+          justification: request.justification,
           targetUrl: request.targetUrl,
           method: request.method,
           headers: request.headers,
@@ -675,6 +677,7 @@ class LocalVaultService implements VaultService {
         },
         secretId,
         secretAlias: request.secretAlias,
+        justification: request.justification,
         targetUrl: request.targetUrl,
         method: request.method,
         headers: request.headers,

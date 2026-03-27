@@ -137,12 +137,14 @@ try {
     secretAlias: "unscoped-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
+    justification: "Need to verify the unscoped request behavior.",
   });
   assert.equal(unscopedResult.status, "PENDING");
   const storedThenDefinedResult = await storedThenDefinedAgent.agentDispatch({
     secretAlias: "stored-then-defined-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
+    justification: "Need to verify the stored-then-defined secret path.",
   });
   assert.equal(storedThenDefinedResult.status, "SUCCEEDED");
 
@@ -150,6 +152,7 @@ try {
     secretAlias: "restricted-token",
     targetUrl: "https://denied.example.com/resource",
     method: "POST",
+    justification: "Need to verify denial for the wrong site.",
   });
   assert.equal(deniedSiteResult.status, "PENDING");
 
@@ -163,6 +166,7 @@ try {
     secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/other",
     method: "POST",
+    justification: "Need to verify denial for the wrong path.",
   });
   assert.equal(otherPathResult.status, "PENDING");
 
@@ -198,6 +202,7 @@ try {
     secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
+    justification: "Need to verify the first rate-limited request succeeds.",
   });
   assert.equal(firstLimited.status, "SUCCEEDED");
   await assert.rejects(
@@ -205,6 +210,7 @@ try {
       secretAlias: "restricted-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
+      justification: "Need to verify the second rate-limited request is blocked.",
     }),
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
@@ -216,6 +222,7 @@ try {
       secretAlias: "restricted-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
+      justification: "Need to verify revoked-capability behavior.",
     }),
     /VAULT_DISPATCH_DENIED|BROKER_GATEWAY_REJECTED/,
   );
@@ -309,6 +316,7 @@ try {
     secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
+    justification: "Need to verify persisted authorization still works after reload.",
   }).catch((error) => {
     if (error instanceof VaultCoreError) {
       throw error;
@@ -360,6 +368,7 @@ try {
     secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
+    justification: "Need to verify persisted replay protection across restarts.",
   };
   const persistedReplayFirst = await reloadedAuthority.agentDispatchSecret(persistedReplayRequest);
   assert.equal(persistedReplayFirst.status, "SUCCEEDED");
@@ -457,6 +466,7 @@ try {
     secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
+    justification: "Need to verify restarted rate limiting still works.",
   });
   assert.equal(restartedRateLimitResult.status, "SUCCEEDED");
 

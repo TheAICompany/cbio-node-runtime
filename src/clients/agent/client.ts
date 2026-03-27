@@ -77,6 +77,10 @@ class DefaultAgentClient implements AgentClient {
   async agentDispatch(intent: AgentDispatchIntent) {
     const requestedAt = intent.requestedAt ?? this._clock.nowIso();
     const requestId = createRequestIdValue("dispatch");
+    const justification = intent.justification.trim();
+    if (!justification) {
+      throw new Error("agentDispatch requires a non-empty justification for owner review");
+    }
 
     return this._transport.agentDispatch({
       vaultId: this._capability.vaultId,
@@ -106,6 +110,7 @@ class DefaultAgentClient implements AgentClient {
         requestId,
         requestedAt,
       },
+      justification,
       secretAlias: intent.secretAlias,
       targetUrl: intent.targetUrl,
       method: intent.method,
@@ -192,6 +197,10 @@ class DefaultAgentClient implements AgentClient {
   async agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput) {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = createRequestIdValue("submit_capability_request");
+    const justification = input.justification.trim();
+    if (!justification) {
+      throw new Error("agentSubmitCapabilityRequest requires a non-empty justification for owner review");
+    }
     const payload = {
       write: {
         ...input.write,
@@ -199,7 +208,7 @@ class DefaultAgentClient implements AgentClient {
       },
       read: input.read,
       operation: input.operation ?? "dispatch_http",
-      justification: input.justification ?? null,
+      justification,
     };
     return this._transport.agentSubmitCapabilityRequest({
       vaultId: this._capability.vaultId,
@@ -219,7 +228,7 @@ class DefaultAgentClient implements AgentClient {
         },
       },
       secretAliases: input.secretAliases ? [...input.secretAliases] : undefined,
-      justification: input.justification,
+      justification,
     });
   }
 }

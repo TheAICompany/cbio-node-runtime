@@ -22,6 +22,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       requestId: request.requestId,
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
+      justification: request.justification,
       capabilityId: request.capability?.capabilityId,
       secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
