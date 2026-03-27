@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.60.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.59.1...v1.60.0) (2026-03-27)
+
+
+### Features
+
+* Add owner request management methods for listing and retrieving requests, enhancing API functionality and documentation for improved clarity on request handling. ([46820c9](https://github.com/TheAICompany/cbio-node-runtime/commit/46820c94317483087dee1baa6a748e62daf720f7))
+
 ### [1.59.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.59.0...v1.59.1) (2026-03-27)
 
 ## [1.59.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.58.0...v1.59.0) (2026-03-27)
