@@ -657,7 +657,7 @@ export function createPersistentVaultCoreDependencies(
 ): VaultCoreDependencies {
   const defaults = createVaultCoreDependencies(options);
   const agentIdentities = new FileAgentIdentityRegistry(storage, options.vaultWorkingKey);
-  const sessionTokens = new InMemorySessionTokenRegistry(); // Session tokens are in-memory for now
+  const sessionTokens = defaults.sessionTokens;
   const capabilityRevocations = new FileCapabilityRevocationRegistry(storage, options.vaultWorkingKey);
   const capabilities = new FileCapabilityRegistry(storage, options.vaultWorkingKey);
   const requests = new FileRequestRecordRegistry(storage, options.vaultWorkingKey);

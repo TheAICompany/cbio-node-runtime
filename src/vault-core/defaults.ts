@@ -723,7 +723,7 @@ export function createVaultCoreDependencies(
   options: VaultCoreDependenciesOptions = {},
 ): VaultCoreDependencies {
   const agentIdentities = new InMemoryAgentIdentityRegistry();
-  const sessionTokens = new InMemorySessionTokenRegistry();
+  const sessionTokens = options.sessionTokens ?? new InMemorySessionTokenRegistry();
   return {
     vaultId: { value: options.vaultId ?? `vault_${crypto.randomUUID()}` },
     secrets: new InMemorySecretRepository(),
@@ -741,7 +741,7 @@ export function createVaultCoreDependencies(
     requests: new InMemoryRequestRecordRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
-    sessionTokens: options.sessionTokens ?? new InMemorySessionTokenRegistry(),
+    sessionTokens,
     clock: options.clock ?? new SystemClock(),
     ids: new RandomIdGenerator(),
   };
