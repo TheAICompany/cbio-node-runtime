@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.59.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.58.0...v1.59.0) (2026-03-27)
+
+
+### Features
+
+* Introduce agent request management with new methods for listing and retrieving request history, enhancing API functionality and documentation for better clarity on request handling. ([c42214b](https://github.com/TheAICompany/cbio-node-runtime/commit/c42214b2a08cfeadb1bf100476579c2bed493da6))
+
 ## [1.58.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.57.0...v1.58.0) (2026-03-27)
 
 
