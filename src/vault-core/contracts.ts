@@ -192,7 +192,6 @@ export interface AgentProof {
 
 export interface AgentVisibleSecretRecord {
   vaultId: VaultId;
-  secretId: SecretId;
   alias: SecretAlias;
   issuerId: string | null;
   source: SecretSource;
@@ -302,6 +301,7 @@ export interface AgentSubmitCapabilityRequestCommand {
   agent: VaultPrincipal & { kind: "agent" };
   proof: AgentProof;
   capability: CapabilityRequestScope;
+  secretAliases?: readonly string[];
   justification?: string;
 }
 
@@ -354,6 +354,7 @@ export interface DispatchRequest {
   agent: VaultPrincipal & { kind: "agent" };
   capability?: AgentCapability;
   proof: AgentProof;
+  secretAlias?: string;
   secretId?: string;
   targetUrl: string;
   method: string;

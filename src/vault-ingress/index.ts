@@ -110,7 +110,7 @@ export interface VaultAgentDispatchRequest {
   requestedAt: string;
   agentId: string;
   capabilityId?: string;
-  secretId?: string;
+  secretAlias?: string;
   targetUrl: string;
   method: string;
   headers?: Record<string, string>;
@@ -191,6 +191,7 @@ export type VaultAgentControlRequest =
       agentId: string;
       proof: VaultAgentControlProof;
       operation?: "dispatch_http" | "custom_http";
+      secretAliases?: string[];
       write: import("../vault-core/index.js").CapabilityWritePolicy;
       read: import("../vault-core/index.js").CapabilityReadPolicy;
       justification?: string;
@@ -321,6 +322,19 @@ class LocalVaultService implements VaultService {
 
   get vaultId() {
     return this._authority.vaultId;
+  }
+
+  private async resolveSecretId(alias: string | undefined): Promise<string | undefined> {
+    if (!alias) return undefined;
+    const record = await (this._authority as any)._deps.secrets.getByAlias({ value: alias });
+    return record?.secretId.value;
+  }
+
+  private async resolveSecretIds(aliases: readonly string[] | undefined): Promise<readonly string[] | undefined> {
+    if (!aliases?.length) return undefined;
+    const resolved = await Promise.all(aliases.map((alias) => this.resolveSecretId(alias)));
+    const filtered = resolved.filter((value): value is string => typeof value === "string");
+    return filtered.length > 0 ? filtered : undefined;
   }
 
 
@@ -503,6 +517,7 @@ class LocalVaultService implements VaultService {
     try {
       const vaultId = { value: request.vaultId };
       const capability = await this.resolveCapability(vaultId, request.agentId, request.capabilityId);
+      const secretId = await this.resolveSecretId(request.secretAlias);
       const customFlow = capability?.operation === "custom_http"
         ? await this.resolveCustomFlow(vaultId, capability.customFlowId)
         : null;
@@ -594,7 +609,8 @@ class LocalVaultService implements VaultService {
           requestId: request.requestId,
           requestedAt: request.requestedAt,
         },
-        secretId: request.secretId,
+        secretId,
+        secretAlias: request.secretAlias,
         targetUrl: request.targetUrl,
         method: request.method,
         headers: request.headers,
@@ -740,6 +756,8 @@ class LocalVaultService implements VaultService {
         case "get_manifest":
           return { ok: true, result: await this.agentGetRuntimeManifest(base) };
         case "submit_capability_request":
+          {
+            const secretIds = await this.resolveSecretIds(request.secretAliases);
           return {
             ok: true,
             result: await this.agentSubmitCapabilityRequest({
@@ -747,7 +765,7 @@ class LocalVaultService implements VaultService {
               capability: {
                 operation: request.operation ?? "dispatch_http",
                 write: {
-                  secretIds: request.write.secretIds ? [...request.write.secretIds] : undefined,
+                  secretIds,
                   scope: request.write.scope,
                   methods: [...request.write.methods],
                 },
@@ -759,6 +777,7 @@ class LocalVaultService implements VaultService {
               justification: request.justification,
             }),
           };
+          }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

@@ -46,7 +46,7 @@ async function runDiscoveryTest() {
   const dispatchTool = manifest.tools.find(t => t.name === "agentDispatch");
   assert.ok(dispatchTool, "agentDispatch tool should be in the manifest");
   assert.ok(dispatchTool.description.includes("dispatch"), "Tool description missing");
-  assert.ok(dispatchTool.parameters.properties.secretId, "Tool parameters missing secretId");
+  assert.ok(dispatchTool.parameters.properties.secretAlias, "Tool parameters missing secretAlias");
 
   console.log("✅ Agent correctly discovered its runtime environment!");
   

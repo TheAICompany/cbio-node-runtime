@@ -51,7 +51,7 @@ async function testHitlApproval() {
   const result1 = await agentClient.agentDispatch({
     targetUrl: 'https://api.example.com/data',
     method: 'POST',
-    secretId: secretRecord.secretId.value,
+    secretAlias: 'top-secret',
     body: 'ping'
   });
 
@@ -69,7 +69,7 @@ async function testHitlApproval() {
   const unknownResult = await agentClient.agentDispatch({
     targetUrl: 'https://other-api.example.com/data',
     method: 'GET',
-    secretId: secretRecord.secretId.value,
+    secretAlias: 'top-secret',
   });
 
   console.log('Result status:', unknownResult.status);

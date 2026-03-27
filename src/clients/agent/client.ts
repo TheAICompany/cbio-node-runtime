@@ -23,7 +23,7 @@ export interface AgentClient {
   /**
    * Dispatches a session-token-authenticated request to a target using a vault secret.
    *
-   * @param intent - The destination, method, and secret ID to use.
+   * @param intent - The destination, method, and secret alias to use.
    * @returns The result of the remote operation.
    *
    * @example
@@ -31,7 +31,7 @@ export interface AgentClient {
    * const result = await agent.agentDispatch({
    *   targetUrl: 'https://api.example.com/data',
    *   method: 'POST',
-   *   secretId: 'secret_123',
+   *   secretAlias: 'api-token',
    *   body: JSON.stringify({ key: 'value' })
    * });
    * ```
@@ -97,7 +97,7 @@ class DefaultAgentClient implements AgentClient {
         requestId,
         requestedAt,
       },
-      secretId: intent.secretId,
+      secretAlias: intent.secretAlias,
       targetUrl: intent.targetUrl,
       method: intent.method,
       headers: intent.headers,
@@ -159,7 +159,10 @@ class DefaultAgentClient implements AgentClient {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = createRequestIdValue("submit_capability_request");
     const payload = {
-      write: input.write,
+      write: {
+        ...input.write,
+        secretAliases: input.secretAliases ?? null,
+      },
       read: input.read,
       operation: input.operation ?? "dispatch_http",
       justification: input.justification ?? null,
@@ -173,7 +176,6 @@ class DefaultAgentClient implements AgentClient {
       capability: {
         operation: input.operation ?? "dispatch_http",
         write: {
-          secretIds: input.write.secretIds ? [...input.write.secretIds] : undefined,
           scope: input.write.scope,
           methods: [...input.write.methods],
         },
@@ -182,6 +184,7 @@ class DefaultAgentClient implements AgentClient {
           paths: input.read.paths ? [...input.read.paths] : undefined,
         },
       },
+      secretAliases: input.secretAliases ? [...input.secretAliases] : undefined,
       justification: input.justification,
     });
   }

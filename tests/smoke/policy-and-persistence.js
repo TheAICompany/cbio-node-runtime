@@ -134,20 +134,20 @@ try {
   });
 
   const unscopedResult = await agent.agentDispatch({
-    secretId: unscopedRecord.secretId.value,
+    secretAlias: "unscoped-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(unscopedResult.status, "PENDING");
   const storedThenDefinedResult = await storedThenDefinedAgent.agentDispatch({
-    secretId: storedThenDefinedRecord.secretId.value,
+    secretAlias: "stored-then-defined-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(storedThenDefinedResult.status, "SUCCEEDED");
 
   const deniedSiteResult = await agent.agentDispatch({
-    secretId: restrictedRecord.secretId.value,
+    secretAlias: "restricted-token",
     targetUrl: "https://denied.example.com/resource",
     method: "POST",
   });
@@ -160,7 +160,7 @@ try {
   assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
   const otherPathResult = await agent.agentDispatch({
-    secretId: restrictedRecord.secretId.value,
+    secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/other",
     method: "POST",
   });
@@ -195,14 +195,14 @@ try {
     token: session.token,
   });
   const firstLimited = await rateLimitedAgent.agentDispatch({
-    secretId: restrictedRecord.secretId.value,
+    secretAlias: "restricted-token",
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(firstLimited.status, "SUCCEEDED");
   await assert.rejects(
     () => rateLimitedAgent.agentDispatch({
-      secretId: restrictedRecord.secretId.value,
+      secretAlias: "restricted-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
     }),
@@ -213,7 +213,7 @@ try {
   assert.equal(revokedVersion, 1);
   await assert.rejects(
     () => agent.agentDispatch({
-      secretId: restrictedRecord.secretId.value,
+      secretAlias: "restricted-token",
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
     }),

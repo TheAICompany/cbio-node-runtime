@@ -16,7 +16,7 @@ export class LocalVaultTransport implements AgentDispatchTransport {
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
       capabilityId: request.capability?.capabilityId,
-      secretId: request.secretId,
+      secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
       method: request.method,
       headers: request.headers,

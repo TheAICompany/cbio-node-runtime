@@ -471,7 +471,6 @@ export class VaultCore {
       const authorizedCapabilities = capabilityMap.get(record.secretId.value) ?? [];
       return {
         vaultId: record.vaultId,
-        secretId: record.secretId,
         alias: record.alias,
         issuerId: record.issuerId,
         source: record.source,
@@ -1184,7 +1183,6 @@ export class VaultCore {
     );
     return records.map((record) => ({
       vaultId: record.vaultId,
-      secretId: record.secretId,
       alias: record.alias,
       issuerId: record.issuerId,
       source: record.source,

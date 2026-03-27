@@ -151,7 +151,7 @@ const agent = createAgentClient({
 });
 
 const result = await agent.agentDispatch({
-  secretId: ownedRecord.secretId.value,
+  secretAlias: "api-token",
   targetUrl: "https://api.example.com/endpoint",
   method: "POST",
   body: '{"hello":"world"}',
@@ -195,7 +195,7 @@ const customAgent = createAgentClient({
 });
 
 const customResult = await customAgent.agentDispatch({
-  secretId: ownedRecord.secretId.value,
+  secretAlias: "api-token",
   targetUrl: "https://api.example.com/custom-status",
   method: "POST",
   body: '{"mode":"custom"}',
@@ -434,7 +434,7 @@ try {
   });
   await assert.rejects(
     () => acquiredAgent.agentDispatch({
-      secretId: persistentExport.secretId.value,
+      secretAlias: "issuer-token",
       targetUrl: "https://issuer.example.com/other",
       method: "GET",
     }),

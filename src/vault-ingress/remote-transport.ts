@@ -23,7 +23,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
       capabilityId: request.capability?.capabilityId,
-      secretId: request.secretId,
+      secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
       method: request.method,
       headers: request.headers,
@@ -100,8 +100,8 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       agentId: request.agent.id,
       proof: { token: request.proof.token },
       operation: request.capability.operation,
+      secretAliases: request.secretAliases ? [...request.secretAliases] : [],
       write: {
-        secretIds: request.capability.write.secretIds ? [...request.capability.write.secretIds] : undefined,
         scope: request.capability.write.scope,
         methods: [...request.capability.write.methods],
       },

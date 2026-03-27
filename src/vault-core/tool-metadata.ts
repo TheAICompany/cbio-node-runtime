@@ -13,13 +13,13 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     parameters: {
       type: "object",
       properties: {
-        secretId: { type: "string", description: "The stable secret ID to use." },
+        secretAlias: { type: "string", description: "The human-readable secret name to use." },
         targetUrl: { type: "string", description: "The destination URL for the secret." },
         method: { type: "string", description: "The HTTP method (e.g., POST, GET)." },
         body: { type: "string", description: "Optional request body." },
         headers: { type: "object", description: "Optional request headers." },
       },
-      required: ["secretId", "targetUrl", "method"],
+      required: ["secretAlias", "targetUrl", "method"],
     },
   },
   agentListCapabilities: {
@@ -41,7 +41,8 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     parameters: {
       type: "object",
       properties: {
-        write: { type: "object", description: "Outbound request policy including secret IDs, scope, and methods." },
+        secretAliases: { type: "array", items: { type: "string" }, description: "Human-readable secret names to request." },
+        write: { type: "object", description: "Outbound request policy including URL scope and methods." },
         read: { type: "object", description: "Inbound response visibility policy." },
         operation: { type: "string", description: "The operation type, usually 'dispatch_http'." },
         justification: { type: "string", description: "Why you need this capability." },
