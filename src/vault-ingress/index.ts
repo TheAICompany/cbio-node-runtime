@@ -36,6 +36,69 @@ export type RedactedResponseShape =
   | RedactedResponseShape[]
   | { [key: string]: RedactedResponseShape };
 
+function applyResponseReadPolicy(
+  body: string | undefined,
+  policy: import("../vault-core/index.js").CapabilityReadPolicy,
+): string | undefined {
+  if (body === undefined) return body;
+  if (policy.mode === "full") return body;
+  if (policy.mode === "none") return undefined;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return policy.mode === "shape_only" ? JSON.stringify(null) : undefined;
+  }
+
+  if (policy.mode === "shape_only") {
+    return JSON.stringify(redactResponseShapeValue(parsed));
+  }
+  if (policy.mode !== "custom") return body;
+
+  const result: Record<string, unknown> = {};
+  for (const path of policy.paths ?? []) {
+    const segments = path.split(".").filter(Boolean);
+    let source: any = parsed;
+    let valid = true;
+    for (const segment of segments) {
+      if (source && typeof source === "object" && segment in source) {
+        source = source[segment];
+      } else {
+        valid = false;
+        break;
+      }
+    }
+    if (!valid) continue;
+    let target: any = result;
+    for (let index = 0; index < segments.length - 1; index += 1) {
+      const segment = segments[index]!;
+      target[segment] ??= {};
+      target = target[segment];
+    }
+    const leaf = segments[segments.length - 1];
+    if (leaf) {
+      target[leaf] = source;
+    }
+  }
+  return JSON.stringify(result);
+}
+
+function redactResponseShapeValue(value: unknown): RedactedResponseShape {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactResponseShapeValue(entry));
+  }
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, redactResponseShapeValue(entry)]),
+    );
+  }
+  return null;
+}
+
 export type VaultAcquireSecretFlow =
   | "oauth_token_response.access_token"
   | "oauth_token_response.refresh_token"
@@ -47,7 +110,7 @@ export interface VaultAgentDispatchRequest {
   requestedAt: string;
   agentId: string;
   capabilityId?: string;
-  secretAlias?: string;
+  secretId?: string;
   targetUrl: string;
   method: string;
   headers?: Record<string, string>;
@@ -127,10 +190,9 @@ export type VaultAgentControlRequest =
       requestedAt: string;
       agentId: string;
       proof: VaultAgentControlProof;
-      scope: string;
-      methods: string[];
       operation?: "dispatch_http" | "custom_http";
-      secretAliases?: string[];
+      write: import("../vault-core/index.js").CapabilityWritePolicy;
+      read: import("../vault-core/index.js").CapabilityReadPolicy;
       justification?: string;
     }
   | {
@@ -287,18 +349,7 @@ class LocalVaultService implements VaultService {
   }
 
   private redactResponseShape(value: unknown): RedactedResponseShape {
-    if (value === null || value === undefined) {
-      return null;
-    }
-    if (Array.isArray(value)) {
-      return value.map((entry) => this.redactResponseShape(entry));
-    }
-    if (typeof value === "object") {
-      return Object.fromEntries(
-        Object.entries(value).map(([key, entry]) => [key, this.redactResponseShape(entry)]),
-      );
-    }
-    return null;
+    return redactResponseShapeValue(value);
   }
 
   private buildAcquireResponseShape(flow: VaultAcquireSecretFlow, payload: unknown): RedactedResponseShape {
@@ -488,7 +539,7 @@ class LocalVaultService implements VaultService {
             requestId: request.requestId,
             requestedAt: request.requestedAt,
           },
-          secretAlias: undefined,
+          secretId: undefined,
           targetUrl: request.targetUrl,
           method: request.method,
           headers: request.headers,
@@ -517,9 +568,12 @@ class LocalVaultService implements VaultService {
             targetUrl: request.targetUrl,
             method: request.method,
             responseStatus: payload.responseStatus,
-            responseBody: boundary.responseVisibility === "shape_only"
-              ? JSON.stringify(this.redactResponseShape(payload.parsedBody))
-              : payload.rawBody,
+            responseBody: applyResponseReadPolicy(
+              boundary.responseVisibility === "shape_only"
+                ? JSON.stringify(this.redactResponseShape(payload.parsedBody))
+                : payload.rawBody,
+              capability?.read ?? { mode: "full" },
+            ),
           },
         };
       }
@@ -540,7 +594,7 @@ class LocalVaultService implements VaultService {
           requestId: request.requestId,
           requestedAt: request.requestedAt,
         },
-        secretAlias: request.secretAlias,
+        secretId: request.secretId,
         targetUrl: request.targetUrl,
         method: request.method,
         headers: request.headers,
@@ -559,12 +613,15 @@ class LocalVaultService implements VaultService {
       }
       return {
         ok: true,
-        result: boundary.responseVisibility === "shape_only"
-          ? {
-            ...result,
-            responseBody: JSON.stringify(this.redactResponseShape(this.parseBody(result.responseBody))),
-          }
-          : result,
+        result: {
+          ...result,
+          responseBody: applyResponseReadPolicy(
+            boundary.responseVisibility === "shape_only"
+              ? JSON.stringify(this.redactResponseShape(this.parseBody(result.responseBody)))
+              : result.responseBody,
+            capability?.read ?? { mode: "full" },
+          ),
+        },
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -687,11 +744,17 @@ class LocalVaultService implements VaultService {
             ok: true,
             result: await this.agentSubmitCapabilityRequest({
               ...base,
-              scope: {
+              capability: {
                 operation: request.operation ?? "dispatch_http",
-                secretAliases: request.secretAliases ?? [],
-                scope: request.scope,
-                methods: request.methods,
+                write: {
+                  secretIds: request.write.secretIds ? [...request.write.secretIds] : undefined,
+                  scope: request.write.scope,
+                  methods: [...request.write.methods],
+                },
+                read: {
+                  mode: request.read.mode,
+                  paths: request.read.paths ? [...request.read.paths] : undefined,
+                },
               },
               justification: request.justification,
             }),

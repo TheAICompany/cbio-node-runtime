@@ -21,7 +21,7 @@ async function testHitlApproval() {
   const vaultAgentId = provisionedAgent.agent.agentId;
 
   // 3. Register a Secret
-  await ownerClient.ownerWriteSecret({
+  const secretRecord = await ownerClient.ownerWriteSecret({
     alias: 'top-secret',
     plaintext: 'shhh!',
   });
@@ -29,9 +29,12 @@ async function testHitlApproval() {
   // 4. Grant Capability (NO LONGER REQUIRES EXPLICIT FLAG)
   await ownerClient.ownerGrantCapability({
     agentId: vaultAgentId,
-    secretAliases: ['top-secret'],
-    scope: 'https://api.example.com/*',
-    methods: ['POST'],
+    write: {
+      secretIds: [secretRecord.secretId.value],
+      scope: 'https://api.example.com/*',
+      methods: ['POST'],
+    },
+    read: { mode: 'full' },
     // requiresApproval: true removed
   });
 
@@ -48,7 +51,7 @@ async function testHitlApproval() {
   const result1 = await agentClient.agentDispatch({
     targetUrl: 'https://api.example.com/data',
     method: 'POST',
-    secretAlias: 'top-secret',
+    secretId: secretRecord.secretId.value,
     body: 'ping'
   });
 
@@ -66,7 +69,7 @@ async function testHitlApproval() {
   const unknownResult = await agentClient.agentDispatch({
     targetUrl: 'https://other-api.example.com/data',
     method: 'GET',
-    secretAlias: 'top-secret',
+    secretId: secretRecord.secretId.value,
   });
 
   console.log('Result status:', unknownResult.status);

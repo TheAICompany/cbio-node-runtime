@@ -12,15 +12,15 @@
 
 ***
 
-### methods
-
-> **methods**: readonly `string`[]
-
-***
-
 ### operation?
 
 > `optional` **operation?**: `"dispatch_http"` \| `"custom_http"`
+
+***
+
+### read
+
+> **read**: `CapabilityReadPolicy`
 
 ***
 
@@ -30,12 +30,6 @@
 
 ***
 
-### scope
+### write
 
-> **scope**: `string`
-
-***
-
-### secretAliases?
-
-> `optional` **secretAliases?**: readonly `string`[]
+> **write**: `CapabilityWritePolicy`

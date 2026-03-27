@@ -59,7 +59,7 @@ async function startVaultServer(port: number) {
 }
 
 // --- Process A: The LLM Agent Logic ---
-async function runAgentDemo(port: number, agentIdentity: any, capability: any, token: string) {
+async function runAgentDemo(port: number, agentIdentity: any, capability: any, token: string, secretId: string) {
   // Process A ONLY knows the remote URL and its own Agent Identity.
   // It has NO access to the Vault's master key or storage.
   const transport = new AgentDispatchHttpTransport(`http://localhost:${port}/dispatch`);
@@ -75,7 +75,7 @@ async function runAgentDemo(port: number, agentIdentity: any, capability: any, t
   
   try {
     const result = await agentClient.agentDispatch({
-      secretAlias: "api-token",
+      secretId,
       targetUrl: "https://httpbin.org/post",
       method: "POST",
       body: JSON.stringify({ message: "Hello from isolated Process A" }),
@@ -128,11 +128,13 @@ async function main() {
     vaultId: vault.vaultId,
     capabilityId: "cap-llm-1",
     agentId: agentIdentity.identityId,
-    secretIds: [secret.secretId.value],
-    secretAliases: ["api-token"],
     operation: "dispatch_http" as const,
-    scope: "https://httpbin.org/post",
-    methods: ["POST"],
+    write: {
+      secretIds: [secret.secretId.value],
+      scope: "https://httpbin.org/post",
+      methods: ["POST"],
+    },
+    read: { mode: "full" },
     issuedAt: new Date().toISOString(),
   };
 
@@ -153,7 +155,7 @@ async function main() {
   });
 
   // 3. Run the "LLM Agent" (Process A)
-  await runAgentDemo(PORT, agentIdentity, capability, session.token);
+  await runAgentDemo(PORT, agentIdentity, capability, session.token, secret.secretId.value);
 
   // 4. Cleanup
   server.close();

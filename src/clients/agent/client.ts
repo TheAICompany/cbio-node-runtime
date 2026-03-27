@@ -23,7 +23,7 @@ export interface AgentClient {
   /**
    * Dispatches a session-token-authenticated request to a target using a vault secret.
    *
-   * @param intent - The destination, method, and secret alias to use.
+   * @param intent - The destination, method, and secret ID to use.
    * @returns The result of the remote operation.
    *
    * @example
@@ -31,7 +31,7 @@ export interface AgentClient {
    * const result = await agent.agentDispatch({
    *   targetUrl: 'https://api.example.com/data',
    *   method: 'POST',
-   *   secretAlias: 'api-token',
+   *   secretId: 'secret_123',
    *   body: JSON.stringify({ key: 'value' })
    * });
    * ```
@@ -81,11 +81,10 @@ class DefaultAgentClient implements AgentClient {
         vaultId: this._capability.vaultId,
         capabilityId: this._capability.capabilityId,
         agentId: this._capability.agentId,
-        secretIds: this._capability.secretIds,
-        secretAliases: this._capability.secretAliases,
         operation: this._capability.operation,
-        scope: this._capability.scope,
-        methods: this._capability.methods,
+        customFlowId: this._capability.customFlowId,
+        write: this._capability.write,
+        read: this._capability.read,
         issuedAt: this._capability.issuedAt,
         expiresAt: this._capability.expiresAt,
         revocationVersion: this._capability.revocationVersion,
@@ -98,7 +97,7 @@ class DefaultAgentClient implements AgentClient {
         requestId,
         requestedAt,
       },
-      secretAlias: intent.secretAlias,
+      secretId: intent.secretId,
       targetUrl: intent.targetUrl,
       method: intent.method,
       headers: intent.headers,
@@ -160,10 +159,9 @@ class DefaultAgentClient implements AgentClient {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
     const requestId = createRequestIdValue("submit_capability_request");
     const payload = {
-      scope: input.scope,
-      methods: input.methods,
+      write: input.write,
+      read: input.read,
       operation: input.operation ?? "dispatch_http",
-      secretAliases: input.secretAliases ?? [],
       justification: input.justification ?? null,
     };
     return this._transport.agentSubmitCapabilityRequest({
@@ -172,11 +170,17 @@ class DefaultAgentClient implements AgentClient {
       requestedAt,
       agent: { kind: "agent", id: this._identity.agentId },
       proof: await this._createProof(requestId, requestedAt, "submit_capability_request", payload),
-      scope: {
+      capability: {
         operation: input.operation ?? "dispatch_http",
-        secretAliases: input.secretAliases ?? [],
-        scope: input.scope,
-        methods: [...input.methods],
+        write: {
+          secretIds: input.write.secretIds ? [...input.write.secretIds] : undefined,
+          scope: input.write.scope,
+          methods: [...input.write.methods],
+        },
+        read: {
+          mode: input.read.mode,
+          paths: input.read.paths ? [...input.read.paths] : undefined,
+        },
       },
       justification: input.justification,
     });

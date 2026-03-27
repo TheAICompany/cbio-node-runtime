@@ -23,6 +23,10 @@ const provisionedAgent = await ownerClient.ownerCreateAgent({
   nickname: "Planner",
 });
 const vaultAgentId = provisionedAgent.agent.agentId;
+const crmSecret = await ownerClient.ownerWriteSecret({
+  alias: "crm-token",
+  plaintext: "secret",
+});
 
 let observed = null;
 const unsubscribe = ownerClient.ownerOnCapabilityState((record) => {
@@ -32,15 +36,18 @@ const unsubscribe = ownerClient.ownerOnCapabilityState((record) => {
 const submitted = await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },
   agentId: vaultAgentId,
-  secretAliases: ["crm-token"],
-  scope: "https://api.example.com/users/*",
-  methods: ["GET"],
+  write: {
+    secretIds: [crmSecret.secretId.value],
+    scope: "https://api.example.com/users/*",
+    methods: ["GET"],
+  },
+  read: { mode: "full" },
   justification: "Need to read user resources without per-id approval",
 });
 
 assert.equal(submitted.agentId, vaultAgentId);
-assert.deepEqual(submitted.methods, ["GET"]);
-assert.equal(submitted.scope, "https://api.example.com/users/*");
+assert.deepEqual(submitted.write.methods, ["GET"]);
+assert.equal(submitted.write.scope, "https://api.example.com/users/*");
 assert.ok(observed, "pending capability request observer should fire");
 
 const pending = await ownerClient.ownerListCapabilityStates({ status: "PENDING" });
@@ -53,14 +60,17 @@ const approved = await ownerClient.ownerExecuteCapabilityStateAndGrant({
 assert.equal(approved.status, "SUCCEEDED");
 
 const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
-assert.ok(capabilities.some((cap) => cap.scope === "https://api.example.com/users/*"));
+assert.ok(capabilities.some((cap) => cap.write.scope === "https://api.example.com/users/*"));
 
 await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },
   agentId: vaultAgentId,
-  secretAliases: ["crm-token"],
-  scope: "https://api.example.com/admin/*",
-  methods: ["POST"],
+  write: {
+    secretIds: [crmSecret.secretId.value],
+    scope: "https://api.example.com/admin/*",
+    methods: ["POST"],
+  },
+  read: { mode: "full" },
 });
 const pendingAfterSecondSubmit = await ownerClient.ownerListCapabilityStates({ status: "PENDING" });
 assert.equal(pendingAfterSecondSubmit.length, 1);

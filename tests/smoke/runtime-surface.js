@@ -128,10 +128,13 @@ const dispatchCapability = {
   vaultId: authority.vaultId,
   capabilityId: "cap-1",
   agentId: importedAgentId,
-  secretIds: [ownedRecord.secretId.value],
   operation: "dispatch_http",
-  scope: "https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment",
-  methods: ["POST"],
+  write: {
+    secretIds: [ownedRecord.secretId.value],
+    scope: "https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment",
+    methods: ["POST"],
+  },
+  read: { mode: "full" },
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -148,7 +151,7 @@ const agent = createAgentClient({
 });
 
 const result = await agent.agentDispatch({
-  secretAlias: "api-token",
+  secretId: ownedRecord.secretId.value,
   targetUrl: "https://api.example.com/endpoint",
   method: "POST",
   body: '{"hello":"world"}',
@@ -170,10 +173,13 @@ const customCapability = {
   capabilityId: "cap-custom",
   agentId: importedAgentId,
   customFlowId: shapeOnlyFlow.flowId,
-  secretIds: [ownedRecord.secretId.value],
   operation: "custom_http",
-  scope: "https://api.example.com/custom-status",
-  methods: ["POST"],
+  write: {
+    secretIds: [ownedRecord.secretId.value],
+    scope: "https://api.example.com/custom-status",
+    methods: ["POST"],
+  },
+  read: { mode: "full" },
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -189,7 +195,7 @@ const customAgent = createAgentClient({
 });
 
 const customResult = await customAgent.agentDispatch({
-  secretAlias: "api-token",
+  secretId: ownedRecord.secretId.value,
   targetUrl: "https://api.example.com/custom-status",
   method: "POST",
   body: '{"mode":"custom"}',
@@ -216,8 +222,11 @@ const customAcquireCapability = {
   agentId: importedAgentId,
   customFlowId: customAcquireFlow.flowId,
   operation: "custom_http",
-  scope: "https://api.example.com/custom-acquire",
-  methods: ["POST"],
+  write: {
+    scope: "https://api.example.com/custom-acquire",
+    methods: ["POST"],
+  },
+  read: { mode: "full" },
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -373,13 +382,16 @@ try {
   const submittedCapabilityRequest = await auditClient.ownerSubmitCapabilityRequest({
     requester: { kind: "trusted_executor", id: "llm-planner" },
     agentId: managedRecord.agentId,
-    secretAliases: ["api-token"],
-    scope: "https://api.example.com/users/*",
-    methods: ["GET"],
+    write: {
+      secretIds: [ownedRecord.secretId.value],
+      scope: "https://api.example.com/users/*",
+      methods: ["GET"],
+    },
+    read: { mode: "full" },
     justification: "Need collection-level user read access",
   });
   assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
-  assert.equal(submittedCapabilityRequest.scope, "https://api.example.com/users/*");
+  assert.equal(submittedCapabilityRequest.write.scope, "https://api.example.com/users/*");
   assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
   const pendingCapabilityRequests = await auditClient.ownerListCapabilityStates({ status: "PENDING" });
   assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
@@ -390,7 +402,7 @@ try {
   assert.equal(approvedCapability.status, "SUCCEEDED");
   const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
   assert.ok(
-    capabilitiesAfterApproval.some((cap) => cap.scope === "https://api.example.com/users/*"),
+    capabilitiesAfterApproval.some((cap) => cap.write.scope === "https://api.example.com/users/*"),
     "Approved capability should be registered",
   );
   console.log("   [OK] Proactive capability request approval flow passed");
@@ -399,10 +411,13 @@ try {
     vaultId: createdVault.core.vaultId,
     capabilityId: "cap-acquired",
     agentId: managedRecord.agentId,
-    secretAliases: ["issuer-token"],
     operation: "dispatch_http",
-    scope: "https://issuer.example.com/other",
-    methods: ["GET"],
+    write: {
+      secretIds: [persistentExport.secretId.value],
+      scope: "https://issuer.example.com/other",
+      methods: ["GET"],
+    },
+    read: { mode: "full" },
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
@@ -419,7 +434,7 @@ try {
   });
   await assert.rejects(
     () => acquiredAgent.agentDispatch({
-      secretAlias: "issuer-token",
+      secretId: persistentExport.secretId.value,
       targetUrl: "https://issuer.example.com/other",
       method: "GET",
     }),

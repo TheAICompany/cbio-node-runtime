@@ -61,9 +61,12 @@ const replayRecord = await client.ownerWriteSecret({
 
 const replayCapability = await client.ownerGrantCapability({
   agentId: vaultAgentId,
-  secretAliases: ["replay-token"],
-  scope: "https://allowed.example.com/replay",
-  methods: ["POST"],
+  write: {
+    secretIds: [replayRecord.secretId.value],
+    scope: "https://allowed.example.com/replay",
+    methods: ["POST"],
+  },
+  read: { mode: "full" },
 });
 
 const requestId = "replay-request";
@@ -73,7 +76,7 @@ const binding = JSON.stringify({
   requestedAt,
   agentId: vaultAgentId,
   capabilityId: replayCapability.capabilityId,
-  secretAlias: "replay-token",
+  secretId: replayRecord.secretId.value,
   targetUrl: "https://allowed.example.com/replay",
   method: "POST",
   body: null,
@@ -89,11 +92,9 @@ const request = {
     vaultId: authority.vaultId,
     capabilityId: replayCapability.capabilityId,
     agentId: vaultAgentId,
-    secretIds: replayCapability.secretIds,
-    secretAliases: replayCapability.secretAliases,
     operation: replayCapability.operation,
-    scope: replayCapability.scope,
-    methods: replayCapability.methods,
+    write: replayCapability.write,
+    read: replayCapability.read,
     issuedAt: replayCapability.issuedAt,
     skipAudit: replayCapability.skipAudit,
   },
@@ -103,7 +104,7 @@ const request = {
     requestId,
     requestedAt,
   },
-  secretAlias: "replay-token",
+  secretId: replayRecord.secretId.value,
   targetUrl: "https://allowed.example.com/replay",
   method: "POST",
 };

@@ -176,12 +176,17 @@ export class VaultCore {
       vaultId: state.vaultId,
       capabilityId: state.capabilityId ?? "",
       agentId: state.agentId,
-      secretIds: state.secretIds ? [...state.secretIds] : undefined,
-      secretAliases: state.secretAliases ? [...state.secretAliases] : undefined,
       operation: state.operation,
       customFlowId: state.customFlowId,
-      scope: state.scope,
-      methods: [...state.methods],
+      write: {
+        secretIds: state.write.secretIds ? [...state.write.secretIds] : undefined,
+        scope: state.write.scope,
+        methods: [...state.write.methods],
+      },
+      read: {
+        mode: state.read.mode,
+        paths: state.read.paths ? [...state.read.paths] : undefined,
+      },
       issuedAt: state.issuedAt ?? state.requestedAt,
       expiresAt: state.expiresAt,
       rateLimit: state.rateLimit,
@@ -197,18 +202,23 @@ export class VaultCore {
       requestId: state.requestId,
       capabilityId: state.capabilityId,
       operation: state.operation,
-      secretIds: state.secretIds ? [...state.secretIds] : undefined,
-      secretAliases: state.secretAliases ? [...state.secretAliases] : undefined,
       customFlowId: state.customFlowId,
-      scope: state.scope,
-      methods: [...state.methods],
+      write: {
+        secretIds: state.write.secretIds ? [...state.write.secretIds] : undefined,
+        scope: state.write.scope,
+        methods: [...state.write.methods],
+      },
+      read: {
+        mode: state.read.mode,
+        paths: state.read.paths ? [...state.read.paths] : undefined,
+      },
       issuedAt: state.issuedAt,
       requestedAt: state.requestedAt,
       expiresAt: state.expiresAt,
       rateLimit: state.rateLimit,
       skipAudit: state.skipAudit,
       justification: state.justification,
-      secretAlias: state.secretAlias,
+      secretId: state.secretId,
       targetUrl: state.targetUrl,
     }));
   }
@@ -216,10 +226,9 @@ export class VaultCore {
   private _isExecutablePendingState(state: CapabilityStateRecord): state is CapabilityStateRecord & {
     requestId: string;
     targetUrl: string;
-    secretAlias: string;
     proof: import("./contracts.js").AgentProof;
   } {
-    return !!(state.requestId && state.targetUrl && state.secretAlias && state.proof);
+    return !!(state.requestId && state.targetUrl && state.proof);
   }
 
   private async _executePendingCapabilityState(
@@ -238,12 +247,17 @@ export class VaultCore {
       vaultId: this._deps.vaultId,
       agentId: pending.agentId,
       capabilityId: pending.capabilityId ?? this._deps.ids.newCapabilityId(),
-      secretIds: pending.secretIds ? [...pending.secretIds] : undefined,
-      secretAliases: pending.secretAliases ? [...pending.secretAliases] : (pending.secretAlias ? [pending.secretAlias] : []),
       operation: pending.operation,
       customFlowId: pending.customFlowId,
-      scope: pending.targetUrl ?? pending.scope,
-      methods: [...pending.methods],
+      write: {
+        secretIds: pending.write.secretIds ? [...pending.write.secretIds] : undefined,
+        scope: pending.targetUrl ?? pending.write.scope,
+        methods: [...pending.write.methods],
+      },
+      read: {
+        mode: pending.read.mode,
+        paths: pending.read.paths ? [...pending.read.paths] : undefined,
+      },
       issuedAt,
       expiresAt: pending.expiresAt,
       rateLimit: pending.rateLimit,
@@ -255,9 +269,9 @@ export class VaultCore {
         vaultId: this._deps.vaultId,
         agent: { kind: "agent", id: pending.agentId },
         capability,
-        secretAlias: pending.secretAlias === "unknown" ? undefined : pending.secretAlias,
+        secretId: pending.secretId,
         targetUrl: pending.targetUrl,
-        method: pending.methods[0] ?? "POST",
+        method: pending.write.methods[0] ?? "POST",
         headers: pending.headers,
         body: pending.body,
         proof: pending.proof,
@@ -269,8 +283,8 @@ export class VaultCore {
         vaultId: this._deps.vaultId,
         requestId: pending.requestId ?? command.requestId,
         status: DispatchStatus.SUCCEEDED,
-        targetUrl: pending.scope,
-        method: pending.methods[0] ?? "POST",
+        targetUrl: pending.write.scope,
+        method: pending.write.methods[0] ?? "POST",
       };
     } else {
       throw new VaultCoreError("pending capability state is not executable", "VAULT_WRITE_DENIED");
@@ -289,9 +303,24 @@ export class VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          AuditAction.APPROVE_CAPABILITY_REQUEST,
+          AuditAction.APPROVE_CAPABILITY_WRITE,
           AuditOutcome.SUCCEEDED,
           `executed and granted capability state ${command.requestId}`,
+          {
+            requestId: command.requestId,
+            agentId: pending.agentId,
+            capabilityId: capability.capabilityId,
+            operation: capability.operation,
+          },
+        ),
+      );
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          AuditAction.APPROVE_CAPABILITY_READ,
+          AuditOutcome.SUCCEEDED,
+          `approved read policy for capability state ${command.requestId}`,
           {
             requestId: command.requestId,
             agentId: pending.agentId,
@@ -306,9 +335,24 @@ export class VaultCore {
         toAuditEntry(
           this._deps,
           command.owner,
-          AuditAction.APPROVE_CAPABILITY_REQUEST,
+          AuditAction.APPROVE_CAPABILITY_WRITE,
           AuditOutcome.SUCCEEDED,
           `executed once and deleted capability state ${command.requestId}`,
+          {
+            requestId: command.requestId,
+            agentId: pending.agentId,
+            capabilityId: capability.capabilityId,
+            operation: capability.operation,
+          },
+        ),
+      );
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          AuditAction.APPROVE_CAPABILITY_READ,
+          AuditOutcome.SUCCEEDED,
+          `approved one-time read policy for capability state ${command.requestId}`,
           {
             requestId: command.requestId,
             agentId: pending.agentId,
@@ -350,8 +394,8 @@ export class VaultCore {
         capabilityId: request.capability?.capabilityId,
         operation: (request.capability?.operation as any) ?? AuditAction.AUTHORIZE_DISPATCH,
         targetUrl: request.targetUrl,
-        secretAlias: options?.secretAlias ?? request.secretAlias,
-        secretId: options?.secretId,
+        secretAlias: options?.secretAlias,
+        secretId: options?.secretId ?? request.secretId,
       }),
     );
   }
@@ -401,23 +445,30 @@ export class VaultCore {
       .map((state) => this._stateToGrantedCapability(state));
     const capabilityMap = new Map<string, {
       capabilityId: string;
-      scope: string;
-      methods: readonly string[];
+      write: import("./contracts.js").CapabilityWritePolicy;
+      read: import("./contracts.js").CapabilityReadPolicy;
     }[]>();
     for (const capability of capabilities) {
-      for (const alias of capability.secretAliases ?? []) {
-        const existing = capabilityMap.get(alias) ?? [];
+      for (const secretId of capability.write.secretIds ?? []) {
+        const existing = capabilityMap.get(secretId) ?? [];
         existing.push({
           capabilityId: capability.capabilityId,
-          scope: capability.scope,
-          methods: [...capability.methods],
+          write: {
+            secretIds: capability.write.secretIds ? [...capability.write.secretIds] : undefined,
+            scope: capability.write.scope,
+            methods: [...capability.write.methods],
+          },
+          read: {
+            mode: capability.read.mode,
+            paths: capability.read.paths ? [...capability.read.paths] : undefined,
+          },
         });
-        capabilityMap.set(alias, existing);
+        capabilityMap.set(secretId, existing);
       }
     }
     const records = await this._deps.secrets.list(this._deps.vaultId);
     return records.map((record) => {
-      const authorizedCapabilities = capabilityMap.get(record.alias.value) ?? [];
+      const authorizedCapabilities = capabilityMap.get(record.secretId.value) ?? [];
       return {
         vaultId: record.vaultId,
         secretId: record.secretId,
@@ -582,10 +633,10 @@ export class VaultCore {
     if (!command.agentId.trim()) {
       throw new VaultCoreError("capability request agent id required", "VAULT_IDENTITY_DENIED");
     }
-    if (!command.scope.scope.trim()) {
+    if (!command.capability.write.scope.trim()) {
       throw new VaultCoreError("capability request scope required", "VAULT_IDENTITY_DENIED");
     }
-    if (command.scope.methods.length === 0) {
+    if (command.capability.write.methods.length === 0) {
       throw new VaultCoreError("capability request method required", "VAULT_IDENTITY_DENIED");
     }
     const pendingRecord: CapabilityStateRecord = {
@@ -594,13 +645,19 @@ export class VaultCore {
       source: "explicit_request",
       requestId: command.requestId,
       agentId: command.agentId,
-      operation: command.scope.operation,
-      secretAliases: command.scope.secretAliases ? [...command.scope.secretAliases] : [],
-      scope: command.scope.scope,
-      methods: [...command.scope.methods],
-      rateLimit: command.scope.rateLimit,
-      skipAudit: command.scope.skipAudit,
-      expiresAt: command.scope.expiresAt,
+      operation: command.capability.operation,
+      write: {
+        secretIds: command.capability.write.secretIds ? [...command.capability.write.secretIds] : undefined,
+        scope: command.capability.write.scope,
+        methods: [...command.capability.write.methods],
+      },
+      read: {
+        mode: command.capability.read.mode,
+        paths: command.capability.read.paths ? [...command.capability.read.paths] : undefined,
+      },
+      rateLimit: command.capability.rateLimit,
+      skipAudit: command.capability.skipAudit,
+      expiresAt: command.capability.expiresAt,
       justification: command.justification,
       requestedAt: command.requestedAt,
     };
@@ -624,7 +681,7 @@ export class VaultCore {
         {
           requestId: command.requestId,
           agentId: command.agentId,
-          operation: command.scope.operation,
+          operation: command.capability.operation,
         },
       ),
     );
@@ -823,10 +880,10 @@ export class VaultCore {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("request vault mismatch", "VAULT_DISPATCH_DENIED");
     }
-    const record = request.secretAlias
-      ? await this._deps.secrets.getByAlias({ value: request.secretAlias })
+    const record = request.secretId
+      ? await this._deps.secrets.getById({ value: request.secretId })
       : null;
-    if (request.secretAlias && !record) {
+    if (request.secretId && !record) {
       await this._appendDecisionAudit(request, AuditOutcome.DENIED, "secret not found");
       return {
         vaultId: this._deps.vaultId,
@@ -843,7 +900,7 @@ export class VaultCore {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       await this._appendDecisionAudit(request, AuditOutcome.DENIED, detail, {
-        secretAlias: record?.alias.value ?? request.secretAlias,
+        secretAlias: record?.alias.value,
         secretId: record?.secretId.value,
       });
       throw error;
@@ -874,11 +931,16 @@ export class VaultCore {
         agentId: request.agent.id,
         capabilityId: undefined,
         operation: "dispatch_http",
-        secretAliases: request.secretAlias ? [request.secretAlias] : [],
-        scope: request.targetUrl,
-        methods: [request.method],
+        write: {
+          secretIds: request.secretId ? [request.secretId] : undefined,
+          scope: request.targetUrl,
+          methods: [request.method],
+        },
+        read: {
+          mode: "none",
+        },
         requestedAt: request.requestedAt,
-        secretAlias: request.secretAlias ?? "unknown",
+        secretId: request.secretId,
         targetUrl: request.targetUrl,
         headers: request.headers,
         body: request.body,
@@ -896,7 +958,7 @@ export class VaultCore {
       }
 
       await this._appendDecisionAudit(request, AuditOutcome.PENDING, "dispatch stalled for manual discovery approval", {
-        secretAlias: record?.alias.value ?? request.secretAlias,
+        secretAlias: record?.alias.value,
         secretId: record?.secretId.value,
       });
 
@@ -916,7 +978,7 @@ export class VaultCore {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       await this._appendDecisionAudit(request, AuditOutcome.DENIED, detail, {
-        secretAlias: record?.alias.value ?? request.secretAlias,
+        secretAlias: record?.alias.value,
         secretId: record?.secretId.value,
       });
       return {
@@ -930,7 +992,7 @@ export class VaultCore {
     // Capability found, proceed
     if (!capability.skipAudit) {
       await this._appendDecisionAudit(request, AuditOutcome.ALLOWED, "dispatch authorized", {
-        secretAlias: record?.alias.value ?? request.secretAlias,
+        secretAlias: record?.alias.value,
         secretId: record?.secretId.value,
       });
     }
@@ -1062,20 +1124,18 @@ export class VaultCore {
   }
 
   private isCapabilityMatch(capability: AgentCapability, request: DispatchRequest, secretId?: string): boolean {
-    // Match either alias- or id-based capability grants when a secret is specified.
-    if (request.secretAlias) {
-      const aliasMatched = capability.secretAliases?.includes(request.secretAlias) ?? false;
-      const idMatched = secretId ? (capability.secretIds?.includes(secretId) ?? false) : false;
-      if (!aliasMatched && !idMatched) {
+    if (request.secretId) {
+      const idMatched = secretId ? (capability.write.secretIds?.includes(secretId) ?? false) : false;
+      if (!idMatched) {
         return false;
       }
     }
 
-    if (request.method && capability.methods?.length > 0 && !capability.methods.includes(request.method)) {
+    if (request.method && capability.write.methods?.length > 0 && !capability.write.methods.includes(request.method)) {
       return false;
     }
 
-    if (capability.scope && !isScopeMatch(capability.scope, request.targetUrl)) {
+    if (capability.write.scope && !isScopeMatch(capability.write.scope, request.targetUrl)) {
       return false;
     }
 
@@ -1183,10 +1243,9 @@ export class VaultCore {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
     await this._verifyAgentControlProof(command, "submit_capability_request", {
-      scope: command.scope.scope,
-      methods: command.scope.methods,
-      operation: command.scope.operation,
-      secretAliases: command.scope.secretAliases ?? [],
+      write: command.capability.write,
+      read: command.capability.read,
+      operation: command.capability.operation,
       justification: command.justification ?? null,
     });
     return this.ownerSubmitCapabilityRequest({
@@ -1194,7 +1253,7 @@ export class VaultCore {
       requestId: command.requestId,
       requester: command.agent,
       agentId: command.agent.id,
-      scope: command.scope,
+      capability: command.capability,
       justification: command.justification,
       requestedAt: command.requestedAt,
     });
@@ -1314,9 +1373,23 @@ export class VaultCore {
       toAuditEntry(
         this._deps,
         command.owner,
-        AuditAction.REJECT_CAPABILITY_REQUEST,
+        AuditAction.REJECT_CAPABILITY_WRITE,
         AuditOutcome.SUCCEEDED,
         `rejected capability request ${command.requestId}`,
+        {
+          requestId: command.requestId,
+          agentId: pending.agentId,
+          operation: pending.operation,
+        },
+      ),
+    );
+    await this._appendAudit(
+      toAuditEntry(
+        this._deps,
+        command.owner,
+        AuditAction.REJECT_CAPABILITY_READ,
+        AuditOutcome.SUCCEEDED,
+        `rejected read policy for capability request ${command.requestId}`,
         {
           requestId: command.requestId,
           agentId: pending.agentId,

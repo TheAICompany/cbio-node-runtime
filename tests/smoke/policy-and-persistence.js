@@ -86,10 +86,13 @@ try {
     vaultId: authority.vaultId,
     capabilityId: "cap-restricted",
     agentId: vaultAgentId,
-    secretIds: [restrictedRecord.secretId.value],
     operation: "dispatch_http",
-    scope: "https://allowed.example.com/resource",
-    methods: ["POST"],
+    write: {
+      secretIds: [restrictedRecord.secretId.value],
+      scope: "https://allowed.example.com/resource",
+      methods: ["POST"],
+    },
+    read: { mode: "full" },
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
@@ -98,10 +101,13 @@ try {
     vaultId: authority.vaultId,
     capabilityId: "cap-stored-then-defined",
     agentId: vaultAgentId,
-    secretIds: [storedThenDefinedRecord.secretId.value],
     operation: "dispatch_http",
-    scope: "https://allowed.example.com/resource",
-    methods: ["POST"],
+    write: {
+      secretIds: [storedThenDefinedRecord.secretId.value],
+      scope: "https://allowed.example.com/resource",
+      methods: ["POST"],
+    },
+    read: { mode: "full" },
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
@@ -128,20 +134,20 @@ try {
   });
 
   const unscopedResult = await agent.agentDispatch({
-    secretAlias: "unscoped-token",
+    secretId: unscopedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(unscopedResult.status, "PENDING");
   const storedThenDefinedResult = await storedThenDefinedAgent.agentDispatch({
-    secretAlias: "stored-then-defined-token",
+    secretId: storedThenDefinedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(storedThenDefinedResult.status, "SUCCEEDED");
 
   const deniedSiteResult = await agent.agentDispatch({
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://denied.example.com/resource",
     method: "POST",
   });
@@ -154,7 +160,7 @@ try {
   assert.equal(exportedRestrictedSecret.plaintext, "secret-2");
 
   const otherPathResult = await agent.agentDispatch({
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/other",
     method: "POST",
   });
@@ -164,10 +170,13 @@ try {
     vaultId: authority.vaultId,
     capabilityId: "cap-limited",
     agentId: vaultAgentId,
-    secretIds: [restrictedRecord.secretId.value],
     operation: "dispatch_http",
-    scope: "https://allowed.example.com/resource",
-    methods: ["POST"],
+    write: {
+      secretIds: [restrictedRecord.secretId.value],
+      scope: "https://allowed.example.com/resource",
+      methods: ["POST"],
+    },
+    read: { mode: "full" },
     issuedAt: new Date().toISOString(),
     rateLimit: {
       maxRequests: 1,
@@ -186,14 +195,14 @@ try {
     token: session.token,
   });
   const firstLimited = await rateLimitedAgent.agentDispatch({
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });
   assert.equal(firstLimited.status, "SUCCEEDED");
   await assert.rejects(
     () => rateLimitedAgent.agentDispatch({
-      secretAlias: "restricted-token",
+      secretId: restrictedRecord.secretId.value,
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
     }),
@@ -204,7 +213,7 @@ try {
   assert.equal(revokedVersion, 1);
   await assert.rejects(
     () => agent.agentDispatch({
-      secretAlias: "restricted-token",
+      secretId: restrictedRecord.secretId.value,
       targetUrl: "https://allowed.example.com/resource",
       method: "POST",
     }),
@@ -246,10 +255,13 @@ try {
       vaultId: reloadedAuthority.vaultId,
       capabilityId: reloadedCapabilityId,
       agentId: reloadedVaultAgentId,
-      secretIds: [restrictedRecord.secretId.value],
       operation: "dispatch_http",
-      scope: "https://allowed.example.com/resource",
-      methods: ["POST"],
+      write: {
+        secretIds: [restrictedRecord.secretId.value],
+        scope: "https://allowed.example.com/resource",
+        methods: ["POST"],
+      },
+      read: { mode: "full" },
       issuedAt: new Date().toISOString(),
       auditRequired: true,
     },
@@ -263,7 +275,7 @@ try {
     requestedAt,
     agentId: reloadedVaultAgentId,
     capabilityId: reloadedCapabilityId,
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
     body: null,
@@ -278,10 +290,13 @@ try {
       vaultId: reloadedAuthority.vaultId,
       capabilityId: reloadedCapabilityId,
       agentId: reloadedVaultAgentId,
-      secretIds: [restrictedRecord.secretId.value],
       operation: "dispatch_http",
-      scope: "https://allowed.example.com/resource",
-      methods: ["POST"],
+      write: {
+        secretIds: [restrictedRecord.secretId.value],
+        scope: "https://allowed.example.com/resource",
+        methods: ["POST"],
+      },
+      read: { mode: "full" },
       issuedAt: new Date().toISOString(),
       auditRequired: true,
     },
@@ -291,7 +306,7 @@ try {
       requestId,
       requestedAt,
     },
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   }).catch((error) => {
@@ -312,7 +327,7 @@ try {
     requestedAt: persistedReplayRequestedAt,
     agentId: reloadedVaultAgentId,
     capabilityId: "cap-reloaded",
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
     body: null,
@@ -326,10 +341,13 @@ try {
       vaultId: reloadedAuthority.vaultId,
       capabilityId: "cap-reloaded",
       agentId: reloadedVaultAgentId,
-      secretIds: [restrictedRecord.secretId.value],
       operation: "dispatch_http",
-      scope: "https://allowed.example.com/resource",
-      methods: ["POST"],
+      write: {
+        secretIds: [restrictedRecord.secretId.value],
+        scope: "https://allowed.example.com/resource",
+        methods: ["POST"],
+      },
+      read: { mode: "full" },
       issuedAt: new Date().toISOString(),
       auditRequired: true,
     },
@@ -339,7 +357,7 @@ try {
       requestId: persistedReplayRequestId,
       requestedAt: persistedReplayRequestedAt,
     },
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   };
@@ -373,10 +391,13 @@ try {
       vaultId: restartedAuthority.vaultId,
       capabilityId: restartedRateLimitCapabilityId,
       agentId: restartedVaultAgentId,
-      secretIds: [restrictedRecord.secretId.value],
       operation: "dispatch_http",
-      scope: "https://allowed.example.com/resource",
-      methods: ["POST"],
+      write: {
+        secretIds: [restrictedRecord.secretId.value],
+        scope: "https://allowed.example.com/resource",
+        methods: ["POST"],
+      },
+      read: { mode: "full" },
       issuedAt: new Date().toISOString(),
       rateLimit: {
         maxRequests: 1,
@@ -398,7 +419,7 @@ try {
     requestedAt: restartedRateLimitRequestedAt,
     agentId: restartedVaultAgentId,
     capabilityId: restartedRateLimitCapabilityId,
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
     body: null,
@@ -413,10 +434,13 @@ try {
       vaultId: restartedAuthority.vaultId,
       capabilityId: restartedRateLimitCapabilityId,
       agentId: restartedVaultAgentId,
-      secretIds: [restrictedRecord.secretId.value],
       operation: "dispatch_http",
-      scope: "https://allowed.example.com/resource",
-      methods: ["POST"],
+      write: {
+        secretIds: [restrictedRecord.secretId.value],
+        scope: "https://allowed.example.com/resource",
+        methods: ["POST"],
+      },
+      read: { mode: "full" },
       issuedAt: new Date().toISOString(),
       rateLimit: {
         maxRequests: 1,
@@ -430,7 +454,7 @@ try {
       requestId: restartedRateLimitRequestId,
       requestedAt: restartedRateLimitRequestedAt,
     },
-    secretAlias: "restricted-token",
+    secretId: restrictedRecord.secretId.value,
     targetUrl: "https://allowed.example.com/resource",
     method: "POST",
   });

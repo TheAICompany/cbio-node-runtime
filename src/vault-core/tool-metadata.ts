@@ -13,13 +13,13 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     parameters: {
       type: "object",
       properties: {
-        secretAlias: { type: "string", description: "The alias of the secret to use." },
+        secretId: { type: "string", description: "The stable secret ID to use." },
         targetUrl: { type: "string", description: "The destination URL for the secret." },
         method: { type: "string", description: "The HTTP method (e.g., POST, GET)." },
         body: { type: "string", description: "Optional request body." },
         headers: { type: "object", description: "Optional request headers." },
       },
-      required: ["secretAlias", "targetUrl", "method"],
+      required: ["secretId", "targetUrl", "method"],
     },
   },
   agentListCapabilities: {
@@ -41,13 +41,12 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     parameters: {
       type: "object",
       properties: {
-        scope: { type: "string", description: "The URL scope (e.g., https://api.example.com/*)." },
-        methods: { type: "array", items: { type: "string" }, description: "List of allowed HTTP methods." },
+        write: { type: "object", description: "Outbound request policy including secret IDs, scope, and methods." },
+        read: { type: "object", description: "Inbound response visibility policy." },
         operation: { type: "string", description: "The operation type, usually 'dispatch_http'." },
-        secretAliases: { type: "array", items: { type: "string" }, description: "Optional list of secret aliases to bind." },
         justification: { type: "string", description: "Why you need this capability." },
       },
-      required: ["scope", "methods"],
+      required: ["write", "read"],
     },
   },
 };

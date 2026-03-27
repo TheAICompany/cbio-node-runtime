@@ -24,7 +24,9 @@ async function runDiscoveryTest() {
       vaultId: { value: owner.vaultId },
       capabilityId: "initial-sync",
       agentId: agent.agentId,
-      scope: { operation: "dispatch_http", scope: "https://api.github.com/*", methods: ["GET"] },
+      operation: "dispatch_http",
+      write: { scope: "https://api.github.com/*", methods: ["GET"] },
+      read: { mode: "full" },
       grantedAt: new Date().toISOString(),
     },
     vault: owner._service, // Use local vault service for testing
@@ -44,7 +46,7 @@ async function runDiscoveryTest() {
   const dispatchTool = manifest.tools.find(t => t.name === "agentDispatch");
   assert.ok(dispatchTool, "agentDispatch tool should be in the manifest");
   assert.ok(dispatchTool.description.includes("dispatch"), "Tool description missing");
-  assert.ok(dispatchTool.parameters.properties.secretAlias, "Tool parameters missing secretAlias");
+  assert.ok(dispatchTool.parameters.properties.secretId, "Tool parameters missing secretId");
 
   console.log("✅ Agent correctly discovered its runtime environment!");
   

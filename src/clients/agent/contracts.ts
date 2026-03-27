@@ -1,5 +1,5 @@
 export interface AgentDispatchIntent {
-  secretAlias?: string;
+  secretId?: string;
   targetUrl: string;
   method: string;
   headers?: Record<string, string>;
@@ -9,9 +9,8 @@ export interface AgentDispatchIntent {
 
 export interface AgentSubmitCapabilityRequestInput {
   operation?: "dispatch_http" | "custom_http";
-  secretAliases?: readonly string[];
-  scope: string;
-  methods: readonly string[];
+  write: import("../../vault-core/index.js").CapabilityWritePolicy;
+  read: import("../../vault-core/index.js").CapabilityReadPolicy;
   justification?: string;
   requestedAt?: string;
 }

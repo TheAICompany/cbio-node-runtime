@@ -76,6 +76,8 @@ export type {
   OwnerListCapabilityStatesRequest,
   OwnerExecuteCapabilityStateCommand,
   OwnerRejectCapabilityStateCommand,
+  CapabilityWritePolicy,
+  CapabilityReadPolicy,
   CapabilityRequestScope,
   CustomHttpFlowDefinition,
   AuditEntry,

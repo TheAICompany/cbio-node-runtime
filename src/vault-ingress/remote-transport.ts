@@ -23,7 +23,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
       capabilityId: request.capability?.capabilityId,
-      secretAlias: request.secretAlias,
+      secretId: request.secretId,
       targetUrl: request.targetUrl,
       method: request.method,
       headers: request.headers,
@@ -99,10 +99,16 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
       proof: { token: request.proof.token },
-      scope: request.scope.scope,
-      methods: [...request.scope.methods],
-      operation: request.scope.operation,
-      secretAliases: request.scope.secretAliases ? [...request.scope.secretAliases] : [],
+      operation: request.capability.operation,
+      write: {
+        secretIds: request.capability.write.secretIds ? [...request.capability.write.secretIds] : undefined,
+        scope: request.capability.write.scope,
+        methods: [...request.capability.write.methods],
+      },
+      read: {
+        mode: request.capability.read.mode,
+        paths: request.capability.read.paths ? [...request.capability.read.paths] : undefined,
+      },
       justification: request.justification,
     });
     return payload as import("../vault-core/index.js").CapabilityStateRecord;

@@ -202,11 +202,9 @@ class DefaultVaultClient implements VaultClient {
       capabilityId?: string;
       agentId: string;
       operation?: "dispatch_http" | "custom_http" | string;
-      secretAliases?: readonly string[];
-      secretIds?: readonly string[];
       customFlowId?: string;
-      scope: string;
-      methods: readonly string[];
+      write: import("../../vault-core/index.js").CapabilityWritePolicy;
+      read: import("../../vault-core/index.js").CapabilityReadPolicy;
       issuedAt?: string;
       expiresAt?: string;
       rateLimit?: {
@@ -225,11 +223,9 @@ class DefaultVaultClient implements VaultClient {
           capabilityId: input.capability.capabilityId,
           agentId: input.capability.agentId,
           operation: input.capability.operation,
-          secretAliases: input.capability.secretAliases,
-          secretIds: input.capability.secretIds,
           customFlowId: input.capability.customFlowId,
-          scope: input.capability.scope,
-          methods: input.capability.methods,
+          write: input.capability.write,
+          read: input.capability.read,
           issuedAt: input.capability.issuedAt,
           expiresAt: input.capability.expiresAt,
           rateLimit: input.capability.rateLimit,
@@ -488,11 +484,16 @@ class DefaultVaultClient implements VaultClient {
       agentId: normalized.capability.agentId,
       capabilityId,
       operation: (normalized.capability.operation as any) ?? "dispatch_http",
-      secretAliases: normalized.capability.secretAliases ? [...normalized.capability.secretAliases] : undefined,
-      secretIds: normalized.capability.secretIds ? [...normalized.capability.secretIds] : undefined,
       customFlowId: normalized.capability.customFlowId,
-      scope: normalized.capability.scope,
-      methods: [...normalized.capability.methods],
+      write: {
+        secretIds: normalized.capability.write.secretIds ? [...normalized.capability.write.secretIds] : undefined,
+        scope: normalized.capability.write.scope,
+        methods: [...normalized.capability.write.methods],
+      },
+      read: {
+        mode: normalized.capability.read.mode,
+        paths: normalized.capability.read.paths ? [...normalized.capability.read.paths] : undefined,
+      },
       expiresAt: normalized.capability.expiresAt,
       rateLimit: normalized.capability.rateLimit,
       skipAudit,
@@ -681,11 +682,17 @@ class DefaultVaultClient implements VaultClient {
       requestId,
       requester: input.requester,
       agentId: input.agentId,
-      scope: {
+      capability: {
         operation: (input.operation as any) ?? "dispatch_http",
-        secretAliases: input.secretAliases ? [...input.secretAliases] : [],
-        scope: input.scope,
-        methods: [...input.methods],
+        write: {
+          secretIds: input.write.secretIds ? [...input.write.secretIds] : undefined,
+          scope: input.write.scope,
+          methods: [...input.write.methods],
+        },
+        read: {
+          mode: input.read.mode,
+          paths: input.read.paths ? [...input.read.paths] : undefined,
+        },
         rateLimit: input.rateLimit,
         skipAudit: input.skipAudit,
         expiresAt: input.expiresAt,

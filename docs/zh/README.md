@@ -101,9 +101,12 @@ const record = await client.ownerWriteSecret({
 
 await client.ownerGrantCapability({
   agentId,
-  secretAliases: ['api-token'],
-  scope: 'https://api.example.com/*',
-  methods: ['POST']
+  write: {
+    secretIds: [record.secretId.value],
+    scope: 'https://api.example.com/*',
+    methods: ['POST']
+  },
+  read: { mode: 'full' }
 });
 ```
 

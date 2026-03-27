@@ -153,16 +153,25 @@ export interface OwnerRevokeCapabilityCommand {
   requestedAt: string;
 }
 
+export interface CapabilityWritePolicy {
+  secretIds?: readonly string[];
+  scope: string;
+  methods: readonly string[];
+}
+
+export interface CapabilityReadPolicy {
+  mode: "none" | "shape_only" | "full" | "custom";
+  paths?: readonly string[];
+}
+
 export interface AgentCapability {
   vaultId: VaultId;
   capabilityId: string;
   agentId: string;
-  secretIds?: readonly string[];
-  secretAliases?: readonly string[];
   operation: "dispatch_http" | "custom_http";
   customFlowId?: string;
-  scope: string;
-  methods: readonly string[];
+  write: CapabilityWritePolicy;
+  read: CapabilityReadPolicy;
   issuedAt: string;
   expiresAt?: string;
   revocationVersion?: number;
@@ -192,8 +201,8 @@ export interface AgentVisibleSecretRecord {
   isAuthorizedForAgent?: boolean;
   authorizedCapabilities?: readonly {
     capabilityId: string;
-    scope: string;
-    methods: readonly string[];
+    write: CapabilityWritePolicy;
+    read: CapabilityReadPolicy;
   }[];
 }
 
@@ -230,11 +239,9 @@ export interface AgentCapabilityState {
   requestId?: string;
   capabilityId?: string;
   operation: "dispatch_http" | "custom_http";
-  secretIds?: readonly string[];
-  secretAliases?: readonly string[];
   customFlowId?: string;
-  scope: string;
-  methods: readonly string[];
+  write: CapabilityWritePolicy;
+  read: CapabilityReadPolicy;
   issuedAt?: string;
   requestedAt: string;
   expiresAt?: string;
@@ -244,7 +251,7 @@ export interface AgentCapabilityState {
   };
   skipAudit?: boolean;
   justification?: string;
-  secretAlias?: string;
+  secretId?: string;
   targetUrl?: string;
 }
 
@@ -294,15 +301,14 @@ export interface AgentSubmitCapabilityRequestCommand {
   requestedAt: string;
   agent: VaultPrincipal & { kind: "agent" };
   proof: AgentProof;
-  scope: CapabilityRequestScope;
+  capability: CapabilityRequestScope;
   justification?: string;
 }
 
 export interface CapabilityRequestScope {
   operation: "dispatch_http" | "custom_http";
-  secretAliases?: readonly string[];
-  scope: string;
-  methods: readonly string[];
+  write: CapabilityWritePolicy;
+  read: CapabilityReadPolicy;
   rateLimit?: {
     maxRequests: number;
     windowMs: number;
@@ -316,7 +322,7 @@ export interface SubmitCapabilityRequestCommand {
   requestId: string;
   requester: VaultPrincipal;
   agentId: string;
-  scope: CapabilityRequestScope;
+  capability: CapabilityRequestScope;
   justification?: string;
   requestedAt: string;
 }
@@ -348,7 +354,7 @@ export interface DispatchRequest {
   agent: VaultPrincipal & { kind: "agent" };
   capability?: AgentCapability;
   proof: AgentProof;
-  secretAlias?: string;
+  secretId?: string;
   targetUrl: string;
   method: string;
   headers?: Record<string, string>;
@@ -407,8 +413,10 @@ export enum AuditAction {
   REGISTER_CUSTOM_FLOW = "REGISTER_CUSTOM_FLOW",
   REGISTER_CAPABILITY = "REGISTER_CAPABILITY",
   SUBMIT_CAPABILITY_REQUEST = "SUBMIT_CAPABILITY_REQUEST",
-  APPROVE_CAPABILITY_REQUEST = "APPROVE_CAPABILITY_REQUEST",
-  REJECT_CAPABILITY_REQUEST = "REJECT_CAPABILITY_REQUEST",
+  APPROVE_CAPABILITY_WRITE = "APPROVE_CAPABILITY_WRITE",
+  APPROVE_CAPABILITY_READ = "APPROVE_CAPABILITY_READ",
+  REJECT_CAPABILITY_WRITE = "REJECT_CAPABILITY_WRITE",
+  REJECT_CAPABILITY_READ = "REJECT_CAPABILITY_READ",
   REVOKE_CAPABILITY = "REVOKE_CAPABILITY",
   WRITE_SECRET = "WRITE_SECRET",
   EXPORT_SECRET = "EXPORT_SECRET",

@@ -24,7 +24,7 @@ const importedAgent = await ownerClient.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
 const vaultAgentId = importedAgent.agent.agentId;
-await ownerClient.ownerWriteSecret({
+const crmRecord = await ownerClient.ownerWriteSecret({
   alias: "crm-token",
   plaintext: "secret-crm-token",
 });
@@ -34,9 +34,12 @@ await ownerClient.ownerWriteSecret({
 });
 await ownerClient.ownerGrantCapability({
   agentId: vaultAgentId,
-  secretAliases: ["crm-token"],
-  scope: "https://api.example.com/users/*",
-  methods: ["GET"],
+  write: {
+    secretIds: [crmRecord.secretId.value],
+    scope: "https://api.example.com/users/*",
+    methods: ["GET"],
+  },
+  read: { mode: "full" },
 });
 
 const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
@@ -51,7 +54,7 @@ const agentClient = createAgentClient({
 const visibleCapabilities = await agentClient.agentListCapabilities();
 assert.equal(visibleCapabilities.length, 1);
 assert.equal(visibleCapabilities[0].status, "GRANTED");
-assert.equal(visibleCapabilities[0].scope, "https://api.example.com/users/*");
+assert.equal(visibleCapabilities[0].write.scope, "https://api.example.com/users/*");
 
 const visibleSecrets = await agentClient.agentListSecrets();
 assert.equal(visibleSecrets.length, 2);
@@ -68,35 +71,38 @@ const httpResult = await handleVaultAgentControlHttp(vault, {
   requestedAt,
   agentId: vaultAgentId,
   proof: { token: session.token },
-  scope: "https://api.example.com/admin/*",
-  methods: ["POST"],
   operation: "dispatch_http",
-  secretAliases: ["crm-token"],
+  write: {
+    secretIds: [crmRecord.secretId.value],
+    scope: "https://api.example.com/admin/*",
+    methods: ["POST"],
+  },
+  read: { mode: "full" },
   justification: "Need admin write access",
 });
 
 assert.equal(httpResult.ok, true);
 const pending = await ownerClient.ownerListCapabilityStates({ status: "PENDING" });
 assert.equal(pending.length, 1);
-assert.equal(pending[0].scope, "https://api.example.com/admin/*");
+assert.equal(pending[0].write.scope, "https://api.example.com/admin/*");
 
 const manifest = await agentClient.agentIntrospect();
 assert.equal(manifest.agent.agentId, vaultAgentId);
 assert.equal(manifest.agent.identityId, importedAgent.agent.identityId);
 assert.equal(manifest.agent.publicKey, importedAgent.agent.publicKey);
-assert.equal(manifest.capabilities.some((entry) => entry.status === "GRANTED" && entry.scope === "https://api.example.com/users/*"), true);
+assert.equal(manifest.capabilities.some((entry) => entry.status === "GRANTED" && entry.write.scope === "https://api.example.com/users/*"), true);
 assert.equal(
   manifest.capabilities.some((entry) =>
     entry.status === "PENDING"
     && entry.source === "explicit_request"
-    && entry.scope === "https://api.example.com/admin/*"
+    && entry.write.scope === "https://api.example.com/admin/*"
   ),
   true,
 );
 
 const capabilityView = await agentClient.agentListCapabilities();
 assert.equal(
-  capabilityView.some((entry) => entry.status === "PENDING" && entry.scope === "https://api.example.com/admin/*"),
+  capabilityView.some((entry) => entry.status === "PENDING" && entry.write.scope === "https://api.example.com/admin/*"),
   true,
 );
 

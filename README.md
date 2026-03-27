@@ -123,9 +123,12 @@ const record = await client.ownerWriteSecret({
 // 4. Grant agent capabilities
 await client.ownerGrantCapability({
   agentId,
-  secretAliases: ['api-token'],
-  scope: 'https://api.example.com/*',
-  methods: ['POST']
+  write: {
+    secretIds: [record.secretId.value],
+    scope: 'https://api.example.com/*',
+    methods: ['POST']
+  },
+  read: { mode: 'full' }
 });
 ```
 
@@ -157,9 +160,12 @@ If an LLM or orchestration layer already knows it needs a broader scope, it can 
 const request = await client.ownerSubmitCapabilityRequest({
   requester: { kind: 'trusted_executor', id: 'llm-planner' },
   agentId,
-  secretAliases: ['api-token'],
-  scope: 'https://api.example.com/users/*',
-  methods: ['GET'],
+  write: {
+    secretIds: [record.secretId.value],
+    scope: 'https://api.example.com/users/*',
+    methods: ['GET']
+  },
+  read: { mode: 'full' },
   justification: 'Need collection-level user read access'
 });
 

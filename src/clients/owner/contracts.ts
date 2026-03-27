@@ -75,11 +75,9 @@ export interface VaultRegisterFlowInput extends OwnerHttpFlowBoundary {
 export interface VaultGrantCapabilityInput {
   agentId: string;
   operation?: string;
-  secretAliases?: readonly string[];
-  secretIds?: readonly string[];
   customFlowId?: string;
-  scope: string;
-  methods: readonly string[];
+  write: import("../../vault-core/index.js").CapabilityWritePolicy;
+  read: import("../../vault-core/index.js").CapabilityReadPolicy;
   expiresAt?: string;
   expiresIn?: number;
   rateLimit?: {
@@ -111,9 +109,8 @@ export interface VaultSubmitCapabilityRequestInput {
   requester: import("../../vault-core/index.js").VaultPrincipal;
   agentId: string;
   operation?: string;
-  secretAliases?: readonly string[];
-  scope: string;
-  methods: readonly string[];
+  write: import("../../vault-core/index.js").CapabilityWritePolicy;
+  read: import("../../vault-core/index.js").CapabilityReadPolicy;
   rateLimit?: {
     maxRequests: number;
     windowMs: number;

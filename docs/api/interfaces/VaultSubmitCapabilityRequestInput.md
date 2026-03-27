@@ -24,12 +24,6 @@
 
 ***
 
-### methods
-
-> **methods**: readonly `string`[]
-
-***
-
 ### operation?
 
 > `optional` **operation?**: `string`
@@ -50,6 +44,12 @@
 
 ***
 
+### read
+
+> **read**: `CapabilityReadPolicy`
+
+***
+
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
@@ -62,18 +62,12 @@
 
 ***
 
-### scope
-
-> **scope**: `string`
-
-***
-
-### secretAliases?
-
-> `optional` **secretAliases?**: readonly `string`[]
-
-***
-
 ### skipAudit?
 
 > `optional` **skipAudit?**: `boolean`
+
+***
+
+### write
+
+> **write**: `CapabilityWritePolicy`

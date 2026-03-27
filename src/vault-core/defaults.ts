@@ -134,7 +134,7 @@ function createDispatchBinding(request: DispatchRequest): string {
     requestedAt: request.requestedAt,
     agentId: request.agent.id,
     capabilityId: request.capability?.capabilityId ?? null,
-    secretAlias: request.secretAlias ?? null,
+    secretId: request.secretId ?? null,
     targetUrl: request.targetUrl,
     method: request.method,
     body: request.body ?? null,
@@ -468,25 +468,23 @@ export class DefaultPolicyEngine implements PolicyEngine {
       throw new VaultCoreError("capability issuedAt invalid", "VAULT_DISPATCH_DENIED");
     }
     if (record) {
-      if (capability.secretIds?.length) {
-        if (!capability.secretIds.includes(record.secretId.value)) {
+      if (capability.write.secretIds?.length) {
+        if (!capability.write.secretIds.includes(record.secretId.value)) {
           throw new VaultCoreError("secret id denied", "VAULT_DISPATCH_DENIED");
         }
-      } else if (capability.secretAliases?.length && !capability.secretAliases.includes(record.alias.value)) {
-        throw new VaultCoreError("secret alias denied", "VAULT_DISPATCH_DENIED");
       }
     } else {
       if (capability.operation !== "custom_http") {
-        throw new VaultCoreError("secret alias required", "VAULT_DISPATCH_DENIED");
+        throw new VaultCoreError("secret id required", "VAULT_DISPATCH_DENIED");
       }
-      if (capability.secretIds?.length || capability.secretAliases?.length) {
+      if (capability.write.secretIds?.length) {
         throw new VaultCoreError("secret scope denied", "VAULT_DISPATCH_DENIED");
       }
     }
-    if (!matchesScope(capability.scope, request.targetUrl)) {
+    if (!matchesScope(capability.write.scope, request.targetUrl)) {
       throw new VaultCoreError("scope denied", "VAULT_DISPATCH_DENIED");
     }
-    if (!capability.methods.includes(canonicalRequestTarget.method)) {
+    if (!capability.write.methods.includes(canonicalRequestTarget.method)) {
       throw new VaultCoreError("method denied", "VAULT_DISPATCH_DENIED");
     }
     const currentRevocationVersion = this._options.capabilityRevocationRegistry
