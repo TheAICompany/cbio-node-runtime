@@ -25,7 +25,7 @@ const provisionedAgent = await ownerClient.ownerCreateAgent({
 const vaultAgentId = provisionedAgent.agent.agentId;
 
 let observed = null;
-const unsubscribe = ownerClient.ownerOnPendingCapabilityRequest((record) => {
+const unsubscribe = ownerClient.ownerOnCapabilityState((record) => {
   observed = record;
 });
 
@@ -39,23 +39,21 @@ const submitted = await ownerClient.ownerSubmitCapabilityRequest({
 });
 
 assert.equal(submitted.agentId, vaultAgentId);
-assert.deepEqual(submitted.scope.methods, ["GET"]);
-assert.equal(submitted.scope.scope, "https://api.example.com/users/*");
+assert.deepEqual(submitted.methods, ["GET"]);
+assert.equal(submitted.scope, "https://api.example.com/users/*");
 assert.ok(observed, "pending capability request observer should fire");
 
-const pending = await ownerClient.ownerListPendingCapabilityRequests();
+const pending = await ownerClient.ownerListCapabilityStates({ status: "PENDING" });
 assert.equal(pending.length, 1);
 assert.equal(pending[0].justification, "Need to read user resources without per-id approval");
 
-const approved = await ownerClient.ownerApproveCapabilityRequest({
+const approved = await ownerClient.ownerExecuteCapabilityStateAndGrant({
   requestId: pending[0].requestId,
 });
-assert.equal(typeof approved.capabilityId, "string");
-assert.deepEqual(approved.methods, ["GET"]);
-assert.equal(approved.scope, "https://api.example.com/users/*");
+assert.equal(approved.status, "SUCCEEDED");
 
 const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
-assert.ok(capabilities.some((cap) => cap.capabilityId === approved.capabilityId));
+assert.ok(capabilities.some((cap) => cap.scope === "https://api.example.com/users/*"));
 
 await ownerClient.ownerSubmitCapabilityRequest({
   requester: { kind: "trusted_executor", id: "llm-planner" },
@@ -64,10 +62,10 @@ await ownerClient.ownerSubmitCapabilityRequest({
   scope: "https://api.example.com/admin/*",
   methods: ["POST"],
 });
-const pendingAfterSecondSubmit = await ownerClient.ownerListPendingCapabilityRequests();
+const pendingAfterSecondSubmit = await ownerClient.ownerListCapabilityStates({ status: "PENDING" });
 assert.equal(pendingAfterSecondSubmit.length, 1);
-await ownerClient.ownerRejectCapabilityRequest(pendingAfterSecondSubmit[0].requestId);
-assert.equal((await ownerClient.ownerListPendingCapabilityRequests()).length, 0);
+await ownerClient.ownerRejectCapabilityState(pendingAfterSecondSubmit[0].requestId);
+assert.equal((await ownerClient.ownerListCapabilityStates({ status: "PENDING" })).length, 0);
 
 unsubscribe();
 

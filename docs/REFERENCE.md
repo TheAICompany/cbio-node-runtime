@@ -79,14 +79,11 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerListSecrets(...)`
 - `ownerRegisterFlow(...)`
 - `ownerSubmitCapabilityRequest(...)`
-- `ownerListPendingCapabilityRequests()`
-- `ownerApproveCapabilityRequest(...)`
-- `ownerRejectCapabilityRequest(...)`
-- `ownerOnPendingCapabilityRequest(...)`
-- `ownerListPendingDispatches()`
-- `ownerApproveDispatch(...)`
-- `ownerRejectDispatch(...)`
-- `ownerOnPendingDispatch(...)`
+- `ownerListCapabilityStates(...)`
+- `ownerExecuteCapabilityStateOnce(...)`
+- `ownerExecuteCapabilityStateAndGrant(...)`
+- `ownerRejectCapabilityState(...)`
+- `ownerOnCapabilityState(...)`
 - `ownerIssueSessionToken(...)`
 - `ownerIssueAllSessionTokens()`
 - `ownerRevokeSessionToken(...)`
@@ -99,15 +96,12 @@ The following owner-side methods are part of the supported public surface and ar
 - `ownerUpdateAgent(...)`: Update an agent's stored nickname and metadata.
 - `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
 - `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
-- `ownerSubmitCapabilityRequest(...)`: Submit a broader pending capability request for later owner review.
-- `ownerListPendingCapabilityRequests()`: List proactive capability requests that are waiting for approval.
-- `ownerApproveCapabilityRequest({ requestId })`: Turn a pending capability request into a real stored capability. Capability IDs are generated internally.
-- `ownerRejectCapabilityRequest(requestId)`: Deny a pending capability request.
-- `ownerOnPendingCapabilityRequest(callback)`: Register a real-time observer to receive proactive capability requests.
-- `ownerListPendingDispatches()`: List agent requests awaiting manual approval (HITL).
-- `ownerApproveDispatch({ requestId, permanent, skipAudit })`: Grant a stalled request manual authorization.
-- `ownerOnPendingDispatch(callback)`: Register a real-time observer to receive push notifications for discovery requests.
-- `ownerRejectDispatch(requestId)`: Deny a stalled request.
+- `ownerSubmitCapabilityRequest(...)`: Create a `PENDING` capability state for later owner review.
+- `ownerListCapabilityStates(...)`: Read the unified capability-state table, optionally filtered by `agentId` or status.
+- `ownerExecuteCapabilityStateOnce({ requestId })`: Execute a concrete `PENDING` request once, then delete the state.
+- `ownerExecuteCapabilityStateAndGrant({ requestId })`: Execute a `PENDING` request and convert it to `GRANTED`. Capability IDs are generated internally.
+- `ownerRejectCapabilityState(requestId)`: Turn a `PENDING` state into `REJECTED`.
+- `ownerOnCapabilityState(callback)`: Register a real-time observer for capability-state changes.
 - `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
 - `ownerIssueAllSessionTokens()`: Batch-issue session tokens for ALL registered agents (Automatic during `createVaultClient` warmup).
 - `ownerRevokeSessionToken({ token })`: Invalidate a specific session token.
@@ -161,31 +155,35 @@ The `AgentClient` is used by delegated processes (e.g., LLMs or background worke
 - `agentDispatch(...)`: Use a granted capability to send a secret to an authorized target.
   - **Status**: Returns `SUCCEEDED`, `FAILED`, or `PENDING`.
   - **Discovery Flow**: If an agent attempts an action not explicitly in its white-list, the request is automatically stalled as `PENDING` for owner review. 
-- `agentListCapabilities()`: Read the current capability table granted to that agent.
+- `agentListCapabilities()`: Read the agent's unified capability-state table.
+  - Includes both `GRANTED` and `PENDING` entries.
+  - Pending rows cover both proactive requests and dispatch-discovery requests.
 - `agentListSecrets()`: Read all secret metadata in the vault, with per-secret authorization markers showing which entries the agent can currently use.
+- `agentIntrospect()`: Read the vault-known self context (`agentId`, `identityId`, `nickname`, `metadata`) plus the unified capability-state table and tool manifest.
 - `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant before dispatching.
 - **Security**: The agent never handles the vault's master password. Agent execution uses **Session Tokens** rather than raw private-key dispatch.
 - **Auditing**: Dispatches are audited by default. Set `skipAudit: true` in the capability (or during approval) to disable logging for specific actions.
 
-## Proactive Capability Approval
+## Capability State Approval
 
-The runtime now supports a second approval path alongside dispatch discovery:
+The runtime uses one unified capability-state model:
 
-- **Dispatch discovery**: A concrete dispatch misses existing capability coverage and becomes `PENDING`.
-- **Capability request**: An external planner or controller submits a broader capability proposal before any dispatch is attempted.
+- **Dispatch discovery**: A concrete dispatch misses existing capability coverage and creates a `PENDING` state.
+- **Capability request**: An external planner or controller creates a broader `PENDING` state before any dispatch is attempted.
 
 This is useful for LLM-driven planners that can infer the needed scope ahead of time, for example:
 - scope `https://api.example.com/users/*`
 - methods `["GET"]`
 
-The request stays pending until the owner approves or rejects it:
+The state stays pending until the owner approves or rejects it:
 - `ownerSubmitCapabilityRequest(...)` creates the request record.
-- `ownerListPendingCapabilityRequests()` reads the current queue.
-- `ownerApproveCapabilityRequest(...)` persists a real capability.
-- `ownerRejectCapabilityRequest(...)` removes the request without granting access.
-- `ownerOnPendingCapabilityRequest(...)` supports push-style owner interfaces.
+- `ownerListCapabilityStates({ status: "PENDING" })` reads the current queue.
+- `ownerExecuteCapabilityStateOnce(...)` executes once and removes the pending state.
+- `ownerExecuteCapabilityStateAndGrant(...)` executes and persists a real capability.
+- `ownerRejectCapabilityState(...)` marks the state rejected.
+- `ownerOnCapabilityState(...)` supports push-style owner interfaces.
 
-The proactive request flow does not replace dispatch discovery. It is an additional, explicit path for requesting broader access without generating one pending dispatch per resource ID.
+The proactive request flow does not replace dispatch discovery. Both flows now produce the same `PENDING` capability-state object.
 
 ## Storage Layout
 

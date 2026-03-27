@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.57.0**](../README.md)
 
 ***
 
@@ -125,7 +125,7 @@ This is the primary implementation of the Vault logic.
 
 ##### command
 
-`AgentGetRuntimeManifestCommand`
+`AgentGetRuntimeManifestRequest`
 
 #### Returns
 
@@ -135,7 +135,7 @@ This is the primary implementation of the Vault logic.
 
 ### agentListCapabilities()
 
-> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentCapability`[]\>
+> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentCapabilityState`[]\>
 
 #### Parameters
 
@@ -145,7 +145,7 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<readonly `AgentCapability`[]\>
+`Promise`\<readonly `AgentCapabilityState`[]\>
 
 ***
 
@@ -167,7 +167,7 @@ This is the primary implementation of the Vault logic.
 
 ### agentSubmitCapabilityRequest()
 
-> **agentSubmitCapabilityRequest**(`command`): `Promise`\<`PendingCapabilityRequestRecord`\>
+> **agentSubmitCapabilityRequest**(`command`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
@@ -177,39 +177,7 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<`PendingCapabilityRequestRecord`\>
-
-***
-
-### ownerApproveCapabilityRequest()
-
-> **ownerApproveCapabilityRequest**(`command`): `Promise`\<`AgentCapability`\>
-
-#### Parameters
-
-##### command
-
-`OwnerApproveCapabilityRequestCommand`
-
-#### Returns
-
-`Promise`\<`AgentCapability`\>
-
-***
-
-### ownerApproveDispatch()
-
-> **ownerApproveDispatch**(`command`): `Promise`\<`DispatchResult`\>
-
-#### Parameters
-
-##### command
-
-`OwnerApproveDispatchCommand`
-
-#### Returns
-
-`Promise`\<`DispatchResult`\>
+`Promise`\<`CapabilityStateRecord`\>
 
 ***
 
@@ -242,6 +210,38 @@ This is the primary implementation of the Vault logic.
 #### Returns
 
 `Promise`\<`void`\>
+
+***
+
+### ownerExecuteCapabilityStateAndGrant()
+
+> **ownerExecuteCapabilityStateAndGrant**(`command`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### command
+
+`OwnerExecuteCapabilityStateCommand`
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
+### ownerExecuteCapabilityStateOnce()
+
+> **ownerExecuteCapabilityStateOnce**(`command`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### command
+
+`OwnerExecuteCapabilityStateCommand`
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
 
 ***
 
@@ -345,47 +345,19 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerListPendingCapabilityRequests()
+### ownerListCapabilityStates()
 
-> **ownerListPendingCapabilityRequests**(`command`): `Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
-
-#### Parameters
-
-##### command
-
-###### owner
-
-`VaultPrincipal`
-
-###### vaultId
-
-`VaultId`
-
-#### Returns
-
-`Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
-
-***
-
-### ownerListPendingDispatches()
-
-> **ownerListPendingDispatches**(`command`): `Promise`\<readonly `PendingDispatchRecord`[]\>
+> **ownerListCapabilityStates**(`command`): `Promise`\<readonly `CapabilityStateRecord`[]\>
 
 #### Parameters
 
 ##### command
 
-###### owner
-
-`VaultPrincipal`
-
-###### vaultId
-
-`VaultId`
+`OwnerListCapabilityStatesRequest`
 
 #### Returns
 
-`Promise`\<readonly `PendingDispatchRecord`[]\>
+`Promise`\<readonly `CapabilityStateRecord`[]\>
 
 ***
 
@@ -411,25 +383,9 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerOnPendingCapabilityRequest()
+### ownerOnCapabilityState()
 
-> **ownerOnPendingCapabilityRequest**(`callback`): () => `void`
-
-#### Parameters
-
-##### callback
-
-(`record`) => `void`
-
-#### Returns
-
-() => `void`
-
-***
-
-### ownerOnPendingDispatch()
-
-> **ownerOnPendingDispatch**(`callback`): () => `void`
+> **ownerOnCapabilityState**(`callback`): () => `void`
 
 #### Parameters
 
@@ -515,35 +471,19 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerRejectCapabilityRequest()
+### ownerRejectCapabilityState()
 
-> **ownerRejectCapabilityRequest**(`command`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### command
-
-`OwnerRejectCapabilityRequestCommand`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
-
-### ownerRejectDispatch()
-
-> **ownerRejectDispatch**(`command`): `Promise`\<`void`\>
+> **ownerRejectCapabilityState**(`command`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
 ##### command
 
-`OwnerRejectDispatchCommand`
+`OwnerRejectCapabilityStateCommand`
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`CapabilityStateRecord`\>
 
 ***
 
@@ -591,7 +531,7 @@ This is the primary implementation of the Vault logic.
 
 ### ownerSubmitCapabilityRequest()
 
-> **ownerSubmitCapabilityRequest**(`command`): `Promise`\<`PendingCapabilityRequestRecord`\>
+> **ownerSubmitCapabilityRequest**(`command`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
@@ -601,7 +541,7 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<`PendingCapabilityRequestRecord`\>
+`Promise`\<`CapabilityStateRecord`\>
 
 ***
 

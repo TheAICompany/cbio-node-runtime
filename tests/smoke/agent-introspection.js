@@ -62,6 +62,7 @@ const agentClient = createAgentClient({
 
 const visibleCapabilities = await agentClient.agentListCapabilities();
 assert.equal(visibleCapabilities.length, 1);
+assert.equal(visibleCapabilities[0].status, "GRANTED");
 assert.equal(visibleCapabilities[0].scope, "https://api.example.com/users/*");
 
 const visibleSecrets = await agentClient.agentListSecrets();
@@ -87,8 +88,28 @@ const httpResult = await handleVaultAgentControlHttp(vault, {
 });
 
 assert.equal(httpResult.ok, true);
-const pending = await ownerClient.ownerListPendingCapabilityRequests();
+const pending = await ownerClient.ownerListCapabilityStates({ status: "PENDING" });
 assert.equal(pending.length, 1);
-assert.equal(pending[0].scope.scope, "https://api.example.com/admin/*");
+assert.equal(pending[0].scope, "https://api.example.com/admin/*");
+
+const manifest = await agentClient.agentIntrospect();
+assert.equal(manifest.agent.agentId, vaultAgentId);
+assert.equal(manifest.agent.identityId, importedAgent.agent.identityId);
+assert.equal(manifest.agent.publicKey, importedAgent.agent.publicKey);
+assert.equal(manifest.capabilities.some((entry) => entry.status === "GRANTED" && entry.scope === "https://api.example.com/users/*"), true);
+assert.equal(
+  manifest.capabilities.some((entry) =>
+    entry.status === "PENDING"
+    && entry.source === "explicit_request"
+    && entry.scope === "https://api.example.com/admin/*"
+  ),
+  true,
+);
+
+const capabilityView = await agentClient.agentListCapabilities();
+assert.equal(
+  capabilityView.some((entry) => entry.status === "PENDING" && entry.scope === "https://api.example.com/admin/*"),
+  true,
+);
 
 console.log("Agent introspection smoke test passed");

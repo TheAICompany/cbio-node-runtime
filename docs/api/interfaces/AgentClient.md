@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.57.0**](../README.md)
 
 ***
 
@@ -57,11 +57,11 @@ Equivalent to '--help' or 'llms.txt' for the agent.
 
 ### agentListCapabilities()
 
-> **agentListCapabilities**(): `Promise`\<readonly `AgentCapability`[]\>
+> **agentListCapabilities**(): `Promise`\<readonly `AgentCapabilityState`[]\>
 
 #### Returns
 
-`Promise`\<readonly `AgentCapability`[]\>
+`Promise`\<readonly `AgentCapabilityState`[]\>
 
 ***
 
@@ -77,7 +77,7 @@ Equivalent to '--help' or 'llms.txt' for the agent.
 
 ### agentSubmitCapabilityRequest()
 
-> **agentSubmitCapabilityRequest**(`input`): `Promise`\<`PendingCapabilityRequestRecord`\>
+> **agentSubmitCapabilityRequest**(`input`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
@@ -87,4 +87,4 @@ Equivalent to '--help' or 'llms.txt' for the agent.
 
 #### Returns
 
-`Promise`\<`PendingCapabilityRequestRecord`\>
+`Promise`\<`CapabilityStateRecord`\>

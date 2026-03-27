@@ -59,7 +59,7 @@ async function testHitlApproval() {
   // 6. Discovery Flow: Owner listens via observer
   console.log('--- Testing Discovery Flow with Observer ---');
   let interceptedRequest = null;
-  const unsubscribe = ownerClient.ownerOnPendingDispatch((req) => {
+  const unsubscribe = ownerClient.ownerOnCapabilityState((req) => {
     console.log('Observer caught request:', req.requestId);
     interceptedRequest = req;
   });
@@ -75,19 +75,17 @@ async function testHitlApproval() {
   assert.ok(interceptedRequest, 'Observer should have been triggered');
   unsubscribe();
 
-  // 7. Owner lists pending requests (to get the object for approval)
-  const pending = await ownerClient.ownerListPendingDispatches();
+  // 7. Owner lists pending capability states (to get the object for approval)
+  const pending = await ownerClient.ownerListCapabilityStates({ status: 'PENDING' });
   assert.strictEqual(pending.length, 1);
 
-  // 8. Owner approves and makes it PERMANENT
-  console.log('Owner approving and granting permanent capability...');
-  const approveResult = await ownerClient.ownerApproveDispatch({
+  // 8. Owner executes once and grants
+  console.log('Owner executing request and granting capability...');
+  const approveResult = await ownerClient.ownerExecuteCapabilityStateAndGrant({
     requestId: pending[0].requestId,
-    permanent: true
   });
-  
-  console.log('Approve result status:', approveResult.status);
-  assert.strictEqual(approveResult.status, 'SUCCEEDED', 'Approved discovery should succeed');
+  console.log('Approval result status:', approveResult.status);
+  assert.strictEqual(approveResult.status, 'SUCCEEDED', 'Approved discovery should execute immediately');
 
   // 9. Verify new capability is granted
   const finalCapabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });

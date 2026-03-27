@@ -29,8 +29,6 @@ import {
   InMemoryAuditLog,
   InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
-  InMemoryPendingCapabilityRequestRegistry,
-  InMemoryPendingRequestRegistry,
   InMemoryReplayGuard,
   InMemorySecretCustody,
   InMemorySecretRepository,
@@ -92,12 +90,10 @@ const authority = createVaultCore({
   audit: new InMemoryAuditLog(),
   executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
   agentIdentities: runtimeSurfaceAgentIdentities,
-  capabilities: new InMemoryCapabilityRegistry(),
+  capabilityStates: new InMemoryCapabilityRegistry(),
   agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokens),
   customFlows: runtimeSurfaceCustomFlows,
   sessionTokens: runtimeSurfaceSessionTokens,
-  pendingRequests: new InMemoryPendingRequestRegistry(),
-  pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
   ids: new RandomIdGenerator(),
@@ -385,7 +381,7 @@ try {
 
   console.log("-> Verifying Proactive Capability Request Flow...");
   let pendingCapabilityRequest = null;
-  const unsubscribeCapability = auditClient.ownerOnPendingCapabilityRequest((record) => {
+  const unsubscribeCapability = auditClient.ownerOnCapabilityState((record) => {
     pendingCapabilityRequest = record;
   });
   const submittedCapabilityRequest = await auditClient.ownerSubmitCapabilityRequest({
@@ -397,19 +393,18 @@ try {
     justification: "Need collection-level user read access",
   });
   assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
-  assert.equal(submittedCapabilityRequest.scope.scope, "https://api.example.com/users/*");
+  assert.equal(submittedCapabilityRequest.scope, "https://api.example.com/users/*");
   assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
-  const pendingCapabilityRequests = await auditClient.ownerListPendingCapabilityRequests();
+  const pendingCapabilityRequests = await auditClient.ownerListCapabilityStates({ status: "PENDING" });
   assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
-  const approvedCapability = await auditClient.ownerApproveCapabilityRequest({
+  const approvedCapability = await auditClient.ownerExecuteCapabilityStateAndGrant({
     requestId: pendingCapabilityRequests[0].requestId,
   });
   unsubscribeCapability();
-  assert.equal(typeof approvedCapability.capabilityId, "string");
-  assert.equal(approvedCapability.scope, "https://api.example.com/users/*");
+  assert.equal(approvedCapability.status, "SUCCEEDED");
   const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
   assert.ok(
-    capabilitiesAfterApproval.some((cap) => cap.capabilityId === approvedCapability.capabilityId),
+    capabilitiesAfterApproval.some((cap) => cap.scope === "https://api.example.com/users/*"),
     "Approved capability should be registered",
   );
   console.log("   [OK] Proactive capability request approval flow passed");
@@ -481,11 +476,9 @@ try {
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: rollbackAgentIdentities,
     agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
-    capabilities: new InMemoryCapabilityRegistry(),
+    capabilityStates: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     sessionTokens: rollbackSessionTokens,
-    pendingRequests: new InMemoryPendingRequestRegistry(),
-    pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),
@@ -506,11 +499,9 @@ try {
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
     agentIdentities: rollbackAgentIdentities,
     agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
-    capabilities: new InMemoryCapabilityRegistry(),
+    capabilityStates: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     sessionTokens: rollbackSessionTokens,
-    pendingRequests: new InMemoryPendingRequestRegistry(),
-    pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),

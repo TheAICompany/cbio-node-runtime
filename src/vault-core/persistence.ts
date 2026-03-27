@@ -3,6 +3,7 @@ import { sealBlob, unsealBlob, SealedJsonRepository } from "../sealed/index.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type {
   AgentCapability,
+  CapabilityStateRecord,
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
@@ -16,7 +17,7 @@ import type {
 import type {
   AgentIdentityRegistry,
   AuditLog,
-  CapabilityRegistry,
+  CapabilityStateRegistry,
   CapabilityRevocationRegistry,
   CustomHttpFlowRegistry,
   RateLimitStore,
@@ -30,11 +31,9 @@ import {
   InMemoryAuditLog,
   InMemoryCapabilityRegistry,
   InMemoryCustomHttpFlowRegistry,
-  InMemoryPendingCapabilityRequestRegistry,
   InMemoryReplayGuard,
   InMemorySecretCustody,
   InMemorySecretRepository,
-  InMemoryPendingRequestRegistry,
   InMemorySessionTokenRegistry,
   RandomIdGenerator,
   SignatureAgentProofVerifier,
@@ -68,7 +67,7 @@ interface CustomFlowState {
 }
 
 interface CapabilityState {
-  capabilities: AgentCapability[];
+  capabilities: CapabilityStateRecord[];
 }
 
 interface AgentIdentityState {
@@ -418,7 +417,7 @@ export class FileReplayGuard implements ReplayGuard {
 /**
  * @internal
  */
-export class FileCapabilityRegistry implements CapabilityRegistry {
+export class FileCapabilityRegistry implements CapabilityStateRegistry {
   private readonly _repo: SealedJsonRepository<CapabilityState>;
 
   constructor(
@@ -434,7 +433,7 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
     return this._repo.read({ capabilities: [] });
   }
 
-  async register(capability: AgentCapability): Promise<void> {
+  async upsert(capability: CapabilityStateRecord): Promise<void> {
     await withStorageLock(this._repo.storage, this._lockKey, async () => {
       const state = await this.loadState();
       const next = state.capabilities.filter((candidate) =>
@@ -449,7 +448,7 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
     });
   }
 
-  async get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null> {
+  async getByCapabilityId(vaultId: VaultId, agentId: string, capabilityId: string): Promise<CapabilityStateRecord | null> {
     const state = await this.loadState();
     return state.capabilities.find((capability) =>
       capability.vaultId.value === vaultId.value
@@ -458,7 +457,25 @@ export class FileCapabilityRegistry implements CapabilityRegistry {
     ) ?? null;
   }
 
-  async list(vaultId: VaultId, agentId?: string): Promise<readonly AgentCapability[]> {
+  async getByRequestId(vaultId: VaultId, requestId: string): Promise<CapabilityStateRecord | null> {
+    const state = await this.loadState();
+    return state.capabilities.find((capability) =>
+      capability.vaultId.value === vaultId.value
+      && capability.requestId === requestId
+    ) ?? null;
+  }
+
+  async deleteByRequestId(vaultId: VaultId, requestId: string): Promise<void> {
+    await withStorageLock(this._repo.storage, this._lockKey, async () => {
+      const state = await this.loadState();
+      const next = state.capabilities.filter((capability) =>
+        !(capability.vaultId.value === vaultId.value && capability.requestId === requestId)
+      );
+      await this._repo.write({ capabilities: next }, "capability_state");
+    });
+  }
+
+  async list(vaultId: VaultId, agentId?: string): Promise<readonly CapabilityStateRecord[]> {
     const state = await this.loadState();
     return state.capabilities.filter((capability) => {
       if (capability.vaultId.value !== vaultId.value) return false;
@@ -586,8 +603,6 @@ export function createPersistentVaultCoreDependencies(
   const defaults = createVaultCoreDependencies(options);
   const agentIdentities = new FileAgentIdentityRegistry(storage, options.vaultWorkingKey);
   const sessionTokens = new InMemorySessionTokenRegistry(); // Session tokens are in-memory for now
-  const pendingRequests = new InMemoryPendingRequestRegistry(); // Pending requests are in-memory
-  const pendingCapabilityRequests = new InMemoryPendingCapabilityRequestRegistry(); // Capability requests are in-memory for now
   const capabilityRevocations = new FileCapabilityRevocationRegistry(storage, options.vaultWorkingKey);
   const capabilities = new FileCapabilityRegistry(storage, options.vaultWorkingKey);
   const customFlows = new FileCustomHttpFlowRegistry(storage, options.vaultWorkingKey);
@@ -611,11 +626,9 @@ export function createPersistentVaultCoreDependencies(
       options.proofVerifier?.maxSkewMs ?? (5 * 60 * 1000),
     ),
     agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
-    capabilities,
+    capabilityStates: capabilities,
     customFlows,
     sessionTokens,
-    pendingRequests,
-    pendingCapabilityRequests,
     clock: defaults.clock,
     ids: defaults.ids,
     executor: defaults.executor,

@@ -37,14 +37,14 @@ export interface AgentClient {
    * ```
    */
   agentDispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
-  agentListCapabilities(): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  agentListCapabilities(): Promise<readonly import("../../vault-core/index.js").AgentCapabilityState[]>;
   agentListSecrets(): Promise<readonly AgentVisibleSecretRecord[]>;
   /**
    * Introspects the current runtime environment, providing identity, capabilities, and a toolbox manifest.
    * Equivalent to '--help' or 'llms.txt' for the agent.
    */
   agentIntrospect(): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
-  agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
+  agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
 }
 
 export interface CreateAgentClientOptions {

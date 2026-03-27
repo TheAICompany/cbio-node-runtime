@@ -158,38 +158,26 @@ export interface VaultAgentControlErrorResponse {
 
 export type VaultOwnerControlRequest =
   | {
-      action: "list_pending_dispatches";
+      action: "list_capability_states";
       vaultId: string;
       ownerId?: string;
+      agentId?: string;
+      status?: "PENDING" | "GRANTED" | "REJECTED";
     }
   | {
-      action: "approve_dispatch";
-      vaultId: string;
-      requestId: string;
-      ownerId?: string;
-      permanent?: boolean;
-      skipAudit?: boolean;
-    }
-  | {
-      action: "reject_dispatch";
+      action: "execute_capability_state_once";
       vaultId: string;
       requestId: string;
       ownerId?: string;
     }
   | {
-      action: "list_pending_capability_requests";
-      vaultId: string;
-      ownerId?: string;
-    }
-  | {
-      action: "approve_capability_request";
+      action: "execute_capability_state_and_grant";
       vaultId: string;
       requestId: string;
       ownerId?: string;
-      capabilityId?: string;
     }
   | {
-      action: "reject_capability_request";
+      action: "reject_capability_state";
       vaultId: string;
       requestId: string;
       ownerId?: string;
@@ -244,24 +232,21 @@ export interface VaultService {
   ownerDeleteSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void>;
   ownerListAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]>;
   ownerListCapabilities(request: OwnerListCapabilitiesRequest): Promise<readonly AgentCapability[]>;
+  ownerListCapabilityStates(request: import("../vault-core/index.js").OwnerListCapabilityStatesRequest): Promise<readonly import("../vault-core/index.js").CapabilityStateRecord[]>;
   ownerListSecrets(request: { vaultId: VaultId; owner: VaultPrincipal; requestId?: string }): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
   ownerRevokeCapability(request: OwnerRevokeCapabilityCommand): Promise<void>;
   ownerIssueSessionToken(request: import("../vault-core/index.js").OwnerIssueSessionTokenRequest): Promise<import("../vault-core/index.js").OwnerSessionToken>;
   ownerIssueAllAgentSessionTokens(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" } }): Promise<import("../vault-core/index.js").OwnerSessionToken[]>;
   ownerRevokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void>;
-  ownerSubmitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord>;
-  ownerListPendingCapabilityRequests(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingCapabilityRequestRecord[]>;
-  ownerApproveCapabilityRequest(request: import("../vault-core/index.js").OwnerApproveCapabilityRequestCommand): Promise<AgentCapability>;
-  ownerRejectCapabilityRequest(request: import("../vault-core/index.js").OwnerRejectCapabilityRequestCommand): Promise<void>;
-  ownerListPendingDispatches(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingDispatchRecord[]>;
-  ownerApproveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult>;
-  ownerRejectDispatch(request: import("../vault-core/index.js").OwnerRejectDispatchCommand): Promise<void>;
-  ownerOnPendingDispatch(callback: (record: import("../vault-core/index.js").PendingDispatchRecord) => void): () => void;
-  ownerOnPendingCapabilityRequest(callback: (record: import("../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
-  agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly AgentCapability[]>;
+  ownerSubmitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
+  ownerExecuteCapabilityStateOnce(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult>;
+  ownerExecuteCapabilityStateAndGrant(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult>;
+  ownerRejectCapabilityState(request: import("../vault-core/index.js").OwnerRejectCapabilityStateCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
+  ownerOnCapabilityState(callback: (record: import("../vault-core/index.js").CapabilityStateRecord) => void): () => void;
+  agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../vault-core/index.js").AgentCapabilityState[]>;
   agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
   agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest>;
-  agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord>;
+  agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord>;
   agentHandleControl(request: VaultAgentControlRequest): Promise<VaultAgentControlResponse | VaultAgentControlErrorResponse>;
   ownerHandleControl(request: VaultOwnerControlRequest): Promise<VaultOwnerControlResponse | VaultOwnerControlErrorResponse>;
 }
@@ -279,12 +264,8 @@ class LocalVaultService implements VaultService {
   }
 
 
-  ownerOnPendingDispatch(callback: (record: import("../vault-core/index.js").PendingDispatchRecord) => void): () => void {
-    return this._authority.ownerOnPendingDispatch(callback);
-  }
-
-  ownerOnPendingCapabilityRequest(callback: (record: import("../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void {
-    return this._authority.ownerOnPendingCapabilityRequest(callback);
+  ownerOnCapabilityState(callback: (record: import("../vault-core/index.js").CapabilityStateRecord) => void): () => void {
+    return this._authority.ownerOnCapabilityState(callback);
   }
 
   ownerRegisterCapability(request: OwnerRegisterCapabilityCommand): Promise<void> {
@@ -655,35 +636,27 @@ class LocalVaultService implements VaultService {
     return this._authority.ownerRevokeSessionToken(request);
   }
 
-  ownerSubmitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord> {
+  ownerSubmitCapabilityRequest(request: import("../vault-core/index.js").SubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
     return this._authority.ownerSubmitCapabilityRequest(request);
   }
 
-  ownerListPendingCapabilityRequests(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingCapabilityRequestRecord[]> {
-    return this._authority.ownerListPendingCapabilityRequests(request);
+  ownerListCapabilityStates(request: import("../vault-core/index.js").OwnerListCapabilityStatesRequest): Promise<readonly import("../vault-core/index.js").CapabilityStateRecord[]> {
+    return this._authority.ownerListCapabilityStates(request);
   }
 
-  ownerApproveCapabilityRequest(request: import("../vault-core/index.js").OwnerApproveCapabilityRequestCommand): Promise<AgentCapability> {
-    return this._authority.ownerApproveCapabilityRequest(request);
+  ownerExecuteCapabilityStateOnce(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
+    return this._authority.ownerExecuteCapabilityStateOnce(request);
   }
 
-  ownerRejectCapabilityRequest(request: import("../vault-core/index.js").OwnerRejectCapabilityRequestCommand): Promise<void> {
-    return this._authority.ownerRejectCapabilityRequest(request);
+  ownerExecuteCapabilityStateAndGrant(request: import("../vault-core/index.js").OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
+    return this._authority.ownerExecuteCapabilityStateAndGrant(request);
   }
 
-  ownerListPendingDispatches(request: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("../vault-core/index.js").PendingDispatchRecord[]> {
-    return this._authority.ownerListPendingDispatches(request);
+  ownerRejectCapabilityState(request: import("../vault-core/index.js").OwnerRejectCapabilityStateCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
+    return this._authority.ownerRejectCapabilityState(request);
   }
 
-  ownerApproveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult> {
-    return this._authority.ownerApproveDispatch(request);
-  }
-
-  ownerRejectDispatch(request: import("../vault-core/index.js").OwnerRejectDispatchCommand): Promise<void> {
-    return this._authority.ownerRejectDispatch(request);
-  }
-
-  agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly AgentCapability[]> {
+  agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../vault-core/index.js").AgentCapabilityState[]> {
     return this._authority.agentListCapabilities(request);
   }
 
@@ -695,7 +668,7 @@ class LocalVaultService implements VaultService {
     return this._authority.agentGetRuntimeManifest(request);
   }
 
-  agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord> {
+  agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
     return this._authority.agentSubmitCapabilityRequest(request);
   }
 
@@ -750,18 +723,14 @@ class LocalVaultService implements VaultService {
     const vaultId = { value: request.vaultId };
     try {
       switch (request.action) {
-        case "list_pending_dispatches":
-          return { ok: true, result: await this.ownerListPendingDispatches({ vaultId, owner }) };
-        case "approve_dispatch":
-          return { ok: true, result: await this.ownerApproveDispatch({ vaultId, requestId: request.requestId, owner, permanent: request.permanent, skipAudit: request.skipAudit }) };
-        case "reject_dispatch":
-          return { ok: true, result: await this.ownerRejectDispatch({ vaultId, requestId: request.requestId, owner }) };
-        case "list_pending_capability_requests":
-          return { ok: true, result: await this.ownerListPendingCapabilityRequests({ vaultId, owner }) };
-        case "approve_capability_request":
-          return { ok: true, result: await this.ownerApproveCapabilityRequest({ vaultId, requestId: request.requestId, owner, capabilityId: request.capabilityId }) };
-        case "reject_capability_request":
-          return { ok: true, result: await this.ownerRejectCapabilityRequest({ vaultId, requestId: request.requestId, owner }) };
+        case "list_capability_states":
+          return { ok: true, result: await this.ownerListCapabilityStates({ vaultId, owner, agentId: request.agentId, status: request.status }) };
+        case "execute_capability_state_once":
+          return { ok: true, result: await this.ownerExecuteCapabilityStateOnce({ vaultId, requestId: request.requestId, owner }) };
+        case "execute_capability_state_and_grant":
+          return { ok: true, result: await this.ownerExecuteCapabilityStateAndGrant({ vaultId, requestId: request.requestId, owner }) };
+        case "reject_capability_state":
+          return { ok: true, result: await this.ownerRejectCapabilityState({ vaultId, requestId: request.requestId, owner }) };
         case "list_agents":
           return { ok: true, result: await this.ownerListAgents({ vaultId, actor: owner, requestId: `owner:list_agents:${Date.now()}`, requestedAt: this._clock?.nowIso?.() ?? new Date().toISOString() }) };
         case "list_capabilities":

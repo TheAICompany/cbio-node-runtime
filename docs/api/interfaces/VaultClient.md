@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.57.0**](../README.md)
 
 ***
 
@@ -8,38 +8,6 @@ A client for vault owners to manage secrets, agents, and capabilities.
 In Sovereign Vault model, administrative actions are implicitly authorized by the working key.
 
 ## Methods
-
-### ownerApproveCapabilityRequest()
-
-> **ownerApproveCapabilityRequest**(`input`): `Promise`\<`AgentCapability`\>
-
-#### Parameters
-
-##### input
-
-[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
-
-#### Returns
-
-`Promise`\<`AgentCapability`\>
-
-***
-
-### ownerApproveDispatch()
-
-> **ownerApproveDispatch**(`input`): `Promise`\<`DispatchResult`\>
-
-#### Parameters
-
-##### input
-
-[`VaultApproveDispatchInput`](VaultApproveDispatchInput.md)
-
-#### Returns
-
-`Promise`\<`DispatchResult`\>
-
-***
 
 ### ownerCreateAgent()
 
@@ -93,6 +61,38 @@ Permanently deletes a secret from the vault.
 #### Returns
 
 `Promise`\<`void`\>
+
+***
+
+### ownerExecuteCapabilityStateAndGrant()
+
+> **ownerExecuteCapabilityStateAndGrant**(`input`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
+
+***
+
+### ownerExecuteCapabilityStateOnce()
+
+> **ownerExecuteCapabilityStateOnce**(`input`): `Promise`\<`DispatchResult`\>
+
+#### Parameters
+
+##### input
+
+[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+
+#### Returns
+
+`Promise`\<`DispatchResult`\>
 
 ***
 
@@ -210,23 +210,19 @@ Lists all active capabilities granted to agents.
 
 ***
 
-### ownerListPendingCapabilityRequests()
+### ownerListCapabilityStates()
 
-> **ownerListPendingCapabilityRequests**(): `Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
+> **ownerListCapabilityStates**(`input?`): `Promise`\<readonly `CapabilityStateRecord`[]\>
 
-#### Returns
+#### Parameters
 
-`Promise`\<readonly `PendingCapabilityRequestRecord`[]\>
+##### input?
 
-***
-
-### ownerListPendingDispatches()
-
-> **ownerListPendingDispatches**(): `Promise`\<readonly `PendingDispatchRecord`[]\>
+`VaultListCapabilityStatesInput`
 
 #### Returns
 
-`Promise`\<readonly `PendingDispatchRecord`[]\>
+`Promise`\<readonly `CapabilityStateRecord`[]\>
 
 ***
 
@@ -246,25 +242,9 @@ Lists all active capabilities granted to agents.
 
 ***
 
-### ownerOnPendingCapabilityRequest()
+### ownerOnCapabilityState()
 
-> **ownerOnPendingCapabilityRequest**(`callback`): () => `void`
-
-#### Parameters
-
-##### callback
-
-(`record`) => `void`
-
-#### Returns
-
-() => `void`
-
-***
-
-### ownerOnPendingDispatch()
-
-> **ownerOnPendingDispatch**(`callback`): () => `void`
+> **ownerOnCapabilityState**(`callback`): () => `void`
 
 #### Parameters
 
@@ -346,25 +326,9 @@ Registers a custom HTTP flow for complex secret usage.
 
 ***
 
-### ownerRejectCapabilityRequest()
+### ownerRejectCapabilityState()
 
-> **ownerRejectCapabilityRequest**(`requestId`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### requestId
-
-`string`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
-
-### ownerRejectDispatch()
-
-> **ownerRejectDispatch**(`requestId`): `Promise`\<`void`\>
+> **ownerRejectCapabilityState**(`requestId`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
@@ -374,7 +338,7 @@ Registers a custom HTTP flow for complex secret usage.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`CapabilityStateRecord`\>
 
 ***
 
@@ -432,7 +396,7 @@ Securely stores a new secret in the vault.
 
 ### ownerSubmitCapabilityRequest()
 
-> **ownerSubmitCapabilityRequest**(`input`): `Promise`\<`PendingCapabilityRequestRecord`\>
+> **ownerSubmitCapabilityRequest**(`input`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
@@ -442,7 +406,7 @@ Securely stores a new secret in the vault.
 
 #### Returns
 
-`Promise`\<`PendingCapabilityRequestRecord`\>
+`Promise`\<`CapabilityStateRecord`\>
 
 ***
 

@@ -11,6 +11,7 @@ import {
 import { verifySignature } from "../protocol/crypto.js";
 import type {
   AgentCapability,
+  CapabilityStateRecord,
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
@@ -40,11 +41,9 @@ import type {
 import {
   AgentIdentityRegistry,
   AgentProofVerifier,
-  CapabilityRegistry,
+  CapabilityStateRegistry,
   Clock,
   IdGenerator,
-  IPendingRequestRegistry,
-  IPendingCapabilityRequestRegistry,
   ISessionTokenRegistry,
   ReplayGuard,
   SecretCustody,
@@ -320,21 +319,35 @@ export class InMemoryCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
 /**
  * @internal
  */
-export class InMemoryCapabilityRegistry implements CapabilityRegistry {
-  private readonly _capabilities = new Map<string, AgentCapability>();
+export class InMemoryCapabilityRegistry implements CapabilityStateRegistry {
+  private readonly _capabilities = new Map<string, CapabilityStateRecord>();
 
-  async register(capability: AgentCapability): Promise<void> {
+  async upsert(capability: CapabilityStateRecord): Promise<void> {
     this._capabilities.set(
-      `${capability.vaultId.value}:${capability.agentId}:${capability.capabilityId}`,
+      `${capability.vaultId.value}:${capability.agentId}:${capability.capabilityId ?? capability.requestId ?? "state"}`,
       capability,
     );
   }
 
-  async get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null> {
+  async getByCapabilityId(vaultId: VaultId, agentId: string, capabilityId: string): Promise<CapabilityStateRecord | null> {
     return this._capabilities.get(`${vaultId.value}:${agentId}:${capabilityId}`) ?? null;
   }
 
-  async list(vaultId: VaultId, agentId?: string): Promise<readonly AgentCapability[]> {
+  async getByRequestId(vaultId: VaultId, requestId: string): Promise<CapabilityStateRecord | null> {
+    return Array.from(this._capabilities.values()).find((record) =>
+      record.vaultId.value === vaultId.value && record.requestId === requestId,
+    ) ?? null;
+  }
+
+  async deleteByRequestId(vaultId: VaultId, requestId: string): Promise<void> {
+    for (const [key, record] of this._capabilities.entries()) {
+      if (record.vaultId.value === vaultId.value && record.requestId === requestId) {
+        this._capabilities.delete(key);
+      }
+    }
+  }
+
+  async list(vaultId: VaultId, agentId?: string): Promise<readonly CapabilityStateRecord[]> {
     const prefix = `${vaultId.value}:`;
     const agentPrefix = agentId ? `${prefix}${agentId}:` : prefix;
     return Array.from(this._capabilities.entries())
@@ -554,47 +567,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
   }
 }
 
-export class InMemoryPendingRequestRegistry implements IPendingRequestRegistry {
-  private readonly _requests = new Map<string, import("./contracts.js").PendingDispatchRecord>();
-
-  async save(record: import("./contracts.js").PendingDispatchRecord): Promise<void> {
-    this._requests.set(record.requestId, record);
-  }
-
-  async get(requestId: string): Promise<import("./contracts.js").PendingDispatchRecord | null> {
-    return this._requests.get(requestId) ?? null;
-  }
-
-  async list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingDispatchRecord[]> {
-    return Array.from(this._requests.values());
-  }
-
-  async delete(requestId: string): Promise<void> {
-    this._requests.delete(requestId);
-  }
-}
-
-export class InMemoryPendingCapabilityRequestRegistry implements IPendingCapabilityRequestRegistry {
-  private readonly _requests = new Map<string, import("./contracts.js").PendingCapabilityRequestRecord>();
-
-  async save(record: import("./contracts.js").PendingCapabilityRequestRecord): Promise<void> {
-    this._requests.set(record.requestId, record);
-  }
-
-  async get(requestId: string): Promise<import("./contracts.js").PendingCapabilityRequestRecord | null> {
-    return this._requests.get(requestId) ?? null;
-  }
-
-  async list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingCapabilityRequestRecord[]> {
-    return Array.from(this._requests.values())
-      .filter((record) => record.vaultId.value === vaultId.value);
-  }
-
-  async delete(requestId: string): Promise<void> {
-    this._requests.delete(requestId);
-  }
-}
-
 export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
   private readonly _tokens = new Map<string, StoredSessionToken>();
 
@@ -785,12 +757,10 @@ export function createVaultCoreDependencies(
     ),
     agentIdentities,
     agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
-    capabilities: new InMemoryCapabilityRegistry(),
+    capabilityStates: new InMemoryCapabilityRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
     sessionTokens: options.sessionTokens ?? new InMemorySessionTokenRegistry(),
-    pendingRequests: new InMemoryPendingRequestRegistry(),
-    pendingCapabilityRequests: new InMemoryPendingCapabilityRequestRegistry(),
     clock: options.clock ?? new SystemClock(),
     ids: new RandomIdGenerator(),
   };

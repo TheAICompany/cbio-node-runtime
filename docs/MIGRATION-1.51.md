@@ -68,7 +68,7 @@ Use `result.agent.agentId` as the vault-internal agent ID.
 ### Capability creation
 
 - `ownerGrantCapability(...)` no longer accepts caller-supplied `capabilityId`
-- `ownerApproveCapabilityRequest(...)` no longer accepts caller-supplied `capabilityId`
+- `ownerExecuteCapabilityStateAndGrant(...)` no longer accepts caller-supplied `capabilityId`
 - Capability IDs are generated internally
 
 `ownerGrantCapability(...)` now returns the created capability so the caller can read the generated ID immediately.

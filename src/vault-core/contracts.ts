@@ -217,12 +217,57 @@ export interface AgentGetRuntimeManifestCommand {
   requestedAt: string;
 }
 
+export interface AgentSelfContext {
+  agentId: string;
+  identityId: string;
+  publicKey: string;
+  nickname?: string;
+  metadata?: Record<string, any>;
+}
+
+export type AgentCapabilityStateStatus = "GRANTED" | "PENDING" | "REJECTED";
+export type AgentCapabilityStateSource = "owner_grant" | "explicit_request" | "dispatch_discovery";
+
+export interface AgentCapabilityState {
+  status: AgentCapabilityStateStatus;
+  source: AgentCapabilityStateSource;
+  agentId: string;
+  requestId?: string;
+  capabilityId?: string;
+  operation: "dispatch_http" | "custom_http";
+  secretIds?: readonly string[];
+  secretAliases?: readonly string[];
+  customFlowId?: string;
+  scope: string;
+  methods: readonly string[];
+  issuedAt?: string;
+  requestedAt: string;
+  expiresAt?: string;
+  rateLimit?: {
+    maxRequests: number;
+    windowMs: number;
+  };
+  skipAudit?: boolean;
+  justification?: string;
+  secretAlias?: string;
+  targetUrl?: string;
+}
+
+export interface CapabilityStateRecord extends AgentCapabilityState {
+  vaultId: VaultId;
+  proof?: AgentProof;
+  headers?: Record<string, string>;
+  body?: string;
+  decidedAt?: string;
+}
+
 export interface AgentRuntimeManifest {
   agentId: string;
   vaultId: string;
   vaultNickname?: string;
   issuedAt: string;
-  capabilities: readonly AgentCapability[];
+  agent: AgentSelfContext;
+  capabilities: readonly AgentCapabilityState[];
   tools: readonly VaultToolDefinition[];
 }
 
@@ -258,33 +303,6 @@ export interface AgentSubmitCapabilityRequestCommand {
   justification?: string;
 }
 
-export interface PendingDispatchRecord {
-  requestId: string;
-  agentId: string;
-  capabilityId?: string;
-  secretAlias: string;
-  targetUrl: string;
-  method: string;
-  headers?: Record<string, string>;
-  body?: string;
-  requestedAt: string;
-  proof: AgentProof;
-}
-
-export interface OwnerApproveDispatchCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
-  permanent?: boolean;
-  skipAudit?: boolean;
-}
-
-export interface OwnerRejectDispatchCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
-}
-
 export interface CapabilityRequestScope {
   operation: "dispatch_http" | "custom_http";
   secretAliases?: readonly string[];
@@ -308,24 +326,20 @@ export interface SubmitCapabilityRequestCommand {
   requestedAt: string;
 }
 
-export interface PendingCapabilityRequestRecord {
+export interface OwnerListCapabilityStatesRequest {
   vaultId: VaultId;
-  requestId: string;
-  requester: VaultPrincipal;
-  agentId: string;
-  scope: CapabilityRequestScope;
-  justification?: string;
-  requestedAt: string;
+  owner: VaultPrincipal;
+  agentId?: string;
+  status?: AgentCapabilityStateStatus;
 }
 
-export interface OwnerApproveCapabilityRequestCommand {
+export interface OwnerExecuteCapabilityStateCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;
-  capabilityId?: string;
 }
 
-export interface OwnerRejectCapabilityRequestCommand {
+export interface OwnerRejectCapabilityStateCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal;

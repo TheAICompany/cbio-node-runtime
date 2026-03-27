@@ -2,12 +2,11 @@ import type {
   AuditEntry,
   AuditQuery,
   AgentCapability,
+  CapabilityStateRecord,
   AgentIdentityRecord,
   AgentProof,
   OwnerDefineSecretTargetsCommand,
-  OwnerApproveCapabilityRequestCommand,
   OwnerDeleteSecretCommand,
-  OwnerRejectCapabilityRequestCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
   OwnerRegisterCapabilityCommand,
@@ -106,10 +105,12 @@ export interface CustomHttpFlowRegistry {
   get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null>;
 }
 
-export interface CapabilityRegistry {
-  register(capability: AgentCapability): Promise<void>;
-  get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<AgentCapability | null>;
-  list(vaultId: VaultId, agentId?: string): Promise<readonly AgentCapability[]>;
+export interface CapabilityStateRegistry {
+  upsert(record: CapabilityStateRecord): Promise<void>;
+  getByCapabilityId(vaultId: VaultId, agentId: string, capabilityId: string): Promise<CapabilityStateRecord | null>;
+  getByRequestId(vaultId: VaultId, requestId: string): Promise<CapabilityStateRecord | null>;
+  deleteByRequestId(vaultId: VaultId, requestId: string): Promise<void>;
+  list(vaultId: VaultId, agentId?: string): Promise<readonly CapabilityStateRecord[]>;
 }
 
 export interface VaultCoreDependencies {
@@ -120,27 +121,11 @@ export interface VaultCoreDependencies {
   audit: AuditLog;
   executor: TrustedExecutor;
   agentIdentities: AgentIdentityRegistry;
-  capabilities: CapabilityRegistry;
+  capabilityStates: CapabilityStateRegistry;
   customFlows: CustomHttpFlowRegistry;
   agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;
   sessionTokens: ISessionTokenRegistry;
-  pendingRequests: IPendingRequestRegistry;
-  pendingCapabilityRequests: IPendingCapabilityRequestRegistry;
   clock: Clock;
   ids: IdGenerator;
-}
-
-export interface IPendingRequestRegistry {
-  save(record: import("./contracts.js").PendingDispatchRecord): Promise<void>;
-  get(requestId: string): Promise<import("./contracts.js").PendingDispatchRecord | null>;
-  list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingDispatchRecord[]>;
-  delete(requestId: string): Promise<void>;
-}
-
-export interface IPendingCapabilityRequestRegistry {
-  save(record: import("./contracts.js").PendingCapabilityRequestRecord): Promise<void>;
-  get(requestId: string): Promise<import("./contracts.js").PendingCapabilityRequestRecord | null>;
-  list(vaultId: import("./contracts.js").VaultId): Promise<readonly import("./contracts.js").PendingCapabilityRequestRecord[]>;
-  delete(requestId: string): Promise<void>;
 }

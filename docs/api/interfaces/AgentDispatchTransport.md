@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.56.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.57.0**](../README.md)
 
 ***
 
@@ -40,7 +40,7 @@
 
 ### agentListCapabilities()
 
-> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentCapability`[]\>
+> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentCapabilityState`[]\>
 
 #### Parameters
 
@@ -50,7 +50,7 @@
 
 #### Returns
 
-`Promise`\<readonly `AgentCapability`[]\>
+`Promise`\<readonly `AgentCapabilityState`[]\>
 
 ***
 
@@ -72,7 +72,7 @@
 
 ### agentSubmitCapabilityRequest()
 
-> **agentSubmitCapabilityRequest**(`request`): `Promise`\<`PendingCapabilityRequestRecord`\>
+> **agentSubmitCapabilityRequest**(`request`): `Promise`\<`CapabilityStateRecord`\>
 
 #### Parameters
 
@@ -82,4 +82,4 @@
 
 #### Returns
 
-`Promise`\<`PendingCapabilityRequestRecord`\>
+`Promise`\<`CapabilityStateRecord`\>

@@ -55,7 +55,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     return payload.result;
   }
 
-  async agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../vault-core/index.js").AgentCapability[]> {
+  async agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../vault-core/index.js").AgentCapabilityState[]> {
     const payload = await this._postControl({
       action: "list_capabilities",
       vaultId: request.vaultId.value,
@@ -64,7 +64,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       agentId: request.agent.id,
       proof: { token: request.proof.token },
     });
-    return payload as readonly import("../vault-core/index.js").AgentCapability[];
+    return payload as readonly import("../vault-core/index.js").AgentCapabilityState[];
   }
 
   async agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]> {
@@ -91,7 +91,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     return payload as import("../vault-core/index.js").AgentRuntimeManifest;
   }
 
-  async agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").PendingCapabilityRequestRecord> {
+  async agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../vault-core/index.js").CapabilityStateRecord> {
     const payload = await this._postControl({
       action: "submit_capability_request",
       vaultId: request.vaultId.value,
@@ -105,7 +105,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       secretAliases: request.scope.secretAliases ? [...request.scope.secretAliases] : [],
       justification: request.justification,
     });
-    return payload as import("../vault-core/index.js").PendingCapabilityRequestRecord;
+    return payload as import("../vault-core/index.js").CapabilityStateRecord;
   }
 
   private async _postControl(body: unknown): Promise<unknown> {

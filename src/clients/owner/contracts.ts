@@ -144,6 +144,12 @@ export interface VaultApproveCapabilityRequestInput {
   requestedAt?: string;
 }
 
+export interface VaultListCapabilityStatesInput {
+  agentId?: string;
+  status?: import("../../vault-core/index.js").AgentCapabilityStateStatus;
+  requestedAt?: string;
+}
+
 export interface VaultDeleteSecretInput {
   alias: string;
   password: string;
@@ -217,18 +223,15 @@ export interface VaultClient {
   ownerDeleteSecret(input: VaultDeleteSecretInput): Promise<void>;
   ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
   ownerListCapabilities(input?: VaultListCapabilitiesInput): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  ownerListCapabilityStates(input?: VaultListCapabilityStatesInput): Promise<readonly import("../../vault-core/index.js").CapabilityStateRecord[]>;
   ownerListSecrets(input?: VaultListSecretsInput): Promise<readonly import("../../vault-core/index.js").AgentVisibleSecretRecord[]>;
   ownerRevokeCapability(input: VaultRevokeCapabilityInput): Promise<void>;
   ownerIssueSessionToken(input: VaultIssueSessionTokenInput): Promise<import("../../vault-core/index.js").OwnerSessionToken>;
   ownerIssueAllSessionTokens(): Promise<readonly import("../../vault-core/index.js").OwnerSessionToken[]>;
   ownerRevokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
-  ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
-  ownerListPendingCapabilityRequests(): Promise<readonly import("../../vault-core/index.js").PendingCapabilityRequestRecord[]>;
-  ownerApproveCapabilityRequest(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").AgentCapability>;
-  ownerRejectCapabilityRequest(requestId: string): Promise<void>;
-  ownerListPendingDispatches(): Promise<readonly import("../../vault-core/index.js").PendingDispatchRecord[]>;
-  ownerApproveDispatch(input: VaultApproveDispatchInput): Promise<import("../../vault-core/index.js").DispatchResult>;
-  ownerRejectDispatch(requestId: string): Promise<void>;
-  ownerOnPendingDispatch(callback: (record: import("../../vault-core/index.js").PendingDispatchRecord) => void): () => void;
-  ownerOnPendingCapabilityRequest(callback: (record: import("../../vault-core/index.js").PendingCapabilityRequestRecord) => void): () => void;
+  ownerSubmitCapabilityRequest(input: VaultSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
+  ownerExecuteCapabilityStateOnce(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
+  ownerExecuteCapabilityStateAndGrant(input: VaultApproveCapabilityRequestInput): Promise<import("../../vault-core/index.js").DispatchResult>;
+  ownerRejectCapabilityState(requestId: string): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
+  ownerOnCapabilityState(callback: (record: import("../../vault-core/index.js").CapabilityStateRecord) => void): () => void;
 }

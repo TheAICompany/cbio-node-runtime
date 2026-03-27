@@ -157,7 +157,7 @@ The agent process does not execute directly with its raw private key. If it has 
 
 ### 7. Proactive Capability Requests
 
-If an LLM or orchestration layer already knows it needs a broader scope, it can ask for that scope up front instead of triggering one pending dispatch per concrete URL.
+If an LLM or orchestration layer already knows it needs a broader scope, it can create a `PENDING` capability state up front instead of discovering one URL at a time through failed dispatch attempts.
 
 ```ts
 const request = await client.ownerSubmitCapabilityRequest({
@@ -169,18 +169,19 @@ const request = await client.ownerSubmitCapabilityRequest({
   justification: 'Need collection-level user read access'
 });
 
-const pendingRequests = await client.ownerListPendingCapabilityRequests();
+const pendingRequests = await client.ownerListCapabilityStates({ status: 'PENDING' });
 
-const capability = await client.ownerApproveCapabilityRequest({
+await client.ownerExecuteCapabilityStateAndGrant({
   requestId: pendingRequests[0].requestId
 });
 ```
 
-This flow is separate from dispatch discovery:
-- `ownerSubmitCapabilityRequest(...)` creates a pending capability request for owner review.
-- `ownerOnPendingCapabilityRequest(...)` pushes new requests to the owner UI or controller.
-- `ownerApproveCapabilityRequest(...)` turns the request into a real stored capability.
-- `ownerRejectCapabilityRequest(...)` drops the request without granting access.
+This uses the same capability-state model as dispatch discovery:
+- `ownerSubmitCapabilityRequest(...)` creates a `PENDING` capability state for owner review.
+- `ownerOnCapabilityState(...)` pushes new capability-state changes to the owner UI or controller.
+- `ownerExecuteCapabilityStateAndGrant(...)` executes the pending request and turns the state into `GRANTED`.
+- `ownerExecuteCapabilityStateOnce(...)` executes the pending request once and then deletes the state.
+- `ownerRejectCapabilityState(...)` turns the state into `REJECTED`.
 
 ### 8. Zero-Configuration Agent Discovery (v1.56.0+)
 
@@ -189,12 +190,16 @@ Instead of hard-coding the agent's capabilities or tools, the agent can self-int
 ```ts
 const manifest = await agent.agentIntrospect();
 
-console.log(manifest.agentId);      // The agent's identity in the vault
-console.log(manifest.capabilities); // List of granted permissions
-console.log(manifest.tools);        // List of available API tools with JSON-Schema
+console.log(manifest.agent.agentId);      // Vault-known agent ID
+console.log(manifest.agent.identityId);   // Stable identity ID
+console.log(manifest.agent.nickname);     // Optional nickname
+console.log(manifest.capabilities);       // Unified capability view: GRANTED + PENDING
+console.log(manifest.tools);              // List of available API tools with JSON-Schema
 ```
 
 This manifest can be directly fed into an LLM's system prompt or tool-calling configuration to enable fully autonomous, zero-config integration.
+
+`agentListCapabilities()` now returns the same unified capability-state view used by the manifest, so agents and schedulers can see both granted and pending entries through one table.
 
 ---
 
@@ -212,7 +217,7 @@ This manifest can be directly fed into an LLM's system prompt or tool-calling co
 
 ### Human-in-the-Loop (HITL) Workflow
 
-The system uses a **Discovery-first** model. If an agent attempts an action not explicitly in its white-list (the "Iron Triangle" of Agent-Key-Action), the dispatch is paused:
+The system uses a unified capability-state model. If an agent attempts an action not explicitly in its white-list (the "Iron Triangle" of Agent-Key-Action), the dispatch returns `PENDING` and the runtime records a `PENDING` capability state:
 
 ```ts
 // In Agent process
@@ -221,18 +226,18 @@ if (result.status === 'PENDING') {
   console.log("Discovery needed: Waiting for owner approval...");
 }
 
-// OR: Use the Observer for real-time push (v1.48.4+)
-client.ownerOnPendingDispatch((req) => {
-  console.log("New discovery request:", req.requestId);
+// OR: Use the observer for real-time push
+client.ownerOnCapabilityState((state) => {
+  if (state.status === 'PENDING') {
+    console.log("New pending capability state:", state.requestId);
+  }
 });
 
 // In Owner process (GUI or Script)
-const pending = await client.ownerListPendingDispatches();
+const pending = await client.ownerListCapabilityStates({ status: 'PENDING' });
 if (pending.length > 0) {
-  // Inspect and approve the request, optionally making it permanent
-  await client.ownerApproveDispatch({ 
-    requestId: pending[0].requestId, 
-    permanent: true 
+  await client.ownerExecuteCapabilityStateAndGrant({
+    requestId: pending[0].requestId
   });
 }
 ```

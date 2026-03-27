@@ -17,6 +17,7 @@ export interface AgentSubmitCapabilityRequestInput {
 }
 
 export type AgentCapabilityEnvelope = import("../../vault-core/index.js").AgentCapability;
+export type AgentCapabilityState = import("../../vault-core/index.js").AgentCapabilityState;
 export type AgentVisibleSecretRecord = import("../../vault-core/index.js").AgentVisibleSecretRecord;
 
 export interface AgentSigner {
@@ -25,8 +26,8 @@ export interface AgentSigner {
 
 export interface AgentDispatchTransport {
   agentDispatch(request: import("../../vault-core/index.js").DispatchRequest): Promise<import("../../vault-core/index.js").DispatchResult>;
-  agentListCapabilities(request: import("../../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly import("../../vault-core/index.js").AgentCapability[]>;
+  agentListCapabilities(request: import("../../vault-core/index.js").AgentListCapabilitiesRequest): Promise<readonly AgentCapabilityState[]>;
   agentListSecrets(request: import("../../vault-core/index.js").AgentListSecretsRequest): Promise<readonly AgentVisibleSecretRecord[]>;
   agentGetRuntimeManifest(request: import("../../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
-  agentSubmitCapabilityRequest(request: import("../../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../../vault-core/index.js").PendingCapabilityRequestRecord>;
+  agentSubmitCapabilityRequest(request: import("../../vault-core/index.js").AgentSubmitCapabilityRequestCommand): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
 }

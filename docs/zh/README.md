@@ -130,9 +130,20 @@ const result = await agent.agentDispatch({ ... });
 
 Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身份材料，也应先换取 session token，再进行 dispatch。
 
+```ts
+const manifest = await agent.agentIntrospect();
+
+console.log(manifest.agent.agentId);
+console.log(manifest.agent.identityId);
+console.log(manifest.agent.nickname);
+console.log(manifest.capabilities); // 同一张能力状态表里同时包含 GRANTED 和 PENDING
+```
+
+`agentListCapabilities()` 现在返回的也是同一张统一能力状态表，因此调度器或 Agent 重启后，不需要分别拼“已授权能力”和“待审批能力”。
+
 ### 7. 人机协同（HITL）工作流
 
-系统采用 **“发现优先（Discovery-first）”** 模型。如果 Agent 尝试执行的动作不在白名单内，dispatch 会自动进入 `PENDING`，等待 Owner 审批。
+系统采用统一的 **能力状态（capability state）** 模型。如果 Agent 尝试执行的动作不在白名单内，dispatch 会返回 `PENDING`，同时运行时会写入一条 `PENDING` 能力状态，等待 Owner 审批。
 
 ```ts
 const result = await agent.agentDispatch({ ... });
@@ -140,15 +151,16 @@ if (result.status === 'PENDING') {
   console.log('触发发现流程：等待所有者审批...');
 }
 
-client.ownerOnPendingDispatch((req) => {
-  console.log('收到新请求:', req.requestId);
+client.ownerOnCapabilityState((state) => {
+  if (state.status === 'PENDING') {
+    console.log('收到新的待审批能力状态:', state.requestId);
+  }
 });
 
-const pending = await client.ownerListPendingDispatches();
+const pending = await client.ownerListCapabilityStates({ status: 'PENDING' });
 if (pending.length > 0) {
-  await client.ownerApproveDispatch({
-    requestId: pending[0].requestId,
-    permanent: true
+  await client.ownerExecuteCapabilityStateAndGrant({
+    requestId: pending[0].requestId
   });
 }
 ```

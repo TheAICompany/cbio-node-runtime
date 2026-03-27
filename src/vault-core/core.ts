@@ -7,20 +7,21 @@ import type {
   CapabilityRequestScope,
   AgentListCapabilitiesRequest,
   AgentListSecretsRequest,
-  AgentGetRuntimeManifestCommand,
+  AgentGetRuntimeManifestRequest,
   AgentRuntimeManifest,
   AgentSubmitCapabilityRequestCommand,
   AgentVisibleSecretRecord,
   AuditEntry,
   AuditQuery,
+  AgentCapabilityState,
   CustomHttpFlowDefinition,
   DispatchAuthorization,
   DispatchRequest,
   DispatchResult,
-  OwnerApproveCapabilityRequestCommand,
+  OwnerExecuteCapabilityStateCommand,
   OwnerDefineSecretTargetsCommand,
   OwnerIssueSessionTokenRequest,
-  OwnerRejectCapabilityRequestCommand,
+  OwnerRejectCapabilityStateCommand,
   OwnerDeleteSecretCommand,
   OwnerExportSecretRequest,
   OwnerRegisterAgentIdentityCommand,
@@ -30,9 +31,9 @@ import type {
   OwnerRevokeCapabilityCommand,
   OwnerListAgentsRequest,
   OwnerListCapabilitiesRequest,
+  OwnerListCapabilityStatesRequest,
   OwnerSecretExport,
   OwnerSessionToken,
-  PendingCapabilityRequestRecord,
   SecretAlias,
   SecretId,
   SecretRecord,
@@ -42,6 +43,7 @@ import type {
   VaultWriteSecretCommand,
   AgentIdentityRecord,
   AgentCapability,
+  CapabilityStateRecord,
 } from "./contracts.js";
 import type { VaultCoreDependencies } from "./ports.js";
 import { VaultCoreError } from "./errors.js";
@@ -158,8 +160,7 @@ function createAgentControlBinding(
  * This is the primary implementation of the Vault logic.
  */
 export class VaultCore {
-  private readonly _pendingObservers = new Set<(record: import("./contracts.js").PendingDispatchRecord) => void>();
-  private readonly _pendingCapabilityObservers = new Set<(record: PendingCapabilityRequestRecord) => void>();
+  private readonly _capabilityStateObservers = new Set<(record: CapabilityStateRecord) => void>();
 
   constructor(private readonly _deps: VaultCoreDependencies) {}
 
@@ -167,6 +168,157 @@ export class VaultCore {
     if (actor.kind !== "owner" || actor.id !== VAULT_MASTER_ID) {
       throw new VaultCoreError("owner access denied", code);
     }
+  }
+
+  private _stateToGrantedCapability(state: import("./contracts.js").CapabilityStateRecord): AgentCapability {
+    return {
+      vaultId: state.vaultId,
+      capabilityId: state.capabilityId ?? "",
+      agentId: state.agentId,
+      secretIds: state.secretIds ? [...state.secretIds] : undefined,
+      secretAliases: state.secretAliases ? [...state.secretAliases] : undefined,
+      operation: state.operation,
+      customFlowId: state.customFlowId,
+      scope: state.scope,
+      methods: [...state.methods],
+      issuedAt: state.issuedAt ?? state.requestedAt,
+      expiresAt: state.expiresAt,
+      rateLimit: state.rateLimit,
+      skipAudit: state.skipAudit,
+    };
+  }
+
+  private async _buildAgentCapabilityStates(agentId: string): Promise<readonly AgentCapabilityState[]> {
+    return (await this._deps.capabilityStates.list(this._deps.vaultId, agentId)).map((state) => ({
+      status: state.status,
+      source: state.source,
+      agentId: state.agentId,
+      requestId: state.requestId,
+      capabilityId: state.capabilityId,
+      operation: state.operation,
+      secretIds: state.secretIds ? [...state.secretIds] : undefined,
+      secretAliases: state.secretAliases ? [...state.secretAliases] : undefined,
+      customFlowId: state.customFlowId,
+      scope: state.scope,
+      methods: [...state.methods],
+      issuedAt: state.issuedAt,
+      requestedAt: state.requestedAt,
+      expiresAt: state.expiresAt,
+      rateLimit: state.rateLimit,
+      skipAudit: state.skipAudit,
+      justification: state.justification,
+      secretAlias: state.secretAlias,
+      targetUrl: state.targetUrl,
+    }));
+  }
+
+  private _isExecutablePendingState(state: CapabilityStateRecord): state is CapabilityStateRecord & {
+    requestId: string;
+    targetUrl: string;
+    secretAlias: string;
+    proof: import("./contracts.js").AgentProof;
+  } {
+    return !!(state.requestId && state.targetUrl && state.secretAlias && state.proof);
+  }
+
+  private async _executePendingCapabilityState(
+    command: OwnerExecuteCapabilityStateCommand,
+    mode: "once" | "grant",
+  ): Promise<DispatchResult> {
+    if (command.vaultId.value !== this._deps.vaultId.value) {
+      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
+    }
+    const pending = await this._deps.capabilityStates.getByRequestId(command.vaultId, command.requestId);
+    if (!pending || pending.status !== "PENDING") {
+      throw new VaultCoreError("pending capability state not found", "VAULT_REQUEST_NOT_FOUND");
+    }
+    const issuedAt = this._deps.clock.nowIso();
+    const capability: AgentCapability = {
+      vaultId: this._deps.vaultId,
+      agentId: pending.agentId,
+      capabilityId: pending.capabilityId ?? this._deps.ids.newCapabilityId(),
+      secretIds: pending.secretIds ? [...pending.secretIds] : undefined,
+      secretAliases: pending.secretAliases ? [...pending.secretAliases] : (pending.secretAlias ? [pending.secretAlias] : []),
+      operation: pending.operation,
+      customFlowId: pending.customFlowId,
+      scope: pending.targetUrl ?? pending.scope,
+      methods: [...pending.methods],
+      issuedAt,
+      expiresAt: pending.expiresAt,
+      rateLimit: pending.rateLimit,
+      skipAudit: pending.skipAudit,
+    };
+    let result: DispatchResult;
+    if (this._isExecutablePendingState(pending)) {
+      result = await this.agentDispatchSecret({
+        vaultId: this._deps.vaultId,
+        agent: { kind: "agent", id: pending.agentId },
+        capability,
+        secretAlias: pending.secretAlias === "unknown" ? undefined : pending.secretAlias,
+        targetUrl: pending.targetUrl,
+        method: pending.methods[0] ?? "POST",
+        headers: pending.headers,
+        body: pending.body,
+        proof: pending.proof,
+        requestId: pending.requestId,
+        requestedAt: pending.requestedAt,
+      });
+    } else if (mode === "grant") {
+      result = {
+        vaultId: this._deps.vaultId,
+        requestId: pending.requestId ?? command.requestId,
+        status: DispatchStatus.SUCCEEDED,
+        targetUrl: pending.scope,
+        method: pending.methods[0] ?? "POST",
+      };
+    } else {
+      throw new VaultCoreError("pending capability state is not executable", "VAULT_WRITE_DENIED");
+    }
+
+    if (mode === "grant") {
+      await this._deps.capabilityStates.upsert({
+        ...pending,
+        capabilityId: capability.capabilityId,
+        status: "GRANTED",
+        source: "owner_grant",
+        issuedAt,
+        decidedAt: issuedAt,
+      });
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          AuditAction.APPROVE_CAPABILITY_REQUEST,
+          AuditOutcome.SUCCEEDED,
+          `executed and granted capability state ${command.requestId}`,
+          {
+            requestId: command.requestId,
+            agentId: pending.agentId,
+            capabilityId: capability.capabilityId,
+            operation: capability.operation,
+          },
+        ),
+      );
+    } else {
+      await this._deps.capabilityStates.deleteByRequestId(command.vaultId, command.requestId);
+      await this._appendAudit(
+        toAuditEntry(
+          this._deps,
+          command.owner,
+          AuditAction.APPROVE_CAPABILITY_REQUEST,
+          AuditOutcome.SUCCEEDED,
+          `executed once and deleted capability state ${command.requestId}`,
+          {
+            requestId: command.requestId,
+            agentId: pending.agentId,
+            capabilityId: capability.capabilityId,
+            operation: capability.operation,
+          },
+        ),
+      );
+    }
+
+    return result;
   }
 
   get vaultId() {
@@ -243,7 +395,9 @@ export class VaultCore {
   }
 
   private async _listVisibleSecretsForAgent(agentId: string): Promise<readonly AgentVisibleSecretRecord[]> {
-    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, agentId);
+    const capabilities = (await this._deps.capabilityStates.list(this._deps.vaultId, agentId))
+      .filter((state) => state.status === "GRANTED")
+      .map((state) => this._stateToGrantedCapability(state));
     const capabilityMap = new Map<string, {
       capabilityId: string;
       scope: string;
@@ -278,17 +432,10 @@ export class VaultCore {
   }
 
 
-  ownerOnPendingDispatch(callback: (record: import("./contracts.js").PendingDispatchRecord) => void): () => void {
-    this._pendingObservers.add(callback);
+  ownerOnCapabilityState(callback: (record: CapabilityStateRecord) => void): () => void {
+    this._capabilityStateObservers.add(callback);
     return () => {
-      this._pendingObservers.delete(callback);
-    };
-  }
-
-  ownerOnPendingCapabilityRequest(callback: (record: PendingCapabilityRequestRecord) => void): () => void {
-    this._pendingCapabilityObservers.add(callback);
-    return () => {
-      this._pendingCapabilityObservers.delete(callback);
+      this._capabilityStateObservers.delete(callback);
     };
   }
 
@@ -388,7 +535,13 @@ export class VaultCore {
       throw new VaultCoreError("capability id required", "VAULT_IDENTITY_DENIED");
     }
     try {
-      await this._deps.capabilities.register(command.capability);
+      await this._deps.capabilityStates.upsert({
+        ...command.capability,
+        status: "GRANTED",
+        source: "owner_grant",
+        requestId: undefined,
+        requestedAt: command.capability.issuedAt,
+      });
       await this._appendAudit(
         toAuditEntry(
           this._deps,
@@ -421,7 +574,7 @@ export class VaultCore {
     }
   }
 
-  async ownerSubmitCapabilityRequest(command: SubmitCapabilityRequestCommand): Promise<PendingCapabilityRequestRecord> {
+  async ownerSubmitCapabilityRequest(command: SubmitCapabilityRequestCommand): Promise<CapabilityStateRecord> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("capability request vault mismatch", "VAULT_IDENTITY_DENIED");
     }
@@ -434,30 +587,29 @@ export class VaultCore {
     if (command.scope.methods.length === 0) {
       throw new VaultCoreError("capability request method required", "VAULT_IDENTITY_DENIED");
     }
-    const pendingRecord: PendingCapabilityRequestRecord = {
+    const pendingRecord: CapabilityStateRecord = {
       vaultId: this._deps.vaultId,
+      status: "PENDING",
+      source: "explicit_request",
       requestId: command.requestId,
-      requester: command.requester,
       agentId: command.agentId,
-      scope: {
-        operation: command.scope.operation,
-        secretAliases: command.scope.secretAliases ? [...command.scope.secretAliases] : [],
-        scope: command.scope.scope,
-        methods: [...command.scope.methods],
-        rateLimit: command.scope.rateLimit,
-        skipAudit: command.scope.skipAudit,
-        expiresAt: command.scope.expiresAt,
-      },
+      operation: command.scope.operation,
+      secretAliases: command.scope.secretAliases ? [...command.scope.secretAliases] : [],
+      scope: command.scope.scope,
+      methods: [...command.scope.methods],
+      rateLimit: command.scope.rateLimit,
+      skipAudit: command.scope.skipAudit,
+      expiresAt: command.scope.expiresAt,
       justification: command.justification,
       requestedAt: command.requestedAt,
     };
-    await this._deps.pendingCapabilityRequests.save(pendingRecord);
+    await this._deps.capabilityStates.upsert(pendingRecord);
 
-    for (const observer of this._pendingCapabilityObservers) {
+    for (const observer of this._capabilityStateObservers) {
       try {
         observer(pendingRecord);
       } catch (error) {
-        console.error("VaultCore: error in pending capability observer:", error);
+        console.error("VaultCore: error in capability state observer:", error);
       }
     }
 
@@ -483,7 +635,8 @@ export class VaultCore {
     if (vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("capability lookup vault mismatch", "VAULT_IDENTITY_DENIED");
     }
-    return this._deps.capabilities.get(vaultId, agentId, capabilityId);
+    const state = await this._deps.capabilityStates.getByCapabilityId(vaultId, agentId, capabilityId);
+    return state && state.status === "GRANTED" ? this._stateToGrantedCapability(state) : null;
   }
 
   async ownerRegisterCustomFlow(command: OwnerRegisterCustomHttpFlowCommand): Promise<void> {
@@ -755,7 +908,9 @@ export class VaultCore {
        return { vaultId: this._deps.vaultId, decision: "deny", reason: "agent not found", secretId: null, executorTarget: null };
     }
 
-    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, request.agent.id);
+    const capabilities = (await this._deps.capabilityStates.list(this._deps.vaultId, request.agent.id))
+      .filter((state) => state.status === "GRANTED")
+      .map((state) => this._stateToGrantedCapability(state));
     const requestedCapabilityId = request.capability?.capabilityId;
     const candidateCapabilities = requestedCapabilityId
       ? capabilities.filter((cap) => cap.capabilityId === requestedCapabilityId)
@@ -770,26 +925,32 @@ export class VaultCore {
 
     if (!capability) {
       // It's a discovery case if the agent and secret exist but no capability matches
-      const pendingRecord = {
+      const pendingRecord: CapabilityStateRecord = {
+        vaultId: this._deps.vaultId,
+        status: "PENDING",
+        source: "dispatch_discovery",
         requestId: request.requestId,
         agentId: request.agent.id,
         capabilityId: undefined,
+        operation: "dispatch_http",
+        secretAliases: request.secretAlias ? [request.secretAlias] : [],
+        scope: request.targetUrl,
+        methods: [request.method],
+        requestedAt: request.requestedAt,
         secretAlias: request.secretAlias ?? "unknown",
         targetUrl: request.targetUrl,
-        method: request.method,
         headers: request.headers,
         body: request.body,
-        requestedAt: request.requestedAt,
         proof: request.proof,
       };
-      await this._deps.pendingRequests.save(pendingRecord);
+      await this._deps.capabilityStates.upsert(pendingRecord);
 
       // Notify observers
-      for (const observer of this._pendingObservers) {
+      for (const observer of this._capabilityStateObservers) {
         try {
           observer(pendingRecord);
         } catch (error) {
-          console.error("VaultCore: error in pending observer:", error);
+          console.error("VaultCore: error in capability state observer:", error);
         }
       }
 
@@ -1001,7 +1162,9 @@ export class VaultCore {
     agentId?: string,
     request?: Omit<OwnerListCapabilitiesRequest, "actor" | "agentId" | "vaultId">,
   ): Promise<readonly AgentCapability[]> {
-    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, agentId);
+    const capabilities = (await this._deps.capabilityStates.list(this._deps.vaultId, agentId))
+      .filter((state) => state.status === "GRANTED")
+      .map((state) => this._stateToGrantedCapability(state));
     await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_CAPABILITIES, AuditOutcome.ALLOWED, "capabilities listed", {
         requestId: request?.requestId,
@@ -1032,12 +1195,12 @@ export class VaultCore {
     }));
   }
 
-  async agentListCapabilities(request: AgentListCapabilitiesRequest): Promise<readonly AgentCapability[]> {
+  async agentListCapabilities(request: AgentListCapabilitiesRequest): Promise<readonly import("./contracts.js").AgentCapabilityState[]> {
     if (request.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
     }
     await this._verifyAgentControlProof(request, "list_capabilities");
-    return this._deps.capabilities.list(this._deps.vaultId, request.agent.id);
+    return this._buildAgentCapabilityStates(request.agent.id);
   }
 
   async agentListSecrets(request: AgentListSecretsRequest): Promise<readonly AgentVisibleSecretRecord[]> {
@@ -1048,11 +1211,16 @@ export class VaultCore {
     return this._listVisibleSecretsForAgent(request.agent.id);
   }
 
-  async agentGetRuntimeManifest(command: AgentGetRuntimeManifestCommand): Promise<AgentRuntimeManifest> {
+  async agentGetRuntimeManifest(command: AgentGetRuntimeManifestRequest): Promise<AgentRuntimeManifest> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
     }
-    const capabilities = await this._deps.capabilities.list(this._deps.vaultId, command.agent.id);
+    await this._verifyAgentControlProof(command, "get_manifest");
+    const agentRecord = await this._deps.agentIdentities.get(this._deps.vaultId, command.agent.id);
+    if (!agentRecord) {
+      throw new VaultCoreError("agent identity not registered", "VAULT_DISPATCH_DENIED");
+    }
+    const capabilities = await this._buildAgentCapabilityStates(command.agent.id);
     const vaultNickname = "CBIO Vault"; // TODO: Pull from profile if available
     
     return {
@@ -1060,12 +1228,19 @@ export class VaultCore {
       vaultId: this._deps.vaultId.value,
       vaultNickname,
       issuedAt: this._deps.clock.nowIso(),
+      agent: {
+        agentId: agentRecord.agentId,
+        identityId: agentRecord.identityId,
+        publicKey: agentRecord.publicKey,
+        nickname: agentRecord.nickname,
+        metadata: agentRecord.metadata,
+      },
       capabilities,
       tools: getAgentToolbox(),
     };
   }
 
-  async agentSubmitCapabilityRequest(command: AgentSubmitCapabilityRequestCommand): Promise<PendingCapabilityRequestRecord> {
+  async agentSubmitCapabilityRequest(command: AgentSubmitCapabilityRequestCommand): Promise<CapabilityStateRecord> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
@@ -1088,7 +1263,15 @@ export class VaultCore {
   }
 
   async ownerRevokeCapability(command: OwnerRevokeCapabilityCommand): Promise<void> {
-    await this._deps.policy.revokeCapability(command.vaultId, command.agentId, command.capabilityId);
+    const existing = await this._deps.capabilityStates.getByCapabilityId(command.vaultId, command.agentId, command.capabilityId);
+    if (!existing) {
+      throw new VaultCoreError("capability not found", "VAULT_CAPABILITY_NOT_FOUND");
+    }
+    await this._deps.capabilityStates.upsert({
+      ...existing,
+      status: "REJECTED",
+      decidedAt: this._deps.clock.nowIso(),
+    });
     await this._appendAudit(
       toAuditEntry(this._deps, command.owner, AuditAction.REVOKE_CAPABILITY, AuditOutcome.SUCCEEDED, "capability revoked", {
         requestId: command.requestId,
@@ -1158,74 +1341,37 @@ export class VaultCore {
     );
   }
 
-  async ownerListPendingDispatches(command: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly import("./contracts.js").PendingDispatchRecord[]> {
+  async ownerListCapabilityStates(command: OwnerListCapabilityStatesRequest): Promise<readonly CapabilityStateRecord[]> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
     }
-    return this._deps.pendingRequests.list(command.vaultId);
+    return (await this._deps.capabilityStates.list(command.vaultId, command.agentId))
+      .filter((state) => !command.status || state.status === command.status);
   }
 
-  async ownerListPendingCapabilityRequests(command: { vaultId: VaultId; owner: VaultPrincipal }): Promise<readonly PendingCapabilityRequestRecord[]> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("read vault mismatch", "VAULT_READ_DENIED");
-    }
-    return this._deps.pendingCapabilityRequests.list(command.vaultId);
+  async ownerExecuteCapabilityStateOnce(command: OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
+    return this._executePendingCapabilityState(command, "once");
   }
 
-  async ownerApproveCapabilityRequest(command: OwnerApproveCapabilityRequestCommand): Promise<AgentCapability> {
+  async ownerExecuteCapabilityStateAndGrant(command: OwnerExecuteCapabilityStateCommand): Promise<DispatchResult> {
+    return this._executePendingCapabilityState(command, "grant");
+  }
+
+  async ownerRejectCapabilityState(command: OwnerRejectCapabilityStateCommand): Promise<CapabilityStateRecord> {
     if (command.vaultId.value !== this._deps.vaultId.value) {
       throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
     }
-    const pending = await this._deps.pendingCapabilityRequests.get(command.requestId);
-    if (!pending) {
-      throw new VaultCoreError("pending capability request not found", "VAULT_REQUEST_NOT_FOUND");
+    const pending = await this._deps.capabilityStates.getByRequestId(command.vaultId, command.requestId);
+    if (!pending || pending.status !== "PENDING") {
+      throw new VaultCoreError("pending capability state not found", "VAULT_REQUEST_NOT_FOUND");
     }
-    const capability: AgentCapability = {
-      vaultId: this._deps.vaultId,
-      agentId: pending.agentId,
-      capabilityId: command.capabilityId ?? this._deps.ids.newCapabilityId(),
-      operation: pending.scope.operation,
-      secretAliases: pending.scope.secretAliases ? [...pending.scope.secretAliases] : [],
-      scope: pending.scope.scope,
-      methods: [...pending.scope.methods],
-      rateLimit: pending.scope.rateLimit,
-      skipAudit: pending.scope.skipAudit,
-      expiresAt: pending.scope.expiresAt,
-      issuedAt: this._deps.clock.nowIso(),
+
+    const rejectedState: CapabilityStateRecord = {
+      ...pending,
+      status: "REJECTED",
+      decidedAt: this._deps.clock.nowIso(),
     };
-
-    await this._deps.capabilities.register(capability);
-    await this._deps.pendingCapabilityRequests.delete(command.requestId);
-
-    await this._appendAudit(
-      toAuditEntry(
-        this._deps,
-        command.owner,
-        AuditAction.APPROVE_CAPABILITY_REQUEST,
-        AuditOutcome.SUCCEEDED,
-        `approved capability request ${command.requestId}`,
-        {
-          requestId: command.requestId,
-          agentId: pending.agentId,
-          capabilityId: capability.capabilityId,
-          operation: capability.operation,
-        },
-      ),
-    );
-
-    return capability;
-  }
-
-  async ownerRejectCapabilityRequest(command: OwnerRejectCapabilityRequestCommand): Promise<void> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
-    }
-    const pending = await this._deps.pendingCapabilityRequests.get(command.requestId);
-    if (!pending) {
-      throw new VaultCoreError("pending capability request not found", "VAULT_REQUEST_NOT_FOUND");
-    }
-
-    await this._deps.pendingCapabilityRequests.delete(command.requestId);
+    await this._deps.capabilityStates.upsert(rejectedState);
     await this._appendAudit(
       toAuditEntry(
         this._deps,
@@ -1236,97 +1382,11 @@ export class VaultCore {
         {
           requestId: command.requestId,
           agentId: pending.agentId,
-          operation: pending.scope.operation,
+          operation: pending.operation,
         },
       ),
     );
-  }
-
-  async ownerApproveDispatch(command: import("./contracts.js").OwnerApproveDispatchCommand): Promise<DispatchResult> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
-    }
-    const pending = await this._deps.pendingRequests.get(command.requestId);
-    if (!pending) {
-      throw new VaultCoreError("pending request not found", "VAULT_REQUEST_NOT_FOUND");
-    }
-
-    const agentRecord = await this._deps.agentIdentities.get(this._deps.vaultId, pending.agentId);
-    if (!agentRecord) {
-      throw new VaultCoreError("agent identity not found", "VAULT_AGENT_NOT_FOUND");
-    }
-
-    let capability: AgentCapability;
-
-    if (pending.capabilityId) {
-      const existing = await this._deps.capabilities.get(this._deps.vaultId, pending.agentId, pending.capabilityId);
-      if (!existing) {
-        throw new VaultCoreError("capability not found", "VAULT_CAPABILITY_NOT_FOUND");
-      }
-      capability = existing;
-    } else {
-      // Discovery case: derive from request
-      const capabilityId = this._deps.ids.newCapabilityId();
-        capability = {
-          vaultId: this._deps.vaultId,
-          agentId: pending.agentId,
-          capabilityId,
-          secretAliases: [pending.secretAlias],
-          methods: [pending.method],
-          scope: pending.targetUrl,
-          operation: "dispatch_http",
-          issuedAt: this._deps.clock.nowIso(),
-          skipAudit: command.skipAudit ?? false,
-      };
-
-      if (command.permanent) {
-        await this._deps.capabilities.register(capability);
-      }
-    }
-
-    const result = await this.agentDispatchSecret({
-      vaultId: this._deps.vaultId,
-      agent: { kind: "agent", id: pending.agentId },
-      capability: capability,
-      secretAlias: pending.secretAlias === "unknown" ? undefined : pending.secretAlias,
-      targetUrl: pending.targetUrl,
-      method: pending.method,
-      headers: pending.headers,
-      body: pending.body,
-      proof: pending.proof,
-      requestId: pending.requestId,
-      requestedAt: pending.requestedAt,
-    });
-
-    await this._deps.pendingRequests.delete(command.requestId);
-    
-    await this._appendAudit(
-      toAuditEntry(this._deps, command.owner, AuditAction.APPROVE_DISPATCH, AuditOutcome.SUCCEEDED, `approved dispatch ${command.requestId}${command.permanent ? " and granted permanent capability" : ""}`, {
-        requestId: command.requestId,
-        agentId: pending.agentId,
-        capabilityId: capability.capabilityId,
-      }),
-    );
-
-    return result;
-  }
-
-  async ownerRejectDispatch(command: import("./contracts.js").OwnerRejectDispatchCommand): Promise<void> {
-    if (command.vaultId.value !== this._deps.vaultId.value) {
-      throw new VaultCoreError("write vault mismatch", "VAULT_WRITE_DENIED");
-    }
-    const pending = await this._deps.pendingRequests.get(command.requestId);
-    if (!pending) {
-      throw new VaultCoreError("pending request not found", "VAULT_REQUEST_NOT_FOUND");
-    }
-
-    await this._deps.pendingRequests.delete(command.requestId);
-
-    await this._appendAudit(
-      toAuditEntry(this._deps, command.owner, AuditAction.REJECT_DISPATCH, AuditOutcome.SUCCEEDED, `rejected dispatch ${command.requestId}`, {
-        requestId: command.requestId,
-      }),
-    );
+    return rejectedState;
   }
 }
 
