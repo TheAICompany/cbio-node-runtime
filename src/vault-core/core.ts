@@ -61,76 +61,9 @@ import { VaultCoreError } from "./errors.js";
 import { verifySignature } from "../protocol/crypto.js";
 import { getAgentToolbox } from "./tool-metadata.js";
 import { InMemoryRequestRecordRegistry } from "./defaults.js";
+import { applyResponseReadPolicy } from "./read-policy.js";
 
 const VAULT_MASTER_ID = "vault-master";
-
-type RedactedResponseShape =
-  | null
-  | RedactedResponseShape[]
-  | { [key: string]: RedactedResponseShape };
-
-function redactResponseShapeValue(value: unknown): RedactedResponseShape {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (Array.isArray(value)) {
-    return value.map((entry) => redactResponseShapeValue(entry));
-  }
-  if (typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, redactResponseShapeValue(entry)]),
-    );
-  }
-  return null;
-}
-
-function applyResponseReadPolicy(
-  body: string | undefined,
-  policy: import("./contracts.js").CapabilityReadPolicy,
-): string | undefined {
-  if (body === undefined) return body;
-  if (policy.mode === "full") return body;
-  if (policy.mode === "none") return undefined;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(body);
-  } catch {
-    return policy.mode === "shape_only" ? JSON.stringify(null) : undefined;
-  }
-
-  if (policy.mode === "shape_only") {
-    return JSON.stringify(redactResponseShapeValue(parsed));
-  }
-  if (policy.mode !== "custom") {
-    return body;
-  }
-
-  const result: Record<string, unknown> = {};
-  for (const path of policy.paths ?? []) {
-    const segments = path.split(".").filter(Boolean);
-    if (!segments.length) continue;
-    let source: any = parsed;
-    let valid = true;
-    for (const segment of segments) {
-      if (source && typeof source === "object" && segment in source) {
-        source = source[segment];
-      } else {
-        valid = false;
-        break;
-      }
-    }
-    if (!valid) continue;
-    let target: any = result;
-    for (let index = 0; index < segments.length - 1; index += 1) {
-      const segment = segments[index]!;
-      target[segment] ??= {};
-      target = target[segment];
-    }
-    target[segments[segments.length - 1]!] = source;
-  }
-  return JSON.stringify(result);
-}
 
 
 function toAuditEntry(
@@ -276,13 +209,8 @@ export class VaultCore {
         methods: [...state.write.methods],
       },
       read: state.actions.read.status === "APPROVED"
-        ? {
-          mode: state.read.mode,
-          paths: state.read.paths ? [...state.read.paths] : undefined,
-        }
-        : {
-          mode: "none",
-        },
+        ? { paths: [...state.read.paths] }
+        : { paths: [] },
       issuedAt: state.issuedAt ?? state.requestedAt,
       expiresAt: state.expiresAt,
       rateLimit: state.rateLimit,
@@ -304,8 +232,7 @@ export class VaultCore {
         methods: [...state.write.methods],
       },
       read: {
-        mode: state.read.mode,
-        paths: state.read.paths ? [...state.read.paths] : undefined,
+        paths: [...state.read.paths],
       },
       issuedAt: state.issuedAt,
       requestedAt: state.requestedAt,
@@ -328,6 +255,17 @@ export class VaultCore {
     proof: import("./contracts.js").AgentProof;
   } {
     return !!(state.requestId && state.targetUrl && state.proof);
+  }
+
+  private async _resolveRequestState(record: RequestRecord): Promise<CapabilityStateRecord | null> {
+    const byRequestId = await this._deps.capabilityStates.getByRequestId(this._deps.vaultId, record.requestId);
+    if (byRequestId) {
+      return byRequestId;
+    }
+    if (record.capabilityId) {
+      return this._deps.capabilityStates.getByCapabilityId(this._deps.vaultId, record.agentId, record.capabilityId);
+    }
+    return null;
   }
 
   private async _executePendingCapabilityState(
@@ -360,8 +298,7 @@ export class VaultCore {
         methods: [...pending.write.methods],
       },
       read: {
-        mode: pending.read.mode,
-        paths: pending.read.paths ? [...pending.read.paths] : undefined,
+        paths: [...pending.read.paths],
       },
       issuedAt,
       expiresAt: pending.expiresAt,
@@ -505,8 +442,7 @@ export class VaultCore {
             methods: [...capability.write.methods],
           },
           read: {
-            mode: capability.read.mode,
-            paths: capability.read.paths ? [...capability.read.paths] : undefined,
+            paths: [...capability.read.paths],
           },
         });
         capabilityMap.set(secretId, existing);
@@ -798,8 +734,7 @@ export class VaultCore {
         methods: [...command.capability.write.methods],
       },
       read: {
-        mode: command.capability.read.mode,
-        paths: command.capability.read.paths ? [...command.capability.read.paths] : undefined,
+        paths: [...command.capability.read.paths],
       },
       rateLimit: command.capability.rateLimit,
       skipAudit: command.capability.skipAudit,
@@ -1187,7 +1122,7 @@ export class VaultCore {
           methods: [request.method],
         },
         read: {
-          mode: "none",
+          paths: [],
         },
         requestedAt: request.requestedAt,
         reason: request.reason,
@@ -1436,15 +1371,13 @@ export class VaultCore {
     request?: Omit<OwnerListRequestsRequest, "actor" | "agentId" | "vaultId">,
   ): Promise<readonly OwnerVisibleRequestRecord[]> {
     const records = await this._deps.requests.list(this._deps.vaultId, agentId);
-    const states = await this._deps.capabilityStates.list(this._deps.vaultId, agentId);
-    const stateByRequestId = new Map(states.filter((state) => state.requestId).map((state) => [state.requestId as string, state]));
     await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.LIST_REQUESTS, AuditOutcome.ALLOWED, "request records listed", {
         requestId: request?.requestId,
         agentId,
       }),
     );
-    return records.map((record) => this.toOwnerVisibleRequestRecord(record, stateByRequestId.get(record.requestId) ?? null));
+    return Promise.all(records.map(async (record) => this.toOwnerVisibleRequestRecord(record, await this._resolveRequestState(record))));
   }
 
   async ownerGetRequest(
@@ -1456,7 +1389,7 @@ export class VaultCore {
     if (!record) {
       throw new VaultCoreError("request record not found", "VAULT_READ_DENIED");
     }
-    const state = await this._deps.capabilityStates.getByRequestId(this._deps.vaultId, targetRequestId);
+    const state = await this._resolveRequestState(record);
     await this._appendAudit(
       toAuditEntry(this._deps, actor, AuditAction.READ_REQUEST, AuditOutcome.ALLOWED, "request record read", {
         requestId: request?.requestId,
@@ -1511,9 +1444,7 @@ export class VaultCore {
     }
     await this._verifyAgentControlProof(request, "list_requests");
     const records = await this._deps.requests.list(this._deps.vaultId, request.agent.id);
-    const states = await this._deps.capabilityStates.list(this._deps.vaultId, request.agent.id);
-    const stateByRequestId = new Map(states.filter((state) => state.requestId).map((state) => [state.requestId as string, state]));
-    return records.map((record) => this.toVisibleRequestRecord(record, stateByRequestId.get(record.requestId) ?? null));
+    return Promise.all(records.map(async (record) => this.toVisibleRequestRecord(record, await this._resolveRequestState(record))));
   }
 
   async agentGetRequest(request: AgentGetRequestRequest): Promise<AgentRequestResult> {
@@ -1525,10 +1456,10 @@ export class VaultCore {
     if (!record || record.agentId !== request.agent.id) {
       throw new VaultCoreError("request record not found", "VAULT_READ_DENIED");
     }
-    const state = await this._deps.capabilityStates.getByRequestId(this._deps.vaultId, request.targetRequestId);
+    const state = await this._resolveRequestState(record);
     const readApproved = state?.actions.read.status === "APPROVED";
     const responseBody = readApproved
-      ? applyResponseReadPolicy(record.response?.body, state?.read ?? { mode: "full" })
+      ? applyResponseReadPolicy(record.response?.body, state?.read ?? { paths: [] })
       : undefined;
     return {
       requestId: record.requestId,
@@ -1744,10 +1675,7 @@ export class VaultCore {
     const next: CapabilityStateRecord = {
       ...pending,
       read: command.read
-        ? {
-            mode: command.read.mode,
-            paths: command.read.paths ? [...command.read.paths] : undefined,
-          }
+        ? { paths: [...command.read.paths] }
         : pending.read,
       decidedAt,
       actions: {

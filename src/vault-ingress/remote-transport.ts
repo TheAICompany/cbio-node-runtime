@@ -131,10 +131,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
         scope: request.capability.write.scope,
         methods: [...request.capability.write.methods],
       },
-      read: {
-        mode: request.capability.read.mode,
-        paths: request.capability.read.paths ? [...request.capability.read.paths] : undefined,
-      },
+      read: { paths: [...request.capability.read.paths] },
       reason: request.reason,
     });
     return payload as import("../vault-core/index.js").CapabilityStateRecord;

@@ -39,7 +39,7 @@ await ownerClient.ownerGrantCapability({
     scope: "https://api.example.com/users/*",
     methods: ["GET"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
 });
 
 const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
@@ -77,7 +77,7 @@ const httpResult = await handleVaultAgentControlHttp(vault, {
     scope: "https://api.example.com/admin/*",
     methods: ["POST"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
   reason: "Need admin write access",
 });
 

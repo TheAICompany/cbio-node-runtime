@@ -61,7 +61,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
       properties: {
         secretAliases: { type: "array", items: { type: "string" }, description: "Human-readable secret names to request." },
         write: { type: "object", description: "Outbound request policy including URL scope and methods." },
-        read: { type: "object", description: "Inbound response visibility policy." },
+        read: { type: "object", description: "Inbound response value visibility. The response shape is always visible. `paths` lists which values may be revealed; use `['$']` to reveal the entire response body." },
         operation: { type: "string", description: "The operation type, usually 'dispatch_http'." },
         reason: { type: "string", description: "Required. One concise sentence for the owner explaining why this capability is needed." },
       },

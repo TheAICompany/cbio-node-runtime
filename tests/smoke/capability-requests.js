@@ -41,7 +41,7 @@ const submitted = await ownerClient.ownerSubmitCapabilityRequest({
     scope: "https://api.example.com/users/*",
     methods: ["GET"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
   reason: "Need to read user resources without per-id approval",
 });
 
@@ -89,7 +89,7 @@ await ownerClient.ownerSubmitCapabilityRequest({
     scope: "https://api.example.com/admin/*",
     methods: ["POST"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
 });
 const pendingAfterSecondSubmit = await ownerClient.ownerListCapabilityStates({ writeStatus: "PENDING" });
 assert.equal(pendingAfterSecondSubmit.length, 1);

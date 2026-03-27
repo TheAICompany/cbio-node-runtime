@@ -22,6 +22,7 @@ import {
   VaultId,
   DispatchStatus,
 } from "../vault-core/index.js";
+import { applyResponseReadPolicy } from "../vault-core/read-policy.js";
 import {
   createOwnerHttpFlowBoundary,
   createStandardAcquireBoundary,
@@ -35,54 +36,6 @@ export type RedactedResponseShape =
   | boolean
   | RedactedResponseShape[]
   | { [key: string]: RedactedResponseShape };
-
-function applyResponseReadPolicy(
-  body: string | undefined,
-  policy: import("../vault-core/index.js").CapabilityReadPolicy,
-): string | undefined {
-  if (body === undefined) return body;
-  if (policy.mode === "full") return body;
-  if (policy.mode === "none") return undefined;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(body);
-  } catch {
-    return policy.mode === "shape_only" ? JSON.stringify(null) : undefined;
-  }
-
-  if (policy.mode === "shape_only") {
-    return JSON.stringify(redactResponseShapeValue(parsed));
-  }
-  if (policy.mode !== "custom") return body;
-
-  const result: Record<string, unknown> = {};
-  for (const path of policy.paths ?? []) {
-    const segments = path.split(".").filter(Boolean);
-    let source: any = parsed;
-    let valid = true;
-    for (const segment of segments) {
-      if (source && typeof source === "object" && segment in source) {
-        source = source[segment];
-      } else {
-        valid = false;
-        break;
-      }
-    }
-    if (!valid) continue;
-    let target: any = result;
-    for (let index = 0; index < segments.length - 1; index += 1) {
-      const segment = segments[index]!;
-      target[segment] ??= {};
-      target = target[segment];
-    }
-    const leaf = segments[segments.length - 1];
-    if (leaf) {
-      target[leaf] = source;
-    }
-  }
-  return JSON.stringify(result);
-}
 
 function redactResponseShapeValue(value: unknown): RedactedResponseShape {
   if (value === null || value === undefined) {
@@ -518,6 +471,17 @@ class LocalVaultService implements VaultService {
     };
   }
 
+  private toCustomFlowResponseBody(
+    rawBody: string | undefined,
+    contentType: string | null | undefined,
+    visibility: "passthrough" | "shape_only",
+  ): string | undefined {
+    if (visibility !== "shape_only") {
+      return rawBody;
+    }
+    return JSON.stringify(this.redactResponseShape(this.parseRawResponse(contentType ?? null, rawBody ?? "")));
+  }
+
   private extractCustomFlowSecret(flow: CustomHttpFlowDefinition, payload: unknown): string | null {
     if (!flow.responseSecret) {
       return null;
@@ -650,10 +614,8 @@ class LocalVaultService implements VaultService {
             method: request.method,
             responseStatus: payload.responseStatus,
             responseBody: applyResponseReadPolicy(
-              boundary.responseVisibility === "shape_only"
-                ? JSON.stringify(this.redactResponseShape(payload.parsedBody))
-                : payload.rawBody,
-              capability?.read ?? { mode: "full" },
+              this.toCustomFlowResponseBody(payload.rawBody, payload.contentType, boundary.responseVisibility),
+              capability?.read ?? { paths: [] },
             ),
           },
         };
@@ -699,10 +661,8 @@ class LocalVaultService implements VaultService {
         result: {
           ...result,
           responseBody: applyResponseReadPolicy(
-            boundary.responseVisibility === "shape_only"
-              ? JSON.stringify(this.redactResponseShape(this.parseBody(result.responseBody)))
-              : result.responseBody,
-            capability?.read ?? { mode: "full" },
+            this.toCustomFlowResponseBody(result.responseBody, null, boundary.responseVisibility),
+            capability?.read ?? { paths: [] },
           ),
         },
       };
@@ -865,8 +825,7 @@ class LocalVaultService implements VaultService {
                   methods: [...request.write.methods],
                 },
                 read: {
-                  mode: request.read.mode,
-                  paths: request.read.paths ? [...request.read.paths] : undefined,
+                  paths: [...request.read.paths],
                 },
               },
               reason: request.reason,
@@ -899,12 +858,7 @@ class LocalVaultService implements VaultService {
               vaultId,
               requestId: request.requestId,
               owner,
-              read: request.read
-                ? {
-                    mode: request.read.mode,
-                    paths: request.read.paths ? [...request.read.paths] : undefined,
-                  }
-                : undefined,
+              read: request.read ? { paths: [...request.read.paths] } : undefined,
             }),
           };
         case "allow_once":

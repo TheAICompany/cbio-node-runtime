@@ -34,7 +34,7 @@ async function testHitlApproval() {
       scope: 'https://api.example.com/*',
       methods: ['POST'],
     },
-    read: { mode: 'full' },
+    read: { paths: ['$'] },
     // requiresApproval: true removed
   });
 

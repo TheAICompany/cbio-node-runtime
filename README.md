@@ -128,7 +128,7 @@ await client.ownerGrantCapability({
     scope: 'https://api.example.com/*',
     methods: ['POST']
   },
-  read: { mode: 'full' }
+  read: { paths: ['$'] }
 });
 ```
 
@@ -176,7 +176,7 @@ const request = await client.ownerSubmitCapabilityRequest({
     scope: 'https://api.example.com/users/*',
     methods: ['GET']
   },
-  read: { mode: 'full' },
+  read: { paths: ['$'] },
   reason: 'Need collection-level user read access'
 });
 
@@ -192,7 +192,7 @@ await client.ownerAllowAlways({
 
 await client.ownerApproveCapabilityRead({
   requestId: pendingRequests[0].requestId,
-  read: { mode: 'custom', paths: ['data.id', 'data.status'] }
+  read: { paths: ['data.id', 'data.status'] }
 });
 ```
 
@@ -202,7 +202,8 @@ This uses the same carrier model as dispatch discovery:
 - `ownerApproveCapabilityWrite(...)` approves the outbound write action first.
 - `ownerAllowAlways(...)` persists the carrier as an active capability. For dispatch discovery it also executes the blocked request; for explicit requests it grants the capability without sending network traffic.
 - `ownerAllowOnce(...)` executes the approved write action once and then deletes the carrier record. This option is only valid for dispatch discovery carriers that already contain a concrete blocked request.
-- `ownerApproveCapabilityRead(...)` approves response release separately on the same carrier record and may replace the pending `read` policy with a narrower one such as `custom(paths)`.
+- `ownerApproveCapabilityRead(...)` approves response release separately on the same carrier record and may replace the pending `read` policy with a narrower `paths` whitelist.
+- Response shape is always visible. `read.paths` only controls which values are revealed, and `['$']` means the full response body is visible.
 - `ownerDeny(...)` rejects the currently pending action on the carrier.
 
 ### 8. Zero-Configuration Agent Discovery (v1.56.0+)

@@ -66,7 +66,7 @@ const replayCapability = await client.ownerGrantCapability({
     scope: "https://allowed.example.com/replay",
     methods: ["POST"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
 });
 
 const requestId = "replay-request";

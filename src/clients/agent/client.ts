@@ -222,10 +222,7 @@ class DefaultAgentClient implements AgentClient {
           scope: input.write.scope,
           methods: [...input.write.methods],
         },
-        read: {
-          mode: input.read.mode,
-          paths: input.read.paths ? [...input.read.paths] : undefined,
-        },
+        read: { paths: [...input.read.paths] },
       },
       secretAliases: input.secretAliases ? [...input.secretAliases] : undefined,
       reason,

@@ -496,10 +496,7 @@ class DefaultVaultClient implements VaultClient {
         scope: normalized.capability.write.scope,
         methods: [...normalized.capability.write.methods],
       },
-      read: {
-        mode: normalized.capability.read.mode,
-        paths: normalized.capability.read.paths ? [...normalized.capability.read.paths] : undefined,
-      },
+      read: { paths: [...normalized.capability.read.paths] },
       expiresAt: normalized.capability.expiresAt,
       rateLimit: normalized.capability.rateLimit,
       skipAudit,
@@ -729,10 +726,7 @@ class DefaultVaultClient implements VaultClient {
           scope: input.write.scope,
           methods: [...input.write.methods],
         },
-        read: {
-          mode: input.read.mode,
-          paths: input.read.paths ? [...input.read.paths] : undefined,
-        },
+        read: { paths: [...input.read.paths] },
         rateLimit: input.rateLimit,
         skipAudit: input.skipAudit,
         expiresAt: input.expiresAt,
@@ -762,12 +756,7 @@ class DefaultVaultClient implements VaultClient {
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
       owner: { kind: "owner", id: this._identityId },
-      read: input.read
-        ? {
-            mode: input.read.mode,
-            paths: input.read.paths ? [...input.read.paths] : undefined,
-          }
-        : undefined,
+      read: input.read ? { paths: [...input.read.paths] } : undefined,
     });
   }
 

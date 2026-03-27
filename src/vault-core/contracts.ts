@@ -183,8 +183,7 @@ export interface CapabilityWritePolicy {
 }
 
 export interface CapabilityReadPolicy {
-  mode: "none" | "shape_only" | "full" | "custom";
-  paths?: readonly string[];
+  paths: readonly string[];
 }
 
 export interface AgentCapability {

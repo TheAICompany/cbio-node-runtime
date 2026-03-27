@@ -26,7 +26,7 @@ async function runDiscoveryTest() {
       agentId: agent.agentId,
       operation: "dispatch_http",
       write: { scope: "https://api.github.com/*", methods: ["GET"] },
-      read: { mode: "full" },
+      read: { paths: ["$"] },
       grantedAt: new Date().toISOString(),
     },
     vault: owner._service, // Use local vault service for testing

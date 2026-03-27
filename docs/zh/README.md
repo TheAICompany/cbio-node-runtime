@@ -106,7 +106,7 @@ await client.ownerGrantCapability({
     scope: 'https://api.example.com/*',
     methods: ['POST']
   },
-  read: { mode: 'full' }
+  read: { paths: ['$'] }
 });
 ```
 
@@ -137,6 +137,7 @@ Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身�
 - `agentSubmitCapabilityRequest(...)` 也必须带 `reason`，说明为什么需要这项权限
 - `agentListRequests()` / `agentGetRequest(...)` = 在请求执行后查看异步结果
 - `ownerListRequests()` / `ownerGetRequest(...)` = owner 查看完整请求记录，用于决定是否放行 read
+- `read.paths` 只控制哪些响应值可见；响应结构始终可见，`['$']` 表示整个 body 都可见
 
 ```ts
 const manifest = await agent.agentIntrospect();
@@ -175,7 +176,7 @@ if (pending.length > 0) {
   });
   await client.ownerApproveCapabilityRead({
     requestId: pending[0].requestId,
-    read: { mode: 'custom', paths: ['data.id', 'data.status'] }
+    read: { paths: ['data.id', 'data.status'] }
   });
 }
 ```

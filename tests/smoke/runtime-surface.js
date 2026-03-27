@@ -145,7 +145,7 @@ const dispatchCapability = {
     scope: "https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment",
     methods: ["POST"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -175,14 +175,14 @@ assert.equal(result.responseBody, undefined);
 const requestHistory = await agent.agentListRequests();
 const dispatchedRequest = requestHistory.find((entry) => entry.requestId === result.requestId);
 assert.ok(dispatchedRequest);
-assert.equal(dispatchedRequest.resultVisible, false);
+assert.equal(dispatchedRequest.resultVisible, true);
 assert.equal(dispatchedRequest.executionStatus, "SUCCEEDED");
 const hiddenResult = await agent.agentGetRequest(result.requestId);
-assert.equal(hiddenResult.responseBody, undefined);
+assert.equal(hiddenResult.responseBody, "ok");
 const ownerRequestHistory = await client.ownerListRequests({ agentId: importedAgentId });
 const ownerRequestSummary = ownerRequestHistory.find((entry) => entry.requestId === result.requestId);
 assert.ok(ownerRequestSummary);
-assert.equal(ownerRequestSummary.readStatus, "PENDING");
+assert.equal(ownerRequestSummary.readStatus, "APPROVED");
 const ownerRequest = await client.ownerGetRequest({ requestId: result.requestId });
 assert.equal(ownerRequest.request.secretId, updatedRecord.secretId.value);
 assert.equal(ownerRequest.response?.body, "ok");
@@ -197,7 +197,7 @@ const customStatusCapability = {
     scope: "https://api.example.com/custom-status",
     methods: ["POST"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -230,7 +230,7 @@ await runtimeSurfaceCapabilityStates.upsert({
     scope: "https://api.example.com/custom-status",
     methods: ["POST"],
   },
-  read: { mode: "none" },
+  read: { paths: [] },
   requestedAt: new Date().toISOString(),
   issuedAt: customStatusCapability.issuedAt,
   secretId: updatedRecord.secretId.value,
@@ -244,13 +244,10 @@ const filteredOwnerView = await client.ownerGetRequest({ requestId: filteredDisp
 assert.equal(filteredOwnerView.response?.body, JSON.stringify({ state: "ok", nested: { code: 200 } }));
 await client.ownerApproveCapabilityRead({
   requestId: filteredDispatch.requestId,
-  read: {
-    mode: "custom",
-    paths: ["nested.code"],
-  },
+  read: { paths: ["nested.code"] },
 });
 const filteredAgentView = await standardCustomStatusAgent.agentGetRequest(filteredDispatch.requestId);
-assert.equal(filteredAgentView.responseBody, JSON.stringify({ nested: { code: 200 } }));
+assert.equal(filteredAgentView.responseBody, JSON.stringify({ state: "******", nested: { code: 200 } }));
 
 const shapeOnlyFlow = await client.ownerRegisterFlow({
   mode: "send_secret",
@@ -270,7 +267,7 @@ const customCapability = {
     scope: "https://api.example.com/custom-status",
     methods: ["POST"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -318,7 +315,7 @@ const customAcquireCapability = {
     scope: "https://api.example.com/custom-acquire",
     methods: ["POST"],
   },
-  read: { mode: "full" },
+  read: { paths: ["$"] },
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
@@ -480,7 +477,7 @@ try {
       scope: "https://api.example.com/users/*",
       methods: ["GET"],
     },
-    read: { mode: "full" },
+    read: { paths: ["$"] },
     reason: "Need collection-level user read access",
   });
   assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
@@ -527,7 +524,7 @@ try {
       scope: "https://issuer.example.com/other",
       methods: ["GET"],
     },
-    read: { mode: "full" },
+    read: { paths: ["$"] },
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
