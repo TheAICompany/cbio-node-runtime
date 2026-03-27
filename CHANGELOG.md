@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.61.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.60.0...v1.61.0) (2026-03-27)
+
+
+### Features
+
+* Enhance ownerApproveCapabilityRead method to support custom read policies, updating related documentation and interfaces for improved clarity on read action approvals. ([1b6ad0a](https://github.com/TheAICompany/cbio-node-runtime/commit/1b6ad0a9df6dab9562ff934c99e1171ab87a70b7))
+
 ## [1.60.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.59.1...v1.60.0) (2026-03-27)
 
 
