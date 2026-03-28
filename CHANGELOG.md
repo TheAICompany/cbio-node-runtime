@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.64.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.8...v1.64.0) (2026-03-28)
+
+
+### Features
+
+* enforce strict secret creation and enable batch operations for owner secret management ([b1f193d](https://github.com/TheAICompany/cbio-node-runtime/commit/b1f193d48a8b1a54f0393a99df95939cef136f2e))
+
 ### [1.63.8](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.7...v1.63.8) (2026-03-28)
 
 ### [1.63.7](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.6...v1.63.7) (2026-03-28)
