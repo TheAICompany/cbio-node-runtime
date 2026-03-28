@@ -1,6 +1,6 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "1.63.7",
+  "version": "1.63.8",
   "publishConfig": {
     "access": "public"
   },
@@ -28,7 +28,7 @@
   "scripts": {
     "build": "tsc",
     "build:docs": "npx typedoc --options typedoc.json",
-    "release": "npx standard-version && npm publish",
+    "release": "npm test && npx standard-version && npm publish",
     "prepare": "npm run build && npm run build:docs",
     "test": "npm run build && npm run test:types && npm run test:acceptance",
     "test:types": "tsc -p tsconfig.type-tests.json --noEmit",

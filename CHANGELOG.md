@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.63.8](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.7...v1.63.8) (2026-03-28)
+
 ### [1.63.7](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.6...v1.63.7) (2026-03-28)
 
 ### [1.63.6](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.5...v1.63.6) (2026-03-28)
@@ -169,7 +171,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Breaking Changes
 
-* **Sovereign Vault Architecture**: The administrative model has transitioned from "Identity-centric" to "Authority-centric".
+* **Vault Architecture**: The administrative model has transitioned from "Identity-centric" to "Authority-centric".
     * Removed `OwnerIdentityRegistry` and `OwnerProofVerifier`.
     * Authority is now granted implicitly via vault unlocking with the master password.
     * Removed `ownerIdentity` parameter from `createVault`, `recoverVault`, and `VaultClient` constructor.
