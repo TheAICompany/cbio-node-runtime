@@ -3,7 +3,7 @@ import {
   createRequestIdValue,
 } from "../../internal/id-factory.js";
 import { createIdentity, restoreIdentity, type CreatedIdentity } from "../../runtime/identity.js";
-import { SystemClock, type Clock } from "../../vault-core/index.js";
+import { SystemClock, VaultCoreError, type Clock } from "../../vault-core/index.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
   VaultAuditQueryInput,
@@ -107,9 +107,7 @@ class DefaultOwnerClient implements OwnerClient {
     const duplicates = items.filter(item => existingAliases.has(item.alias));
     if (duplicates.length > 0) {
       const names = duplicates.map(d => `"${d.alias}"`).join(", ");
-      const err = new Error(`secret alias already exists: ${names}`) as any;
-      err.code = "VAULT_ALIAS_ALREADY_EXISTS";
-      throw err;
+      throw new VaultCoreError(`secret alias already exists: ${names}`, "VAULT_ALIAS_ALREADY_EXISTS");
     }
 
     // Phase 2: 并行写入（校验全过才到这里）
@@ -142,9 +140,7 @@ class DefaultOwnerClient implements OwnerClient {
     const missing = items.filter(item => !existingAliases.has(item.alias));
     if (missing.length > 0) {
       const names = missing.map(d => `"${d.alias}"`).join(", ");
-      const err = new Error(`secret not found: ${names}`) as any;
-      err.code = "VAULT_SECRET_NOT_FOUND";
-      throw err;
+      throw new VaultCoreError(`secret not found: ${names}`, "VAULT_SECRET_NOT_FOUND");
     }
 
     // Phase 2: 并行写入
