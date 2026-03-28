@@ -23,6 +23,7 @@ import type {
   SecretDestinationGrantRegistry,
   AuditLog,
   ISessionTokenRegistry,
+  ReplayGuard,
 
   RequestRecordRegistry,
   SecretCustody,
@@ -31,7 +32,11 @@ import type {
 } from "./ports.js";
 import {
     DefaultPolicyEngine,
+    HttpDispatchExecutor,
+    InMemoryReplayGuard,
     RandomIdGenerator,
+    SignatureAgentProofVerifier,
+    type SignatureAgentProofVerifierOptions,
     SystemClock,
 } from "./defaults.js";
 
@@ -485,15 +490,22 @@ export async function recoverVaultWorkingKey(storage: { read(key: string): Promi
 export interface CreatePersistentVaultCoreDependenciesOptions {
   vault_id: string;
   vaultWorkingKey: string;
+  fetchImpl?: typeof fetch;
+  authHeaderName?: string;
+  authPrefix?: string;
+  proofVerifier?: SignatureAgentProofVerifierOptions;
+  replayGuard?: ReplayGuard;
 }
 
 export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): string }, options: CreatePersistentVaultCoreDependenciesOptions): VaultCoreDependencies {
   const baseDir = storage.getBaseDir();
+  const agentRecords = new FileAgentIdentityRegistry(baseDir);
+  const sessionTokenRegistry = new FileSessionTokenRegistry(baseDir);
   return {
     vault_id: { value: options.vault_id },
     ids: new RandomIdGenerator(),
     clock: new SystemClock(),
-    agentRecords: new FileAgentIdentityRegistry(baseDir),
+    agentRecords,
     agent_secretGrants: new FileAgentSecretGrantRegistry(baseDir),
     secret_destinationGrants: new FileSecretDestinationGrantRegistry(baseDir),
     audit: new FileAuditLog(baseDir),
@@ -501,19 +513,13 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     custody: new FileSecretCustody(baseDir, options.vaultWorkingKey),
     secrets: new FileSecretRepository(baseDir),
     policy: new DefaultPolicyEngine(),
-    replayGuard: { assertNotReplayed: async () => {} },
-    agentProofVerifier: { verify: async () => {} },
-    sessionTokenRegistry: new FileSessionTokenRegistry(baseDir),
-    executor: { 
-      dispatch: async (inst) => ({ 
-        vault_id: inst.vault_id, 
-        request_id: inst.request_id, 
-        status: DispatchStatus.SUCCEEDED, 
-        target_url: inst.target_url, 
-        method: inst.method, 
-        response_status: 200, 
-        response_body: "{}" 
-      }) 
-    }
+    replayGuard: options.replayGuard ?? new InMemoryReplayGuard(options.proofVerifier),
+    agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, sessionTokenRegistry, options.proofVerifier),
+    sessionTokenRegistry,
+    executor: new HttpDispatchExecutor(
+      options.fetchImpl,
+      options.authHeaderName,
+      options.authPrefix,
+    ),
   };
 }

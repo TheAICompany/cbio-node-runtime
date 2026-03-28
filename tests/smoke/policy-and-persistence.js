@@ -6,6 +6,7 @@ import {
   createVault,
   recoverVault,
   createOwnerClient,
+  createAgentClient,
   FsStorageProvider,
 } from "../../dist/runtime/index.js";
 
@@ -19,12 +20,18 @@ async function runPersistenceTest() {
 
   try {
     const storage = new FsStorageProvider(tempDir);
+    let seenAuthHeader = null;
+    const runtimeFetch = async (_url, init) => {
+      seenAuthHeader = new Headers(init?.headers).get("Authorization");
+      return new Response("ok", { status: 200 });
+    };
 
     // 1. Create and configure vault
     console.log("📦 Creating vault...");
     const { vault, core } = await createVault(storage, {
       nickname: "Persistent Vault",
       password: "master-password",
+      fetchImpl: runtimeFetch,
     });
 
     const ownerClient = await createOwnerClient({
@@ -66,6 +73,7 @@ async function runPersistenceTest() {
     const { vault: reloadedVault } = await recoverVault(storage, {
       vault_id: vault.vault_id.value,
       password: "master-password",
+      fetchImpl: runtimeFetch,
     });
     
     // Actually, let's just use the same storage and re-initialize the dependencies
@@ -88,6 +96,20 @@ async function runPersistenceTest() {
     
     const secrets = await ownerClient2.ownerListSecrets();
     assert.ok(secrets.some(s => s.alias.value === "persistent-secret"), "Secret lost after restart");
+
+    const reloadedAgentClient = createAgentClient({
+      agentRecord: agent,
+      vault: reloadedVault,
+      token: session_token.token,
+    });
+    const dispatchResult = await reloadedAgentClient.agentDispatch({
+      secret_alias: "persistent-secret",
+      target_url: "https://api.persistent.com/restart-check",
+      method: "POST",
+      reason: "Verify persisted session token after restart",
+    });
+    assert.equal(dispatchResult.status, "SUCCEEDED", "Persisted session token failed after restart");
+    assert.equal(seenAuthHeader, "Bearer i-survive-restarts");
 
     const rotatedSession = await ownerClient2.ownerIssueSessionToken({ root_agent_id: agent.root_agent_id });
     const listedAfterRotation = await ownerClient2.ownerListAgents();
