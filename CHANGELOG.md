@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.67.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.66.0...v1.67.0) (2026-03-28)
+
+
+### Features
+
+* enhance session token validation with agent-specific ownership checks and add security audit documentation ([3972493](https://github.com/TheAICompany/cbio-node-runtime/commit/3972493c9b45faf70a0dafba03dadad153d83a99))
+
 ## [1.66.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.65.0...v1.66.0) (2026-03-28)
 
 
