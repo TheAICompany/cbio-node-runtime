@@ -18,13 +18,13 @@ export interface OwnerSession {
   readonly nickname?: string;
   isValid(): boolean;
   invalidate(): void;
-  refresh(): Promise<RecoveredVault>;
-  vault(): Promise<RecoveredVault>;
-  client(): Promise<OwnerClient>;
-  withClient<T>(callback: (client: OwnerClient, vault: RecoveredVault) => Promise<T> | T): Promise<T>;
+  reloadVault(): Promise<RecoveredVault>;
+  getVault(): Promise<RecoveredVault>;
+  getOwnerClient(): Promise<OwnerClient>;
+  withOwnerClient<T>(callback: (client: OwnerClient, vault: RecoveredVault) => Promise<T> | T): Promise<T>;
 }
 
-export interface CreateOwnerSessionOptions extends RecoverVaultOptions {
+export interface OpenOwnerSessionOptions extends RecoverVaultOptions {
   signer?: any;
   clock?: Clock;
   skipWarmup?: boolean;
@@ -37,11 +37,12 @@ export interface CreateOwnerSessionOptions extends RecoverVaultOptions {
 class DefaultOwnerSession implements OwnerSession {
   private _invalidated = false;
   private _cachedVaultPromise: Promise<RecoveredVault> | undefined;
+  private _cachedOwnerClientPromise: Promise<OwnerClient> | undefined;
   private _nickname: string | undefined;
 
   constructor(
     readonly storage: IStorageProvider,
-    private readonly _options: CreateOwnerSessionOptions,
+    private readonly _options: OpenOwnerSessionOptions,
   ) {}
 
   get vault_id(): string {
@@ -59,15 +60,17 @@ class DefaultOwnerSession implements OwnerSession {
   invalidate(): void {
     this._invalidated = true;
     this._cachedVaultPromise = undefined;
+    this._cachedOwnerClientPromise = undefined;
   }
 
-  async refresh(): Promise<RecoveredVault> {
+  async reloadVault(): Promise<RecoveredVault> {
     this._assertValid();
     this._cachedVaultPromise = undefined;
-    return this.vault();
+    this._cachedOwnerClientPromise = undefined;
+    return this.getVault();
   }
 
-  async vault(): Promise<RecoveredVault> {
+  async getVault(): Promise<RecoveredVault> {
     this._assertValid();
     if (!this._cachedVaultPromise) {
       this._cachedVaultPromise = recoverVault(this.storage, this._options).then((vault) => {
@@ -78,16 +81,18 @@ class DefaultOwnerSession implements OwnerSession {
     return this._cachedVaultPromise;
   }
 
-  async client(): Promise<OwnerClient> {
-    const vault = await this.vault();
+  async getOwnerClient(): Promise<OwnerClient> {
     this._assertValid();
-    return await this._createClient(vault);
+    if (!this._cachedOwnerClientPromise) {
+      this._cachedOwnerClientPromise = this.getVault().then((vault) => this._createClient(vault));
+    }
+    return this._cachedOwnerClientPromise;
   }
 
-  async withClient<T>(callback: (client: OwnerClient, vault: RecoveredVault) => Promise<T> | T): Promise<T> {
-    const vault = await this.vault();
+  async withOwnerClient<T>(callback: (client: OwnerClient, vault: RecoveredVault) => Promise<T> | T): Promise<T> {
+    const vault = await this.getVault();
     this._assertValid();
-    return callback(await this._createClient(vault), vault);
+    return callback(await this.getOwnerClient(), vault);
   }
 
   private _assertValid(): void {
@@ -109,9 +114,9 @@ class DefaultOwnerSession implements OwnerSession {
 }
 
 function resolveOwnerSessionStorage(
-  storageOrOptions: IStorageProvider | string | CreateOwnerSessionOptions,
-  maybeOptions?: CreateOwnerSessionOptions,
-): { storage: IStorageProvider; options: CreateOwnerSessionOptions } {
+  storageOrOptions: IStorageProvider | string | OpenOwnerSessionOptions,
+  maybeOptions?: OpenOwnerSessionOptions,
+): { storage: IStorageProvider; options: OpenOwnerSessionOptions } {
   if (maybeOptions) {
     return {
       storage: typeof storageOrOptions === "string"
@@ -122,18 +127,18 @@ function resolveOwnerSessionStorage(
   }
   return {
     storage: createWorkspaceStorage(),
-    options: storageOrOptions as CreateOwnerSessionOptions,
+    options: storageOrOptions as OpenOwnerSessionOptions,
   };
 }
 
-export function createOwnerSession(
+export function openOwnerSession(
   storage: IStorageProvider | string,
-  options: CreateOwnerSessionOptions,
+  options: OpenOwnerSessionOptions,
 ): OwnerSession;
-export function createOwnerSession(options: CreateOwnerSessionOptions): OwnerSession;
-export function createOwnerSession(
-  storageOrOptions: IStorageProvider | string | CreateOwnerSessionOptions,
-  maybeOptions?: CreateOwnerSessionOptions,
+export function openOwnerSession(options: OpenOwnerSessionOptions): OwnerSession;
+export function openOwnerSession(
+  storageOrOptions: IStorageProvider | string | OpenOwnerSessionOptions,
+  maybeOptions?: OpenOwnerSessionOptions,
 ): OwnerSession {
   const { storage, options } = resolveOwnerSessionStorage(storageOrOptions, maybeOptions);
   return new DefaultOwnerSession(storage, options);

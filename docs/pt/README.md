@@ -22,7 +22,7 @@ import {
   createVault,
   listVaults,
   recoverVault,
-  createOwnerSession,
+  openOwnerSession,
   createOwnerClient,
   createAgentClient,
   FsStorageProvider,
@@ -40,7 +40,7 @@ Caminho principal recomendado para vault persistente:
 
 - criar o cofre persistente com `createVault(...)`
 - recuperar o cofre persistente com `recoverVault(...)` usando `vaultId` + `password`
-- para GUIs ou processos longos, manter `createOwnerSession(...)` em vez de cachear um `createOwnerClient(...)` bruto
+- para GUIs ou processos longos, manter `openOwnerSession(...)` em vez de cachear um `createOwnerClient(...)` bruto
 - usar `createOwnerClient(...)` apenas para scripts curtos ou tarefas pontuais no runtime atual
 
 A antiga API centrada em `CbioIdentity` nao e mais a superficie principal do produto.

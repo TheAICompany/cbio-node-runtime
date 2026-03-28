@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: CreateOwnerSessionOptions
+# Interface: OpenOwnerSessionOptions
 
 ## Extends
 

@@ -26,7 +26,7 @@ This version suffix is for storage-layout evolution. Future storage rewrites sho
   - `passwordVerifier`
   - `sensitiveActionVerifier`
 - If your UI reads secret plaintext or agent private keys, configure one of these verifiers.
-- For long-running GUI processes, prefer `createOwnerSession(...)` and obtain owner clients from the session rather than caching a raw `OwnerClient`.
+- For long-running GUI processes, prefer `openOwnerSession(...)` and obtain owner clients from the session rather than caching a raw `OwnerClient`.
 
 ### Sensitive actions
 

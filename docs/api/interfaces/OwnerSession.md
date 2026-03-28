@@ -24,13 +24,23 @@
 
 ## Methods
 
-### client()
+### getOwnerClient()
 
-> **client**(): `Promise`\<[`OwnerClient`](OwnerClient.md)\>
+> **getOwnerClient**(): `Promise`\<[`OwnerClient`](OwnerClient.md)\>
 
 #### Returns
 
 `Promise`\<[`OwnerClient`](OwnerClient.md)\>
+
+***
+
+### getVault()
+
+> **getVault**(): `Promise`\<[`RecoveredVault`](RecoveredVault.md)\>
+
+#### Returns
+
+`Promise`\<[`RecoveredVault`](RecoveredVault.md)\>
 
 ***
 
@@ -54,19 +64,9 @@
 
 ***
 
-### refresh()
+### reloadVault()
 
-> **refresh**(): `Promise`\<[`RecoveredVault`](RecoveredVault.md)\>
-
-#### Returns
-
-`Promise`\<[`RecoveredVault`](RecoveredVault.md)\>
-
-***
-
-### vault()
-
-> **vault**(): `Promise`\<[`RecoveredVault`](RecoveredVault.md)\>
+> **reloadVault**(): `Promise`\<[`RecoveredVault`](RecoveredVault.md)\>
 
 #### Returns
 
@@ -74,9 +74,9 @@
 
 ***
 
-### withClient()
+### withOwnerClient()
 
-> **withClient**\<`T`\>(`callback`): `Promise`\<`T`\>
+> **withOwnerClient**\<`T`\>(`callback`): `Promise`\<`T`\>
 
 #### Type Parameters
 

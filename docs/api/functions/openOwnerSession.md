@@ -2,11 +2,11 @@
 
 ***
 
-# Function: createOwnerSession()
+# Function: openOwnerSession()
 
 ## Call Signature
 
-> **createOwnerSession**(`storage`, `options`): [`OwnerSession`](../interfaces/OwnerSession.md)
+> **openOwnerSession**(`storage`, `options`): [`OwnerSession`](../interfaces/OwnerSession.md)
 
 ### Parameters
 
@@ -16,7 +16,7 @@
 
 #### options
 
-[`CreateOwnerSessionOptions`](../interfaces/CreateOwnerSessionOptions.md)
+[`OpenOwnerSessionOptions`](../interfaces/OpenOwnerSessionOptions.md)
 
 ### Returns
 
@@ -24,13 +24,13 @@
 
 ## Call Signature
 
-> **createOwnerSession**(`options`): [`OwnerSession`](../interfaces/OwnerSession.md)
+> **openOwnerSession**(`options`): [`OwnerSession`](../interfaces/OwnerSession.md)
 
 ### Parameters
 
 #### options
 
-[`CreateOwnerSessionOptions`](../interfaces/CreateOwnerSessionOptions.md)
+[`OpenOwnerSessionOptions`](../interfaces/OpenOwnerSessionOptions.md)
 
 ### Returns
 

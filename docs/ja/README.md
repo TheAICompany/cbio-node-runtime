@@ -22,7 +22,7 @@ import {
   createVault,
   listVaults,
   recoverVault,
-  createOwnerSession,
+  openOwnerSession,
   createOwnerClient,
   createAgentClient,
   FsStorageProvider,
@@ -40,7 +40,7 @@ import {
 
 - `createVault(...)` で persistent vault を作成する
 - `recoverVault(...)` で `vaultId` と `password` を使って persistent vault を復旧する
-- GUI や長寿命プロセスでは、生の `createOwnerClient(...)` をキャッシュせず `createOwnerSession(...)` を保持する
+- GUI や長寿命プロセスでは、生の `createOwnerClient(...)` をキャッシュせず `openOwnerSession(...)` を保持する
 - `createOwnerClient(...)` は短命スクリプトやその runtime 限定の単発処理に使う
 
 旧 `CbioIdentity` 中心 API は、もはや主要な公開面ではありません。

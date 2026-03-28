@@ -10,7 +10,7 @@
 
 ## Extended by
 
-- [`CreateOwnerSessionOptions`](CreateOwnerSessionOptions.md)
+- [`OpenOwnerSessionOptions`](OpenOwnerSessionOptions.md)
 
 ## Properties
 

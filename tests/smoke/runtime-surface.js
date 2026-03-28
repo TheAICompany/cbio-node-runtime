@@ -7,7 +7,6 @@ import {
   createWorkspaceStorage,
   getDefaultWorkspaceDir,
   recoverVault,
-  createOwnerSession,
   listVaults,
   updateVaultMetadata,
   createOwnerClient,

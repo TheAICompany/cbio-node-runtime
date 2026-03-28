@@ -51,21 +51,21 @@ const vault = await recoverVault(storage, {
 
 对于 GUI 这类长生命周期进程，应该持有 `OwnerSession`，而不是长期缓存裸 `OwnerClient`。
 
-`createOwnerClient(...)` 只负责基于当前 runtime 创建 owner client；它不应该跨 HMR、模块重载或 runtime 替换被长期复用。`OwnerSession` 会提供稳定的 SDK 句柄，并按需重新创建 owner client。
+`createOwnerClient(...)` 只负责基于当前 runtime 创建 owner client；它不应该跨 HMR、模块重载或 runtime 替换被长期复用。`OwnerSession` 会提供稳定的 SDK 句柄，并暴露清晰的读取方法。
 
 ```ts
-import { createOwnerSession } from '@the-ai-company/cbio-node-runtime';
+import { openOwnerSession } from '@the-ai-company/cbio-node-runtime';
 
-const session = createOwnerSession(storage, {
+const session = openOwnerSession(storage, {
   vaultId: myVault.core.vaultId.value,
   password: 'your-secure-password',
 });
 
-const createdAgent = await session.withClient((client) =>
+const createdAgent = await session.withOwnerClient((client) =>
   client.ownerCreateAgent({ nickname: '后台处理插件' })
 );
 
-const ownerClient = await session.client();
+const ownerClient = await session.getOwnerClient();
 const agents = await ownerClient.ownerListAgents();
 // ownerListAgents() 会直接返回每个 agent 当前的 session_token
 

@@ -38,9 +38,9 @@ export {
   type VaultMetadata,
 } from "./bootstrap.js";
 export {
-  createOwnerSession,
+  openOwnerSession,
   type OwnerSession,
-  type CreateOwnerSessionOptions,
+  type OpenOwnerSessionOptions,
 } from "./owner-session.js";
 
 export {
@@ -174,7 +174,7 @@ export interface CbioRuntime {
   listVaults: typeof import("./bootstrap.js").listVaults;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
-  createOwnerSession: typeof import("./owner-session.js").createOwnerSession;
+  openOwnerSession: typeof import("./owner-session.js").openOwnerSession;
   deriveVaultWorkingKeyFromPassword: typeof import("../protocol/crypto.js").deriveVaultWorkingKeyFromPassword;
   createOwnerClient: typeof import("../clients/owner/index.js").createOwnerClient;
   createAgentClient: typeof import("../clients/agent/index.js").createAgentClient;

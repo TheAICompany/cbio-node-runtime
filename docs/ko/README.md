@@ -22,7 +22,7 @@ import {
   createVault,
   listVaults,
   recoverVault,
-  createOwnerSession,
+  openOwnerSession,
   createOwnerClient,
   createAgentClient,
   FsStorageProvider,
@@ -40,7 +40,7 @@ import {
 
 - `createVault(...)` 로 persistent vault 를 생성합니다
 - `recoverVault(...)` 로 `vaultId` 와 `password` 를 사용해 persistent vault 를 복구합니다
-- GUI 나 장수명 프로세스에서는 raw `createOwnerClient(...)` 를 캐시하지 말고 `createOwnerSession(...)` 을 유지합니다
+- GUI 나 장수명 프로세스에서는 raw `createOwnerClient(...)` 를 캐시하지 말고 `openOwnerSession(...)` 을 유지합니다
 - `createOwnerClient(...)` 는 현재 runtime 안의 짧은 스크립트나 일회성 작업에 사용합니다
 
 이전 `CbioIdentity` 중심 API 는 더 이상 주요 제품 표면이 아닙니다.

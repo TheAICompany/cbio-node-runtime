@@ -77,44 +77,6 @@ console.log(identity.root_agent_id);
 
 ***
 
-### createOwnerSession
-
-> **createOwnerSession**: \{(`storage`, `options`): [`OwnerSession`](OwnerSession.md); (`options`): [`OwnerSession`](OwnerSession.md); \}
-
-#### Call Signature
-
-> (`storage`, `options`): [`OwnerSession`](OwnerSession.md)
-
-##### Parameters
-
-###### storage
-
-`string` \| [`IStorageProvider`](IStorageProvider.md)
-
-###### options
-
-[`CreateOwnerSessionOptions`](CreateOwnerSessionOptions.md)
-
-##### Returns
-
-[`OwnerSession`](OwnerSession.md)
-
-#### Call Signature
-
-> (`options`): [`OwnerSession`](OwnerSession.md)
-
-##### Parameters
-
-###### options
-
-[`CreateOwnerSessionOptions`](CreateOwnerSessionOptions.md)
-
-##### Returns
-
-[`OwnerSession`](OwnerSession.md)
-
-***
-
 ### createVault
 
 > **createVault**: \{(`storage`, `options`): `Promise`\<[`CreatedVault`](CreatedVault.md)\>; (`options`): `Promise`\<[`CreatedVault`](CreatedVault.md)\>; \}
@@ -355,6 +317,44 @@ A list of vault IDs.
 ### MemoryStorageProvider
 
 > **MemoryStorageProvider**: *typeof* `MemoryStorageProvider`
+
+***
+
+### openOwnerSession
+
+> **openOwnerSession**: \{(`storage`, `options`): [`OwnerSession`](OwnerSession.md); (`options`): [`OwnerSession`](OwnerSession.md); \}
+
+#### Call Signature
+
+> (`storage`, `options`): [`OwnerSession`](OwnerSession.md)
+
+##### Parameters
+
+###### storage
+
+`string` \| [`IStorageProvider`](IStorageProvider.md)
+
+###### options
+
+[`OpenOwnerSessionOptions`](OpenOwnerSessionOptions.md)
+
+##### Returns
+
+[`OwnerSession`](OwnerSession.md)
+
+#### Call Signature
+
+> (`options`): [`OwnerSession`](OwnerSession.md)
+
+##### Parameters
+
+###### options
+
+[`OpenOwnerSessionOptions`](OpenOwnerSessionOptions.md)
+
+##### Returns
+
+[`OwnerSession`](OwnerSession.md)
 
 ***
 
