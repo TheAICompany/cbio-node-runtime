@@ -1,6 +1,6 @@
 {
   "name": "@the-ai-company/cbio-node-runtime",
-  "version": "1.63.6",
+  "version": "1.63.7",
   "publishConfig": {
     "access": "public"
   },
