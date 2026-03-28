@@ -88,9 +88,9 @@ export interface AgentSecretGrantRegistry {
 
 export interface SecretDestinationGrantRegistry {
   upsert(grant: SecretDestinationGrant): Promise<void>;
-  get(vaultId: VaultId, secretAlias: string, domain: string): Promise<SecretDestinationGrant | null>;
+  get(vaultId: VaultId, secretAlias: string, siteId: string): Promise<SecretDestinationGrant | null>;
   list(vaultId: VaultId, secretAlias?: string): Promise<readonly SecretDestinationGrant[]>;
-  delete(vaultId: VaultId, secretAlias: string, domain: string): Promise<void>;
+  delete(vaultId: VaultId, secretAlias: string, siteId: string): Promise<void>;
 }
 
 export interface CustomHttpFlowRegistry {

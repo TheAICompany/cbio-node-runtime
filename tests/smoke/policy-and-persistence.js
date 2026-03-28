@@ -50,7 +50,7 @@ async function runPersistenceTest() {
     
     await ownerClient.ownerGrantSecretDestination({
       secretAlias: "persistent-secret",
-      domain: "api.persistent.com",
+      siteId: "api.persistent.com",
     });
 
     // 3. Verify initial state

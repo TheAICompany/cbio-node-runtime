@@ -339,7 +339,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId: createRequestIdValue("grant_secret_destination"),
       actor: { kind: "owner", id: this._rootAgentId },
       secretAlias: input.secretAlias,
-      domain: input.domain,
+      siteId: input.siteId,
       requestedAt,
     });
   }
@@ -363,7 +363,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId: createRequestIdValue("revoke_secret_destination"),
       actor: { kind: "owner", id: this._rootAgentId },
       secretAlias: input.secretAlias,
-      domain: input.domain,
+      siteId: input.siteId,
       requestedAt,
     });
   }

@@ -246,16 +246,16 @@ export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistr
 export class InMemorySecretDestinationGrantRegistry implements SecretDestinationGrantRegistry {
   private readonly _grants = new Map<string, SecretDestinationGrant>();
 
-  private _key(vaultId: VaultId, secretAlias: string, domain: string): string {
-    return `${vaultId.value}:${secretAlias}:${domain}`;
+  private _key(vaultId: VaultId, secretAlias: string, siteId: string): string {
+    return `${vaultId.value}:${secretAlias}:${siteId}`;
   }
 
   async upsert(grant: SecretDestinationGrant): Promise<void> {
-    this._grants.set(this._key(grant.vaultId, grant.secretAlias, grant.domain), grant);
+    this._grants.set(this._key(grant.vaultId, grant.secretAlias, grant.siteId), grant);
   }
 
-  async get(vaultId: VaultId, secretAlias: string, domain: string): Promise<SecretDestinationGrant | null> {
-    return this._grants.get(this._key(vaultId, secretAlias, domain)) ?? null;
+  async get(vaultId: VaultId, secretAlias: string, siteId: string): Promise<SecretDestinationGrant | null> {
+    return this._grants.get(this._key(vaultId, secretAlias, siteId)) ?? null;
   }
 
   async list(vaultId: VaultId, secretAlias?: string): Promise<readonly SecretDestinationGrant[]> {
@@ -266,8 +266,8 @@ export class InMemorySecretDestinationGrantRegistry implements SecretDestination
     });
   }
 
-  async delete(vaultId: VaultId, secretAlias: string, domain: string): Promise<void> {
-    this._grants.delete(this._key(vaultId, secretAlias, domain));
+  async delete(vaultId: VaultId, secretAlias: string, siteId: string): Promise<void> {
+    this._grants.delete(this._key(vaultId, secretAlias, siteId));
   }
 }
 

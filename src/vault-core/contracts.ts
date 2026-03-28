@@ -77,7 +77,7 @@ export interface AgentSecretGrant {
 export interface SecretDestinationGrant {
   vaultId: VaultId;
   secretAlias: string;
-  domain: string;
+  siteId: string;
   status: GrantStatus;
   requestedAt: string;
   grantedAt?: string;
@@ -166,7 +166,7 @@ export interface OwnerGrantSecretDestinationCommand {
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
   secretAlias: string;
-  domain: string;
+  siteId: string;
   requestedAt: string;
 }
 
@@ -184,7 +184,7 @@ export interface OwnerRevokeSecretDestinationCommand {
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
   secretAlias: string;
-  domain: string;
+  siteId: string;
   requestedAt: string;
 }
 
@@ -541,7 +541,7 @@ export interface AuditEntry {
   secretAlias?: string;
   secretId?: string;
   rootAgentId?: string;
-  domain?: string;
+  siteId?: string;
   outcome: AuditOutcome;
   detail: string;
 }
@@ -600,6 +600,7 @@ export interface OwnerListGrantsRequest {
   actor: VaultPrincipal & { kind: "owner" };
   rootAgentId?: string;
   secretAlias?: string;
+  siteId?: string;
   requestedAt: string;
 }
 

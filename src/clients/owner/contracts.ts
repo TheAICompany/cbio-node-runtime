@@ -87,7 +87,7 @@ export interface VaultGrantAgentSecretInput {
 
 export interface VaultGrantSecretDestinationInput {
   secretAlias: string;
-  domain: string;
+  siteId: string;
   requestedAt?: string;
 }
 
@@ -136,7 +136,7 @@ export interface VaultRevokeAgentSecretInput {
 
 export interface VaultRevokeSecretDestinationInput {
   secretAlias: string;
-  domain: string;
+  siteId: string;
   requestedAt?: string;
 }
 

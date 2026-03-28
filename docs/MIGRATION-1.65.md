@@ -6,7 +6,7 @@ This guide documents the transition from the legacy "Capability" model to the ne
 
 The heavyweight `Grant` system has been removed in favor of two simple, context-free white-list tables:
 1. **Agent-Secret Grants**: Who (Agent) can use What (Secret).
-2. **Secret-Destination Grants**: Where (Secret) can be sent (Domain).
+2. **Secret-Destination Grants**: Where (Secret) can be sent (**Site ID**, which is the destination domain).
 
 ## API Changes
 
@@ -21,7 +21,15 @@ The heavyweight `Grant` system has been removed in favor of two simple, context-
 | `ownerAllowAlways` | `ownerApproveDispatch(..., 'allow_and_grant')` | Integrated into the dispatch approval flow. |
 | `ownerAllowOnce` | `ownerApproveDispatch(..., 'allow_once')` | Integrated into the dispatch approval flow. |
 
-### 2. Decision Logic
+### 2. Rename: Domain → Site ID
+
+To align with the "protocol-native" philosophy, the term `domain` has been replaced with `siteId` throughout the SDK. In our architecture, **the domain name is the unique identifier (ID) of a site.**
+
+- `SecretDestinationGrant.domain` → `SecretDestinationGrant.siteId`
+- `AuditEntry.domain` → `AuditEntry.siteId`
+- All method parameters renamed from `domain` to `siteId`.
+
+### 3. Decision Logic
 
 The `DispatchApprovalDecision` has been standardized:
 - `allow_once`: Execute the blocked dispatch without creating a permanent grant.

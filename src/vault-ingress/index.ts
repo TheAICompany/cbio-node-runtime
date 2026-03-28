@@ -241,7 +241,7 @@ class LocalVaultService implements VaultService {
   }
 
   ownerGrantSecretDestination(request: import("../vault-core/index.js").OwnerGrantSecretDestinationCommand): Promise<import("../vault-core/index.js").SecretDestinationGrant> {
-    return this._authority.ownerGrantSecretDestination(request.actor as any, request.secretAlias, request.domain, request);
+    return this._authority.ownerGrantSecretDestination(request.actor as any, request.secretAlias, request.siteId, request);
   }
 
   ownerRevokeAgentSecret(request: import("../vault-core/index.js").OwnerRevokeAgentSecretCommand): Promise<void> {
@@ -249,7 +249,7 @@ class LocalVaultService implements VaultService {
   }
 
   ownerRevokeSecretDestination(request: import("../vault-core/index.js").OwnerRevokeSecretDestinationCommand): Promise<void> {
-    return this._authority.ownerRevokeSecretDestination(request.actor as any, request.secretAlias, request.domain, request);
+    return this._authority.ownerRevokeSecretDestination(request.actor as any, request.secretAlias, request.siteId, request);
   }
 
   ownerListGrants(request: import("../vault-core/index.js").OwnerListGrantsRequest): Promise<{ 

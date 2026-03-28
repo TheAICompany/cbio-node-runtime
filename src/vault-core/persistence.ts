@@ -292,19 +292,19 @@ export class FileSecretDestinationGrantRegistry implements SecretDestinationGran
     this._baseDir = path.join(baseDir, "grants", "secret_destinations");
   }
 
-  private _getPath(vaultId: VaultId, secretAlias: string, domain: string) {
-    return path.join(this._baseDir, vaultId.value, Buffer.from(secretAlias).toString("hex"), `${Buffer.from(domain).toString("hex")}.json`);
+  private _getPath(vaultId: VaultId, secretAlias: string, siteId: string) {
+    return path.join(this._baseDir, vaultId.value, Buffer.from(secretAlias).toString("hex"), `${Buffer.from(siteId).toString("hex")}.json`);
   }
 
   async upsert(grant: SecretDestinationGrant): Promise<void> {
-    const filePath = this._getPath(grant.vaultId, grant.secretAlias, grant.domain);
+    const filePath = this._getPath(grant.vaultId, grant.secretAlias, grant.siteId);
     await ensureDir(path.dirname(filePath));
     await fs.writeFile(filePath, JSON.stringify(grant, null, 2));
   }
 
-  async get(vaultId: VaultId, secretAlias: string, domain: string): Promise<SecretDestinationGrant | null> {
+  async get(vaultId: VaultId, secretAlias: string, siteId: string): Promise<SecretDestinationGrant | null> {
     try {
-      const content = await fs.readFile(this._getPath(vaultId, secretAlias, domain), "utf-8");
+      const content = await fs.readFile(this._getPath(vaultId, secretAlias, siteId), "utf-8");
       return JSON.parse(content);
     } catch {
       return null;
@@ -334,9 +334,9 @@ export class FileSecretDestinationGrantRegistry implements SecretDestinationGran
     }
   }
 
-  async delete(vaultId: VaultId, secretAlias: string, domain: string): Promise<void> {
+  async delete(vaultId: VaultId, secretAlias: string, siteId: string): Promise<void> {
     try {
-      await fs.unlink(this._getPath(vaultId, secretAlias, domain));
+      await fs.unlink(this._getPath(vaultId, secretAlias, siteId));
     } catch {}
   }
 }

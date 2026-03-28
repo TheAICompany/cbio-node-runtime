@@ -144,7 +144,7 @@ export class VaultCore {
   async ownerGrantSecretDestination(
     actor: VaultPrincipal & { kind: "owner" },
     secretAlias: string,
-    domain: string,
+    siteId: string,
     request?: { requestId?: string },
   ): Promise<SecretDestinationGrant> {
     this._assertOwnerPrincipal(actor);
@@ -152,17 +152,17 @@ export class VaultCore {
     const grant: SecretDestinationGrant = {
       vaultId: this._deps.vaultId,
       secretAlias,
-      domain,
+      siteId,
       status: "approved",
       requestedAt: now,
       grantedAt: now,
     };
     await this._deps.secretDestinationGrants.upsert(grant);
     await this._appendAudit(
-      toAuditEntry(this._deps, actor, AuditAction.GRANT_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, `granted destination "${domain}" for secret "${secretAlias}"`, {
+      toAuditEntry(this._deps, actor, AuditAction.GRANT_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, `granted destination "${siteId}" for secret "${secretAlias}"`, {
         requestId: request?.requestId,
         secretAlias,
-        domain,
+        siteId,
       }),
     );
     return grant;
@@ -188,16 +188,16 @@ export class VaultCore {
   async ownerRevokeSecretDestination(
     actor: VaultPrincipal & { kind: "owner" },
     secretAlias: string,
-    domain: string,
+    siteId: string,
     request?: { requestId?: string },
   ): Promise<void> {
     this._assertOwnerPrincipal(actor);
-    await this._deps.secretDestinationGrants.delete(this._deps.vaultId, secretAlias, domain);
+    await this._deps.secretDestinationGrants.delete(this._deps.vaultId, secretAlias, siteId);
     await this._appendAudit(
-      toAuditEntry(this._deps, actor, AuditAction.REVOKE_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, `revoked destination "${domain}" from secret "${secretAlias}"`, {
+      toAuditEntry(this._deps, actor, AuditAction.REVOKE_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, `revoked destination "${siteId}" from secret "${secretAlias}"`, {
         requestId: request?.requestId,
         secretAlias,
-        domain,
+        siteId,
       }),
     );
   }
@@ -234,8 +234,8 @@ export class VaultCore {
     const agentSecretApproved = agentSecretGrant?.status === "approved";
 
     // 2. Check Secret-Destination Grant
-    const domain = extractDomain(targetUrl);
-    const destGrant = await this._deps.secretDestinationGrants.get(this._deps.vaultId, secretAlias, domain);
+    const siteId = extractDomain(targetUrl);
+    const destGrant = await this._deps.secretDestinationGrants.get(this._deps.vaultId, secretAlias, siteId);
     const destApproved = destGrant?.status === "approved";
 
     if (agentSecretApproved && destApproved) {
@@ -395,7 +395,7 @@ export class VaultCore {
     // Auto-grant if requested
     if (decision === "allow_and_grant") {
       const now = this._deps.clock.nowIso();
-      const domain = extractDomain(record.request.targetUrl);
+      const siteId = extractDomain(record.request.targetUrl);
 
       await Promise.all([
         this._deps.agentSecretGrants.upsert({
@@ -409,7 +409,7 @@ export class VaultCore {
         this._deps.secretDestinationGrants.upsert({
           vaultId: this._deps.vaultId,
           secretAlias,
-          domain,
+          siteId,
           status: "approved",
           requestedAt: now,
           grantedAt: now,
@@ -425,7 +425,7 @@ export class VaultCore {
       await this._appendAudit(
         toAuditEntry(this._deps, actor, AuditAction.GRANT_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, "granted during dispatch approval", {
           secretAlias,
-          domain,
+          siteId,
         }),
       );
     }
