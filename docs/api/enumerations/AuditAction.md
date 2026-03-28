@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
@@ -105,12 +105,6 @@
 ### REGISTER\_AGENT\_IDENTITY
 
 > **REGISTER\_AGENT\_IDENTITY**: `"REGISTER_AGENT_IDENTITY"`
-
-***
-
-### REGISTER\_HTTP\_FLOW
-
-> **REGISTER\_HTTP\_FLOW**: `"REGISTER_HTTP_FLOW"`
 
 ***
 

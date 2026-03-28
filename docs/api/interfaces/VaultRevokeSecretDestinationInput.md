@@ -1,16 +1,10 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
 # Interface: VaultRevokeSecretDestinationInput
 
 ## Properties
-
-### domain
-
-> **domain**: `string`
-
-***
 
 ### requestedAt?
 
@@ -21,3 +15,9 @@
 ### secretAlias
 
 > **secretAlias**: `string`
+
+***
+
+### siteId
+
+> **siteId**: `string`

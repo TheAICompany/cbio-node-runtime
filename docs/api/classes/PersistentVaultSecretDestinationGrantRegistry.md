@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
@@ -28,7 +28,7 @@
 
 ### delete()
 
-> **delete**(`vaultId`, `secretAlias`, `domain`): `Promise`\<`void`\>
+> **delete**(`vaultId`, `secretAlias`, `siteId`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -40,7 +40,7 @@
 
 `string`
 
-##### domain
+##### siteId
 
 `string`
 
@@ -56,7 +56,7 @@
 
 ### get()
 
-> **get**(`vaultId`, `secretAlias`, `domain`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md) \| `null`\>
+> **get**(`vaultId`, `secretAlias`, `siteId`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md) \| `null`\>
 
 #### Parameters
 
@@ -68,7 +68,7 @@
 
 `string`
 
-##### domain
+##### siteId
 
 `string`
 

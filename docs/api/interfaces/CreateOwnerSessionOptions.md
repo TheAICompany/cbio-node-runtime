@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
@@ -67,10 +67,6 @@
 ### vault?
 
 > `optional` **vault?**: `object`
-
-#### customFlows?
-
-> `optional` **customFlows?**: `VaultCustomFlowResolver`
 
 #### fetchImpl?
 

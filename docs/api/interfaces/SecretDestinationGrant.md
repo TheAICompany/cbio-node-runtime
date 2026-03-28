@@ -1,16 +1,10 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
 # Interface: SecretDestinationGrant
 
 ## Properties
-
-### domain
-
-> **domain**: `string`
-
-***
 
 ### grantedAt?
 
@@ -27,6 +21,12 @@
 ### secretAlias
 
 > **secretAlias**: `string`
+
+***
+
+### siteId
+
+> **siteId**: `string`
 
 ***
 

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
@@ -21,12 +21,6 @@
 ### detail
 
 > **detail**: `string`
-
-***
-
-### domain?
-
-> `optional` **domain?**: `string`
 
 ***
 
@@ -69,6 +63,12 @@
 ### secretId?
 
 > `optional` **secretId?**: `string`
+
+***
+
+### siteId?
+
+> `optional` **siteId?**: `string`
 
 ***
 

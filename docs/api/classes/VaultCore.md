@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
@@ -33,7 +33,6 @@
 [`VaultId`](../interfaces/VaultId.md)
 
 ## Methods
-
 
 ### agentAuthorizeDispatch()
 
@@ -233,7 +232,7 @@
 
 ### ownerExportSecret()
 
-> **ownerExportSecret**(`actor`, `alias`): `Promise`\<`any`\>
+> **ownerExportSecret**(`actor`, `alias`): `Promise`\<`OwnerSecretExport`\>
 
 #### Parameters
 
@@ -247,7 +246,7 @@
 
 #### Returns
 
-`Promise`\<`any`\>
+`Promise`\<`OwnerSecretExport`\>
 
 ***
 
@@ -303,7 +302,7 @@
 
 ### ownerGrantSecretDestination()
 
-> **ownerGrantSecretDestination**(`actor`, `secretAlias`, `domain`, `request?`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)\>
+> **ownerGrantSecretDestination**(`actor`, `secretAlias`, `siteId`, `request?`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)\>
 
 #### Parameters
 
@@ -315,7 +314,7 @@
 
 `string`
 
-##### domain
+##### siteId
 
 `string`
 
@@ -535,7 +534,6 @@
 
 ***
 
-
 ### ownerRemoveSecret()
 
 > **ownerRemoveSecret**(`command`): `Promise`\<`void`\>
@@ -606,7 +604,7 @@
 
 ### ownerRevokeSecretDestination()
 
-> **ownerRevokeSecretDestination**(`actor`, `secretAlias`, `domain`, `request?`): `Promise`\<`void`\>
+> **ownerRevokeSecretDestination**(`actor`, `secretAlias`, `siteId`, `request?`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -618,7 +616,7 @@
 
 `string`
 
-##### domain
+##### siteId
 
 `string`
 

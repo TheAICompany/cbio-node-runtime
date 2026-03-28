@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
@@ -217,10 +217,6 @@ Configuration for the new vault.
 [`VaultCore`](../classes/VaultCore.md)
 
 ##### options?
-
-###### customFlows?
-
-`VaultCustomFlowResolver`
 
 ###### fetchImpl?
 

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.6**](../README.md)
 
 ***
 
@@ -305,7 +305,6 @@ A client for vault owners to manage secrets, agents, and grants.
 `Promise`\<`string`\>
 
 ***
-
 
 ### ownerRemoveSecret()
 

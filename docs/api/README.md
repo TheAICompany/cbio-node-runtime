@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.63.5**
+**CBIO Node Runtime Agent API v1.63.6**
 
 ***
 
-# CBIO Node Runtime Agent API v1.63.5
+# CBIO Node Runtime Agent API v1.63.6
 
 ## Enumerations
 
@@ -19,7 +19,6 @@
 - [PersistentVaultAgentIdentityRegistry](classes/PersistentVaultAgentIdentityRegistry.md)
 - [PersistentVaultAgentSecretGrantRegistry](classes/PersistentVaultAgentSecretGrantRegistry.md)
 - [PersistentVaultAuditLog](classes/PersistentVaultAuditLog.md)
-- [PersistentVaultCustomHttpFlowRegistry](classes/PersistentVaultCustomHttpFlowRegistry.md)
 - [PersistentVaultSecretCustody](classes/PersistentVaultSecretCustody.md)
 - [PersistentVaultSecretDestinationGrantRegistry](classes/PersistentVaultSecretDestinationGrantRegistry.md)
 - [PersistentVaultSecretRepository](classes/PersistentVaultSecretRepository.md)
@@ -48,7 +47,6 @@
 - [CreateOwnerSessionOptions](interfaces/CreateOwnerSessionOptions.md)
 - [CreatePersistentVaultCoreDependenciesOptions](interfaces/CreatePersistentVaultCoreDependenciesOptions.md)
 - [CreateVaultOptions](interfaces/CreateVaultOptions.md)
-- [CustomHttpFlowDefinition](interfaces/CustomHttpFlowDefinition.md)
 - [DefaultPolicyEngineOptions](interfaces/DefaultPolicyEngineOptions.md)
 - [DispatchAuthorization](interfaces/DispatchAuthorization.md)
 - [DispatchInstruction](interfaces/DispatchInstruction.md)
@@ -97,7 +95,6 @@
 - [VaultProfile](interfaces/VaultProfile.md)
 - [VaultReadAgentPrivateKeyInput](interfaces/VaultReadAgentPrivateKeyInput.md)
 - [VaultReadSecretPlaintextInput](interfaces/VaultReadSecretPlaintextInput.md)
-- [VaultRegisterFlowInput](interfaces/VaultRegisterFlowInput.md)
 - [VaultRevokeAgentSecretInput](interfaces/VaultRevokeAgentSecretInput.md)
 - [VaultRevokeSecretDestinationInput](interfaces/VaultRevokeSecretDestinationInput.md)
 - [VaultRevokeSessionTokenInput](interfaces/VaultRevokeSessionTokenInput.md)
