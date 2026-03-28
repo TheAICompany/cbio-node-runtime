@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.65.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.64.0...v1.65.0) (2026-03-28)
+
+
+### Features
+
+* rename dispatch statuses to AWAITING_APPROVAL and IN_PROGRESS, and update request tracking to record in-flight dispatches ([5d101c3](https://github.com/TheAICompany/cbio-node-runtime/commit/5d101c3b9848502d9a4e0e649afb7db034c48251))
+
 ## [1.64.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.8...v1.64.0) (2026-03-28)
 
 
