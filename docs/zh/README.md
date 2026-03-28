@@ -92,26 +92,33 @@ const rootAgentId = createdAgent.agent.rootAgentId;
 const sessionToken = createdAgent.sessionToken;
 ```
 
-### 5. 机密管理
+### 5. 机密与授权管理（Grant Model）
+
+v1.65+ 采用了简化的 **Grant（授权）** 模型，通过白名单控制访问：
 
 ```ts
+// 1. 创建机密
 const record = await client.ownerCreateSecret({
   alias: 'api-token',
   plaintext: 'secret-value'
 });
 
+// 2. 授权 Agent 使用该机密
 await client.ownerGrantAgentSecret({
   rootAgentId,
   secretAlias: 'api-token',
 });
 
+// 3. 授权该机密可发送至的目标域名
 await client.ownerGrantSecretDestination({
   secretAlias: 'api-token',
   domain: 'api.example.com',
 });
 ```
 
-### 6. Agent 消费机密
+### 6. Agent 消费机密与自省
+
+Agent 使用 `AgentClient` 进行操作，支持 **零配置（Zero-Configuration）** 自省：
 
 ```ts
 import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
@@ -122,66 +129,44 @@ const agent = createAgentClient({
   vault: vault.vault
 });
 
-const result = await agent.agentDispatch({ ... });
-const requests = await agent.agentListRequests();
-const request = await agent.agentGetRequest(result.requestId);
-const ownerView = await client.ownerGetRequest({ requestId: result.requestId });
-```
-
-Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身份材料，也应先换取 session token，再进行 dispatch。
-
-给 LLM 的直白规则：
-- `agentDispatch(...)` = 立刻尝试执行真实任务
-- `agentDispatch(...)` 必须带一条给 owner 看的 `reason`，说明为什么要发这个请求
-- `agentSubmitGrantRequest(...)` = 只申请权限，不会执行任务
-- `agentSubmitGrantRequest(...)` 也必须带 `reason`，说明为什么需要这项权限
-- `agentListRequests()` / `agentGetRequest(...)` = 在请求执行后查看异步结果
-- `ownerListRequests()` / `ownerGetRequest(...)` = owner 查看完整请求记录，用于决定是否放行 read
-- `read.paths` 只控制哪些响应值可见；响应结构始终可见，`['$']` 表示整个 body 都可见
-
-```ts
-const manifest = await agent.agentIntrospect();
-
-console.log(manifest.agent.rootAgentId);
-console.log(manifest.agent.rootAgentId);
-console.log(manifest.agent.nickname);
-console.log(manifest.capabilities); // 同一组能力载体里包含 write/read 动作状态
-```
-
-`agentListCapabilities()` 返回能力载体视图，`agentListRequests()` / `agentGetRequest()` 则负责暴露请求历史和按权限裁剪后的结果。
-
-### 7. 人机协同（HITL）工作流
-
-如果 Agent 尝试执行的动作不在白名单内，dispatch 会返回 `PENDING`，同时运行时会写入一条能力载体记录，其 `write` 动作等待 Owner 审批。
-
-```ts
-const result = await agent.agentDispatch({ ... });
-if (result.status === 'PENDING') {
-  console.log('触发发现流程：等待所有者审批...');
-}
-
-client.ownerOnGrantState((state) => {
-  if (state.writeGrant === null) {
-    console.log('收到新的待审批能力状态:', state.requestId);
-  }
+// 执行机密驱动的请求
+const result = await agent.agentDispatch({ 
+  targetUrl: 'https://api.example.com/data',
+  method: 'POST',
+  reason: '同步业务数据' 
 });
 
-const pending = await client.ownerListGrantStates({ writeGranted: false });
+// 自省：查看自己的身份、权限和可用工具
+const manifest = await agent.agentGetRuntimeManifest();
+console.log(manifest.agent.nickname);
+console.log(manifest.grants.agentSecrets); // 已获得的机密授权
+```
+
+### 7. 人机协同（HITL）与语义化审计
+
+如果 Agent 尝试的请求未获授权，`agentDispatch` 会返回 `PENDING` 状态，进入人工审批流。
+
+```ts
+// 审批待处理的请求
+const pending = await client.ownerListRequests({ rootAgentId });
 if (pending.length > 0) {
-  await client.ownerAllowAlways({
-    requestId: pending[0].requestId
-  });
-  await client.ownerApproveGrantRead({
+  await client.ownerApproveDispatch({
     requestId: pending[0].requestId,
-    read: { paths: ['data.id', 'data.status'] }
+    decision: 'allow_and_grant' // 允许执行并自动补齐缺少的授权
   });
 }
+
+// 查看语义化审计日志
+const logs = await client.ownerReadAudit({ 
+  action: 'APPROVE_DISPATCH' // 使用业务感知的语义化动作进行查询
+});
 ```
 
 ---
 
 ## 详细文档
 
+- [迁移指南 (v1.4 -> v1.65)](../MIGRATION-1.65.md)
 - [进程隔离（A/B 架构）](../PROCESS_ISOLATION.md)
 - [根目录 README（英文）](../../README.md)
 
@@ -189,5 +174,5 @@ if (pending.length > 0) {
 
 1. **机密隔离**：机密明文绝不离开安全进程。
 2. **密码即权限**：主密码是唯一的管理授权来源。
-3. **可审计性**：所有管理动作均记录为 `vault-master` 或对应的 Agent 身份。
+3. **语义化审计**：所有操作均记录为具有业务含义的动作（如 `APPROVE_DISPATCH`），而非底层技术术语。
 4. **二元状态**：保险箱要么被解锁并可见，要么只是磁盘上一组加密碎片。

@@ -28,6 +28,24 @@ The `DispatchApprovalDecision` has been standardized:
 - `allow_and_grant`: Execute the dispatch AND provision the needed grants as a side-effect.
 - `deny`: Reject the request.
 
+### 3. Audit Log Changes (Semantic Refactoring)
+
+The `AuditAction` enum has been refactored to use business-oriented, semantic names instead of internal technical terms.
+
+| Legacy Action (v1.4x) | New Semantic Action (v1.65+) | Description |
+| :--- | :--- | :--- |
+| `STALL_DISPATCH` | `PENDING_DISPATCH_APPROVAL` | Request held for human review. |
+| `ALLOW_DISPATCH` | `APPROVE_DISPATCH` | Owner approved a pending request. |
+| `DENY_DISPATCH` | `REJECT_DISPATCH` | Owner rejected a pending request. |
+| `AUTHORIZE_DISPATCH` | `EVALUATE_DISPATCH_POLICY` | Result of an automated policy evaluation. |
+| `REGISTER_CUSTOM_FLOW`| `REGISTER_HTTP_FLOW` | Semantic renaming of custom flows. |
+
+### 4. Error Code Changes
+
+The following legacy error codes have been removed to align with the "Grant" model:
+
+- `VAULT_CAPABILITY_NOT_FOUND`: Replaced by standard access denied or missing grant logic.
+
 ## Storage Migration
 
 The storage layout for authorization has changed:
