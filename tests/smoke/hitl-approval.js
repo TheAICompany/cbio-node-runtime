@@ -35,7 +35,7 @@ async function runHitlTest() {
     plaintext: "secret-value",
   });
 
-  // 4. Initial attempt: No grant -> Should be PENDING
+  // 4. Initial attempt: No grant -> Should be awaiting approval
   console.log("🔍 Attempting dispatch without grant...");
   const pendingResult = await agentClient.agentDispatch({
     target_url: "https://api.example.com/data",
@@ -45,7 +45,7 @@ async function runHitlTest() {
     body: "ping",
   });
 
-  assert.strictEqual(pendingResult.status, "PENDING", "Initial request should be pending");
+  assert.strictEqual(pendingResult.status, "AWAITING_APPROVAL", "Initial request should be awaiting approval");
   
   // 5. Verify NO grants were created yet
   console.log("Verifying grant registry is still empty...");
@@ -56,8 +56,8 @@ async function runHitlTest() {
   // 6. Owner list pending and approve "allow_and_grant"
   console.log("🎁 Approving always (allow_and_grant)...");
   const pendingRequests = await ownerClient.ownerListRequests({ root_agent_id: agent.root_agent_id });
-  const req = pendingRequests.find(r => r.status === "PENDING");
-  assert.ok(req, "Should find pending request");
+  const req = pendingRequests.find(r => r.execution_status === "AWAITING_APPROVAL");
+  assert.ok(req, "Should find request awaiting approval");
 
   const approvedResult = await ownerClient.ownerApproveDispatch({
     request_id: req.request_id,

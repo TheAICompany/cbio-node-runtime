@@ -6,6 +6,12 @@
 
 ## Enumeration Members
 
+### AWAITING\_APPROVAL
+
+> **AWAITING\_APPROVAL**: `"AWAITING_APPROVAL"`
+
+***
+
 ### DENIED
 
 > **DENIED**: `"DENIED"`
@@ -18,15 +24,9 @@
 
 ***
 
-### PENDING
+### IN\_PROGRESS
 
-> **PENDING**: `"PENDING"`
-
-***
-
-### STALLED
-
-> **STALLED**: `"STALLED"`
+> **IN\_PROGRESS**: `"IN_PROGRESS"`
 
 ***
 

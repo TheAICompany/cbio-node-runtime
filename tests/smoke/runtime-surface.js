@@ -114,6 +114,66 @@ async function runSmokeTest() {
   assert.equal(result.status, "SUCCEEDED");
   assert.equal(seenAuthHeader, "Bearer secret-v1");
 
+  let releaseSlowDispatch;
+  const slowDispatchStarted = new Promise((resolve) => {
+    releaseSlowDispatch = resolve;
+  });
+  const slowFetch = async (url, init) => {
+    seenAuthHeader = new Headers(init?.headers).get("Authorization");
+    await slowDispatchStarted;
+    return new Response("slow-ok", { status: 200 });
+  };
+  const slowAgentIdentities = new InMemoryAgentIdentityRegistry();
+  const slowSessionTokens = new InMemorySessionTokenRegistry();
+
+  const slowAuthority = createVaultCore({
+    vault_id: { value: "vault-runtime-surface-slow" },
+    secrets: new InMemorySecretRepository(),
+    custody: new InMemorySecretCustody(),
+    policy: new DefaultPolicyEngine(),
+    audit: new InMemoryAuditLog(),
+    executor: new HttpDispatchExecutor(slowFetch),
+    agentRecords: slowAgentIdentities,
+    agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
+    secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
+    agentProofVerifier: new SignatureAgentProofVerifier(slowAgentIdentities, slowSessionTokens),
+    session_tokens: slowSessionTokens,
+    replayGuard: new InMemoryReplayGuard(),
+    clock: new SystemClock(),
+    ids: new RandomIdGenerator(),
+    requests: new InMemoryRequestRecordRegistry(),
+  });
+  const slowVault = wrapVaultCoreAsVaultService(slowAuthority, { fetchImpl: slowFetch });
+  const slowOwnerClient = await createOwnerClient({
+    vault: slowVault,
+    password_verifier: async (password) => password === "password-1",
+  });
+  const slowImported = await slowOwnerClient.ownerImportAgent({ private_key: agentRecord.private_key });
+  await slowOwnerClient.ownerCreateSecret({ alias: "slow-token", plaintext: "secret-slow" });
+  await slowOwnerClient.ownerGrantAgentSecret({ root_agent_id: slowImported.agent.root_agent_id, secret_alias: "slow-token" });
+  await slowOwnerClient.ownerGrantSecretDestination({ secret_alias: "slow-token", site_id: "api.example.com" });
+  const slowSession = await slowOwnerClient.ownerIssueSessionToken({ root_agent_id: slowImported.agent.root_agent_id });
+  const slowAgent = createAgentClient({
+    agentRecord: slowImported.agent,
+    vault: slowVault,
+    token: slowSession.token,
+  });
+
+  const slowDispatchPromise = slowAgent.agentDispatch({
+    secret_alias: "slow-token",
+    target_url: "https://api.example.com/slow-endpoint",
+    method: "POST",
+    reason: "Slow verification request",
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  const inFlightRequests = await slowOwnerClient.ownerListRequests({ root_agent_id: slowImported.agent.root_agent_id });
+  assert.ok(inFlightRequests.some((request) => request.execution_status === "IN_PROGRESS"), "In-flight dispatch should be recorded before completion");
+
+  releaseSlowDispatch();
+  const slowResult = await slowDispatchPromise;
+  assert.equal(slowResult.status, "SUCCEEDED");
+
   // --- 3. Persistence & Recovery ---
   const tempDir = await mkdtemp(join(tmpdir(), "cbio-runtime-persist-"));
   try {

@@ -260,6 +260,7 @@ export class VaultCore {
 
   async agentDispatchSecret(request: DispatchRequest): Promise<DispatchResult> {
     await this._verifyAgentControlProof(request, "dispatch");
+    await this._createInitialRequestRecord(request);
 
     const authorization = await this.agentAuthorizeDispatch(request);
 
@@ -279,7 +280,7 @@ export class VaultCore {
           secret_alias: request.secret_alias,
         }),
       );
-      await this._recordRequestInternal(request, result);
+      await this._updateRequestRecordInternal(request, result);
       return result;
     }
 
@@ -287,7 +288,7 @@ export class VaultCore {
       const result: DispatchResult = {
         vault_id: this._deps.vault_id,
         request_id: request.request_id,
-        status: DispatchStatus.PENDING,
+        status: DispatchStatus.AWAITING_APPROVAL,
         target_url: request.target_url,
         method: request.method,
       };
@@ -298,7 +299,7 @@ export class VaultCore {
           secret_alias: request.secret_alias,
         }),
       );
-      await this._recordRequestInternal(request, result, authorization.missing_grants);
+      await this._updateRequestRecordInternal(request, result, authorization.missing_grants);
       return result;
     }
 
@@ -344,7 +345,7 @@ export class VaultCore {
       ),
     );
 
-    await this._recordRequestInternal(request, result);
+    await this._updateRequestRecordInternal(request, result);
 
     return {
       ...result,
@@ -366,7 +367,7 @@ export class VaultCore {
       throw new VaultCoreError("request record not found", "VAULT_REQUEST_NOT_FOUND");
     }
 
-    if (record.execution.status !== DispatchStatus.PENDING) {
+    if (record.execution.status !== DispatchStatus.AWAITING_APPROVAL) {
       throw new VaultCoreError("request is not pending", "VAULT_REQUEST_NOT_PENDING");
     }
 
@@ -736,8 +737,7 @@ export class VaultCore {
 
   private async _recordRequestInternal(
     request: DispatchRequest,
-    result: DispatchResult,
-    missing_grants?: { agent_secret?: boolean; secret_destination?: boolean },
+    status: DispatchStatus,
   ) {
     const record: RequestRecord = {
       vault_id: this._deps.vault_id,
@@ -752,6 +752,38 @@ export class VaultCore {
         body: request.body,
         secret_alias: request.secret_alias,
       },
+      execution: { status },
+    };
+    await this._deps.requests.save(record);
+  }
+
+  private async _createInitialRequestRecord(request: DispatchRequest) {
+    await this._recordRequestInternal(request, DispatchStatus.IN_PROGRESS);
+  }
+
+  private async _updateRequestRecordInternal(
+    request: DispatchRequest,
+    result: DispatchResult,
+    missing_grants?: { agent_secret?: boolean; secret_destination?: boolean },
+  ) {
+    const existing = await this._deps.requests.get(this._deps.vault_id, request.request_id);
+    const baseRecord = existing ?? {
+      vault_id: this._deps.vault_id,
+      request_id: request.request_id,
+      root_agent_id: request.agent.id,
+      reason: request.reason,
+      created_at: this._deps.clock.nowIso(),
+      request: {
+        target_url: request.target_url,
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        secret_alias: request.secret_alias,
+      },
+      execution: { status: DispatchStatus.IN_PROGRESS },
+    };
+    const record: RequestRecord = {
+      ...baseRecord,
       response: {
         status: result.response_status,
         body: result.response_body,
@@ -761,7 +793,7 @@ export class VaultCore {
       missing_grants,
     };
     await this._deps.requests.save(record);
-    if (result.status === DispatchStatus.PENDING) {
+    if (result.status === DispatchStatus.AWAITING_APPROVAL) {
       this._requestObservers.forEach(obs => obs(record));
     }
   }

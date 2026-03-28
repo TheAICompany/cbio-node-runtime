@@ -22,7 +22,7 @@ export interface AgentIdentity {
 export interface AgentClient {
   /**
    * Dispatches a session-token-authenticated request to a target using a vault secret.
-   * If the grant is missing, it will return a PENDING status.
+   * If the grant is missing, it will return an AWAITING_APPROVAL status.
    */
   agentDispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
   

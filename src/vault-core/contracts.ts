@@ -433,8 +433,8 @@ export enum DispatchStatus {
   SUCCEEDED = "SUCCEEDED",
   DENIED = "DENIED",
   FAILED = "FAILED",
-  PENDING = "PENDING",
-  STALLED = "STALLED",
+  IN_PROGRESS = "IN_PROGRESS",
+  AWAITING_APPROVAL = "AWAITING_APPROVAL",
 }
 
 export interface DispatchResult {

@@ -150,7 +150,7 @@ console.log(manifest.grants.agentSecrets); // 已获得的机密授权
 
 ### 7. 人机协同（HITL）与语义化审计
 
-如果 Agent 尝试的请求未获授权，`agentDispatch` 会返回 `PENDING` 状态，进入人工审批流。
+如果 Agent 尝试的请求未获授权，`agentDispatch` 会返回 `AWAITING_APPROVAL` 状态，进入人工审批流。
 
 ```ts
 // 审批待处理的请求

@@ -53,8 +53,8 @@ The system uses a domain-level white-list model:
 - `ownerListGrants(...)`: Review all active or pending grants.
 
 ### 3. Dispatch and Approval (HITL)
-- `agentDispatch(...)`: Attempt a secret-driven HTTP request. Returns `SUCCEEDED` or `PENDING`.
-- `ownerListRequests(...)`: Review blocked (PENDING) or history of dispatches.
+- `agentDispatch(...)`: Attempt a secret-driven HTTP request. Returns `SUCCEEDED`, `DENIED`, `FAILED`, or `AWAITING_APPROVAL`.
+- `ownerListRequests(...)`: Review approval-waiting (`AWAITING_APPROVAL`) or historical dispatches.
 - `ownerApproveDispatch(...)`: Resolve a pending request.
     - `allow_once`: Execute once, no permanent change.
     - `allow_and_grant`: Execute and automatically provision permanent grants.
