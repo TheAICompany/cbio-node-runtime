@@ -52,6 +52,10 @@ async function runPersistenceTest() {
       site_id: "api.persistent.com",
     });
 
+    const listedBeforeRestart = await ownerClient.ownerListAgents();
+    const listedBeforeRestartAgent = listedBeforeRestart.find((entry) => entry.root_agent_id === agent.root_agent_id);
+    assert.equal(listedBeforeRestartAgent?.session_token?.token, session_token.token, "ownerListAgents should expose the current persisted session token");
+
     // 3. Verify initial state
     const initialGrants = await ownerClient.ownerListGrants({ root_agent_id: agent.root_agent_id });
     assert.strictEqual(initialGrants.agent_secrets.length, 1);
@@ -69,17 +73,26 @@ async function runPersistenceTest() {
     
     const ownerClient2 = await createOwnerClient({
       vault: reloadedVault,
+      skipWarmup: true,
     });
 
     const reloadedGrants = await ownerClient2.ownerListGrants({ root_agent_id: agent.root_agent_id });
+    const listedAfterRestart = await ownerClient2.ownerListAgents();
+    const listedAfterRestartAgent = listedAfterRestart.find((entry) => entry.root_agent_id === agent.root_agent_id);
     
     // 5. Assertions
     console.log("Verifying persistence data...");
     assert.strictEqual(reloadedGrants.agent_secrets.length, 1, "Agent secret grant lost after restart");
     assert.strictEqual(reloadedGrants.secret_destinations.length, 1, "Destination grant lost after restart");
+    assert.equal(listedAfterRestartAgent?.session_token?.token, session_token.token, "Persisted session token missing after restart");
     
     const secrets = await ownerClient2.ownerListSecrets();
     assert.ok(secrets.some(s => s.alias.value === "persistent-secret"), "Secret lost after restart");
+
+    const rotatedSession = await ownerClient2.ownerIssueSessionToken({ root_agent_id: agent.root_agent_id });
+    const listedAfterRotation = await ownerClient2.ownerListAgents();
+    const listedAfterRotationAgent = listedAfterRotation.find((entry) => entry.root_agent_id === agent.root_agent_id);
+    assert.equal(listedAfterRotationAgent?.session_token?.token, rotatedSession.token, "Rotated session token was not persisted");
 
     console.log("✅ Policy & Persistence Test Passed!");
   } finally {

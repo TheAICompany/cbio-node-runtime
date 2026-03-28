@@ -9,6 +9,7 @@ import {
   type AgentIdentityRecord,
   type AuditEntry,
   type AuditQuery,
+  type StoredSessionToken,
 
   type RequestRecord,
   type SecretId,
@@ -21,6 +22,7 @@ import type {
   AgentSecretGrantRegistry,
   SecretDestinationGrantRegistry,
   AuditLog,
+  ISessionTokenRegistry,
 
   RequestRecordRegistry,
   SecretCustody,
@@ -384,6 +386,73 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
   }
 }
 
+export class FileSessionTokenRegistry implements ISessionTokenRegistry {
+  private readonly _baseDir: string;
+
+  constructor(baseDir: string) {
+    this._baseDir = path.join(baseDir, "session_tokens");
+  }
+
+  private _getPath(root_agent_id: string) {
+    return path.join(this._baseDir, `${root_agent_id}.json`);
+  }
+
+  async issue(root_agent_id: string): Promise<string> {
+    const token = `sat_${crypto.randomBytes(16).toString("hex")}`;
+    const stored: StoredSessionToken = {
+      token,
+      root_agent_id,
+      issued_at: new Date().toISOString(),
+    };
+    const filePath = this._getPath(root_agent_id);
+    await ensureDir(path.dirname(filePath));
+    await fs.writeFile(filePath, JSON.stringify(stored, null, 2));
+    return token;
+  }
+
+  async verify(token: string, root_agent_id: string): Promise<boolean> {
+    try {
+      const content = await fs.readFile(this._getPath(root_agent_id), "utf-8");
+      const stored = JSON.parse(content) as StoredSessionToken;
+      return stored.token === token;
+    } catch {
+      return false;
+    }
+  }
+
+  async revoke(token: string): Promise<void> {
+    const tokens = await this.list();
+    const stored = tokens.find((entry) => entry.token === token);
+    if (!stored) return;
+    try {
+      await fs.unlink(this._getPath(stored.root_agent_id));
+    } catch {}
+  }
+
+  async list(root_agent_id?: string): Promise<readonly StoredSessionToken[]> {
+    if (root_agent_id) {
+      try {
+        const content = await fs.readFile(this._getPath(root_agent_id), "utf-8");
+        return [JSON.parse(content) as StoredSessionToken];
+      } catch {
+        return [];
+      }
+    }
+
+    try {
+      const files = await fs.readdir(this._baseDir);
+      return await Promise.all(
+        files.filter((f) => f.endsWith(".json")).map(async (f) => {
+          const content = await fs.readFile(path.join(this._baseDir, f), "utf-8");
+          return JSON.parse(content) as StoredSessionToken;
+        }),
+      );
+    } catch {
+      return [];
+    }
+  }
+}
+
 
 
 export const DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY = "master_key.sealed";
@@ -434,12 +503,7 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     policy: new DefaultPolicyEngine(),
     replayGuard: { assertNotReplayed: async () => {} },
     agentProofVerifier: { verify: async () => {} },
-    sessionTokenRegistry: {
-        issue: async () => "dummy",
-        verify: async () => true,
-        revoke: async () => {},
-        list: async () => []
-    },
+    sessionTokenRegistry: new FileSessionTokenRegistry(baseDir),
     executor: { 
       dispatch: async (inst) => ({ 
         vault_id: inst.vault_id, 
