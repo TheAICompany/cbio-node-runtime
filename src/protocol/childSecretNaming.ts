@@ -8,7 +8,7 @@ import * as crypto from 'node:crypto';
 
 export const CHILD_KEY_PREFIX = 'cbio:child:' as const;
 
-export function getChildIdentitySecretName(publicKey: string): string {
-    const hash = crypto.createHash('sha256').update(publicKey).digest('hex').substring(0, 12);
+export function getChildIdentitySecretName(public_key: string): string {
+    const hash = crypto.createHash('sha256').update(public_key).digest('hex').substring(0, 12);
     return CHILD_KEY_PREFIX + hash;
 }

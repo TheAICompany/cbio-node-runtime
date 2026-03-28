@@ -3,26 +3,26 @@
 export interface OwnerCreateSecretInput {
   alias: string;
   plaintext: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface OwnerUpdateSecretInput {
   alias: string;
   plaintext: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface OwnerRemoveSecretInput {
   alias: string;
   password: string;
   verificationCode?: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultAuditQueryInput {
-  actorId?: string;
-  secretAlias?: string;
-  requestId?: string;
+  actor_id?: string;
+  secret_alias?: string;
+  request_id?: string;
   since?: string;
 }
 
@@ -30,21 +30,21 @@ export interface VaultExportSecretInput {
   alias: string;
   password: string;
   verificationCode?: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultReadSecretPlaintextInput {
   alias: string;
   password: string;
   verificationCode?: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultReadAgentPrivateKeyInput {
-  rootAgentId: string;
+  root_agent_id: string;
   password: string;
   verificationCode?: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface OwnerSensitiveActionConfirmation {
@@ -58,89 +58,89 @@ export interface OwnerSensitiveActionContext {
 }
 
 export interface VaultImportAgentInput {
-  privateKey: string;
+  private_key: string;
   metadata?: Record<string, any>;
   nickname?: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultCreateAgentInput {
   metadata?: Record<string, any>;
   nickname?: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface OwnerAgentProvisionResult {
   agent: import("../../vault-core/index.js").AgentIdentityRecord;
-  sessionToken: import("../../vault-core/index.js").OwnerSessionToken;
+  session_token: import("../../vault-core/index.js").OwnerSessionToken;
 }
 
 
 
 export interface VaultGrantAgentSecretInput {
-  rootAgentId: string;
-  secretAlias: string;
-  requestedAt?: string;
+  root_agent_id: string;
+  secret_alias: string;
+  requested_at?: string;
 }
 
 export interface VaultGrantSecretDestinationInput {
-  secretAlias: string;
-  siteId: string;
-  requestedAt?: string;
+  secret_alias: string;
+  site_id: string;
+  requested_at?: string;
 }
 
 export interface VaultApproveDispatchInput {
-  requestId: string;
+  request_id: string;
   decision: import("../../vault-core/index.js").DispatchApprovalDecision;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultUpdateAgentInput {
-  rootAgentId: string;
+  root_agent_id: string;
   nickname?: string;
   metadata?: Record<string, any>;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultListAgentsInput {
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultListGrantsInput {
-  rootAgentId?: string;
-  secretAlias?: string;
-  requestedAt?: string;
+  root_agent_id?: string;
+  secret_alias?: string;
+  requested_at?: string;
 }
 
 export interface VaultListRequestsInput {
-  rootAgentId?: string;
-  requestedAt?: string;
+  root_agent_id?: string;
+  requested_at?: string;
 }
 
 export interface VaultGetRequestInput {
-  requestId: string;
-  requestedAt?: string;
+  request_id: string;
+  requested_at?: string;
 }
 
 export interface VaultListSecretsInput {
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface VaultRevokeAgentSecretInput {
-  rootAgentId: string;
-  secretAlias: string;
-  requestedAt?: string;
+  root_agent_id: string;
+  secret_alias: string;
+  requested_at?: string;
 }
 
 export interface VaultRevokeSecretDestinationInput {
-  secretAlias: string;
-  siteId: string;
-  requestedAt?: string;
+  secret_alias: string;
+  site_id: string;
+  requested_at?: string;
 }
 
 export interface VaultIssueSessionTokenInput {
-  rootAgentId: string;
-  requestedAt?: string;
+  root_agent_id: string;
+  requested_at?: string;
 }
 
 export interface VaultRevokeSessionTokenInput {
@@ -149,10 +149,9 @@ export interface VaultRevokeSessionTokenInput {
 
 export interface CreateOwnerClientOptions {
   vault: import("../../vault-ingress/index.js").VaultService;
-  ownerIdentity: { rootAgentId: string };
   clock?: import("../../vault-core/index.js").Clock;
   skipWarmup?: boolean;
-  passwordVerifier?: (password: string) => Promise<boolean> | boolean;
+  password_verifier?: (password: string) => Promise<boolean> | boolean;
   sensitiveActionVerifier?: (
     confirmation: OwnerSensitiveActionConfirmation,
     context: OwnerSensitiveActionContext,
@@ -174,8 +173,8 @@ export interface OwnerClient {
   ownerRevokeAgentSecret(input: VaultRevokeAgentSecretInput): Promise<void>;
   ownerRevokeSecretDestination(input: VaultRevokeSecretDestinationInput): Promise<void>;
   ownerListGrants(input?: VaultListGrantsInput): Promise<{ 
-    agentSecrets: readonly import("../../vault-core/index.js").AgentSecretGrant[], 
-    secretDestinations: readonly import("../../vault-core/index.js").SecretDestinationGrant[] 
+    agent_secrets: readonly import("../../vault-core/index.js").AgentSecretGrant[], 
+    secret_destinations: readonly import("../../vault-core/index.js").SecretDestinationGrant[] 
   }>;
 
   ownerReadAudit(query?: VaultAuditQueryInput): Promise<readonly import("../../vault-core/index.js").AuditEntry[]>;
@@ -194,7 +193,7 @@ export interface OwnerClient {
   ownerRevokeSessionToken(input: VaultRevokeSessionTokenInput): Promise<void>;
   
   ownerApproveDispatch(input: VaultApproveDispatchInput): Promise<import("../../vault-core/index.js").DispatchResult | null>;
-  ownerDenyDispatch(requestId: string): Promise<void>;
+  ownerDenyDispatch(request_id: string): Promise<void>;
   
   ownerOnPendingDispatch(callback: (record: import("../../vault-core/index.js").RequestRecord) => void): () => void;
 }

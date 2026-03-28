@@ -11,13 +11,13 @@ export class LocalVaultTransport implements AgentDispatchTransport {
     request: import("../vault-core/index.js").DispatchRequest,
   ): Promise<import("../vault-core/index.js").DispatchResult> {
     const response = await this._vault.agentHandleDispatch({
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
       reason: request.reason,
-      secretAlias: request.secretAlias,
-      targetUrl: request.targetUrl,
+      secret_alias: request.secret_alias,
+      target_url: request.target_url,
       method: request.method,
       headers: request.headers,
       body: request.body,
@@ -32,10 +32,10 @@ export class LocalVaultTransport implements AgentDispatchTransport {
   async agentListGrants(request: import("../vault-core/index.js").AgentListGrantsRequest) {
     const response = await this._vault.agentHandleControl({
       action: "get_manifest",
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
       proof: { token: request.proof.token, signature: request.proof.signature },
     });
     if (!response.ok) throw new Error(`${response.error.code}:${response.error.message}`);

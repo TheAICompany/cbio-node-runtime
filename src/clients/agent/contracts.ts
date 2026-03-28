@@ -1,17 +1,17 @@
 export interface AgentDispatchIntent {
-  secretAlias?: string;
-  targetUrl: string;
+  secret_alias?: string;
+  target_url: string;
   method: string;
   reason: string;
   headers?: Record<string, string>;
   body?: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export interface AgentRequestGrantsInput {
-  secretAliases?: readonly string[];
+  secret_aliases?: readonly string[];
   reason: string;
-  requestedAt?: string;
+  requested_at?: string;
 }
 
 export type AgentVisibleSecretRecord = import("../../vault-core/index.js").AgentVisibleSecretRecord;

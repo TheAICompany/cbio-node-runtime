@@ -1,6 +1,6 @@
 # Custody Model (v1.47.0)
 
-This document defines the **Sovereign Vault** custody model for the local vault runtime.
+This document defines the **Vault** custody model for the local vault runtime.
 
 ## Scope
 
@@ -37,10 +37,10 @@ The runtime enforces a hard process boundary (A/B Architecture):
 
 ## Export / Reveal Policy
 
-Exporting secret plaintext is a first-class grant of the Sovereign Vault.
+Exporting secret plaintext is a first-class grant of the Vault.
 - `exportSecret(...)` is a valid, audited administrative operation.
 - Requires the vault to be in an unlocked (operational) state.
 
 ## Conclusion
 
-The Sovereign Vault model prioritizes **Ease of Use** and **Security through Isolation**. By moving away from complex external identity hierarchies, it provides a stable, "password-manager" style experience for automated agency.
+The Vault model prioritizes **Ease of Use** and **Security through Isolation**. By moving away from complex external identity hierarchies, it provides a stable, "password-manager" style experience for automated agency.

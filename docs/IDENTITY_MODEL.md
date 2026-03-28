@@ -1,10 +1,10 @@
 # Identity Model (v1.47.2)
 
-This document defines the identity model for the **Sovereign Vault**. 
+This document defines the identity model for the **Vault**. 
 
 ## Principle: Authority, Not Identity
 
-The Sovereign Vault model simplifies the relationship between actors and the vault:
+The Vault model simplifies the relationship between actors and the vault:
 
 1. **Administrator (Owner)**: Authority is rooted in **knowledge of the master password**. There is no pre-registered `OwnerIdentity`. If you can unlock the vault, you are the master.
 2. **Delegates (Agents)**: Identities authorized by the master to perform specific tasks.
@@ -38,9 +38,9 @@ All administrative operations performed by the password-holder are recorded unde
 
 ## What was Removed
 
-To achieve the Sovereign Vault's simplicity, the following legacy concepts were removed:
+To achieve the Vault's simplicity, the following legacy concepts were removed:
 - **Child Identities**: Deterministic derivation of keys from a parent identity is no longer supported. Use **Managed Identities** instead.
-- **Identity-Private Vaults**: Every identity used to have its own encrypted "mini-vault". This has been replaced by the unified storage of the Sovereign Vault.
+- **Identity-Private Vaults**: Every identity used to have its own encrypted "mini-vault". This has been replaced by the unified storage of the Vault.
 
 ## Relationship Summary
 

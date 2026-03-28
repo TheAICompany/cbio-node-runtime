@@ -18,13 +18,13 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
 
   async agentDispatch(request: DispatchRequest): Promise<DispatchResult> {
     const remoteRequest: VaultAgentDispatchRequest = {
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
       reason: request.reason,
-      secretAlias: request.secretAlias,
-      targetUrl: request.targetUrl,
+      secret_alias: request.secret_alias,
+      target_url: request.target_url,
       method: request.method,
       headers: request.headers,
       body: request.body,
@@ -55,25 +55,25 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     return payload.result;
   }
 
-  async agentListGrants(request: import("../vault-core/index.js").AgentListGrantsRequest): Promise<{ agentSecrets: readonly AgentSecretGrant[], secretDestinations: readonly SecretDestinationGrant[] }> {
+  async agentListGrants(request: import("../vault-core/index.js").AgentListGrantsRequest): Promise<{ agent_secrets: readonly AgentSecretGrant[], secret_destinations: readonly SecretDestinationGrant[] }> {
     const payload = await this._postControl({
       action: "list_grants",
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
       proof: { token: request.proof.token },
     });
-    return payload as { agentSecrets: readonly AgentSecretGrant[], secretDestinations: readonly SecretDestinationGrant[] };
+    return payload as { agent_secrets: readonly AgentSecretGrant[], secret_destinations: readonly SecretDestinationGrant[] };
   }
 
   async agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]> {
     const payload = await this._postControl({
       action: "list_secrets",
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as readonly import("../vault-core/index.js").AgentVisibleSecretRecord[];
@@ -82,10 +82,10 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
   async agentListRequests(request: import("../vault-core/index.js").AgentListRequestsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleRequestRecord[]> {
     const payload = await this._postControl({
       action: "list_requests",
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as readonly import("../vault-core/index.js").AgentVisibleRequestRecord[];
@@ -94,11 +94,11 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
   async agentGetRequest(request: import("../vault-core/index.js").AgentGetRequestRequest): Promise<import("../vault-core/index.js").AgentRequestResult> {
     const payload = await this._postControl({
       action: "read_request_result",
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      targetRequestId: request.targetRequestId,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      target_request_id: request.target_request_id,
+      root_agent_id: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as import("../vault-core/index.js").AgentRequestResult;
@@ -107,10 +107,10 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
   async agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest> {
     const payload = await this._postControl({
       action: "get_manifest",
-      vaultId: request.vaultId.value,
-      requestId: request.requestId,
-      requestedAt: request.requestedAt,
-      rootAgentId: request.agent.id,
+      vault_id: request.vault_id.value,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as import("../vault-core/index.js").AgentRuntimeManifest;

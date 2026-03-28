@@ -14,6 +14,8 @@ export {
   InMemorySessionTokenRegistry,
   InMemorySecretCustody,
   InMemorySecretRepository,
+  InMemoryRequestRecordRegistry,
+  InMemoryReplayGuard,
   RandomIdGenerator,
   type SignatureAgentProofVerifierOptions,
   SignatureAgentProofVerifier,
@@ -104,8 +106,7 @@ export type {
 
 export {
   DispatchStatus,
-  AuditAction,
-  AuditOutcome,
+  AuditOperation,
 } from "./contracts.js";
 
 export type {

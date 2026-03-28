@@ -1,6 +1,6 @@
 # cbio Vault Runtime (v1.65.1)
 
-Node.js vault runtime with a **Sovereign Vault** architecture: authority is rooted in a master password, and agent identities are fully managed within the vault's encrypted storage.
+Node.js vault runtime with a **Vault** architecture: authority is rooted in a master password, and agent identities are fully managed within the vault's encrypted storage.
 
 **Source:** [https://github.com/TheAICompany/cbio-node-runtime](https://github.com/TheAICompany/cbio-node-runtime)
 
@@ -116,6 +116,6 @@ Decisions can be:
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) - Deep dive into the Sovereign Vault model.
+- [Architecture](docs/ARCHITECTURE.md) - Deep dive into the Vault model.
 - [Reference](docs/REFERENCE.md) - API surface and type definitions.
 - [Migration Guide](docs/MIGRATION-1.65.md) - Moving from v1.4x (Capabilities) to v1.65 (Grants).

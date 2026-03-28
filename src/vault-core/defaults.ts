@@ -50,8 +50,8 @@ import {
 
 export interface DefaultPolicyEngineOptions {
   now?: () => Date;
-  trustedIssuerIds?: readonly string[];
-  trustedIssuerIdResolver?: (issuerId: string) => Promise<boolean> | boolean;
+  trusted_issuer_ids?: readonly string[];
+  trustedIssuerIdResolver?: (issuer_id: string) => Promise<boolean> | boolean;
 }
 
 export interface SignatureAgentProofVerifierOptions {
@@ -61,11 +61,11 @@ export interface SignatureAgentProofVerifierOptions {
 
 function createDispatchBinding(request: DispatchRequest): string {
   return JSON.stringify({
-    requestId: request.requestId,
-    requestedAt: request.requestedAt,
-    rootAgentId: request.agent.id,
-    secretAlias: request.secretAlias ?? null,
-    targetUrl: request.targetUrl,
+    request_id: request.request_id,
+    requested_at: request.requested_at,
+    root_agent_id: request.agent.id,
+    secret_alias: request.secret_alias ?? null,
+    target_url: request.target_url,
     method: request.method,
     body: request.body ?? null,
   });
@@ -113,20 +113,20 @@ export class InMemorySecretRepository implements SecretRepository {
   private readonly _byId = new Map<string, SecretRecord>();
 
   private isActive(record: SecretRecord): boolean {
-    return record.lifecycleStatus ? record.lifecycleStatus === "ACTIVE" : !record.retiredAt;
+    return record.lifecycle_status ? record.lifecycle_status === "ACTIVE" : !record.retiredAt;
   }
 
   async save(record: SecretRecord): Promise<void> {
     this._byAlias.set(record.alias.value, record);
-    this._byId.set(record.secretId.value, record);
+    this._byId.set(record.secret_id.value, record);
   }
 
-  async delete(secretId: SecretId): Promise<void> {
-    const existing = this._byId.get(secretId.value);
+  async delete(secret_id: SecretId): Promise<void> {
+    const existing = this._byId.get(secret_id.value);
     if (!existing) {
       return;
     }
-    this._byId.delete(secretId.value);
+    this._byId.delete(secret_id.value);
     this._byAlias.delete(existing.alias.value);
   }
 
@@ -135,13 +135,13 @@ export class InMemorySecretRepository implements SecretRepository {
     return record && this.isActive(record) ? record : null;
   }
 
-  async getById(secretId: SecretId): Promise<SecretRecord | null> {
-    const record = this._byId.get(secretId.value) ?? null;
+  async getById(secret_id: SecretId): Promise<SecretRecord | null> {
+    const record = this._byId.get(secret_id.value) ?? null;
     return record && this.isActive(record) ? record : null;
   }
 
-  async list(vaultId: VaultId): Promise<readonly SecretRecord[]> {
-    return Array.from(this._byId.values()).filter((record) => record.vaultId.value === vaultId.value && this.isActive(record));
+  async list(vault_id: VaultId): Promise<readonly SecretRecord[]> {
+    return Array.from(this._byId.values()).filter((record) => record.vault_id.value === vault_id.value && this.isActive(record));
   }
 }
 
@@ -157,10 +157,10 @@ export class InMemoryAuditLog implements AuditLog {
 
   async query(query: AuditQuery): Promise<readonly AuditEntry[]> {
     return this._entries.filter((entry) => {
-      if (query.actorId && entry.actor.id !== query.actorId) return false;
-      if (query.secretAlias && entry.secretAlias !== query.secretAlias) return false;
-      if (query.requestId && entry.requestId !== query.requestId) return false;
-      if (query.since && entry.occurredAt < query.since) return false;
+      if (query.actor_id && entry.actor.id !== query.actor_id) return false;
+      if (query.secret_alias && entry.secret_alias !== query.secret_alias) return false;
+      if (query.request_id && entry.request_id !== query.request_id) return false;
+      if (query.since && entry.ts < query.since) return false;
       return true;
     });
   }
@@ -172,16 +172,16 @@ export class InMemoryAuditLog implements AuditLog {
 export class InMemorySecretCustody implements SecretCustody {
   private readonly _plaintextById = new Map<string, string>();
 
-  async store(secretId: SecretId, plaintext: string): Promise<void> {
-    this._plaintextById.set(secretId.value, plaintext);
+  async store(secret_id: SecretId, plaintext: string): Promise<void> {
+    this._plaintextById.set(secret_id.value, plaintext);
   }
 
-  async load(secretId: SecretId): Promise<string | null> {
-    return this._plaintextById.get(secretId.value) ?? null;
+  async load(secret_id: SecretId): Promise<string | null> {
+    return this._plaintextById.get(secret_id.value) ?? null;
   }
 
-  async delete(secretId: SecretId): Promise<void> {
-    this._plaintextById.delete(secretId.value);
+  async delete(secret_id: SecretId): Promise<void> {
+    this._plaintextById.delete(secret_id.value);
   }
 }
 
@@ -192,15 +192,15 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   private readonly _identities = new Map<string, AgentIdentityRecord>();
 
   async register(identity: AgentIdentityRecord): Promise<void> {
-    this._identities.set(`${identity.vaultId.value}:${identity.rootAgentId}`, identity);
+    this._identities.set(`${identity.vault_id.value}:${identity.root_agent_id}`, identity);
   }
 
-  async get(vaultId: VaultId, rootAgentId: string): Promise<AgentIdentityRecord | null> {
-    return this._identities.get(`${vaultId.value}:${rootAgentId}`) ?? null;
+  async get(vault_id: VaultId, root_agent_id: string): Promise<AgentIdentityRecord | null> {
+    return this._identities.get(`${vault_id.value}:${root_agent_id}`) ?? null;
   }
 
-  async list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]> {
-    const prefix = `${vaultId.value}:`;
+  async list(vault_id: VaultId): Promise<readonly AgentIdentityRecord[]> {
+    const prefix = `${vault_id.value}:`;
     return Array.from(this._identities.entries())
       .filter(([key]) => key.startsWith(prefix))
       .map(([, identity]) => identity);
@@ -213,28 +213,28 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
 export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
   private readonly _grants = new Map<string, AgentSecretGrant>();
 
-  private _key(vaultId: VaultId, rootAgentId: string, secretAlias: string): string {
-    return `${vaultId.value}:${rootAgentId}:${secretAlias}`;
+  private _key(vault_id: VaultId, root_agent_id: string, secret_alias: string): string {
+    return `${vault_id.value}:${root_agent_id}:${secret_alias}`;
   }
 
   async upsert(grant: AgentSecretGrant): Promise<void> {
-    this._grants.set(this._key(grant.vaultId, grant.rootAgentId, grant.secretAlias), grant);
+    this._grants.set(this._key(grant.vault_id, grant.root_agent_id, grant.secret_alias), grant);
   }
 
-  async get(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<AgentSecretGrant | null> {
-    return this._grants.get(this._key(vaultId, rootAgentId, secretAlias)) ?? null;
+  async get(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<AgentSecretGrant | null> {
+    return this._grants.get(this._key(vault_id, root_agent_id, secret_alias)) ?? null;
   }
 
-  async list(vaultId: VaultId, rootAgentId?: string): Promise<readonly AgentSecretGrant[]> {
+  async list(vault_id: VaultId, root_agent_id?: string): Promise<readonly AgentSecretGrant[]> {
     return Array.from(this._grants.values()).filter((grant) => {
-      if (grant.vaultId.value !== vaultId.value) return false;
-      if (rootAgentId && grant.rootAgentId !== rootAgentId) return false;
+      if (grant.vault_id.value !== vault_id.value) return false;
+      if (root_agent_id && grant.root_agent_id !== root_agent_id) return false;
       return true;
     });
   }
 
-  async delete(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<void> {
-    this._grants.delete(this._key(vaultId, rootAgentId, secretAlias));
+  async delete(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<void> {
+    this._grants.delete(this._key(vault_id, root_agent_id, secret_alias));
   }
 }
 
@@ -244,28 +244,28 @@ export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistr
 export class InMemorySecretDestinationGrantRegistry implements SecretDestinationGrantRegistry {
   private readonly _grants = new Map<string, SecretDestinationGrant>();
 
-  private _key(vaultId: VaultId, secretAlias: string, siteId: string): string {
-    return `${vaultId.value}:${secretAlias}:${siteId}`;
+  private _key(vault_id: VaultId, secret_alias: string, site_id: string): string {
+    return `${vault_id.value}:${secret_alias}:${site_id}`;
   }
 
   async upsert(grant: SecretDestinationGrant): Promise<void> {
-    this._grants.set(this._key(grant.vaultId, grant.secretAlias, grant.siteId), grant);
+    this._grants.set(this._key(grant.vault_id, grant.secret_alias, grant.site_id), grant);
   }
 
-  async get(vaultId: VaultId, secretAlias: string, siteId: string): Promise<SecretDestinationGrant | null> {
-    return this._grants.get(this._key(vaultId, secretAlias, siteId)) ?? null;
+  async get(vault_id: VaultId, secret_alias: string, site_id: string): Promise<SecretDestinationGrant | null> {
+    return this._grants.get(this._key(vault_id, secret_alias, site_id)) ?? null;
   }
 
-  async list(vaultId: VaultId, secretAlias?: string): Promise<readonly SecretDestinationGrant[]> {
+  async list(vault_id: VaultId, secret_alias?: string): Promise<readonly SecretDestinationGrant[]> {
     return Array.from(this._grants.values()).filter((grant) => {
-      if (grant.vaultId.value !== vaultId.value) return false;
-      if (secretAlias && grant.secretAlias !== secretAlias) return false;
+      if (grant.vault_id.value !== vault_id.value) return false;
+      if (secret_alias && grant.secret_alias !== secret_alias) return false;
       return true;
     });
   }
 
-  async delete(vaultId: VaultId, secretAlias: string, siteId: string): Promise<void> {
-    this._grants.delete(this._key(vaultId, secretAlias, siteId));
+  async delete(vault_id: VaultId, secret_alias: string, site_id: string): Promise<void> {
+    this._grants.delete(this._key(vault_id, secret_alias, site_id));
   }
 }
 
@@ -278,17 +278,17 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
   private readonly _records = new Map<string, RequestRecord>();
 
   async save(record: RequestRecord): Promise<void> {
-    this._records.set(`${record.vaultId.value}:${record.requestId}`, record);
+    this._records.set(`${record.vault_id.value}:${record.request_id}`, record);
   }
 
-  async get(vaultId: VaultId, requestId: string): Promise<RequestRecord | null> {
-    return this._records.get(`${vaultId.value}:${requestId}`) ?? null;
+  async get(vault_id: VaultId, request_id: string): Promise<RequestRecord | null> {
+    return this._records.get(`${vault_id.value}:${request_id}`) ?? null;
   }
 
-  async list(vaultId: VaultId, rootAgentId?: string): Promise<readonly RequestRecord[]> {
+  async list(vault_id: VaultId, root_agent_id?: string): Promise<readonly RequestRecord[]> {
     return Array.from(this._records.values()).filter((record) => {
-      if (record.vaultId.value !== vaultId.value) return false;
-      if (rootAgentId && record.rootAgentId !== rootAgentId) return false;
+      if (record.vault_id.value !== vault_id.value) return false;
+      if (root_agent_id && record.root_agent_id !== root_agent_id) return false;
       return true;
     });
   }
@@ -300,19 +300,19 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
 export class DefaultPolicyEngine implements PolicyEngine {
   constructor(private readonly _options: DefaultPolicyEngineOptions = {}) {}
 
-  private validateRequestedAt(requestedAt: string, fieldName: string): void {
-    const parsed = Date.parse(requestedAt);
+  private validateRequestedAt(requested_at: string, fieldName: string): void {
+    const parsed = Date.parse(requested_at);
     if (Number.isNaN(parsed)) {
       throw new VaultCoreError(`${fieldName} invalid`, "VAULT_WRITE_DENIED");
     }
   }
 
-  private async isTrustedIssuer(issuerId: string): Promise<boolean> {
+  private async isTrustedIssuer(issuer_id: string): Promise<boolean> {
     if (this._options.trustedIssuerIdResolver) {
-      return await this._options.trustedIssuerIdResolver(issuerId);
+      return await this._options.trustedIssuerIdResolver(issuer_id);
     }
-    if (this._options.trustedIssuerIds) {
-      return this._options.trustedIssuerIds.includes(issuerId);
+    if (this._options.trusted_issuer_ids) {
+      return this._options.trusted_issuer_ids.includes(issuer_id);
     }
     return false;
   }
@@ -324,7 +324,7 @@ export class DefaultPolicyEngine implements PolicyEngine {
     if (!command.plaintext) {
       throw new VaultCoreError("secret plaintext required", "VAULT_WRITE_DENIED");
     }
-    this.validateRequestedAt(command.requestedAt, "requestedAt");
+    this.validateRequestedAt(command.requested_at, "requested_at");
     if (command.kind === "owner.create_secret" || command.kind === "owner.update_secret") return;
     if (command.issuer.id !== command.issuerSiteId) {
       throw new VaultCoreError("issuer identity mismatch", "VAULT_WRITE_DENIED");
@@ -338,29 +338,29 @@ export class DefaultPolicyEngine implements PolicyEngine {
 export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
   private readonly _tokens = new Map<string, StoredSessionToken>();
 
-  async issue(rootAgentId: string): Promise<string> {
+  async issue(root_agent_id: string): Promise<string> {
     const token = `sat_${crypto.randomBytes(16).toString("hex")}`;
     this._tokens.set(token, {
       token,
-      rootAgentId,
-      issuedAt: new Date().toISOString(),
+      root_agent_id,
+      issued_at: new Date().toISOString(),
     });
     return token;
   }
 
-  async verify(token: string, rootAgentId: string): Promise<boolean> {
+  async verify(token: string, root_agent_id: string): Promise<boolean> {
     const stored = this._tokens.get(token);
     if (!stored) return false;
-    return stored.rootAgentId === rootAgentId;
+    return stored.root_agent_id === root_agent_id;
   }
 
   async revoke(token: string): Promise<void> {
     this._tokens.delete(token);
   }
 
-  async list(rootAgentId?: string): Promise<readonly StoredSessionToken[]> {
+  async list(root_agent_id?: string): Promise<readonly StoredSessionToken[]> {
     const tokens = [...this._tokens.values()];
-    return rootAgentId ? tokens.filter((token) => token.rootAgentId === rootAgentId) : tokens;
+    return root_agent_id ? tokens.filter((token) => token.root_agent_id === root_agent_id) : tokens;
   }
 }
 
@@ -373,7 +373,7 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
 
   constructor(
     private _identities: AgentIdentityRegistry,
-    private _sessionTokens: ISessionTokenRegistry,
+    private _session_tokens: ISessionTokenRegistry,
     options: SignatureAgentProofVerifierOptions = {},
   ) {
     this._maxSkewMs = options.maxSkewMs ?? (5 * 60 * 1000);
@@ -381,14 +381,14 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
   }
 
   async verify(request: DispatchRequest): Promise<void> {
-    const { vaultId, agent, proof, requestId, requestedAt } = request;
-    if (proof.rootAgentId !== agent.id) {
+    const { vault_id, agent, proof, request_id, requested_at } = request;
+    if (proof.root_agent_id !== agent.id) {
       throw new VaultCoreError("agent.identity mismatch", "VAULT_DISPATCH_DENIED");
     }
 
     // Try token authentication first
     if (proof.token) {
-      const valid = await this._sessionTokens.verify(proof.token, proof.rootAgentId);
+      const valid = await this._session_tokens.verify(proof.token, proof.root_agent_id);
       if (valid) {
         return; // Token is valid, skip signature check
       }
@@ -400,11 +400,11 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
       throw new VaultCoreError("missing agent proof (signature or token required)", "VAULT_DISPATCH_DENIED");
     }
 
-    if (proof.requestId !== requestId || proof.requestedAt !== requestedAt) {
+    if (proof.request_id !== request_id || proof.requested_at !== requested_at) {
       throw new VaultCoreError("proof binding mismatch", "VAULT_DISPATCH_DENIED");
     }
 
-    const parsedRequestedAt = Date.parse(requestedAt);
+    const parsedRequestedAt = Date.parse(requested_at);
     const now = this._now().getTime();
     const maxSkewMs = this._maxSkewMs;
 
@@ -412,13 +412,13 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
       throw new VaultCoreError("proof timestamp out of range", "VAULT_DISPATCH_DENIED");
     }
 
-    const identity = await this._identities.get(vaultId, proof.rootAgentId);
+    const identity = await this._identities.get(vault_id, proof.root_agent_id);
     if (!identity) {
       throw new VaultCoreError("agent.identity not registered", "VAULT_DISPATCH_DENIED");
     }
 
     const binding = createDispatchBinding(request);
-    if (!verifySignature(identity.publicKey, proof.signature, binding)) {
+    if (!verifySignature(identity.public_key, proof.signature, binding)) {
       throw new VaultCoreError("invalid proof signature", "VAULT_DISPATCH_DENIED");
     }
   }
@@ -441,7 +441,7 @@ export class InMemoryReplayGuard implements ReplayGuard {
         this._seen.delete(key);
       }
     }
-    const replayKey = `${request.agent.id}:${request.requestId}`;
+    const replayKey = `${request.agent.id}:${request.request_id}`;
     if (this._seen.has(replayKey)) {
       throw new VaultCoreError("request replay detected", "VAULT_DISPATCH_DENIED");
     }
@@ -464,7 +464,7 @@ export class HttpDispatchExecutor implements TrustedExecutor {
     secret: { record: SecretRecord; plaintext: string },
   ): Promise<DispatchResult> {
     try {
-      const response = await this._fetchImpl(instruction.targetUrl, {
+      const response = await this._fetchImpl(instruction.target_url, {
         method: instruction.method,
         headers: {
           ...(instruction.headers ?? {}),
@@ -473,21 +473,21 @@ export class HttpDispatchExecutor implements TrustedExecutor {
         body: instruction.body,
       });
       return {
-        vaultId: instruction.vaultId,
-        requestId: instruction.requestId,
+        vault_id: instruction.vault_id,
+        request_id: instruction.request_id,
         status: response.ok ? DispatchStatus.SUCCEEDED : DispatchStatus.FAILED,
-        targetUrl: instruction.targetUrl,
+        target_url: instruction.target_url,
         method: instruction.method,
-        responseStatus: response.status,
-        responseBody: await response.text(),
+        response_status: response.status,
+        response_body: await response.text(),
         error: response.ok ? undefined : `HTTP_${response.status}`,
       };
     } catch (error) {
       return {
-        vaultId: instruction.vaultId,
-        requestId: instruction.requestId,
+        vault_id: instruction.vault_id,
+        request_id: instruction.request_id,
         status: DispatchStatus.FAILED,
-        targetUrl: instruction.targetUrl,
+        target_url: instruction.target_url,
         method: instruction.method,
         error: error instanceof Error ? error.message : String(error),
       };
@@ -496,14 +496,14 @@ export class HttpDispatchExecutor implements TrustedExecutor {
 }
 
 export interface VaultCoreDependenciesOptions {
-  vaultId?: string;
+  vault_id?: string;
   fetchImpl?: typeof fetch;
   authHeaderName?: string;
   authPrefix?: string;
   policy?: DefaultPolicyEngineOptions;
   proofVerifier?: SignatureAgentProofVerifierOptions;
   replayGuard?: ReplayGuard;
-  sessionTokens?: ISessionTokenRegistry;
+  session_tokens?: ISessionTokenRegistry;
   clock?: Clock;
 }
 
@@ -511,9 +511,9 @@ export function createVaultCoreDependencies(
   options: VaultCoreDependenciesOptions = {},
 ): VaultCoreDependencies {
   const agentRecords = new InMemoryAgentIdentityRegistry();
-  const sessionTokens = options.sessionTokens ?? new InMemorySessionTokenRegistry();
+  const session_tokens = options.session_tokens ?? new InMemorySessionTokenRegistry();
   return {
-    vaultId: { value: options.vaultId ?? `vault_${crypto.randomUUID()}` },
+    vault_id: { value: options.vault_id ?? `vault_${crypto.randomUUID()}` },
     secrets: new InMemorySecretRepository(),
     custody: new InMemorySecretCustody(),
     policy: new DefaultPolicyEngine(options.policy),
@@ -524,12 +524,12 @@ export function createVaultCoreDependencies(
       options.authPrefix,
     ),
     agentRecords,
-    agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, sessionTokens, options.proofVerifier),
-    agentSecretGrants: new InMemoryAgentSecretGrantRegistry(),
-    secretDestinationGrants: new InMemorySecretDestinationGrantRegistry(),
+    agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, session_tokens, options.proofVerifier),
+    agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
+    secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
     requests: new InMemoryRequestRecordRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
-    sessionTokens,
+    session_tokens,
     clock: options.clock ?? new SystemClock(),
     ids: new RandomIdGenerator(),
   };

@@ -22,23 +22,23 @@ declare const summary: OwnerVisibleRequestRecord;
 declare const detail: OwnerRequestRecord;
 declare const pending: RequestRecord;
 
-owner.ownerListRequests({ rootAgentId: "agent_123" });
-owner.ownerGetRequest({ requestId: summary.requestId });
+owner.ownerListRequests({ root_agent_id: "agent_123" });
+owner.ownerGetRequest({ request_id: summary.request_id });
 owner.ownerOnPendingDispatch((record) => {
-  const id: string | undefined = record.requestId;
+  const id: string | undefined = record.request_id;
   void id;
 });
 
-const detailRequestUrl: string = detail.request.targetUrl;
+const detailRequestUrl: string = detail.request.target_url;
 const detailMethod: string = detail.request.method;
-const pendingRequestId: string | undefined = pending.requestId;
+const pendingRequestId: string | undefined = pending.request_id;
 
 void detailRequestUrl;
 void detailMethod;
 void pendingRequestId;
 
 const dispatchIntent: AgentDispatchIntent = {
-  targetUrl: "https://api.example.com/data",
+  target_url: "https://api.example.com/data",
   method: "POST",
   reason: "sync data to upstream system",
   body: JSON.stringify({ ok: true }),

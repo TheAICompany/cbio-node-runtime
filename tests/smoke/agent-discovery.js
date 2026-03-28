@@ -1,4 +1,4 @@
-import { createVault, createOwnerClient, createAgentClient, MemoryStorageProvider } from "../../src/runtime/index.js";
+import { createVault, createOwnerClient, createAgentClient, MemoryStorageProvider } from "../../dist/runtime/index.js";
 import assert from "node:assert";
 
 /**
@@ -15,31 +15,30 @@ async function runDiscoveryTest() {
   });
 
   // 2. Setup Owner Client
-  const ownerClient = createOwnerClient({
+  const ownerClient = await createOwnerClient({
     vault,
-    ownerIdentity: { rootAgentId: "owner-1" },
   });
 
   // 3. Create Agent
-  const { agent, sessionToken } = await ownerClient.ownerCreateAgent({
+  const { agent, session_token } = await ownerClient.ownerCreateAgent({
     nickname: "Discovery-Bot",
   });
 
-  // 4. Setup Agent Client (No grant needed anymore)
+  // 4. Setup Agent Client
   const agentClient = createAgentClient({
     agentRecord: agent,
     vault,
-    token: sessionToken.token,
+    token: session_token.token,
   });
 
   console.log("🔍 Introspecting...");
   const manifest = await agentClient.agentIntrospect();
 
-  console.log("Agent ID:", manifest.rootAgentId);
-  console.log("Vault ID:", manifest.vaultId);
+  console.log("Agent ID:", manifest.root_agent_id);
+  console.log("Vault ID:", manifest.vault_id);
   console.log("Tools Count:", manifest.tools.length);
 
-  assert.strictEqual(manifest.rootAgentId, agent.id, "Agent ID mismatch");
+  assert.strictEqual(manifest.root_agent_id, agent.root_agent_id, "Agent ID mismatch");
   assert.ok(manifest.tools.length >= 4, "Should have at least 4 tools");
   
   const dispatchTool = manifest.tools.find(t => t.name === "agentDispatch");
@@ -48,14 +47,13 @@ async function runDiscoveryTest() {
   // 5. Grant a secret and verify introspection
   console.log("🎁 Granting secret...");
   await ownerClient.ownerGrantAgentSecret({
-    rootAgentId: agent.id,
-    secretAlias: "test-secret",
+    root_agent_id: agent.root_agent_id,
+    secret_alias: "test-secret",
   });
 
   const updatedManifest = await agentClient.agentIntrospect();
-  const secret = updatedManifest.secrets.find(s => s.alias === "test-secret");
-  assert.ok(secret, "Secret should be visible in manifest");
-  assert.strictEqual(secret.granted, true, "Secret should be marked as granted");
+  const secret = updatedManifest.grants.agent_secrets.find(s => s.secret_alias === "test-secret");
+  assert.ok(secret, "Secret should be visible in manifest grants");
 
   console.log("✅ Agent correctly discovered its runtime environment and grants!");
 }

@@ -17,12 +17,12 @@ export { getChildIdentitySecretName, CHILD_KEY_PREFIX };
 export type { RootAgentIdentity };
 export const createIdentity = protocolCreateIdentity;
 
-export function deriveRootAgentId(publicKey: string): string {
-    return protocolDeriveRootAgentId(publicKey);
+export function deriveRootAgentId(public_key: string): string {
+    return protocolDeriveRootAgentId(public_key);
 }
 
-export function getVaultPath(publicKey: string): string {
-    const hash = crypto.createHash('sha256').update(publicKey).digest('hex').substring(0, 12);
+export function getVaultPath(public_key: string): string {
+    const hash = crypto.createHash('sha256').update(public_key).digest('hex').substring(0, 12);
     const baseDir = process.env.C_BIO_VAULT_DIR || path.join(os.homedir(), 'cbio');
     return path.join(baseDir, `vault_${hash}.enc`);
 }

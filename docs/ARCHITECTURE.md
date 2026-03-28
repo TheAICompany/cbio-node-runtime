@@ -1,6 +1,6 @@
 # Architecture (v1.65.1)
 
-The cbio runtime follows a **Sovereign Vault** architecture: a unified, authority-centric model where security is grounded in proof-of-knowledge (passwords) rather than external identity hierarchies.
+The cbio runtime follows a **Vault** architecture: a unified, authority-centric model where security is grounded in proof-of-knowledge (passwords) rather than external identity hierarchies.
 
 ## Core Principles
 

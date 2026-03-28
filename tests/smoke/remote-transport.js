@@ -20,7 +20,7 @@ async function test() {
         ok: true,
         result: {
           status: "SUCCEEDED",
-          responseBody: "mock-ok"
+          response_body: "mock-ok"
         }
       }));
     }
@@ -31,13 +31,13 @@ async function test() {
   try {
     const transport = new AgentDispatchHttpTransport(`http://localhost:${PORT}/dispatch`);
     const mockRequest = {
-      vaultId: { value: "v-1" },
-      requestId: "r-1",
-      requestedAt: "2024-01-01T00:00:00Z",
+      vault_id: { value: "v-1" },
+      request_id: "r-1",
+      requested_at: "2024-01-01T00:00:00Z",
       agent: { id: "a-1" },
       grant: { grantId: "c-1" },
-      secretId: "s-1",
-      targetUrl: "https://example.com",
+      secret_id: "s-1",
+      target_url: "https://example.com",
       method: "GET",
       proof: { token: "sat-1" }
     };
@@ -45,9 +45,9 @@ async function test() {
     const result = await transport.agentDispatch(mockRequest);
 
     assert.equal(result.status, "SUCCEEDED");
-    assert.equal(result.responseBody, "mock-ok");
+    assert.equal(result.response_body, "mock-ok");
     assert.ok(receivedRequest);
-    assert.equal(receivedRequest.vaultId, "v-1");
+    assert.equal(receivedRequest.vault_id, "v-1");
     assert.equal(receivedRequest.proof.token, "sat-1");
 
     console.log("AgentDispatchHttpTransport smoke test PASSED");

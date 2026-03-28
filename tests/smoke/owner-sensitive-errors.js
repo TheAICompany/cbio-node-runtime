@@ -13,7 +13,7 @@ async function main() {
   });
   const client = createOwnerClient({
     vault: vault.vault,
-    passwordVerifier: async (password) => password === "hunter2",
+    password_verifier: async (password) => password === "hunter2",
     skipWarmup: true,
   });
 
@@ -38,7 +38,7 @@ async function main() {
   let missingPrivateKeyCode;
   try {
     await client.ownerReadAgentPrivateKey({
-      rootAgentId: "missing",
+      root_agent_id: "missing",
       password: "hunter2",
     });
   } catch (error) {

@@ -42,13 +42,13 @@ function redactResponseShapeValue(value: unknown): RedactedResponseShape {
 }
 
 export interface VaultAgentDispatchRequest {
-  vaultId: string;
-  requestId: string;
-  requestedAt: string;
-  rootAgentId: string;
+  vault_id: string;
+  request_id: string;
+  requested_at: string;
+  root_agent_id: string;
   reason: string;
-  secretAlias?: string;
-  targetUrl: string;
+  secret_alias?: string;
+  target_url: string;
   method: string;
   headers?: Record<string, string>;
   body?: string;
@@ -77,10 +77,10 @@ export interface VaultAgentControlProof {
 }
 
 export type VaultAgentControlRequest =
-  | { action: "list_secrets"; vaultId: string; requestId: string; requestedAt: string; rootAgentId: string; proof: VaultAgentControlProof }
-  | { action: "list_requests"; vaultId: string; requestId: string; requestedAt: string; rootAgentId: string; proof: VaultAgentControlProof }
-  | { action: "read_request_result"; vaultId: string; requestId: string; requestedAt: string; targetRequestId: string; rootAgentId: string; proof: VaultAgentControlProof }
-  | { action: "get_manifest"; vaultId: string; requestId: string; requestedAt: string; rootAgentId: string; proof: VaultAgentControlProof };
+  | { action: "list_secrets"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof }
+  | { action: "list_requests"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof }
+  | { action: "read_request_result"; vault_id: string; request_id: string; requested_at: string; target_request_id: string; root_agent_id: string; proof: VaultAgentControlProof }
+  | { action: "get_manifest"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof };
 
 export interface VaultAgentControlResponse {
   ok: true;
@@ -96,12 +96,12 @@ export interface VaultAgentControlErrorResponse {
 }
 
 export type VaultOwnerControlRequest =
-  | { action: "list_agents"; vaultId: string; actorId?: string }
-  | { action: "list_requests"; vaultId: string; actorId?: string; rootAgentId?: string }
-  | { action: "get_request"; vaultId: string; actorId?: string; requestId: string }
-  | { action: "list_secrets"; vaultId: string; actorId?: string }
-  | { action: "list_grants"; vaultId: string; actorId?: string; rootAgentId?: string; secretAlias?: string }
-  | { action: "approve_dispatch"; vaultId: string; requestId: string; actorId?: string; decision: import("../vault-core/index.js").DispatchApprovalDecision };
+  | { action: "list_agents"; vault_id: string; actor_id?: string }
+  | { action: "list_requests"; vault_id: string; actor_id?: string; root_agent_id?: string }
+  | { action: "get_request"; vault_id: string; actor_id?: string; request_id: string }
+  | { action: "list_secrets"; vault_id: string; actor_id?: string }
+  | { action: "list_grants"; vault_id: string; actor_id?: string; root_agent_id?: string; secret_alias?: string }
+  | { action: "approve_dispatch"; vault_id: string; request_id: string; actor_id?: string; decision: import("../vault-core/index.js").DispatchApprovalDecision };
 
 export interface VaultOwnerControlResponse {
   ok: true;
@@ -117,7 +117,7 @@ export interface VaultOwnerControlErrorResponse {
 }
 
 export interface VaultService {
-  readonly vaultId: VaultCore["vaultId"];
+  readonly vault_id: VaultCore["vault_id"];
   
   // Owner Management
   ownerRegisterAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void>;
@@ -132,7 +132,7 @@ export interface VaultService {
   ownerListAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]>;
   ownerListRequests(request: import("../vault-core/index.js").OwnerListRequestsRequest): Promise<readonly import("../vault-core/index.js").OwnerVisibleRequestRecord[]>;
   ownerGetRequest(request: import("../vault-core/index.js").OwnerGetRequestRequest): Promise<import("../vault-core/index.js").OwnerRequestRecord>;
-  ownerListSecrets(request: { vaultId: VaultId; owner: VaultPrincipal; requestId?: string }): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
+  ownerListSecrets(request: { vault_id: VaultId; owner: VaultPrincipal; request_id?: string }): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
   
   // Grant Management
   ownerGrantAgentSecret(request: import("../vault-core/index.js").OwnerGrantAgentSecretCommand): Promise<import("../vault-core/index.js").AgentSecretGrant>;
@@ -140,14 +140,14 @@ export interface VaultService {
   ownerRevokeAgentSecret(request: import("../vault-core/index.js").OwnerRevokeAgentSecretCommand): Promise<void>;
   ownerRevokeSecretDestination(request: import("../vault-core/index.js").OwnerRevokeSecretDestinationCommand): Promise<void>;
   ownerListGrants(request: import("../vault-core/index.js").OwnerListGrantsRequest): Promise<{ 
-    agentSecrets: readonly import("../vault-core/index.js").AgentSecretGrant[], 
-    secretDestinations: readonly import("../vault-core/index.js").SecretDestinationGrant[] 
+    agent_secrets: readonly import("../vault-core/index.js").AgentSecretGrant[], 
+    secret_destinations: readonly import("../vault-core/index.js").SecretDestinationGrant[] 
   }>;
 
   // Session Management
   ownerIssueSessionToken(request: import("../vault-core/index.js").OwnerIssueSessionTokenRequest): Promise<import("../vault-core/index.js").OwnerSessionToken>;
   ownerIssueAllAgentSessionTokens(actor: VaultPrincipal & { kind: "owner" }): Promise<import("../vault-core/index.js").OwnerSessionToken[]>;
-  ownerRevokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void>;
+  ownerRevokeSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void>;
 
   // Dispatch & Approval
   agentDispatch(request: DispatchRequest): Promise<DispatchResult>;
@@ -176,8 +176,8 @@ class LocalVaultService implements VaultService {
     private readonly _fetchImpl: typeof fetch = fetch,
   ) {}
 
-  get vaultId() {
-    return this._authority.vaultId;
+  get vault_id() {
+    return this._authority.vault_id;
   }
 
   ownerRegisterAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void> {
@@ -219,38 +219,38 @@ class LocalVaultService implements VaultService {
   }
 
   ownerListRequests(request: import("../vault-core/index.js").OwnerListRequestsRequest): Promise<readonly import("../vault-core/index.js").OwnerVisibleRequestRecord[]> {
-    return this._authority.ownerListRequests(request.actor as any, request.rootAgentId);
+    return this._authority.ownerListRequests(request.actor as any, request.root_agent_id);
   }
 
   ownerGetRequest(request: import("../vault-core/index.js").OwnerGetRequestRequest): Promise<import("../vault-core/index.js").OwnerRequestRecord> {
-    return this._authority.ownerGetRequest(request.actor as any, request.targetRequestId);
+    return this._authority.ownerGetRequest(request.actor as any, request.target_request_id);
   }
 
-  ownerListSecrets(request: { vaultId: VaultId; owner: VaultPrincipal; requestId?: string }): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]> {
+  ownerListSecrets(request: { vault_id: VaultId; owner: VaultPrincipal; request_id?: string }): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]> {
     return this._authority.ownerListSecrets(request.owner as any);
   }
 
   ownerGrantAgentSecret(request: import("../vault-core/index.js").OwnerGrantAgentSecretCommand): Promise<import("../vault-core/index.js").AgentSecretGrant> {
-    return this._authority.ownerGrantAgentSecret(request.actor as any, request.rootAgentId, request.secretAlias, request);
+    return this._authority.ownerGrantAgentSecret(request.actor as any, request.root_agent_id, request.secret_alias, request);
   }
 
   ownerGrantSecretDestination(request: import("../vault-core/index.js").OwnerGrantSecretDestinationCommand): Promise<import("../vault-core/index.js").SecretDestinationGrant> {
-    return this._authority.ownerGrantSecretDestination(request.actor as any, request.secretAlias, request.siteId, request);
+    return this._authority.ownerGrantSecretDestination(request.actor as any, request.secret_alias, request.site_id, request);
   }
 
   ownerRevokeAgentSecret(request: import("../vault-core/index.js").OwnerRevokeAgentSecretCommand): Promise<void> {
-    return this._authority.ownerRevokeAgentSecret(request.actor as any, request.rootAgentId, request.secretAlias, request);
+    return this._authority.ownerRevokeAgentSecret(request.actor as any, request.root_agent_id, request.secret_alias, request);
   }
 
   ownerRevokeSecretDestination(request: import("../vault-core/index.js").OwnerRevokeSecretDestinationCommand): Promise<void> {
-    return this._authority.ownerRevokeSecretDestination(request.actor as any, request.secretAlias, request.siteId, request);
+    return this._authority.ownerRevokeSecretDestination(request.actor as any, request.secret_alias, request.site_id, request);
   }
 
   ownerListGrants(request: import("../vault-core/index.js").OwnerListGrantsRequest): Promise<{ 
-    agentSecrets: readonly import("../vault-core/index.js").AgentSecretGrant[], 
-    secretDestinations: readonly import("../vault-core/index.js").SecretDestinationGrant[] 
+    agent_secrets: readonly import("../vault-core/index.js").AgentSecretGrant[], 
+    secret_destinations: readonly import("../vault-core/index.js").SecretDestinationGrant[] 
   }> {
-    return this._authority.ownerListGrants(request.actor as any, request.rootAgentId, request.secretAlias);
+    return this._authority.ownerListGrants(request.actor as any, request.root_agent_id, request.secret_alias);
   }
 
   ownerIssueSessionToken(request: import("../vault-core/index.js").OwnerIssueSessionTokenRequest): Promise<import("../vault-core/index.js").OwnerSessionToken> {
@@ -261,7 +261,7 @@ class LocalVaultService implements VaultService {
     return this._authority.ownerIssueAllAgentSessionTokens(actor);
   }
 
-  ownerRevokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
+  ownerRevokeSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
     return this._authority.ownerRevokeSessionToken(request);
   }
 
@@ -270,7 +270,7 @@ class LocalVaultService implements VaultService {
   }
 
   ownerApproveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult | null> {
-    return this._authority.ownerApproveDispatch(request.actor as any, request.requestId, request.decision);
+    return this._authority.ownerApproveDispatch(request.actor as any, request.request_id, request.decision);
   }
 
   ownerOnPendingDispatch(callback: (record: import("../vault-core/index.js").RequestRecord) => void): () => void {
@@ -296,20 +296,20 @@ class LocalVaultService implements VaultService {
   async agentHandleDispatch(request: VaultAgentDispatchRequest): Promise<VaultAgentDispatchResponse | VaultAgentDispatchErrorResponse> {
     try {
       const result = await this._authority.agentDispatchSecret({
-        vaultId: { value: request.vaultId },
-        requestId: request.requestId,
-        requestedAt: request.requestedAt,
-        agent: { kind: "agent", id: request.rootAgentId },
+        vault_id: { value: request.vault_id },
+        request_id: request.request_id,
+        requested_at: request.requested_at,
+        agent: { kind: "agent", id: request.root_agent_id },
         proof: {
-          rootAgentId: request.rootAgentId,
+          root_agent_id: request.root_agent_id,
           signature: request.proof.signature,
           token: request.proof.token,
-          requestId: request.requestId,
-          requestedAt: request.requestedAt,
+          request_id: request.request_id,
+          requested_at: request.requested_at,
         },
         reason: request.reason,
-        secretAlias: request.secretAlias,
-        targetUrl: request.targetUrl,
+        secret_alias: request.secret_alias,
+        target_url: request.target_url,
         method: request.method,
         headers: request.headers,
         body: request.body,
@@ -329,23 +329,23 @@ class LocalVaultService implements VaultService {
   async agentHandleControl(request: VaultAgentControlRequest): Promise<VaultAgentControlResponse | VaultAgentControlErrorResponse> {
     try {
       const base = {
-        vaultId: { value: request.vaultId },
-        requestId: request.requestId,
-        requestedAt: request.requestedAt,
-        agent: { kind: "agent" as const, id: request.rootAgentId },
+        vault_id: { value: request.vault_id },
+        request_id: request.request_id,
+        requested_at: request.requested_at,
+        agent: { kind: "agent" as const, id: request.root_agent_id },
         proof: {
-          rootAgentId: request.rootAgentId,
+          root_agent_id: request.root_agent_id,
           signature: request.proof.signature,
           token: request.proof.token,
-          requestId: request.requestId,
-          requestedAt: request.requestedAt,
+          request_id: request.request_id,
+          requested_at: request.requested_at,
         },
       };
       let result: any;
       switch (request.action) {
         case "list_secrets": result = await this.agentListSecrets(base); break;
         case "list_requests": result = await this.agentListRequests(base); break;
-        case "read_request_result": result = await this.agentGetRequest({ ...base, targetRequestId: request.targetRequestId }); break;
+        case "read_request_result": result = await this.agentGetRequest({ ...base, target_request_id: request.target_request_id }); break;
         case "get_manifest": result = await this.agentGetRuntimeManifest(base); break;
       }
       return { ok: true, result };
@@ -356,15 +356,15 @@ class LocalVaultService implements VaultService {
 
   async ownerHandleControl(request: VaultOwnerControlRequest): Promise<VaultOwnerControlResponse | VaultOwnerControlErrorResponse> {
     try {
-      const actor = { kind: "owner" as const, id: request.actorId || "owner" };
+      const actor = { kind: "owner" as const, id: request.actor_id || "owner" };
       let result: any;
       switch (request.action) {
-        case "list_agents": result = await this.ownerListAgents({ vaultId: { value: request.vaultId }, actor: { kind: "owner", id: request.actorId || "owner" }, requestId: "internal", requestedAt: new Date().toISOString() }); break;
-        case "list_requests": result = await this.ownerListRequests({ vaultId: { value: request.vaultId }, actor: { kind: "owner", id: request.actorId || "owner" }, rootAgentId: request.rootAgentId, requestId: "internal", requestedAt: new Date().toISOString() }); break;
-        case "get_request": result = await this.ownerGetRequest({ vaultId: { value: request.vaultId }, actor: { kind: "owner", id: request.actorId || "owner" }, targetRequestId: request.requestId, requestId: "internal", requestedAt: new Date().toISOString() }); break;
-        case "list_secrets": result = await this.ownerListSecrets({ vaultId: { value: request.vaultId }, owner: { kind: "owner", id: request.actorId || "owner" } }); break;
-        case "list_grants": result = await this.ownerListGrants({ vaultId: { value: request.vaultId }, actor: { kind: "owner", id: request.actorId || "owner" }, rootAgentId: request.rootAgentId, secretAlias: request.secretAlias, requestId: "internal", requestedAt: new Date().toISOString() }); break;
-        case "approve_dispatch": result = await this.ownerApproveDispatch({ vaultId: { value: request.vaultId }, actor: { kind: "owner", id: request.actorId || "owner" }, requestId: request.requestId, decision: request.decision, requestedAt: new Date().toISOString() }); break;
+        case "list_agents": result = await this.ownerListAgents({ vault_id: { value: request.vault_id }, actor: { kind: "owner", id: request.actor_id || "owner" }, request_id: "internal", requested_at: new Date().toISOString() }); break;
+        case "list_requests": result = await this.ownerListRequests({ vault_id: { value: request.vault_id }, actor: { kind: "owner", id: request.actor_id || "owner" }, root_agent_id: request.root_agent_id, request_id: "internal", requested_at: new Date().toISOString() }); break;
+        case "get_request": result = await this.ownerGetRequest({ vault_id: { value: request.vault_id }, actor: { kind: "owner", id: request.actor_id || "owner" }, target_request_id: request.request_id, request_id: "internal", requested_at: new Date().toISOString() }); break;
+        case "list_secrets": result = await this.ownerListSecrets({ vault_id: { value: request.vault_id }, owner: { kind: "owner", id: request.actor_id || "owner" } }); break;
+        case "list_grants": result = await this.ownerListGrants({ vault_id: { value: request.vault_id }, actor: { kind: "owner", id: request.actor_id || "owner" }, root_agent_id: request.root_agent_id, secret_alias: request.secret_alias, request_id: "internal", requested_at: new Date().toISOString() }); break;
+        case "approve_dispatch": result = await this.ownerApproveDispatch({ vault_id: { value: request.vault_id }, actor: { kind: "owner", id: request.actor_id || "owner" }, request_id: request.request_id, decision: request.decision, requested_at: new Date().toISOString() }); break;
       }
       return { ok: true, result };
     } catch (error) {

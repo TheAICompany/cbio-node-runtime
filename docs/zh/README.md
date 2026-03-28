@@ -1,6 +1,6 @@
 # cbio Vault Runtime（中文文档）
 
-cbio Vault Runtime 采用 **Sovereign Vault（主权保险箱）** 架构：管理权限扎根于主密码，Agent 身份与机密材料由保险箱加密托管。
+cbio Vault Runtime 采用 **Vault（保险箱）** 架构：管理权限扎根于主密码，Agent 身份与机密材料由保险箱加密托管。
 
 ---
 

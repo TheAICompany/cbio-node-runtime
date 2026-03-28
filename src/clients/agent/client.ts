@@ -10,7 +10,7 @@ import type {
 } from "./contracts.js";
 
 export interface AgentIdentity {
-  rootAgentId: string;
+  root_agent_id: string;
 }
 
 /**
@@ -39,7 +39,7 @@ export interface AgentClient {
   /**
    * Get details of a specific request.
    */
-  agentGetRequest(requestId: string): Promise<import("../../vault-core/index.js").AgentRequestResult>;
+  agentGetRequest(request_id: string): Promise<import("../../vault-core/index.js").AgentRequestResult>;
   
   /**
    * Introspects the current runtime environment, providing identity, grants, and a toolbox manifest.
@@ -64,29 +64,25 @@ class DefaultAgentClient implements AgentClient {
   ) {}
 
   async agentDispatch(intent: AgentDispatchIntent) {
-    const requestedAt = intent.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("dispatch");
+    const requested_at = intent.requested_at ?? this._clock.nowIso();
+    const request_id = createRequestIdValue("dispatch");
     const reason = intent.reason.trim();
     if (!reason) {
       throw new Error("agentDispatch requires a non-empty reason for owner review");
     }
 
     return this._transport.agentDispatch({
-      vaultId: { value: "" }, // Will be filled by transport/vault if needed, or ignored if local
-      requestId,
-      requestedAt,
+      vault_id: { value: "" }, // Will be filled by transport/vault if needed, or ignored if local
+      request_id,
+      requested_at,
       agent: {
         kind: "agent",
-        id: this._identity.rootAgentId,
+        id: this._identity.root_agent_id,
       },
-      proof: {
-        rootAgentId: this._identity.rootAgentId,
-        requestId,
-        requestedAt,
-      },
+      proof: await this._createProof(request_id, requested_at),
       reason,
-      secretAlias: intent.secretAlias,
-      targetUrl: intent.targetUrl,
+      secret_alias: intent.secret_alias,
+      target_url: intent.target_url,
       method: intent.method,
       headers: intent.headers,
       body: intent.body,
@@ -94,70 +90,71 @@ class DefaultAgentClient implements AgentClient {
   }
 
   private async _createProof(
-    requestId: string,
-    requestedAt: string,
+    request_id: string,
+    requested_at: string,
   ) {
     return {
-      rootAgentId: this._identity.rootAgentId,
-      requestId,
-      requestedAt,
+      root_agent_id: this._identity.root_agent_id,
+      request_id,
+      requested_at,
+      token: this._token,
     };
   }
 
   async agentListSecrets() {
-    const requestedAt = this._clock.nowIso();
-    const requestId = createRequestIdValue("list_secrets");
+    const requested_at = this._clock.nowIso();
+    const request_id = createRequestIdValue("list_secrets");
     return this._transport.agentListSecrets({
-      vaultId: { value: "" },
-      requestId,
-      requestedAt,
-      agent: { kind: "agent", id: this._identity.rootAgentId },
-      proof: await this._createProof(requestId, requestedAt),
+      vault_id: { value: "" },
+      request_id,
+      requested_at,
+      agent: { kind: "agent", id: this._identity.root_agent_id },
+      proof: await this._createProof(request_id, requested_at),
     });
   }
 
   async agentIntrospect() {
-    const requestedAt = this._clock.nowIso();
-    const requestId = createRequestIdValue("get_manifest");
+    const requested_at = this._clock.nowIso();
+    const request_id = createRequestIdValue("get_manifest");
     return this._transport.agentGetRuntimeManifest({
-      vaultId: { value: "" },
-      requestId,
-      requestedAt,
-      agent: { kind: "agent", id: this._identity.rootAgentId },
-      proof: await this._createProof(requestId, requestedAt),
+      vault_id: { value: "" },
+      request_id,
+      requested_at,
+      agent: { kind: "agent", id: this._identity.root_agent_id },
+      proof: await this._createProof(request_id, requested_at),
     });
   }
 
   async agentListRequests() {
-    const requestedAt = this._clock.nowIso();
-    const requestId = createRequestIdValue("list_requests");
+    const requested_at = this._clock.nowIso();
+    const request_id = createRequestIdValue("list_requests");
     return this._transport.agentListRequests({
-      vaultId: { value: "" },
-      requestId,
-      requestedAt,
-      agent: { kind: "agent", id: this._identity.rootAgentId },
-      proof: await this._createProof(requestId, requestedAt),
+      vault_id: { value: "" },
+      request_id,
+      requested_at,
+      agent: { kind: "agent", id: this._identity.root_agent_id },
+      proof: await this._createProof(request_id, requested_at),
     });
   }
 
-  async agentGetRequest(targetRequestId: string) {
-    const requestedAt = this._clock.nowIso();
-    const requestId = createRequestIdValue("read_request_result");
+  async agentGetRequest(target_request_id: string) {
+    const requested_at = this._clock.nowIso();
+    const request_id = createRequestIdValue("read_request_result");
     return this._transport.agentGetRequest({
-      vaultId: { value: "" },
-      requestId,
-      requestedAt,
-      targetRequestId,
-      agent: { kind: "agent", id: this._identity.rootAgentId },
-      proof: await this._createProof(requestId, requestedAt),
+      vault_id: { value: "" },
+      request_id,
+      requested_at,
+      target_request_id,
+      agent: { kind: "agent", id: this._identity.root_agent_id },
+      proof: await this._createProof(request_id, requested_at),
     });
   }
 }
 
 function resolveAgentIdentity(options: CreateAgentClientOptions): AgentIdentity {
-  return "rootAgentId" in options.agentRecord
+  return "root_agent_id" in options.agentRecord
     ? options.agentRecord
-    : { rootAgentId: (options.agentRecord as any).id };
+    : { root_agent_id: (options.agentRecord as any).id };
 }
 
 function resolveAgentTransport(

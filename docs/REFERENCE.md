@@ -1,6 +1,6 @@
 # CBIO Vault Runtime Reference (v1.65.1)
 
-This document describes the current implemented runtime surface for the **Sovereign Vault**. 
+This document describes the current implemented runtime surface for the **Vault**. 
 
 ## Primary API Surface
 

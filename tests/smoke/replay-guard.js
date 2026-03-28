@@ -9,10 +9,11 @@ import {
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryAuditLog,
-  InMemoryGrantRegistry,
-  InMemoryCustomHttpFlowRegistry,
+  InMemoryAgentSecretGrantRegistry,
+  InMemorySecretDestinationGrantRegistry,
   InMemoryReplayGuard,
   InMemorySessionTokenRegistry,
+  InMemoryRequestRecordRegistry,
   InMemorySecretCustody,
   InMemorySecretRepository,
   RandomIdGenerator,
@@ -23,90 +24,93 @@ import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 import { LocalSigner } from "../../dist/protocol/crypto.js";
 
 const agentRecord = createIdentity();
-const signer = new LocalSigner(agentRecord);
+const signer = new LocalSigner({ 
+  publicKey: agentRecord.public_key, 
+  privateKey: agentRecord.private_key 
+});
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
 const replaySessionTokens = new InMemorySessionTokenRegistry();
 const authority = createVaultCore({
-  vaultId: { value: "vault-replay" },
+  vault_id: { value: "vault-replay" },
   secrets: new InMemorySecretRepository(),
   custody: new InMemorySecretCustody(),
   policy: new DefaultPolicyEngine(),
   audit: new InMemoryAuditLog(),
-  executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
-  rootAgentIdentities: replayAgentIdentities,
+  executor: {
+      dispatch: async () => ({
+          status: "SUCCEEDED",
+          response_status: 200,
+          response_body: "ok"
+      })
+  },
+  agentRecords: replayAgentIdentities,
   agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities, replaySessionTokens),
-  grantStates: new InMemoryGrantRegistry(),
-  customFlows: new InMemoryCustomHttpFlowRegistry(),
-  sessionTokens: replaySessionTokens,
+  agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
+  secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
+  session_tokens: replaySessionTokens,
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
   ids: new RandomIdGenerator(),
+  requests: new InMemoryRequestRecordRegistry(),
 });
 const vault = wrapVaultCoreAsVaultService(authority);
 
-const client = createOwnerClient({
+const client = await createOwnerClient({
   vault,
   skipWarmup: true,
 });
-const importedAgent = await client.ownerImportAgent({
-  privateKey: agentRecord.privateKey,
-});
-const vaultAgentId = importedAgent.agent.id;
 
-const replayRecord = await client.ownerCreateSecret({
+const importedAgent = await client.ownerImportAgent({
+  private_key: agentRecord.private_key,
+});
+const vaultAgentId = importedAgent.agent.root_agent_id;
+
+await client.ownerCreateSecret({
   alias: "replay-token",
   plaintext: "replay-secret",
-  requestedAt: new Date().toISOString(),
+  requested_at: new Date().toISOString(),
 });
 
-const replayGrant = await client.ownerGrantGrant({
-  rootAgentId: vaultAgentId,
-  write: {
-    secretIds: [replayRecord.secretId.value],
-    scope: "https://allowed.example.com/replay",
-    methods: ["POST"],
-  },
-  read: { paths: ["$"] },
+// Use new Grant APIs
+await client.ownerGrantAgentSecret({
+  root_agent_id: vaultAgentId,
+  secret_alias: "replay-token",
+});
+await client.ownerGrantSecretDestination({
+  secret_alias: "replay-token",
+  site_id: "allowed.example.com",
 });
 
-const requestId = "replay-request";
-const requestedAt = new Date().toISOString();
+const request_id = "replay-request";
+const requested_at = new Date().toISOString();
+// Sign the dispatch intent
+const target_url = "https://allowed.example.com/replay";
+const method = "POST";
 const binding = JSON.stringify({
-  requestId,
-  requestedAt,
-  rootAgentId: vaultAgentId,
-  grantId: replayGrant.grantId,
-  secretId: replayRecord.secretId.value,
-  targetUrl: "https://allowed.example.com/replay",
-  method: "POST",
+  request_id,
+  requested_at,
+  root_agent_id: vaultAgentId,
+  secret_alias: "replay-token",
+  target_url,
+  method,
   body: null,
 });
 const signature = await signer.sign(binding);
 
 const request = {
-  vaultId: authority.vaultId,
-  requestId,
-  requestedAt,
+  vault_id: authority.vault_id,
+  request_id,
+  requested_at,
   agent: { kind: "agent", id: vaultAgentId },
-  grant: {
-    vaultId: authority.vaultId,
-    grantId: replayGrant.grantId,
-    rootAgentId: vaultAgentId,
-    operation: replayGrant.operation,
-    write: replayGrant.write,
-    read: replayGrant.read,
-    issuedAt: replayGrant.issuedAt,
-    skipAudit: replayGrant.skipAudit,
-  },
   proof: {
-    rootAgentId: vaultAgentId,
+    root_agent_id: vaultAgentId,
     signature,
-    requestId,
-    requestedAt,
+    request_id,
+    requested_at,
   },
-  secretId: replayRecord.secretId.value,
-  targetUrl: "https://allowed.example.com/replay",
-  method: "POST",
+  secret_alias: "replay-token",
+  target_url,
+  method,
   reason: "Need to verify replay protection on repeated dispatch.",
 };
 
@@ -122,7 +126,7 @@ await assert.rejects(
   },
 );
 
-const replayAudit = await client.ownerReadAudit({ secretAlias: "replay-token" });
-assert.ok(replayAudit.some((entry) => entry.outcome === "DENIED" && /replay/.test(entry.detail)));
+const replayAudit = await client.ownerReadAudit({ secret_alias: "replay-token" });
+assert.ok(replayAudit.some((entry) => entry.decision === "denied" && /replay/.test(entry.detail)));
 
 console.log("replay guard smoke test passed");

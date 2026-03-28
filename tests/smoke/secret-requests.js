@@ -9,7 +9,7 @@ import {
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 
 const deps = createVaultCoreDependencies({
-  vaultId: "vault-secret-requests",
+  vault_id: "vault-secret-requests",
   fetchImpl: async () => new Response("ok", { status: 200 }),
 });
 const authority = createVaultCore(deps);
@@ -22,7 +22,7 @@ const ownerClient = createOwnerClient({
 const provisionedAgent = await ownerClient.ownerCreateAgent({
   nickname: "Planner",
 });
-const vaultAgentId = provisionedAgent.agent.id;
+const vaultAgentId = provisionedAgent.agent.root_agent_id;
 const crmSecret = await ownerClient.ownerCreateSecret({
   alias: "crm-token",
   plaintext: "secret",
@@ -34,24 +34,24 @@ const unsubscribe = ownerClient.ownerOnPendingDispatch((record) => {
 });
 
 const crmRecord = await ownerClient.ownerGrantAgentSecret({
-  rootAgentId: vaultAgentId,
-  secretAlias: crmSecret.alias.value,
+  root_agent_id: vaultAgentId,
+  secret_alias: crmSecret.alias.value,
 });
 
-assert.equal(crmRecord.rootAgentId, vaultAgentId);
-assert.equal(crmRecord.secretAlias, crmSecret.alias.value);
+assert.equal(crmRecord.root_agent_id, vaultAgentId);
+assert.equal(crmRecord.secret_alias, crmSecret.alias.value);
 assert.ok(observed, "pending grant observer should fire");
 
 const grants = await ownerClient.ownerListGrants();
-assert.ok(grants.agentSecrets.some((g) => g.rootAgentId === vaultAgentId && g.secretAlias === "crm-token"));
+assert.ok(grants.agent_secrets.some((g) => g.root_agent_id === vaultAgentId && g.secret_alias === "crm-token"));
 
 await ownerClient.ownerRevokeAgentSecret({
-  rootAgentId: vaultAgentId,
-  secretAlias: "crm-token",
+  root_agent_id: vaultAgentId,
+  secret_alias: "crm-token",
 });
 
 const grantsAfterRevoke = await ownerClient.ownerListGrants();
-assert.ok(!grantsAfterRevoke.agentSecrets.some((g) => g.rootAgentId === vaultAgentId && g.secretAlias === "crm-token"));
+assert.ok(!grantsAfterRevoke.agent_secrets.some((g) => g.root_agent_id === vaultAgentId && g.secret_alias === "crm-token"));
 
 unsubscribe();
 

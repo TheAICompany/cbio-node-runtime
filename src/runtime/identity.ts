@@ -9,13 +9,13 @@ import { deriveRootAgentId } from "../protocol/identity.js";
  */
 export interface CreatedIdentity {
   /** The unique identifier for this identity (derived from public key). */
-  rootAgentId: string;
+  root_agent_id: string;
   /** A human-readable label (local only, not part of the crypto identity). */
   nickname?: string;
   /** The base64url-encoded public key. */
-  publicKey: string;
+  public_key: string;
   /** The base64url-encoded Ed25519 PKCS#8 private key. */
-  privateKey: string;
+  private_key: string;
 }
 
 export interface CreateIdentityOptions {
@@ -37,8 +37,8 @@ function normalizeNickname(nickname?: string): string | undefined {
   return nickname?.trim() ? nickname.trim() : undefined;
 }
 
-function decodeEd25519Seed(privateKey: string): Buffer {
-  const der = Buffer.from(privateKey, "base64url");
+function decodeEd25519Seed(private_key: string): Buffer {
+  const der = Buffer.from(private_key, "base64url");
   if (
     der.length !== ED25519_PKCS8_PREFIX.length + ED25519_SEED_LENGTH ||
     !der.subarray(0, ED25519_PKCS8_PREFIX.length).equals(ED25519_PKCS8_PREFIX)
@@ -56,9 +56,10 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
   const keyPair: RootAgentIdentity = createProtocolIdentity();
   const nickname = normalizeNickname(options.nickname);
   return {
-    rootAgentId: deriveRootAgentId(keyPair.publicKey),
-    publicKey: keyPair.publicKey,
-    privateKey: keyPair.privateKey,
+    root_agent_id: deriveRootAgentId(keyPair.publicKey),
+    nickname,
+    public_key: keyPair.publicKey,
+    private_key: keyPair.privateKey,
   };
 }
 
@@ -71,7 +72,7 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
  * @example
  * ```ts
  * const identity = createIdentity({ nickname: 'my-agent' });
- * console.log(identity.rootAgentId);
+ * console.log(identity.root_agent_id);
  * ```
  */
 export function createIdentity(options?: CreateIdentityOptions): CreatedIdentity;
@@ -84,7 +85,7 @@ export function createIdentity(
 /**
  * Restores an identity from an existing private key.
  *
- * @param privateKey - The base64url-encoded PKCS#8 private key.
+ * @param private_key - The base64url-encoded PKCS#8 private key.
  * @param options - Optional metadata to attach to the restored object.
  * @returns The reconstructed {@link CreatedIdentity}.
  *
@@ -93,16 +94,17 @@ export function createIdentity(
  * const identity = restoreIdentity('MIIB...');
  * ```
  */
-export function restoreIdentity(privateKey: string, options: RestoreIdentityOptions = {}): CreatedIdentity {
-  const normalizedPrivateKey = privateKey.trim();
+export function restoreIdentity(private_key: string, options: RestoreIdentityOptions = {}): CreatedIdentity {
+  const normalizedPrivateKey = private_key.trim();
   if (!normalizedPrivateKey) {
     throw new Error("private key is required");
   }
-  const publicKey = derivePublicKey(normalizedPrivateKey);
+  const public_key = derivePublicKey(normalizedPrivateKey);
   const nickname = normalizeNickname(options.nickname);
   return {
-    rootAgentId: deriveRootAgentId(publicKey),
-    publicKey,
-    privateKey: normalizedPrivateKey,
+    root_agent_id: deriveRootAgentId(public_key),
+    nickname,
+    public_key,
+    private_key: normalizedPrivateKey,
   };
 }

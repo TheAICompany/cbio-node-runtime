@@ -7,7 +7,7 @@ const created = await createVault(new MemoryStorageProvider(), {
 
 const client = createOwnerClient({
   vault: created.vault,
-  passwordVerifier: created.verifyPassword,
+  password_verifier: created.verifyPassword,
   skipWarmup: true,
 });
 
@@ -17,7 +17,7 @@ const provisioned = await client.ownerCreateAgent({
 });
 
 const updated = await client.ownerUpdateAgent({
-  rootAgentId: provisioned.agent.id,
+  root_agent_id: provisioned.agent.root_agent_id,
   nickname: "After",
   metadata: { team: "platform" },
 });
@@ -26,7 +26,7 @@ assert.equal(updated.nickname, "After");
 assert.deepEqual(updated.metadata, { team: "platform" });
 
 const listed = await client.ownerListAgents();
-const found = listed.find((agent) => agent.id === provisioned.agent.id);
+const found = listed.find((agent) => agent.root_agent_id === provisioned.agent.root_agent_id);
 assert.equal(found?.nickname, "After");
 assert.deepEqual(found?.metadata, { team: "platform" });
 

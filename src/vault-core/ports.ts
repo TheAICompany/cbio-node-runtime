@@ -20,16 +20,16 @@ import type {
 
 export interface SecretRepository {
   save(record: SecretRecord): Promise<void>;
-  delete(secretId: SecretId): Promise<void>;
+  delete(secret_id: SecretId): Promise<void>;
   getByAlias(alias: SecretAlias): Promise<SecretRecord | null>;
-  getById(secretId: SecretId): Promise<SecretRecord | null>;
-  list(vaultId: VaultId): Promise<readonly SecretRecord[]>;
+  getById(secret_id: SecretId): Promise<SecretRecord | null>;
+  list(vault_id: VaultId): Promise<readonly SecretRecord[]>;
 }
 
 export interface SecretCustody {
-  store(secretId: SecretId, plaintext: string): Promise<void>;
-  load(secretId: SecretId): Promise<string | null>;
-  delete(secretId: SecretId): Promise<void>;
+  store(secret_id: SecretId, plaintext: string): Promise<void>;
+  load(secret_id: SecretId): Promise<string | null>;
+  delete(secret_id: SecretId): Promise<void>;
 }
 
 export interface PolicyEngine {
@@ -62,16 +62,16 @@ export interface AgentProofVerifier {
 }
 
 export interface ISessionTokenRegistry {
-  issue(rootAgentId: string): Promise<string>;
-  verify(token: string, rootAgentId: string): Promise<boolean>;
+  issue(root_agent_id: string): Promise<string>;
+  verify(token: string, root_agent_id: string): Promise<boolean>;
   revoke(token: string): Promise<void>;
-  list(rootAgentId?: string): Promise<readonly StoredSessionToken[]>;
+  list(root_agent_id?: string): Promise<readonly StoredSessionToken[]>;
 }
 
 export interface AgentIdentityRegistry {
   register(identity: AgentIdentityRecord): Promise<void>;
-  get(vaultId: VaultId, rootAgentId: string): Promise<AgentIdentityRecord | null>;
-  list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]>;
+  get(vault_id: VaultId, root_agent_id: string): Promise<AgentIdentityRecord | null>;
+  list(vault_id: VaultId): Promise<readonly AgentIdentityRecord[]>;
 }
 
 
@@ -81,41 +81,41 @@ export interface ReplayGuard {
 
 export interface AgentSecretGrantRegistry {
   upsert(grant: AgentSecretGrant): Promise<void>;
-  get(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<AgentSecretGrant | null>;
-  list(vaultId: VaultId, rootAgentId?: string): Promise<readonly AgentSecretGrant[]>;
-  delete(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<void>;
+  get(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<AgentSecretGrant | null>;
+  list(vault_id: VaultId, root_agent_id?: string): Promise<readonly AgentSecretGrant[]>;
+  delete(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<void>;
 }
 
 export interface SecretDestinationGrantRegistry {
   upsert(grant: SecretDestinationGrant): Promise<void>;
-  get(vaultId: VaultId, secretAlias: string, siteId: string): Promise<SecretDestinationGrant | null>;
-  list(vaultId: VaultId, secretAlias?: string): Promise<readonly SecretDestinationGrant[]>;
-  delete(vaultId: VaultId, secretAlias: string, siteId: string): Promise<void>;
+  get(vault_id: VaultId, secret_alias: string, site_id: string): Promise<SecretDestinationGrant | null>;
+  list(vault_id: VaultId, secret_alias?: string): Promise<readonly SecretDestinationGrant[]>;
+  delete(vault_id: VaultId, secret_alias: string, site_id: string): Promise<void>;
 }
 
 
 
 export interface RequestRecordRegistry {
   save(record: RequestRecord): Promise<void>;
-  get(vaultId: VaultId, requestId: string): Promise<RequestRecord | null>;
-  list(vaultId: VaultId, rootAgentId?: string): Promise<readonly RequestRecord[]>;
+  get(vault_id: VaultId, request_id: string): Promise<RequestRecord | null>;
+  list(vault_id: VaultId, root_agent_id?: string): Promise<readonly RequestRecord[]>;
 }
 
 export interface VaultCoreDependencies {
-  vaultId: VaultId;
+  vault_id: VaultId;
   secrets: SecretRepository;
   custody: SecretCustody;
   policy: PolicyEngine;
   audit: AuditLog;
   executor: TrustedExecutor;
   agentRecords: AgentIdentityRegistry;
-  agentSecretGrants: AgentSecretGrantRegistry;
-  secretDestinationGrants: SecretDestinationGrantRegistry;
+  agent_secretGrants: AgentSecretGrantRegistry;
+  secret_destinationGrants: SecretDestinationGrantRegistry;
   requests: RequestRecordRegistry;
 
   agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;
-  sessionTokens: ISessionTokenRegistry;
+  session_tokens: ISessionTokenRegistry;
   clock: Clock;
   ids: IdGenerator;
 }

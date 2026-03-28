@@ -1,6 +1,5 @@
 import {
-  AuditAction,
-  AuditOutcome,
+  AuditOperation,
   DispatchStatus,
   type AgentIdentityRecord,
   type AgentRuntimeManifest,
@@ -54,18 +53,20 @@ function extractDomain(url: string): string {
 function toAuditEntry(
   deps: VaultCoreDependencies,
   actor: VaultPrincipal,
-  action: AuditAction,
-  outcome: AuditOutcome,
+  operation: AuditOperation,
+  decision: "allowed" | "denied",
+  execution_status: "not_executed" | "succeeded" | "failed",
   detail: string,
   extra: Partial<AuditEntry> = {},
 ): AuditEntry {
   return {
-    entryId: deps.ids.newAuditEntryId(),
-    occurredAt: deps.clock.nowIso(),
-    vaultId: deps.vaultId,
+    event_id: deps.ids.newAuditEntryId(),
+    ts: deps.clock.nowIso(),
+    vault_id: deps.vault_id.value,
     actor,
-    action,
-    outcome,
+    operation,
+    decision,
+    execution_status,
     detail,
     ...extra,
   };
@@ -78,8 +79,8 @@ export class VaultCore {
     this._deps = deps;
   }
 
-  get vaultId() {
-    return this._deps.vaultId;
+  get vault_id() {
+    return this._deps.vault_id;
   }
 
   private _assertOwnerPrincipal(actor: VaultPrincipal, errorCode: VaultCoreErrorCode = "VAULT_ACCESS_DENIED") {
@@ -93,7 +94,7 @@ export class VaultCore {
   }
 
   private async _verifyAgentControlProof(
-    command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; requestId: string; requestedAt: string },
+    command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string },
     actionName: string,
     extraAudit: Record<string, any> = {},
   ) {
@@ -103,8 +104,9 @@ export class VaultCore {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       await this._appendAudit(
-        toAuditEntry(this._deps, command.agent, AuditAction.EVALUATE_DISPATCH_POLICY, AuditOutcome.DENIED, `proof verification failed: ${detail}`, {
-          requestId: command.requestId,
+        toAuditEntry(this._deps, command.agent, AuditOperation.POLICY_EVALUATE, "denied", "not_executed", `proof verification failed: ${detail}`, {
+          request_id: command.request_id,
+          secret_alias: (command as any).secret_alias,
           ...extraAudit,
         }),
       );
@@ -116,26 +118,26 @@ export class VaultCore {
 
   async ownerGrantAgentSecret(
     actor: VaultPrincipal & { kind: "owner" },
-    rootAgentId: string,
-    secretAlias: string,
-    request?: { requestId?: string },
+    root_agent_id: string,
+    secret_alias: string,
+    request?: { request_id?: string },
   ): Promise<AgentSecretGrant> {
     this._assertOwnerPrincipal(actor);
     const now = this._deps.clock.nowIso();
     const grant: AgentSecretGrant = {
-      vaultId: this._deps.vaultId,
-      rootAgentId,
-      secretAlias,
+      vault_id: this._deps.vault_id,
+      root_agent_id,
+      secret_alias,
       status: "approved",
-      requestedAt: now,
-      grantedAt: now,
+      requested_at: now,
+      granted_at: now,
     };
-    await this._deps.agentSecretGrants.upsert(grant);
+    await this._deps.agent_secretGrants.upsert(grant);
     await this._appendAudit(
-      toAuditEntry(this._deps, actor, AuditAction.GRANT_AGENT_SECRET, AuditOutcome.SUCCEEDED, `granted secret "${secretAlias}" to agent "${rootAgentId}"`, {
-        requestId: request?.requestId,
-        rootAgentId,
-        secretAlias,
+      toAuditEntry(this._deps, actor, AuditOperation.GRANT_SECRET, "allowed", "succeeded", `granted secret "${secret_alias}" to agent "${root_agent_id}"`, {
+        request_id: request?.request_id,
+        root_agent_id,
+        secret_alias: secret_alias,
       }),
     );
     return grant;
@@ -143,26 +145,26 @@ export class VaultCore {
 
   async ownerGrantSecretDestination(
     actor: VaultPrincipal & { kind: "owner" },
-    secretAlias: string,
-    siteId: string,
-    request?: { requestId?: string },
+    secret_alias: string,
+    site_id: string,
+    request?: { request_id?: string },
   ): Promise<SecretDestinationGrant> {
     this._assertOwnerPrincipal(actor);
     const now = this._deps.clock.nowIso();
     const grant: SecretDestinationGrant = {
-      vaultId: this._deps.vaultId,
-      secretAlias,
-      siteId,
+      vault_id: this._deps.vault_id,
+      secret_alias,
+      site_id,
       status: "approved",
-      requestedAt: now,
-      grantedAt: now,
+      requested_at: now,
+      granted_at: now,
     };
-    await this._deps.secretDestinationGrants.upsert(grant);
+    await this._deps.secret_destinationGrants.upsert(grant);
     await this._appendAudit(
-      toAuditEntry(this._deps, actor, AuditAction.GRANT_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, `granted destination "${siteId}" for secret "${secretAlias}"`, {
-        requestId: request?.requestId,
-        secretAlias,
-        siteId,
+      toAuditEntry(this._deps, actor, AuditOperation.GRANT_DESTINATION, "allowed", "succeeded", `granted destination "${site_id}" for secret "${secret_alias}"`, {
+        request_id: request?.request_id,
+        secret_alias: secret_alias,
+        site_id,
       }),
     );
     return grant;
@@ -170,89 +172,89 @@ export class VaultCore {
 
   async ownerRevokeAgentSecret(
     actor: VaultPrincipal & { kind: "owner" },
-    rootAgentId: string,
-    secretAlias: string,
-    request?: { requestId?: string },
+    root_agent_id: string,
+    secret_alias: string,
+    request?: { request_id?: string },
   ): Promise<void> {
     this._assertOwnerPrincipal(actor);
-    await this._deps.agentSecretGrants.delete(this._deps.vaultId, rootAgentId, secretAlias);
+    await this._deps.agent_secretGrants.delete(this._deps.vault_id, root_agent_id, secret_alias);
     await this._appendAudit(
-      toAuditEntry(this._deps, actor, AuditAction.REVOKE_AGENT_SECRET, AuditOutcome.SUCCEEDED, `revoked secret "${secretAlias}" from agent "${rootAgentId}"`, {
-        requestId: request?.requestId,
-        rootAgentId,
-        secretAlias,
+      toAuditEntry(this._deps, actor, AuditOperation.REVOKE_SECRET, "allowed", "succeeded", `revoked secret "${secret_alias}" from agent "${root_agent_id}"`, {
+        request_id: request?.request_id,
+        root_agent_id,
+        secret_alias: secret_alias,
       }),
     );
   }
 
   async ownerRevokeSecretDestination(
     actor: VaultPrincipal & { kind: "owner" },
-    secretAlias: string,
-    siteId: string,
-    request?: { requestId?: string },
+    secret_alias: string,
+    site_id: string,
+    request?: { request_id?: string },
   ): Promise<void> {
     this._assertOwnerPrincipal(actor);
-    await this._deps.secretDestinationGrants.delete(this._deps.vaultId, secretAlias, siteId);
+    await this._deps.secret_destinationGrants.delete(this._deps.vault_id, secret_alias, site_id);
     await this._appendAudit(
-      toAuditEntry(this._deps, actor, AuditAction.REVOKE_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, `revoked destination "${siteId}" from secret "${secretAlias}"`, {
-        requestId: request?.requestId,
-        secretAlias,
-        siteId,
+      toAuditEntry(this._deps, actor, AuditOperation.REVOKE_DESTINATION, "allowed", "succeeded", `revoked destination "${site_id}" from secret "${secret_alias}"`, {
+        request_id: request?.request_id,
+        secret_alias: secret_alias,
+        site_id,
       }),
     );
   }
 
   async ownerListGrants(
     actor: VaultPrincipal & { kind: "owner" },
-    rootAgentId?: string,
-    secretAlias?: string,
+    root_agent_id?: string,
+    secret_alias?: string,
   ) {
     this._assertOwnerPrincipal(actor);
-    const [agentSecrets, secretDestinations] = await Promise.all([
-      this._deps.agentSecretGrants.list(this._deps.vaultId, rootAgentId),
-      this._deps.secretDestinationGrants.list(this._deps.vaultId, secretAlias),
+    const [agent_secrets, secret_destinations] = await Promise.all([
+      this._deps.agent_secretGrants.list(this._deps.vault_id, root_agent_id),
+      this._deps.secret_destinationGrants.list(this._deps.vault_id, secret_alias),
     ]);
-    return { agentSecrets, secretDestinations };
+    return { agent_secrets, secret_destinations };
   }
 
   // ─── Dispatch Authorization ───────────────────────────────────────────────────
 
   async agentAuthorizeDispatch(request: DispatchRequest): Promise<DispatchAuthorization> {
-    const { agent, secretAlias, targetUrl } = request;
+    const { agent, secret_alias, target_url } = request;
 
-    if (!secretAlias) {
-      return { vaultId: this._deps.vaultId, decision: "deny", reason: "secretAlias required", secretId: null };
+    if (!secret_alias) {
+      return { vault_id: this._deps.vault_id, decision: "deny", reason: "secret_alias required", secret_id: null };
     }
 
-    const secret = await this._deps.secrets.getByAlias({ value: secretAlias });
+    const secret = await this._deps.secrets.getByAlias({ value: secret_alias });
     if (!secret) {
-      return { vaultId: this._deps.vaultId, decision: "deny", reason: `secret not found: ${secretAlias}`, secretId: null };
+      return { vault_id: this._deps.vault_id, decision: "deny", reason: `secret not found: ${secret_alias}`, secret_id: null };
     }
 
     // 1. Check Agent-Secret Grant
-    const agentSecretGrant = await this._deps.agentSecretGrants.get(this._deps.vaultId, agent.id, secretAlias);
-    const agentSecretApproved = agentSecretGrant?.status === "approved";
+    const agent_secretGrant = await this._deps.agent_secretGrants.get(this._deps.vault_id, agent.id, secret_alias);
+    const agent_secretApproved = agent_secretGrant?.status === "approved";
 
     // 2. Check Secret-Destination Grant
-    const siteId = extractDomain(targetUrl);
-    const destGrant = await this._deps.secretDestinationGrants.get(this._deps.vaultId, secretAlias, siteId);
+    const site_id = extractDomain(target_url);
+    const destGrant = await this._deps.secret_destinationGrants.get(this._deps.vault_id, secret_alias, site_id);
     const destApproved = destGrant?.status === "approved";
 
-    if (agentSecretApproved && destApproved) {
-      return { vaultId: this._deps.vaultId, decision: "allow", reason: "granted", secretId: secret.secretId };
+    if (agent_secretApproved && destApproved) {
+      return { vault_id: this._deps.vault_id, decision: "allow", reason: "granted", secret_id: secret.secret_id };
     }
 
-    const missingGrants = {
-      agentSecret: !agentSecretApproved,
-      secretDestination: !destApproved,
+    const missing_grants = {
+      agent_secret: !agent_secretApproved,
+      secret_destination: !destApproved,
     };
 
     return {
-      vaultId: this._deps.vaultId,
+      vault_id: this._deps.vault_id,
       decision: "pending",
       reason: "pending approval",
-      secretId: secret.secretId,
-      missingGrants,
+      secret_id: secret.secret_id,
+      missing_grants,
     };
   }
 
@@ -263,18 +265,18 @@ export class VaultCore {
 
     if (authorization.decision === "deny") {
       const result: DispatchResult = {
-        vaultId: this._deps.vaultId,
-        requestId: request.requestId,
+        vault_id: this._deps.vault_id,
+        request_id: request.request_id,
         status: DispatchStatus.DENIED,
-        targetUrl: request.targetUrl,
+        target_url: request.target_url,
         method: request.method,
         error: authorization.reason ?? "denied",
       };
       await this._appendAudit(
-        toAuditEntry(this._deps, request.agent, AuditAction.EVALUATE_DISPATCH_POLICY, AuditOutcome.DENIED, authorization.reason ?? "denied", {
-          requestId: request.requestId,
-          targetUrl: request.targetUrl,
-          secretAlias: request.secretAlias,
+        toAuditEntry(this._deps, request.agent, AuditOperation.POLICY_EVALUATE, "denied", "not_executed", authorization.reason ?? "denied", {
+          request_id: request.request_id,
+          target: { kind: "http", url: request.target_url },
+          secret_alias: request.secret_alias,
         }),
       );
       await this._recordRequestInternal(request, result);
@@ -283,41 +285,41 @@ export class VaultCore {
 
     if (authorization.decision === "pending") {
       const result: DispatchResult = {
-        vaultId: this._deps.vaultId,
-        requestId: request.requestId,
+        vault_id: this._deps.vault_id,
+        request_id: request.request_id,
         status: DispatchStatus.PENDING,
-        targetUrl: request.targetUrl,
+        target_url: request.target_url,
         method: request.method,
       };
       await this._appendAudit(
-        toAuditEntry(this._deps, request.agent, AuditAction.PENDING_DISPATCH_APPROVAL, AuditOutcome.ALLOWED, "request held for human approval", {
-          requestId: request.requestId,
-          targetUrl: request.targetUrl,
-          secretAlias: request.secretAlias,
+        toAuditEntry(this._deps, request.agent, AuditOperation.DISPATCH_HOLD, "allowed", "not_executed", "request held for human approval", {
+          request_id: request.request_id,
+          target: { kind: "http", url: request.target_url },
+          secret_alias: request.secret_alias,
         }),
       );
-      await this._recordRequestInternal(request, result, authorization.missingGrants);
+      await this._recordRequestInternal(request, result, authorization.missing_grants);
       return result;
     }
 
     // Proceed with dispatch
-    const secretId = authorization.secretId!;
-    const secretRecord = await this._deps.secrets.getById(secretId);
+    const secret_id = authorization.secret_id!;
+    const secretRecord = await this._deps.secrets.getById(secret_id);
     if (!secretRecord) {
       throw new VaultCoreError("secret record not found after authorization", "VAULT_INTERNAL_ERROR");
     }
 
-    const plaintext = await this._deps.custody.load(secretId);
+    const plaintext = await this._deps.custody.load(secret_id);
     if (plaintext === null) {
       throw new VaultCoreError("secret material not found", "VAULT_SECRET_NOT_FOUND");
     }
 
     const result = await this._deps.executor.dispatch(
       {
-        vaultId: this._deps.vaultId,
-        requestId: request.requestId,
-        secretId: secretId,
-        targetUrl: request.targetUrl,
+        vault_id: this._deps.vault_id,
+        request_id: request.request_id,
+        secret_id: secret_id,
+        target_url: request.target_url,
         method: request.method,
         headers: request.headers,
         body: request.body,
@@ -329,14 +331,15 @@ export class VaultCore {
       toAuditEntry(
         this._deps,
         request.agent,
-        AuditAction.DISPATCH_SECRET,
-        result.status === DispatchStatus.SUCCEEDED ? AuditOutcome.SUCCEEDED : AuditOutcome.FAILED,
+        AuditOperation.SECRET_DISPATCH,
+        "allowed",
+        result.status === DispatchStatus.SUCCEEDED ? "succeeded" : "failed",
         result.status === DispatchStatus.SUCCEEDED ? "dispatch completed" : (result.error ?? "dispatch failed"),
         {
-          requestId: request.requestId,
-          targetUrl: request.targetUrl,
-          secretAlias: request.secretAlias,
-          secretId: secretId.value,
+          request_id: request.request_id,
+          target: { kind: "http", url: request.target_url },
+          secret_alias: request.secret_alias,
+          secret_id: secret_id.value,
         },
       ),
     );
@@ -345,8 +348,8 @@ export class VaultCore {
 
     return {
       ...result,
-      vaultId: this._deps.vaultId,
-      responseBody: undefined, // Hide body in direct return
+      vault_id: this._deps.vault_id,
+      response_body: undefined, // Hide body in direct return
     };
   }
 
@@ -354,11 +357,11 @@ export class VaultCore {
 
   async ownerApproveDispatch(
     actor: VaultPrincipal & { kind: "owner" },
-    requestId: string,
+    request_id: string,
     decision: DispatchApprovalDecision,
   ): Promise<DispatchResult | null> {
     this._assertOwnerPrincipal(actor);
-    const record = await this._deps.requests.get(this._deps.vaultId, requestId);
+    const record = await this._deps.requests.get(this._deps.vault_id, request_id);
     if (!record) {
       throw new VaultCoreError("request record not found", "VAULT_REQUEST_NOT_FOUND");
     }
@@ -374,20 +377,20 @@ export class VaultCore {
       };
       await this._deps.requests.save(updated);
       await this._appendAudit(
-        toAuditEntry(this._deps, actor, AuditAction.REJECT_DISPATCH, AuditOutcome.SUCCEEDED, "dispatch rejected by owner", {
-          requestId,
-          rootAgentId: record.rootAgentId,
+        toAuditEntry(this._deps, actor, AuditOperation.DISPATCH_REJECT, "allowed", "succeeded", "dispatch rejected by owner", {
+          request_id,
+          root_agent_id: record.root_agent_id,
         }),
       );
       return null;
     }
 
-    const secretAlias = record.request.secretAlias;
-    if (!secretAlias) {
-      throw new VaultCoreError("record missing secretAlias", "VAULT_INTERNAL_ERROR");
+    const secret_alias = record.request.secret_alias;
+    if (!secret_alias) {
+      throw new VaultCoreError("record missing secret_alias", "VAULT_INTERNAL_ERROR");
     }
 
-    const secret = await this._deps.secrets.getByAlias({ value: secretAlias });
+    const secret = await this._deps.secrets.getByAlias({ value: secret_alias });
     if (!secret) {
       throw new VaultCoreError("secret not found during approval", "VAULT_SECRET_NOT_FOUND");
     }
@@ -395,53 +398,53 @@ export class VaultCore {
     // Auto-grant if requested
     if (decision === "allow_and_grant") {
       const now = this._deps.clock.nowIso();
-      const siteId = extractDomain(record.request.targetUrl);
+      const site_id = extractDomain(record.request.target_url);
 
       await Promise.all([
-        this._deps.agentSecretGrants.upsert({
-          vaultId: this._deps.vaultId,
-          rootAgentId: record.rootAgentId,
-          secretAlias,
+        this._deps.agent_secretGrants.upsert({
+          vault_id: this._deps.vault_id,
+          root_agent_id: record.root_agent_id,
+          secret_alias,
           status: "approved",
-          requestedAt: now,
-          grantedAt: now,
+          requested_at: now,
+          granted_at: now,
         }),
-        this._deps.secretDestinationGrants.upsert({
-          vaultId: this._deps.vaultId,
-          secretAlias,
-          siteId,
+        this._deps.secret_destinationGrants.upsert({
+          vault_id: this._deps.vault_id,
+          secret_alias,
+          site_id,
           status: "approved",
-          requestedAt: now,
-          grantedAt: now,
+          requested_at: now,
+          granted_at: now,
         }),
       ]);
 
       await this._appendAudit(
-        toAuditEntry(this._deps, actor, AuditAction.GRANT_AGENT_SECRET, AuditOutcome.SUCCEEDED, "granted during dispatch approval", {
-          rootAgentId: record.rootAgentId,
-          secretAlias,
+        toAuditEntry(this._deps, actor, AuditOperation.GRANT_SECRET, "allowed", "succeeded", "granted during dispatch approval", {
+          root_agent_id: record.root_agent_id,
+          secret_alias: secret_alias,
         }),
       );
       await this._appendAudit(
-        toAuditEntry(this._deps, actor, AuditAction.GRANT_SECRET_DESTINATION, AuditOutcome.SUCCEEDED, "granted during dispatch approval", {
-          secretAlias,
-          siteId,
+        toAuditEntry(this._deps, actor, AuditOperation.GRANT_DESTINATION, "allowed", "succeeded", "granted during dispatch approval", {
+          secret_alias: secret_alias,
+          site_id,
         }),
       );
     }
 
     // Execute
-    const plaintext = await this._deps.custody.load(secret.secretId);
+    const plaintext = await this._deps.custody.load(secret.secret_id);
     if (plaintext === null) {
       throw new VaultCoreError("secret material not found", "VAULT_SECRET_NOT_FOUND");
     }
 
     const result = await this._deps.executor.dispatch(
       {
-        vaultId: this._deps.vaultId,
-        requestId,
-        secretId: secret.secretId,
-        targetUrl: record.request.targetUrl,
+        vault_id: this._deps.vault_id,
+        request_id,
+        secret_id: secret.secret_id,
+        target_url: record.request.target_url,
         method: record.request.method,
         headers: record.request.headers,
         body: record.request.body,
@@ -452,8 +455,8 @@ export class VaultCore {
     const finalRecord: RequestRecord = {
       ...record,
       response: {
-        status: result.responseStatus,
-        body: result.responseBody,
+        status: result.response_status,
+        body: result.response_body,
         error: result.error,
       },
       execution: { status: result.status },
@@ -461,9 +464,9 @@ export class VaultCore {
     await this._deps.requests.save(finalRecord);
 
     await this._appendAudit(
-      toAuditEntry(this._deps, actor, AuditAction.APPROVE_DISPATCH, AuditOutcome.SUCCEEDED, `dispatch approved (${decision})`, {
-        requestId,
-        rootAgentId: record.rootAgentId,
+      toAuditEntry(this._deps, actor, AuditOperation.DISPATCH_APPROVE, "allowed", "succeeded", `dispatch approved (${decision})`, {
+        request_id,
+        root_agent_id: record.root_agent_id,
       }),
     );
 
@@ -472,71 +475,71 @@ export class VaultCore {
 
   // ─── Agent Control APIs ───────────────────────────────────────────────────────
 
-  async agentGetRuntimeManifest(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; requestId: string; requestedAt: string }): Promise<AgentRuntimeManifest> {
+  async agentGetRuntimeManifest(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string }): Promise<AgentRuntimeManifest> {
     await this._verifyAgentControlProof(command, "get_manifest");
 
-    const agentRecord = await this._deps.agentRecords.get(this._deps.vaultId, command.agent.id);
+    const agentRecord = await this._deps.agentRecords.get(this._deps.vault_id, command.agent.id);
     if (!agentRecord) {
       throw new VaultCoreError("agent.identity not registered", "VAULT_DISPATCH_DENIED");
     }
 
-    const [agentSecrets, secretDestinations] = await Promise.all([
-      this._deps.agentSecretGrants.list(this._deps.vaultId, command.agent.id),
-      this._deps.secretDestinationGrants.list(this._deps.vaultId), // All destination grants for these secrets? Or just a subset? 
+    const [agent_secrets, secret_destinations] = await Promise.all([
+      this._deps.agent_secretGrants.list(this._deps.vault_id, command.agent.id),
+      this._deps.secret_destinationGrants.list(this._deps.vault_id), // All destination grants for these secrets? Or just a subset? 
       // For simplicity, return all destinations that mention a secret the agent has a grant for.
     ]);
 
-    const secretAliases = new Set(agentSecrets.map(g => g.secretAlias));
-    const relevantDestinations = secretDestinations.filter(d => secretAliases.has(d.secretAlias));
+    const secret_aliases = new Set(agent_secrets.map(g => g.secret_alias));
+    const relevantDestinations = secret_destinations.filter(d => secret_aliases.has(d.secret_alias));
 
     return {
-      rootAgentId: command.agent.id,
-      vaultId: this._deps.vaultId.value,
-      issuedAt: this._deps.clock.nowIso(),
+      root_agent_id: command.agent.id,
+      vault_id: this._deps.vault_id.value,
+      issued_at: this._deps.clock.nowIso(),
       agent: {
-        rootAgentId: agentRecord.rootAgentId,
-                publicKey: agentRecord.publicKey,
+        root_agent_id: agentRecord.root_agent_id,
+                public_key: agentRecord.public_key,
         nickname: agentRecord.nickname,
         metadata: agentRecord.metadata,
       },
       grants: {
-        agentSecrets: agentSecrets.filter(g => g.status === "approved"),
-        secretDestinations: relevantDestinations.filter(d => d.status === "approved"),
+        agent_secrets: agent_secrets.filter(g => g.status === "approved"),
+        secret_destinations: relevantDestinations.filter(d => d.status === "approved"),
       },
       tools: getAgentToolbox(),
     };
   }
 
-  async agentListSecrets(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; requestId: string; requestedAt: string }): Promise<readonly AgentVisibleSecretRecord[]> {
+  async agentListSecrets(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string }): Promise<readonly AgentVisibleSecretRecord[]> {
     await this._verifyAgentControlProof(command, "list_secrets");
-    const records = await this._deps.secrets.list(this._deps.vaultId);
-    const grants = await this._deps.agentSecretGrants.list(this._deps.vaultId, command.agent.id);
-    const approvedAliases = new Set(grants.filter(g => g.status === "approved").map(g => g.secretAlias));
+    const records = await this._deps.secrets.list(this._deps.vault_id);
+    const grants = await this._deps.agent_secretGrants.list(this._deps.vault_id, command.agent.id);
+    const approvedAliases = new Set(grants.filter(g => g.status === "approved").map(g => g.secret_alias));
 
     return records.map(record => ({
-      vaultId: record.vaultId,
-      secretId: record.secretId,
+      vault_id: record.vault_id,
+      secret_id: record.secret_id,
       alias: record.alias,
       version: record.version,
-      lifecycleStatus: record.lifecycleStatus ?? "ACTIVE",
-      issuerId: record.issuerId,
+      lifecycle_status: record.lifecycle_status ?? "ACTIVE",
+      issuer_id: record.issuer_id,
       source: record.source,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
       granted: approvedAliases.has(record.alias.value),
     }));
   }
 
-  async agentListRequests(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; requestId: string; requestedAt: string }): Promise<readonly AgentVisibleRequestRecord[]> {
+  async agentListRequests(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string }): Promise<readonly AgentVisibleRequestRecord[]> {
     await this._verifyAgentControlProof(command, "list_requests");
-    const records = await this._deps.requests.list(this._deps.vaultId, command.agent.id);
+    const records = await this._deps.requests.list(this._deps.vault_id, command.agent.id);
     return records.map(r => this.toAgentVisibleRequestRecord(r));
   }
 
-  async agentGetRequest(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; requestId: string; requestedAt: string; targetRequestId: string }): Promise<any> {
+  async agentGetRequest(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string; target_request_id: string }): Promise<any> {
     await this._verifyAgentControlProof(command, "read_request");
-    const record = await this._deps.requests.get(this._deps.vaultId, command.targetRequestId);
-    if (!record || record.rootAgentId !== command.agent.id) {
+    const record = await this._deps.requests.get(this._deps.vault_id, command.target_request_id);
+    if (!record || record.root_agent_id !== command.agent.id) {
       throw new VaultCoreError("request record not found", "VAULT_READ_DENIED");
     }
 
@@ -547,51 +550,51 @@ export class VaultCore {
     const parsedResponseBody = applyResponseReadPolicy(record.response?.body, { paths: [] });
 
     return {
-      requestId: record.requestId,
-      executionStatus: record.execution.status,
-      responseStatus: record.response?.status,
-      responseBody: parsedResponseBody,
+      request_id: record.request_id,
+      execution_status: record.execution.status,
+      response_status: record.response?.status,
+      response_body: parsedResponseBody,
       error: record.response?.error,
     };
   }
 
   // ─── Owner Management APIs ────────────────────────────────────────────────────
 
-  async ownerRegisterAgentIdentity(command: { vaultId: VaultId; requestId: string; owner: VaultPrincipal; agentRecord: AgentIdentityRecord; requestedAt: string }) {
+  async ownerRegisterAgentIdentity(command: { vault_id: VaultId; request_id: string; owner: VaultPrincipal; agentRecord: AgentIdentityRecord; requested_at: string }) {
     this._assertOwnerPrincipal(command.owner);
     await this._deps.agentRecords.register(command.agentRecord);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.REGISTER_AGENT_IDENTITY, AuditOutcome.SUCCEEDED, `agent identity registered: "${command.agentRecord.rootAgentId}"`, { rootAgentId: command.agentRecord.rootAgentId }));
+    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.IDENTITY_REGISTER, "allowed", "succeeded", `agent identity registered: "${command.agentRecord.root_agent_id}"`, { root_agent_id: command.agentRecord.root_agent_id }));
   }
 
-  async ownerUpdateAgentIdentity(command: { vaultId: VaultId; requestId: string; owner: VaultPrincipal; rootAgentId: string; nickname?: string; metadata?: Record<string, any>; requestedAt: string }): Promise<AgentIdentityRecord> {
+  async ownerUpdateAgentIdentity(command: { vault_id: VaultId; request_id: string; owner: VaultPrincipal; root_agent_id: string; nickname?: string; metadata?: Record<string, any>; requested_at: string }): Promise<AgentIdentityRecord> {
     this._assertOwnerPrincipal(command.owner);
-    const existing = await this._deps.agentRecords.get(command.vaultId, command.rootAgentId);
+    const existing = await this._deps.agentRecords.get(command.vault_id, command.root_agent_id);
     if (!existing) throw new VaultCoreError("agent identity not found", "VAULT_IDENTITY_NOT_FOUND");
     const updated = { ...existing, nickname: command.nickname ?? existing.nickname, metadata: command.metadata ?? existing.metadata };
     await this._deps.agentRecords.register(updated);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.UPDATE_AGENT_IDENTITY, AuditOutcome.SUCCEEDED, `agent identity updated: "${command.rootAgentId}"`, { rootAgentId: command.rootAgentId }));
+    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.IDENTITY_UPDATE, "allowed", "succeeded", `agent identity updated: "${command.root_agent_id}"`, { root_agent_id: command.root_agent_id }));
     return updated;
   }
 
   async ownerCreateSecret(command: OwnerCreateSecretCommand): Promise<SecretRecord> {
     this._assertOwnerPrincipal(command.owner);
     await this._deps.policy.authorizeWrite(command);
-    const secretId = this._deps.ids.newSecretId();
+    const secret_id = this._deps.ids.newSecretId();
     const now = this._deps.clock.nowIso();
     const record: SecretRecord = {
-      vaultId: command.vaultId,
-      secretId,
+      vault_id: command.vault_id,
+      secret_id,
       alias: { value: command.alias },
       version: this._deps.ids.newVersion(),
-      lifecycleStatus: "ACTIVE",
-      issuerId: null,
-      source: command.source ? (command.source.kind === "request" ? { kind: "request", requestId: command.source.requestId! } : { kind: "manual" }) : { kind: "manual" },
-      createdAt: now,
-      updatedAt: now,
+      lifecycle_status: "ACTIVE",
+      issuer_id: null,
+      source: command.source ? (command.source.kind === "request" ? { kind: "request", request_id: command.source.request_id! } : { kind: "manual" }) : { kind: "manual" },
+      created_at: now,
+      updated_at: now,
     };
     await this._deps.secrets.save(record);
-    await this._deps.custody.store(secretId, command.plaintext);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, `secret created: "${command.alias}"`, { secretAlias: command.alias, secretId: secretId.value }));
+    await this._deps.custody.store(secret_id, command.plaintext);
+    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret created: "${command.alias}"`, { secret_alias: command.alias, secret_id: secret_id.value }));
     return record;
   }
 
@@ -600,53 +603,53 @@ export class VaultCore {
     await this._deps.policy.authorizeWrite(command);
     const existing = await this._deps.secrets.getByAlias({ value: command.alias });
     if (!existing) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
-    const secretId = existing.secretId;
+    const secret_id = existing.secret_id;
     const now = this._deps.clock.nowIso();
     const record: SecretRecord = {
       ...existing,
       version: this._deps.ids.newVersion(),
-      updatedAt: now,
+      updated_at: now,
     };
     await this._deps.secrets.save(record);
-    await this._deps.custody.store(secretId, command.plaintext);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, `secret updated: "${command.alias}"`, { secretAlias: command.alias, secretId: secretId.value }));
+    await this._deps.custody.store(secret_id, command.plaintext);
+    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret updated: "${command.alias}"`, { secret_alias: command.alias, secret_id: secret_id.value }));
     return record;
   }
 
-  async ownerRemoveSecret(command: { kind: "owner.remove_secret"; vaultId: VaultId; requestId: string; owner: VaultPrincipal; alias: string; requestedAt: string }) {
+  async ownerRemoveSecret(command: { kind: "owner.remove_secret"; vault_id: VaultId; request_id: string; owner: VaultPrincipal; alias: string; requested_at: string }) {
     this._assertOwnerPrincipal(command.owner);
     const record = await this._deps.secrets.getByAlias({ value: command.alias });
     if (!record) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
-    await this._deps.secrets.delete(record.secretId);
-    await this._deps.custody.delete(record.secretId);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.DELETE_SECRET, AuditOutcome.SUCCEEDED, `secret deleted: "${command.alias}"`, { secretAlias: command.alias, secretId: record.secretId.value }));
+    await this._deps.secrets.delete(record.secret_id);
+    await this._deps.custody.delete(record.secret_id);
+    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.SECRET_DELETE, "allowed", "succeeded", `secret deleted: "${command.alias}"`, { secret_alias: command.alias, secret_id: record.secret_id.value }));
   }
 
   async ownerWriteSecret(command: any): Promise<SecretRecord> {
     this._assertOwnerPrincipal(command.owner ?? command.issuer);
     await this._deps.policy.authorizeWrite(command);
     const existing = await this._deps.secrets.getByAlias({ value: command.alias });
-    const secretId = existing ? existing.secretId : this._deps.ids.newSecretId();
+    const secret_id = existing ? existing.secret_id : this._deps.ids.newSecretId();
     const now = this._deps.clock.nowIso();
     const record: SecretRecord = {
-      vaultId: command.vaultId,
-      secretId,
+      vault_id: command.vault_id,
+      secret_id,
       alias: { value: command.alias },
       version: this._deps.ids.newVersion(),
-      lifecycleStatus: "ACTIVE",
-      issuerId: command.issuer?.id ?? null,
+      lifecycle_status: "ACTIVE",
+      issuer_id: command.issuer?.id ?? null,
       source: command.source,
-      createdAt: existing ? existing.createdAt : now,
-      updatedAt: now,
+      created_at: existing ? existing.created_at : now,
+      updated_at: now,
     };
     await this._deps.secrets.save(record);
-    await this._deps.custody.store(secretId, command.plaintext);
+    await this._deps.custody.store(secret_id, command.plaintext);
     // Generic write doesn't have a specific audit message here, assuming it's called by Create/Update which do their own audit.
     // However, if called directly:
     if (!existing) {
-       await this._appendAudit(toAuditEntry(this._deps, command.owner ?? command.issuer, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, `secret created via generic write: "${command.alias}"`, { secretAlias: command.alias, secretId: secretId.value }));
+       await this._appendAudit(toAuditEntry(this._deps, command.owner ?? command.issuer, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret created via generic write: "${command.alias}"`, { secret_alias: command.alias, secret_id: secret_id.value }));
     } else {
-       await this._appendAudit(toAuditEntry(this._deps, command.owner ?? command.issuer, AuditAction.WRITE_SECRET, AuditOutcome.SUCCEEDED, `secret updated via generic write: "${command.alias}"`, { secretAlias: command.alias, secretId: secretId.value }));
+       await this._appendAudit(toAuditEntry(this._deps, command.owner ?? command.issuer, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret updated via generic write: "${command.alias}"`, { secret_alias: command.alias, secret_id: secret_id.value }));
     }
     return record;
   }
@@ -654,7 +657,7 @@ export class VaultCore {
   async ownerReadAudit(actor: VaultPrincipal & { kind: "owner" }, query: AuditQuery): Promise<readonly AuditEntry[]> {
     this._assertOwnerPrincipal(actor);
     const entries = await this._deps.audit.query(query);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditAction.READ_AUDIT, AuditOutcome.SUCCEEDED, "audit log accessed", { detail: JSON.stringify(query) }));
+    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_READ_AUDIT, "allowed", "succeeded", "audit log accessed", { detail: JSON.stringify(query) }));
     return entries;
   }
 
@@ -662,78 +665,78 @@ export class VaultCore {
     this._assertOwnerPrincipal(actor);
     const record = await this._deps.secrets.getByAlias({ value: alias });
     if (!record) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
-    const plaintext = await this._deps.custody.load(record.secretId);
+    const plaintext = await this._deps.custody.load(record.secret_id);
     if (plaintext === null) throw new VaultCoreError("secret material not found", "VAULT_SECRET_NOT_FOUND");
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditAction.EXPORT_SECRET, AuditOutcome.SUCCEEDED, `secret exported as plaintext: "${alias}"`, { secretAlias: alias, secretId: record.secretId.value }));
-    return { vaultId: this._deps.vaultId, secretId: record.secretId, alias: record.alias, plaintext, exportedAt: this._deps.clock.nowIso() };
+    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.SECRET_EXPORT, "allowed", "succeeded", `secret exported as plaintext: "${alias}"`, { secret_alias: alias, secret_id: record.secret_id.value }));
+    return { vault_id: this._deps.vault_id, secret_id: record.secret_id, alias: record.alias, plaintext, exported_at: this._deps.clock.nowIso() };
   }
 
   async ownerListAgents(actor: VaultPrincipal & { kind: "owner" }): Promise<readonly AgentIdentityRecord[]> {
     this._assertOwnerPrincipal(actor);
-    const identities = await this._deps.agentRecords.list(this._deps.vaultId);
-    const sessionTokens = await this._deps.sessionTokens.list();
+    const identities = await this._deps.agentRecords.list(this._deps.vault_id);
+    const session_tokens = await this._deps.session_tokens.list();
     const tokensByAgentId = new Map<string, StoredSessionToken[]>();
-    for (const st of sessionTokens) {
-      const list = tokensByAgentId.get(st.rootAgentId) ?? [];
+    for (const st of session_tokens) {
+      const list = tokensByAgentId.get(st.root_agent_id) ?? [];
       list.push(st);
-      tokensByAgentId.set(st.rootAgentId, list);
+      tokensByAgentId.set(st.root_agent_id, list);
     }
-    const result = identities.map(id => ({ ...id, sessionTokens: tokensByAgentId.get(id.rootAgentId) ?? [] }));
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditAction.LIST_AGENTS, AuditOutcome.SUCCEEDED, "agent identity list accessed"));
+    const result = identities.map(id => ({ ...id, session_tokens: tokensByAgentId.get(id.root_agent_id) ?? [] }));
+    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_LIST_AGENTS, "allowed", "succeeded", "agent identity list accessed"));
     return result;
   }
 
-  async ownerListRequests(actor: VaultPrincipal & { kind: "owner" }, rootAgentId?: string): Promise<readonly OwnerVisibleRequestRecord[]> {
+  async ownerListRequests(actor: VaultPrincipal & { kind: "owner" }, root_agent_id?: string): Promise<readonly OwnerVisibleRequestRecord[]> {
     this._assertOwnerPrincipal(actor);
-    const records = await this._deps.requests.list(this._deps.vaultId, rootAgentId);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditAction.LIST_REQUESTS, AuditOutcome.SUCCEEDED, "request list accessed"));
+    const records = await this._deps.requests.list(this._deps.vault_id, root_agent_id);
+    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_LIST_REQUESTS, "allowed", "succeeded", "request list accessed"));
     return records.map(r => this.toOwnerVisibleRequestRecord(r));
   }
 
-  async ownerGetRequest(actor: VaultPrincipal & { kind: "owner" }, requestId: string): Promise<OwnerRequestRecord> {
+  async ownerGetRequest(actor: VaultPrincipal & { kind: "owner" }, request_id: string): Promise<OwnerRequestRecord> {
     this._assertOwnerPrincipal(actor);
-    const record = await this._deps.requests.get(this._deps.vaultId, requestId);
+    const record = await this._deps.requests.get(this._deps.vault_id, request_id);
     if (!record) throw new VaultCoreError("request record not found", "VAULT_REQUEST_NOT_FOUND");
     const result = this.toOwnerRequestRecord(record);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditAction.READ_REQUEST, AuditOutcome.SUCCEEDED, `dispatch request detailed: "${requestId}"`, { requestId }));
+    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_READ_REQUEST, "allowed", "succeeded", `dispatch request detailed: "${request_id}"`, { request_id }));
     return result;
   }
 
   async ownerListSecrets(actor: VaultPrincipal & { kind: "owner" }): Promise<readonly AgentVisibleSecretRecord[]> {
     this._assertOwnerPrincipal(actor);
-    const records = await this._deps.secrets.list(this._deps.vaultId);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditAction.LIST_SECRETS, AuditOutcome.SUCCEEDED, "secret list accessed"));
+    const records = await this._deps.secrets.list(this._deps.vault_id);
+    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_LIST_SECRETS, "allowed", "succeeded", "secret list accessed"));
     return records.map(r => ({
-      vaultId: r.vaultId,
-      secretId: r.secretId,
+      vault_id: r.vault_id,
+      secret_id: r.secret_id,
       alias: r.alias,
       version: r.version,
-      lifecycleStatus: r.lifecycleStatus ?? "ACTIVE",
-      issuerId: r.issuerId,
+      lifecycle_status: r.lifecycle_status ?? "ACTIVE",
+      issuer_id: r.issuer_id,
       source: r.source,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
       granted: true,
     }));
   }
 
-  async ownerIssueSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal; rootAgentId: string }) {
+  async ownerIssueSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal; root_agent_id: string }) {
     this._assertOwnerPrincipal(request.actor);
-    const token = await this._deps.sessionTokens.issue(request.rootAgentId);
-    await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditAction.ISSUE_SESSION_TOKEN, AuditOutcome.SUCCEEDED, `session token issued for agent: "${request.rootAgentId}"`, { rootAgentId: request.rootAgentId }));
-    return { token, rootAgentId: request.rootAgentId, issuedAt: this._deps.clock.nowIso() };
+    const token = await this._deps.session_tokens.issue(request.root_agent_id);
+    await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditOperation.IDENTITY_ISSUE_TOKEN, "allowed", "succeeded", `session token issued for agent: "${request.root_agent_id}"`, { root_agent_id: request.root_agent_id }));
+    return { token, root_agent_id: request.root_agent_id, issued_at: this._deps.clock.nowIso() };
   }
 
   async ownerIssueAllAgentSessionTokens(actor: VaultPrincipal & { kind: "owner" }) {
     this._assertOwnerPrincipal(actor);
     const agents = await this.ownerListAgents(actor);
-    return Promise.all(agents.map(a => this.ownerIssueSessionToken({ vaultId: this._deps.vaultId, actor, rootAgentId: a.rootAgentId })));
+    return Promise.all(agents.map(a => this.ownerIssueSessionToken({ vault_id: this._deps.vault_id, actor, root_agent_id: a.root_agent_id })));
   }
 
-  async ownerRevokeSessionToken(request: { vaultId: VaultId; actor: VaultPrincipal; token: string }) {
+  async ownerRevokeSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal; token: string }) {
     this._assertOwnerPrincipal(request.actor);
-    await this._deps.sessionTokens.revoke(request.token);
-    await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditAction.REVOKE_SESSION_TOKEN, AuditOutcome.SUCCEEDED, "session token revoked"));
+    await this._deps.session_tokens.revoke(request.token);
+    await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditOperation.IDENTITY_REVOKE_TOKEN, "allowed", "succeeded", "session token revoked"));
   }
 
 
@@ -759,28 +762,28 @@ export class VaultCore {
   private async _recordRequestInternal(
     request: DispatchRequest,
     result: DispatchResult,
-    missingGrants?: { agentSecret?: boolean; secretDestination?: boolean },
+    missing_grants?: { agent_secret?: boolean; secret_destination?: boolean },
   ) {
     const record: RequestRecord = {
-      vaultId: this._deps.vaultId,
-      requestId: request.requestId,
-      rootAgentId: request.agent.id,
+      vault_id: this._deps.vault_id,
+      request_id: request.request_id,
+      root_agent_id: request.agent.id,
       reason: request.reason,
-      createdAt: this._deps.clock.nowIso(),
+      created_at: this._deps.clock.nowIso(),
       request: {
-        targetUrl: request.targetUrl,
+        target_url: request.target_url,
         method: request.method,
         headers: request.headers,
         body: request.body,
-        secretAlias: request.secretAlias,
+        secret_alias: request.secret_alias,
       },
       response: {
-        status: result.responseStatus,
-        body: result.responseBody,
+        status: result.response_status,
+        body: result.response_body,
         error: result.error,
       },
       execution: { status: result.status },
-      missingGrants,
+      missing_grants,
     };
     await this._deps.requests.save(record);
     if (result.status === DispatchStatus.PENDING) {
@@ -790,48 +793,48 @@ export class VaultCore {
 
   private toAgentVisibleRequestRecord(record: RequestRecord): AgentVisibleRequestRecord {
     return {
-      requestId: record.requestId,
-      createdAt: record.createdAt,
+      request_id: record.request_id,
+      created_at: record.created_at,
       reason: record.reason,
-      targetUrl: record.request.targetUrl,
-      executionStatus: record.execution.status,
-      responseStatus: record.response?.status,
+      target_url: record.request.target_url,
+      execution_status: record.execution.status,
+      response_status: record.response?.status,
       error: record.response?.error,
-      hasResponseBody: !!record.response?.body,
+      has_response_body: !!record.response?.body,
     };
   }
 
   private toOwnerVisibleRequestRecord(record: RequestRecord): OwnerVisibleRequestRecord {
     return {
-      requestId: record.requestId,
-      createdAt: record.createdAt,
-      rootAgentId: record.rootAgentId,
+      request_id: record.request_id,
+      created_at: record.created_at,
+      root_agent_id: record.root_agent_id,
       reason: record.reason,
-      targetUrl: record.request.targetUrl,
-      executionStatus: record.execution.status,
-      responseStatus: record.response?.status,
+      target_url: record.request.target_url,
+      execution_status: record.execution.status,
+      response_status: record.response?.status,
       error: record.response?.error,
-      hasResponseBody: !!record.response?.body,
-      missingGrants: record.missingGrants,
+      has_response_body: !!record.response?.body,
+      missing_grants: record.missing_grants,
     };
   }
 
   private toOwnerRequestRecord(record: RequestRecord): OwnerRequestRecord {
     return {
-      requestId: record.requestId,
-      createdAt: record.createdAt,
-      rootAgentId: record.rootAgentId,
+      request_id: record.request_id,
+      created_at: record.created_at,
+      root_agent_id: record.root_agent_id,
       reason: record.reason,
       request: {
-        targetUrl: record.request.targetUrl,
+        target_url: record.request.target_url,
         method: record.request.method,
         headers: record.request.headers,
         body: record.request.body,
-        secretAlias: record.request.secretAlias,
+        secret_alias: record.request.secret_alias,
       },
       response: record.response,
-      executionStatus: record.execution.status,
-      missingGrants: record.missingGrants,
+      execution_status: record.execution.status,
+      missing_grants: record.missing_grants,
     };
   }
 }

@@ -21,17 +21,17 @@ import { createWorkspaceStorage } from "./workspace-storage.js";
 const VAULT_STORAGE_LAYOUT_VERSION = 1;
 const VAULT_STORAGE_DIR_VERSION_SUFFIX = `_v${VAULT_STORAGE_LAYOUT_VERSION}`;
 
-function vaultStoragePrefix(vaultId: string): string {
-  return `vaults/${vaultId}${VAULT_STORAGE_DIR_VERSION_SUFFIX}`;
+function vaultStoragePrefix(vault_id: string): string {
+  return `vaults/${vault_id}${VAULT_STORAGE_DIR_VERSION_SUFFIX}`;
 }
 
-function parseVaultStorageDirName(entry: string): { vaultId: string; version: number } | null {
+function parseVaultStorageDirName(entry: string): { vault_id: string; version: number } | null {
   const match = /^(.*)_v(\d+)$/.exec(entry);
   if (!match) {
     return null;
   }
   return {
-    vaultId: match[1],
+    vault_id: match[1],
     version: Number.parseInt(match[2], 10),
   };
 }
@@ -41,7 +41,7 @@ export interface VaultMetadata extends Record<string, any> {
   ownerId?: string;
 }
 
-export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
+export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vault_id"> {
   nickname?: string;
   metadata?: Record<string, any>;
   password: string;
@@ -75,8 +75,8 @@ export interface VaultObject {
   verifyPassword(password: string): Promise<boolean>;
 }
 
-export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vaultId"> {
-  vaultId: string;
+export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vault_id"> {
+  vault_id: string;
   password: string;
   vault?: {
 
@@ -106,13 +106,13 @@ function resolveStorage(
   };
 }
 
-async function verifyVaultPassword(storage: IStorageProvider, vaultId: string, password: string): Promise<boolean> {
+async function verifyVaultPassword(storage: IStorageProvider, vault_id: string, password: string): Promise<boolean> {
   const normalizedPassword = password.trim();
   if (!normalizedPassword) {
     return false;
   }
-  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(normalizedPassword, vaultId);
-  const profile = await readVaultProfile(storage, vaultWorkingKey, vaultId);
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(normalizedPassword, vault_id);
+  const profile = await readVaultProfile(storage, vaultWorkingKey, vault_id);
   return profile !== null;
 }
 
@@ -146,16 +146,16 @@ export async function createVault(
     storage: IStorageProvider;
     options: CreateVaultOptions;
   };
-  if ("vaultId" in (options as unknown as Record<string, unknown>)) {
-    throw new Error("createVault() no longer accepts caller-supplied vaultId");
+  if ("vault_id" in (options as unknown as Record<string, unknown>)) {
+    throw new Error("createVault() no longer accepts caller-supplied vault_id");
   }
-  const vaultId = createVaultIdValue();
-  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vaultId));
-  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vaultId);
+  const vault_id = createVaultIdValue();
+  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vault_id));
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vault_id);
 
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
-    vaultId,
+    vault_id,
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
@@ -164,17 +164,17 @@ export async function createVault(
   
   // Single encrypted profile block. Hold the password to see everything.
   await writeVaultProfile(storage, {
-    vaultId,
+    vault_id,
     nickname,
     ...options.metadata,
-  }, vaultWorkingKey, vaultId);
+  }, vaultWorkingKey, vault_id);
 
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
     nickname,
     storage,
-    verifyPassword: async (password: string) => verifyVaultPassword(storage, vaultId, password),
+    verifyPassword: async (password: string) => verifyVaultPassword(storage, vault_id, password),
   };
 }
 
@@ -182,13 +182,13 @@ export async function createVault(
  * Reopens an existing vault from storage.
  *
  * @param storage - Workspace storage where the vault was created.
- * @param options - Recovery options (must include `vaultId` and `password`).
+ * @param options - Recovery options (must include `vault_id` and `password`).
  * @returns A {@link RecoveredVault} instance.
  *
  * @example
  * ```ts
  * const vault = await recoverVault({
- *   vaultId: 'vault_123',
+ *   vault_id: 'vault_123',
  *   password: 'my-strong-password'
  * });
  * ```
@@ -197,7 +197,7 @@ export async function recoverVault(storage: IStorageProvider | string, options: 
 /**
  * Recovers an existing vault using the default workspace storage.
  * 
- * @param options Recovery options including vaultId and password.
+ * @param options Recovery options including vault_id and password.
  */
 export async function recoverVault(options: RecoverVaultOptions): Promise<RecoveredVault>;
 export async function recoverVault(
@@ -208,15 +208,15 @@ export async function recoverVault(
     storage: IStorageProvider;
     options: RecoverVaultOptions;
   };
-  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(options.vaultId));
-  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, options.vaultId);
+  const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(options.vault_id));
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, options.vault_id);
   const deps = createPersistentVaultCoreDependencies(storage, {
     ...options,
-    vaultId: options.vaultId,
+    vault_id: options.vault_id,
     vaultWorkingKey,
   });
   const core = createVaultCore(deps);
-  const profile = await readVaultProfile(storage, vaultWorkingKey, options.vaultId);
+  const profile = await readVaultProfile(storage, vaultWorkingKey, options.vault_id);
   if (!profile) {
     throw new Error("vault profile not found or decryption failed");
   }
@@ -226,7 +226,7 @@ export async function recoverVault(
     vault: wrapVaultCoreAsVaultService(core, options.vault),
     nickname: profile.nickname,
     storage,
-    verifyPassword: async (password: string) => verifyVaultPassword(storage, options.vaultId, password),
+    verifyPassword: async (password: string) => verifyVaultPassword(storage, options.vault_id, password),
   };
 }
 
@@ -247,9 +247,9 @@ export async function listVaults(storage: IStorageProvider): Promise<string[]> {
     if (!parsed) {
       continue;
     }
-    const current = latestByVaultId.get(parsed.vaultId);
+    const current = latestByVaultId.get(parsed.vault_id);
     if (current === undefined || parsed.version > current) {
-      latestByVaultId.set(parsed.vaultId, parsed.version);
+      latestByVaultId.set(parsed.vault_id, parsed.version);
     }
   }
   return [...latestByVaultId.keys()];
@@ -262,15 +262,15 @@ export async function updateVaultMetadata(
   vault: CreatedVault | RecoveredVault,
   options: { nickname?: string; metadata?: Record<string, any>; password: string },
 ): Promise<void> {
-  const vaultId = vault.core.vaultId.value;
-  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vaultId);
+  const vault_id = vault.core.vault_id.value;
+  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vault_id);
   
   // Read current profile to preserve other fields
-  const current = await readVaultProfile(vault.storage, vaultWorkingKey, vaultId);
+  const current = await readVaultProfile(vault.storage, vaultWorkingKey, vault_id);
   
   await writeVaultProfile(vault.storage, {
     ...(current || {}),
     nickname: options.nickname ?? current?.nickname,
     ...(options.metadata ?? {}),
-  }, vaultWorkingKey, vaultId);
+  }, vaultWorkingKey, vault_id);
 }

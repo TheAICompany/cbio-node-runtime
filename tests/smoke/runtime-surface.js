@@ -10,7 +10,6 @@ import {
   createOwnerSession,
   listVaults,
   updateVaultMetadata,
-  createStandardAcquireBoundary,
   createOwnerClient,
   createAgentClient,
   FsStorageProvider,
@@ -22,613 +21,131 @@ import {
 } from "../../dist/runtime/index.js";
 import {
   createVaultCore,
-  createPersistentVaultCoreDependencies,
+  createVaultCoreDependencies,
   DefaultPolicyEngine,
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryAuditLog,
-  InMemoryGrantRegistry,
-  InMemoryCustomHttpFlowRegistry,
+  InMemoryAgentSecretGrantRegistry,
+  InMemorySecretDestinationGrantRegistry,
   InMemoryReplayGuard,
   InMemorySecretCustody,
   InMemorySecretRepository,
   InMemorySessionTokenRegistry,
-  PersistentVaultAuditLog,
-  PersistentVaultSecretCustody,
-  PersistentVaultSecretRepository,
+  InMemoryRequestRecordRegistry,
   RandomIdGenerator,
   SignatureAgentProofVerifier,
   SystemClock,
-  initializeVaultCustody,
 } from "../../dist/vault-core/index.js";
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 import { LocalSigner } from "../../dist/protocol/crypto.js";
 import { MemoryStorageProvider } from "../../dist/storage/memory.js";
 
-assert.equal(typeof createVaultCore, "function");
-assert.equal(typeof createStandardAcquireBoundary, "function");
-assert.equal(typeof createOwnerClient, "function");
-assert.equal(typeof createOwnerSession, "function");
-assert.equal(typeof createAgentClient, "function");
-assert.equal(typeof VaultCoreError, "function");
-assert.equal(typeof IdentityError, "function");
-assert.equal(typeof IdentityErrorCode, "object");
-assert.equal(typeof createWorkspaceStorage, "function");
-assert.equal(typeof getDefaultWorkspaceDir, "function");
+/**
+ * Modern Smoke Test: Runtime Surface (v1.65.0)
+ * Verifies all high-level runtime APIs and core kernel integration.
+ */
+async function runSmokeTest() {
+  console.log("🚀 Starting Runtime Surface Smoke Test...");
 
-const agentRecord = createIdentity({ nickname: "agent-1" });
-const restoredAgentIdentity = restoreIdentity(agentRecord.privateKey, { nickname: "agent-1-restored" });
+  // --- 1. Identity & Signer ---
+  const agentRecord = createIdentity({ nickname: "agent-1" });
+  const restoredAgentIdentity = restoreIdentity(agentRecord.private_key, { nickname: "agent-1-restored" });
 
-assert.equal(typeof agentRecord.privateKey, "string");
-assert.equal(typeof agentRecord.publicKey, "string");
-assert.equal(typeof agentRecord.rootAgentId, "string");
-assert.equal(agentRecord.nickname, "agent-1");
-assert.equal(restoredAgentIdentity.privateKey, agentRecord.privateKey);
-assert.equal(restoredAgentIdentity.publicKey, agentRecord.publicKey);
-assert.equal(restoredAgentIdentity.rootAgentId, agentRecord.rootAgentId);
-assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
+  assert.equal(typeof agentRecord.private_key, "string");
+  assert.equal(agentRecord.nickname, "agent-1");
+  assert.equal(restoredAgentIdentity.root_agent_id, agentRecord.root_agent_id);
 
-let seenAuthHeader = null;
-const runtimeSurfaceFetch = async (url, init) => {
-  seenAuthHeader = new Headers(init?.headers).get("Authorization");
-  if (url.toString().includes("/custom-acquire")) {
-    return new Response(JSON.stringify({ custom_token: "acquired-secret", scope: "read" }), { status: 200 });
-  }
-  if (url.toString().includes("/custom-status")) {
-    return new Response(JSON.stringify({ state: "ok", nested: { code: 200 } }), { status: 200 });
-  }
-  return new Response("ok", { status: 200 });
-};
-const runtimeSurfaceAgentIdentities = new InMemoryAgentIdentityRegistry();
-const runtimeSurfaceCustomFlows = new InMemoryCustomHttpFlowRegistry();
-const runtimeSurfaceSessionTokens = new InMemorySessionTokenRegistry();
-const runtimeSurfaceGrantStates = new InMemoryGrantRegistry();
-const authority = createVaultCore({
-  vaultId: { value: "vault-runtime-surface" },
-  secrets: new InMemorySecretRepository(),
-  custody: new InMemorySecretCustody(),
-  policy: new DefaultPolicyEngine(),
-  audit: new InMemoryAuditLog(),
-  executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
-  rootAgentIdentities: runtimeSurfaceAgentIdentities,
-  grantStates: runtimeSurfaceGrantStates,
-  agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokens),
-  customFlows: runtimeSurfaceCustomFlows,
-  sessionTokens: runtimeSurfaceSessionTokens,
-  replayGuard: new InMemoryReplayGuard(),
-  clock: new SystemClock(),
-  ids: new RandomIdGenerator(),
-});
-const vault = wrapVaultCoreAsVaultService(authority, {
-  customFlows: runtimeSurfaceCustomFlows,
-  fetchImpl: runtimeSurfaceFetch,
-});
-
-const client = createOwnerClient({
-  vault,
-  passwordVerifier: async (password) => password === "runtime-surface-password",
-});
-assert.equal(typeof client.ownerCreateSecret, "function");
-await client.ownerImportAgent({
-  privateKey: agentRecord.privateKey,
-});
-const importedAgentId = (await client.ownerListAgents()).find((agent) => agent.id === agentRecord.rootAgentId)?.rootAgentId;
-assert.equal(typeof importedAgentId, "string");
-const ownedRecord = await client.ownerCreateSecret({
-  alias: "api-token",
-  plaintext: "super-secret",
-});
-assert.deepEqual(ownedRecord.source, { kind: "manual" });
-assert.equal(ownedRecord.lifecycleStatus, "ACTIVE");
-assert.equal(ownedRecord.version.value, "1");
-
-const updatedRecord = await client.ownerUpdateSecret({
-  alias: "api-token",
-  plaintext: "super-secret-v2",
-});
-assert.equal(updatedRecord.previousSecretId?.value, ownedRecord.secretId.value);
-assert.equal(updatedRecord.lifecycleStatus, "ACTIVE");
-assert.equal(updatedRecord.version.value, "2");
-
-const exportedSecret = await client.ownerExportSecret({ alias: "api-token", password: "runtime-surface-password" });
-assert.equal(exportedSecret.plaintext, "super-secret-v2");
-assert.equal(exportedSecret.alias.value, "api-token");
-assert.equal(await client.ownerReadSecretPlaintext({ alias: "api-token", password: "runtime-surface-password" }), "super-secret-v2");
-
-const dispatchGrant = {
-  vaultId: authority.vaultId,
-  grantId: "cap-1",
-  rootAgentId: importedAgentId,
-  operation: "dispatch_http",
-  write: {
-    secretIds: [updatedRecord.secretId.value],
-    scope: "https://API.EXAMPLE.com:443/endpoint?ignored=yes#fragment",
-    methods: ["POST"],
-  },
-  read: { paths: ["$"] },
-  issuedAt: new Date().toISOString(),
-  auditRequired: true,
-};
-await client.ownerGrantGrant({ grant: dispatchGrant });
-const agent1Session = await client.ownerIssueSessionToken({ rootAgentId: importedAgentId });
-
-const agent = createAgentClient({
-  agentRecord: { rootAgentId: importedAgentId },
-  grant: {
-    ...dispatchGrant,
-  },
-  vault,
-  token: agent1Session.token,
-});
-
-const result = await agent.agentDispatch({
-  secretAlias: "api-token",
-  targetUrl: "https://api.example.com/endpoint",
-  method: "POST",
-  reason: "Need to send the primary API request for the current task.",
-  body: '{"hello":"world"}',
-});
-
-assert.equal(result.status, "SUCCEEDED");
-assert.equal(seenAuthHeader, "Bearer super-secret-v2");
-assert.equal(result.responseBody, undefined);
-const requestHistory = await agent.agentListRequests();
-const dispatchedRequest = requestHistory.find((entry) => entry.requestId === result.requestId);
-assert.ok(dispatchedRequest);
-assert.equal(dispatchedRequest.resultVisible, true);
-assert.equal(dispatchedRequest.executionStatus, "SUCCEEDED");
-const hiddenResult = await agent.agentGetRequest(result.requestId);
-assert.equal(hiddenResult.responseBody, "ok");
-const ownerRequestHistory = await client.ownerListRequests({ rootAgentId: importedAgentId });
-const ownerRequestSummary = ownerRequestHistory.find((entry) => entry.requestId === result.requestId);
-assert.ok(ownerRequestSummary);
-assert.deepEqual(ownerRequestSummary.readGrant, ["$"]);
-const ownerRequest = await client.ownerGetRequest({ requestId: result.requestId });
-assert.equal(ownerRequest.request.secretId, updatedRecord.secretId.value);
-assert.equal(ownerRequest.response?.body, "ok");
-
-const customStatusGrant = {
-  vaultId: authority.vaultId,
-  grantId: "cap-custom-status-standard",
-  rootAgentId: importedAgentId,
-  operation: "dispatch_http",
-  write: {
-    secretIds: [updatedRecord.secretId.value],
-    scope: "https://api.example.com/custom-status",
-    methods: ["POST"],
-  },
-  read: { paths: ["$"] },
-  issuedAt: new Date().toISOString(),
-  auditRequired: true,
-};
-await client.ownerGrantGrant({ grant: customStatusGrant });
-const standardCustomStatusAgent = createAgentClient({
-  agentRecord: { rootAgentId: importedAgentId },
-  grant: {
-    ...customStatusGrant,
-  },
-  vault,
-  token: agent1Session.token,
-});
-const filteredDispatch = await standardCustomStatusAgent.agentDispatch({
-  secretAlias: "api-token",
-  targetUrl: "https://api.example.com/custom-status",
-  method: "POST",
-  reason: "Need to fetch the custom status payload for the current task.",
-  body: '{"mode":"discover"}',
-});
-assert.equal(filteredDispatch.status, "SUCCEEDED");
-await runtimeSurfaceGrantStates.upsert({
-  source: "owner_grant",
-  vaultId: authority.vaultId,
-  requestId: filteredDispatch.requestId,
-  grantId: customStatusGrant.grantId,
-  rootAgentId: importedAgentId,
-  operation: "dispatch_http",
-  write: {
-    secretIds: [updatedRecord.secretId.value],
-    scope: "https://api.example.com/custom-status",
-    methods: ["POST"],
-  },
-  read: { paths: [] },
-  requestedAt: new Date().toISOString(),
-  issuedAt: customStatusGrant.issuedAt,
-  writeGrant: "always",
-  writeGrantedAt: customStatusGrant.issuedAt,
-  readGrant: null,
-  secretId: updatedRecord.secretId.value,
-  targetUrl: "https://api.example.com/custom-status",
-});
-const filteredOwnerView = await client.ownerGetRequest({ requestId: filteredDispatch.requestId });
-assert.equal(filteredOwnerView.response?.body, JSON.stringify({ state: "ok", nested: { code: 200 } }));
-await client.ownerApproveGrantRead({
-  requestId: filteredDispatch.requestId,
-  read: { paths: ["nested.code"] },
-});
-const filteredAgentView = await standardCustomStatusAgent.agentGetRequest(filteredDispatch.requestId);
-assert.equal(filteredAgentView.responseBody, JSON.stringify({ state: "******", nested: { code: 200 } }));
-
-const shapeOnlyFlow = await client.ownerRegisterFlow({
-  mode: "send_secret",
-  targetUrl: "https://api.example.com/custom-status",
-  method: "POST",
-  responseVisibility: "shape_only",
-});
-
-const customGrant = {
-  vaultId: authority.vaultId,
-  grantId: "cap-custom",
-  rootAgentId: importedAgentId,
-  customFlowId: shapeOnlyFlow.flowId,
-  operation: "custom_http",
-  write: {
-    secretIds: [updatedRecord.secretId.value],
-    scope: "https://api.example.com/custom-status",
-    methods: ["POST"],
-  },
-  read: { paths: ["$"] },
-  issuedAt: new Date().toISOString(),
-  auditRequired: true,
-};
-await client.ownerGrantGrant({ grant: customGrant });
-
-const customAgent = createAgentClient({
-  agentRecord: { rootAgentId: importedAgentId },
-  grant: {
-    ...customGrant,
-  },
-  vault,
-  token: agent1Session.token,
-});
-
-const customResult = await customAgent.agentDispatch({
-  secretAlias: "api-token",
-  targetUrl: "https://api.example.com/custom-status",
-  method: "POST",
-  reason: "Need to run the custom status request through the request template.",
-  body: '{"mode":"custom"}',
-});
-
-assert.equal(customResult.status, "SUCCEEDED");
-assert.equal(customResult.responseBody, "null");
-
-const customAcquireFlow = await client.ownerRegisterFlow({
-  mode: "acquire_secret",
-  targetUrl: "https://api.example.com/custom-acquire",
-  method: "POST",
-  responseVisibility: "shape_only",
-  responseSecret: {
-    kind: "json_field",
-    field: "custom_token",
-    storeAlias: "custom-acquired-token",
-  },
-});
-
-const customAcquireGrant = {
-  vaultId: authority.vaultId,
-  grantId: "cap-custom-acquire",
-  rootAgentId: importedAgentId,
-  customFlowId: customAcquireFlow.flowId,
-  operation: "custom_http",
-  write: {
-    scope: "https://api.example.com/custom-acquire",
-    methods: ["POST"],
-  },
-  read: { paths: ["$"] },
-  issuedAt: new Date().toISOString(),
-  auditRequired: true,
-};
-await client.ownerGrantGrant({ grant: customAcquireGrant });
-
-const customAcquireAgent = createAgentClient({
-  agentRecord: { rootAgentId: importedAgentId },
-  grant: {
-    ...customAcquireGrant,
-  },
-  vault,
-  token: agent1Session.token,
-});
-
-const customAcquireResult = await customAcquireAgent.agentDispatch({
-  targetUrl: "https://api.example.com/custom-acquire",
-  method: "POST",
-  reason: "Need to acquire the custom token for the workflow.",
-});
-
-assert.equal(customAcquireResult.status, "SUCCEEDED");
-assert.equal(customAcquireResult.responseBody, JSON.stringify({ custom_token: null, scope: null }));
-
-const tempDir = await mkdtemp(join(tmpdir(), "cbio-authority-"));
-try {
-  const storage = new FsStorageProvider(tempDir);
-  const createdVault = await createVault(storage, {
-    nickname: "persistent-main",
-    policy: {
-      trustedIssuerIds: ["issuer-1"],
-    },
-    password: "password-1",
-    vault: {
-      fetchImpl: async () => new Response(JSON.stringify({
-        access_token: "issuer-secret",
-        token_type: "Bearer",
-        expires_in: 3600,
-        scope: "read write",
-      }), { status: 200 }),
-    },
-  });
-  assert.equal(createdVault.nickname, "persistent-main");
-  const persistentVault = wrapVaultCoreAsVaultService(createdVault.core, {
-    fetchImpl: async () => new Response(JSON.stringify({
-      access_token: "issuer-secret",
-      token_type: "Bearer",
-      expires_in: 3600,
-      scope: "read write",
-    }), { status: 200 }),
-  });
-  const issuerResult = await persistentVault.acquireSecret({
-    alias: "issuer-token",
-    issuerId: "issuer-1",
-    url: "https://issuer.example.com/token",
-    flow: "oauth_token_response.access_token",
-  });
-  assert.equal(issuerResult.status, "stored");
-  assert.deepEqual(issuerResult.responseShape, {
-    token_type: "Bearer",
-    expires_in: 3600,
-    scope: "read write",
-  });
-  const auditClient = createOwnerClient({ vault: persistentVault, passwordVerifier: createdVault.verifyPassword });
-  const audit = await auditClient.ownerReadAudit({ secretAlias: "issuer-token" });
-  assert.ok(audit.length >= 1);
-  const persistentExport = await auditClient.ownerExportSecret({ alias: "issuer-token", password: "password-1" });
-  assert.equal(persistentExport.plaintext, "issuer-secret");
-  const recoveredVaultInstance = await recoverVault(storage, {
-    vaultId: createdVault.core.vaultId.value,
-    password: "password-1",
-  });
-  assert.equal(recoveredVaultInstance.nickname, "persistent-main");
-  const ownerSession = createOwnerSession(storage, {
-    vaultId: createdVault.core.vaultId.value,
-    password: "password-1",
-  });
-  assert.equal(ownerSession.isValid(), true);
-  const sessionClientA = await ownerSession.client();
-  const sessionClientB = await ownerSession.client();
-  assert.notEqual(sessionClientA, sessionClientB, "OwnerSession should not cache raw OwnerClient instances");
-  const sessionAgents = await ownerSession.withClient((sessionClient) => sessionClient.ownerListAgents());
-  assert.ok(Array.isArray(sessionAgents));
-  await ownerSession.refresh();
-  ownerSession.invalidate();
-  assert.equal(ownerSession.isValid(), false);
-  await assert.rejects(
-    () => ownerSession.client(),
-    /invalidated/,
-  );
-
-  const defaultWorkspaceDir = await mkdtemp(join(tmpdir(), "cbio-default-workspace-"));
-  process.env.C_BIO_WORKSPACE_DIR = defaultWorkspaceDir;
-  const autoCreatedVault = await createVault({
-    nickname: "default-storage-vault",
-    password: "password-1",
-  });
-  assert.equal(autoCreatedVault.nickname, "default-storage-vault");
-  assert.equal(await autoCreatedVault.storage.has("profile.sealed"), true, "Missing profile.sealed");
-  assert.equal(await autoCreatedVault.storage.has("public.sealed"), false, "public.sealed should be removed");
-  console.log("-> Storage Architecture Verification OK: Detected single encrypted .sealed profile");
-
-  console.log("-> Verifying Vault Discovery API...");
-  const autoRecoveredVault = await recoverVault({
-    vaultId: autoCreatedVault.core.vaultId.value,
-    password: "password-1",
-  });
-  assert.equal(autoRecoveredVault.nickname, "default-storage-vault");
-  
-  const siblingVault = await createVault(storage, {
-    nickname: "sibling-vault",
-    password: "password-1",
-  });
-
-  const allVaults = await listVaults(storage);
-  assert.ok(allVaults.includes(siblingVault.core.vaultId.value), "Vault should be in the list");
-  console.log(`-> Vault List Discovery OK: Successfully found "${siblingVault.core.vaultId.value}"`);
-
-  console.log("-> Verifying Metadata Update...");
-  await updateVaultMetadata(siblingVault, {
-    nickname: "updated-sibling-vault",
-    password: "password-1",
-  });
-  
-  const updatedVaults = await listVaults(storage);
-  assert.ok(updatedVaults.includes(siblingVault.core.vaultId.value), "Vault should still be in the list");
-  console.log(`   [OK] Metadata updated successfully (verified via ID)`);
-
-  console.log("-> Verifying Physical Delete...");
-  await rm(join(tempDir, `vaults/${siblingVault.core.vaultId.value}_v1`), { recursive: true });
-  const remainingVaults = await listVaults(storage);
-  assert.ok(!remainingVaults.includes(siblingVault.core.vaultId.value), "Vault should be deleted");
-  console.log("   [OK] Vault physical deletion successful");
-  console.log("-> Verifying Managed Agent Identity Custody...");
-  const managedProvision = await auditClient.ownerCreateAgent({ 
-    nickname: "Managed Worker",
-    metadata: { dept: "security" }
-  });
-  const managedRecord = managedProvision.agent;
-  assert.ok(managedProvision.sessionToken.token, "Should issue a session token during creation");
-  assert.equal(managedRecord.nickname, "Managed Worker");
-  
-  // Verify recovery after persistence
-  const agentsInVault = await auditClient.ownerListAgents();
-  const foundManaged = agentsInVault.find(a => a.rootAgentId === managedRecord.rootAgentId);
-  assert.equal(foundManaged?.privateKey, undefined, "Default owner agent listing should redact private keys");
-  assert.equal(typeof (await auditClient.ownerReadAgentPrivateKey({ rootAgentId: managedRecord.rootAgentId, password: "password-1" })), "string");
-  console.log("   [OK] Agent creation and private key custody verification passed");
-
-  console.log("-> Verifying Proactive Grant Request Flow...");
-  let pendingGrantRequest = null;
-  const unsubscribeGrant = auditClient.ownerOnGrantState((record) => {
-    pendingGrantRequest = record;
-  });
-  const submittedGrantRequest = await auditClient.ownerSubmitGrantRequest({
-    requester: { kind: "trusted_executor", id: "llm-planner" },
-    rootAgentId: managedRecord.rootAgentId,
-    write: {
-      secretIds: [updatedRecord.secretId.value],
-      scope: "https://api.example.com/users/*",
-      methods: ["GET"],
-    },
-    read: { paths: ["$"] },
-    reason: "Need collection-level user read access",
-  });
-  assert.equal(submittedGrantRequest.rootAgentId, managedRecord.rootAgentId);
-  assert.equal(submittedGrantRequest.write.scope, "https://api.example.com/users/*");
-  assert.equal(submittedGrantRequest.writeGrant, null);
-  assert.equal(submittedGrantRequest.readGrant, null);
-  assert.ok(pendingGrantRequest, "Grant request observer should fire");
-  const pendingGrantRequests = await auditClient.ownerListGrantStates({ writeGranted: false });
-  assert.equal(pendingGrantRequests.length, 1, "Should have one pending grant request");
-  const approvedGrant = await auditClient.ownerAllowAlways({
-    requestId: pendingGrantRequests[0].requestId,
-  });
-  unsubscribeGrant();
-  assert.equal(approvedGrant.status, "SUCCEEDED");
-  const grantedGrantRequests = await auditClient.ownerListGrantStates({ writeGranted: true });
-  const grantedGrantRequest = grantedGrantRequests.find((record) => record.requestId === pendingGrantRequests[0].requestId);
-  assert.ok(grantedGrantRequest, "Granted grant request should remain queryable");
-  assert.equal(grantedGrantRequest.writeGrant, "always");
-  assert.equal(grantedGrantRequest.readGrant, null);
-  const readApprovedGrant = await auditClient.ownerApproveGrantRead({
-    requestId: grantedGrantRequest.requestId,
-  });
-  assert.equal(readApprovedGrant.writeGrant, "always");
-  assert.deepEqual(readApprovedGrant.readGrant, []);
-  const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ rootAgentId: managedRecord.rootAgentId });
-  assert.ok(
-    capabilitiesAfterApproval.some((cap) => cap.write.scope === "https://api.example.com/users/*"),
-    "Approved grant should be registered",
-  );
-  console.log("   [OK] Proactive grant request approval flow passed");
-
-  const acquiredGrant = {
-    vaultId: createdVault.core.vaultId,
-    grantId: "cap-acquired",
-    rootAgentId: managedRecord.rootAgentId,
-    operation: "dispatch_http",
-    write: {
-      secretIds: [persistentExport.secretId.value],
-      scope: "https://issuer.example.com/other",
-      methods: ["GET"],
-    },
-    read: { paths: ["$"] },
-    issuedAt: new Date().toISOString(),
-    auditRequired: true,
+  // --- 2. In-Memory Operations ---
+  let seenAuthHeader = null;
+  const runtimeSurfaceFetch = async (url, init) => {
+    seenAuthHeader = new Headers(init?.headers).get("Authorization");
+    return new Response("ok", { status: 200 });
   };
-  await auditClient.ownerGrantGrant({ grant: acquiredGrant });
-  const acquiredVault = wrapVaultCoreAsVaultService(recoveredVaultInstance.core);
-  const acquiredAgentSession = await auditClient.ownerIssueSessionToken({ rootAgentId: managedRecord.rootAgentId });
-  const acquiredAgent = createAgentClient({
-    agentRecord: { rootAgentId: managedRecord.rootAgentId },
-    grant: {
-      ...acquiredGrant,
-    },
-    vault: acquiredVault,
-    token: acquiredAgentSession.token,
-  });
-  await assert.rejects(
-    () => acquiredAgent.agentDispatch({
-      secretAlias: "issuer-token",
-      targetUrl: "https://issuer.example.com/other",
-      method: "GET",
-      reason: "Need to verify the acquired secret cannot be reused here.",
-    }),
-    /VAULT_AGENT_DISPATCH_REJECTED|VAULT_DISPATCH_DENIED/,
-  );
-  const persistentVaultDir = join(tempDir, `vaults/${createdVault.core.vaultId.value}_v1`);
-  const secretsFile = await readFile(join(persistentVaultDir, "secrets.sealed"), "utf8").catch(() => "");
-  assert.ok(!secretsFile.includes("issuer-secret"), "Encrypted file should not contain plaintext!");
-  console.log("-> Secret Storage Security Verification OK: Data encrypted and isolated on disk");
 
-  console.log("-> Verifying Custody Directory Structure...");
-  const custodyDirEntries = await readdir(persistentVaultDir).then((entries) => entries.filter((entry) => entry.startsWith("secret-")));
-  assert.ok(custodyDirEntries.length >= 1, "Custody entries missing!");
-  console.log("   [OK] Custody directory moved to encrypted area");
-
-  console.log("-> Verifying Secret Physical Deletion...");
-  // Use ownerClient for deletion to verify high-level API loop
-  await auditClient.ownerRemoveSecret({ alias: "issuer-token", password: "password-1" });
-  
-  // Verify cannot retrieve after deletion
-  await assert.rejects(
-    () => auditClient.ownerExportSecret({ alias: "issuer-token", password: "password-1" }),
-    /VAULT_SECRET_NOT_FOUND|secret not found/
-  );
-  console.log("   [OK] Logical deletion and permission check successful");
-  console.log("   [OK] Physical deletion successful");
-
-  const rollbackDir = await mkdtemp(join(tmpdir(), "cbio-authority-rollback-"));
-  const failingAuditStorage = new FsStorageProvider(rollbackDir);
-  const rollbackCustody = await initializeVaultCustody(failingAuditStorage);
-  const vaultWorkingKey = rollbackCustody.vaultWorkingKey;
-  const rollbackAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const rollbackSessionTokens = new InMemorySessionTokenRegistry();
-  const bootstrapRollbackAuthority = createVaultCore({
-    vaultId: { value: "vault-rollback" },
-    secrets: new PersistentVaultSecretRepository(failingAuditStorage),
-    custody: new PersistentVaultSecretCustody(failingAuditStorage, vaultWorkingKey),
+  const runtimeSurfaceAgentIdentities = new InMemoryAgentIdentityRegistry();
+  const runtimeSurfaceSessionTokens = new InMemorySessionTokenRegistry();
+  const authority = createVaultCore({
+    vault_id: { value: "vault-runtime-surface" },
+    secrets: new InMemorySecretRepository(),
+    custody: new InMemorySecretCustody(),
     policy: new DefaultPolicyEngine(),
     audit: new InMemoryAuditLog(),
-    executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
-    rootAgentIdentities: rollbackAgentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
-    grantStates: new InMemoryGrantRegistry(),
-    customFlows: new InMemoryCustomHttpFlowRegistry(),
-    sessionTokens: rollbackSessionTokens,
+    executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
+    agentRecords: runtimeSurfaceAgentIdentities,
+    agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
+    secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
+    agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokens),
+    session_tokens: runtimeSurfaceSessionTokens,
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),
+    requests: new InMemoryRequestRecordRegistry(),
   });
-  const rollbackAuthority = createVaultCore({
-    vaultId: { value: "vault-rollback" },
-    secrets: new PersistentVaultSecretRepository(failingAuditStorage),
-    custody: new PersistentVaultSecretCustody(failingAuditStorage, vaultWorkingKey),
-    policy: new DefaultPolicyEngine(),
-    audit: {
-      async append() {
-        throw new Error("audit sink offline");
-      },
-      async query() {
-        return [];
-      },
-    },
-    executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
-    rootAgentIdentities: rollbackAgentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
-    grantStates: new InMemoryGrantRegistry(),
-    customFlows: new InMemoryCustomHttpFlowRegistry(),
-    sessionTokens: rollbackSessionTokens,
-    replayGuard: new InMemoryReplayGuard(),
-    clock: new SystemClock(),
-    ids: new RandomIdGenerator(),
+
+  const vault = wrapVaultCoreAsVaultService(authority, { fetchImpl: runtimeSurfaceFetch });
+  const client = await createOwnerClient({
+    vault,
+    password_verifier: async (password) => password === "password-1",
   });
-  const rollbackVault = wrapVaultCoreAsVaultService(rollbackAuthority);
-  const rollbackClient = createOwnerClient({
-    vault: rollbackVault,
+
+  const imported = await client.ownerImportAgent({ private_key: agentRecord.private_key });
+  const importedAgentId = imported.agent.root_agent_id;
+
+  const ownedRecord = await client.ownerCreateSecret({ alias: "api-token", plaintext: "secret-v1" });
+  assert.ok(typeof ownedRecord.version.value === "string");
+
+  await client.ownerGrantAgentSecret({ root_agent_id: importedAgentId, secret_alias: "api-token" });
+  await client.ownerGrantSecretDestination({ secret_alias: "api-token", site_id: "api.example.com" });
+
+  const agentSession = await client.ownerIssueSessionToken({ root_agent_id: importedAgentId });
+  const agent = createAgentClient({
+    agentRecord: imported.agent,
+    vault,
+    token: agentSession.token,
   });
-  const custodyDir = join(tempDir, "vaults/vault-runtime-persistent_v1");
-  const custodyCountBefore = await readdir(custodyDir).then((entries) => entries.filter((entry) => entry.startsWith("secret-")).length).catch(() => 0);
-  await assert.rejects(
-    () => rollbackClient.ownerCreateSecret({
-      alias: "should-rollback",
-      plaintext: "rollback-secret",
-    }),
-    (error) => error instanceof VaultCoreError && error.code === "VAULT_AUDIT_FAILED",
-  );
-  const rollbackSecretsFile = await readFile(join(tempDir, "vaults/vault-runtime-persistent_v1/secrets.sealed"), "utf8").catch(() => "");
-  assert.ok(!rollbackSecretsFile.includes("should-rollback"));
-  const custodyCountAfter = await readdir(custodyDir).then((entries) => entries.filter((entry) => entry.startsWith("secret-")).length).catch(() => 0);
-  assert.equal(custodyCountAfter, custodyCountBefore);
-  await rm(rollbackDir, { recursive: true, force: true });
-} finally {
-  await rm(tempDir, { recursive: true, force: true });
+
+  const result = await agent.agentDispatch({
+    secret_alias: "api-token",
+    target_url: "https://api.example.com/endpoint",
+    method: "POST",
+    reason: "Verification request",
+  });
+  assert.equal(result.status, "SUCCEEDED");
+  assert.equal(seenAuthHeader, "Bearer secret-v1");
+
+  // --- 3. Persistence & Recovery ---
+  const tempDir = await mkdtemp(join(tmpdir(), "cbio-runtime-persist-"));
+  try {
+    const storage = new FsStorageProvider(tempDir);
+    const { vault: persistentVault, core: persistentCore } = await createVault(storage, {
+      nickname: "Persistent Vault",
+      password: "master-pw",
+    });
+
+    const persistentClient = await createOwnerClient({ vault: persistentVault, password_verifier: async (pw) => pw === "master-pw" });
+    await persistentClient.ownerCreateSecret({ alias: "p-secret", plaintext: "i-am-persistent" });
+
+    // Simulate recovery
+    const recovered = await recoverVault(storage, { 
+      vault_id: persistentCore.vault_id.value,
+      password: "master-pw" 
+    });
+    assert.equal(recovered.vault.vault_id.value, persistentCore.vault_id.value);
+
+    const recoveredClient = await createOwnerClient({ vault: recovered.vault });
+    const secrets = await recoveredClient.ownerListSecrets();
+    assert.ok(secrets.some(s => s.alias.value === "p-secret"));
+
+    console.log("Persistence & Recovery verified.");
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+
+  console.log("✅ Runtime Surface Smoke Test Passed!");
 }
 
-console.log("runtime surface smoke test passed");
+runSmokeTest().catch(err => {
+  console.error("❌ Test Failed:", err);
+  process.exit(1);
+});

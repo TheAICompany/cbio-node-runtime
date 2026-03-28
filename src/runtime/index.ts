@@ -98,8 +98,7 @@ export type {
 
 export {
   DispatchStatus,
-  AuditAction,
-  AuditOutcome,
+  AuditOperation,
 } from "../vault-core/index.js";
 
 export {

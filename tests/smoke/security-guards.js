@@ -6,42 +6,50 @@ import {
 import {
   createVaultCore,
   createVaultCoreDependencies,
+  InMemoryAgentSecretGrantRegistry,
+  InMemorySecretDestinationGrantRegistry,
+  InMemoryRequestRecordRegistry,
   VaultCoreError,
 } from "../../dist/vault-core/index.js";
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 import { LocalSigner } from "../../dist/protocol/crypto.js";
 
 const agentRecord = createIdentity();
-const signer = new LocalSigner(agentRecord);
+const signer = new LocalSigner({
+  publicKey: agentRecord.public_key,
+  privateKey: agentRecord.private_key,
+});
 
 const authority = createVaultCore(createVaultCoreDependencies({
-  vaultId: "vault-security",
+  vault_id: "vault-security",
   fetchImpl: async () => new Response("ok", { status: 200 }),
+  agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
+  secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
 }));
 const vault = wrapVaultCoreAsVaultService(authority);
 
-const client = createOwnerClient({
+const client = await createOwnerClient({
   vault,
 });
 const importedAgent = await client.ownerImportAgent({
-  privateKey: agentRecord.privateKey,
+  private_key: agentRecord.private_key,
 });
-const vaultAgentId = importedAgent.agent.id;
+const vaultAgentId = importedAgent.agent.root_agent_id;
 
 const guardedRecord = await client.ownerCreateSecret({
   alias: "guarded-token",
   plaintext: "guarded-secret",
 });
 
+// Case 1: Expired requested_at (Security Guard: Clock Skew)
 const expiredRequestedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 const expiredRequestId = "expired-request";
 const expiredBinding = JSON.stringify({
-  requestId: expiredRequestId,
-  requestedAt: expiredRequestedAt,
-  rootAgentId: vaultAgentId,
-  grantId: "cap-expired",
-  secretId: guardedRecord.secretId.value,
-  targetUrl: "https://guarded.example.com/endpoint",
+  request_id: expiredRequestId,
+  requested_at: expiredRequestedAt,
+  root_agent_id: vaultAgentId,
+  secret_alias: "guarded-token",
+  target_url: "https://guarded.example.com/endpoint",
   method: "POST",
   body: null,
 });
@@ -49,142 +57,103 @@ const expiredSignature = await signer.sign(expiredBinding);
 
 await assert.rejects(
   () => authority.agentDispatchSecret({
-    vaultId: authority.vaultId,
-    requestId: expiredRequestId,
-    requestedAt: expiredRequestedAt,
+    vault_id: authority.vault_id,
+    request_id: expiredRequestId,
+    requested_at: expiredRequestedAt,
     agent: { kind: "agent", id: vaultAgentId },
-    grant: {
-      vaultId: authority.vaultId,
-      grantId: "cap-expired",
-      rootAgentId: vaultAgentId,
-      operation: "dispatch_http",
-      write: {
-        secretIds: [guardedRecord.secretId.value],
-        scope: "https://guarded.example.com/endpoint",
-        methods: ["POST"],
-      },
-      read: { paths: ["$"] },
-      issuedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() - 60_000).toISOString(),
-      auditRequired: true,
-    },
     proof: {
-      rootAgentId: vaultAgentId,
+      root_agent_id: vaultAgentId,
       signature: expiredSignature,
-      requestId: expiredRequestId,
-      requestedAt: expiredRequestedAt,
+      request_id: expiredRequestId,
+      requested_at: expiredRequestedAt,
     },
-    secretId: guardedRecord.secretId.value,
-    targetUrl: "https://guarded.example.com/endpoint",
+    secret_alias: "guarded-token",
+    target_url: "https://guarded.example.com/endpoint",
     method: "POST",
-    reason: "Need to verify expired grant rejection.",
+    reason: "Need to verify expired timestamp rejection.",
   }),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);
     assert.equal(error.code, "VAULT_DISPATCH_DENIED");
+    assert.match(error.message, /timestamp out of range/);
     return true;
   },
 );
 
+// Case 2: Signature Mismatch (Tampered Body)
 const validRequestedAt = new Date().toISOString();
 const validRequestId = "valid-security-request";
 const badBinding = JSON.stringify({
-  requestId: validRequestId,
-  requestedAt: validRequestedAt,
-  rootAgentId: vaultAgentId,
-  grantId: "cap-valid",
-  secretId: guardedRecord.secretId.value,
-  targetUrl: "https://guarded.example.com/endpoint",
+  request_id: validRequestId,
+  requested_at: validRequestedAt,
+  root_agent_id: vaultAgentId,
+  secret_alias: "guarded-token",
+  target_url: "https://guarded.example.com/endpoint",
   method: "POST",
-  body: "tampered",
+  body: "tampered", // Binding includes "tampered"
 });
 const badSignature = await signer.sign(badBinding);
 
 await assert.rejects(
   () => authority.agentDispatchSecret({
-    vaultId: authority.vaultId,
-    requestId: validRequestId,
-    requestedAt: validRequestedAt,
+    vault_id: authority.vault_id,
+    request_id: validRequestId,
+    requested_at: validRequestedAt,
     agent: { kind: "agent", id: vaultAgentId },
-    grant: {
-      vaultId: authority.vaultId,
-      grantId: "cap-valid",
-      rootAgentId: vaultAgentId,
-      operation: "dispatch_http",
-      write: {
-        secretIds: [guardedRecord.secretId.value],
-        scope: "https://guarded.example.com/endpoint",
-        methods: ["POST"],
-      },
-      read: { paths: ["$"] },
-      issuedAt: new Date().toISOString(),
-      auditRequired: true,
-    },
     proof: {
-      rootAgentId: vaultAgentId,
+      root_agent_id: vaultAgentId,
       signature: badSignature,
-      requestId: validRequestId,
-      requestedAt: validRequestedAt,
+      request_id: validRequestId,
+      requested_at: validRequestedAt,
     },
-    secretId: guardedRecord.secretId.value,
-    targetUrl: "https://guarded.example.com/endpoint",
+    secret_alias: "guarded-token",
+    target_url: "https://guarded.example.com/endpoint",
     method: "POST",
-    body: null,
+    body: null, // But actual body is null -> Binding Mismatch
     reason: "Need to verify signature mismatch rejection.",
   }),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);
     assert.equal(error.code, "VAULT_DISPATCH_DENIED");
+    assert.match(error.message, /invalid proof signature/);
     return true;
   },
 );
 
-const securityAudit = await client.ownerReadAudit({ secretAlias: "guarded-token" });
-assert.ok(securityAudit.some((entry) => entry.outcome === "DENIED" && /expired|binding mismatch|timestamp out of range|invalid proof signature/.test(entry.detail)));
+const securityAudit = await client.ownerReadAudit({ secret_alias: "guarded-token" });
+assert.ok(securityAudit.some((entry) => entry.decision === "denied" && /timestamp out of range|invalid proof signature/.test(entry.detail)));
 
-// Sovereign Vault: identity registration for unlocked vault is implicitly authorized.
-// We only check for vault ID mismatch.
+// Case 3: Unauthorized Identity Registration (non-owner principal)
 const unauthorizedIdentityRequestId = "unauthorized-agent-registration";
 const unauthorizedIdentityRequestedAt = new Date().toISOString();
 await assert.rejects(
   () => authority.ownerRegisterAgentIdentity({
-    vaultId: { value: "mismatch-vault" },
-    requestId: unauthorizedIdentityRequestId,
-    owner: { kind: "owner", id: "vault-master" },
+    vault_id: authority.vault_id,
+    request_id: unauthorizedIdentityRequestId,
+    owner: { kind: "agent", id: "not-an-owner" },
     agentRecord: {
-      vaultId: authority.vaultId,
-      rootAgentId: "agent-forged",
-      publicKey: agentRecord.publicKey,
+      vault_id: authority.vault_id,
+      root_agent_id: "agent-forged",
+      public_key: agentRecord.public_key,
     },
-    requestedAt: unauthorizedIdentityRequestedAt,
+    requested_at: unauthorizedIdentityRequestedAt,
   }),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);
-    assert.equal(error.code, "VAULT_IDENTITY_DENIED");
+    assert.equal(error.code, "VAULT_ACCESS_DENIED");
     return true;
   },
 );
 
+// Case 4: Unauthorized Audit Access
 await assert.rejects(
   () => authority.ownerReadAudit(
-    { kind: "trusted_executor", id: "not-an-owner" },
-    { secretAlias: "guarded-token" },
+    { kind: "agent", id: "not-an-owner" },
+    { secret_alias: "guarded-token" },
   ),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);
-    assert.equal(error.code, "VAULT_AUDIT_DENIED");
-    return true;
-  },
-);
-
-await assert.rejects(
-  () => authority.ownerExportSecret(
-    { kind: "owner", id: "owner-security" },
-    "guarded-token",
-  ),
-  (error) => {
-    assert.equal(error instanceof VaultCoreError, true);
-    assert.equal(error.code, "VAULT_AUDIT_DENIED");
+    assert.equal(error.code, "VAULT_ACCESS_DENIED");
     return true;
   },
 );

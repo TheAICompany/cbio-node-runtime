@@ -13,14 +13,14 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     parameters: {
       type: "object",
       properties: {
-        secretAlias: { type: "string", description: "The human-readable secret name to use." },
-        targetUrl: { type: "string", description: "The destination URL for the outbound request." },
+        secret_alias: { type: "string", description: "The human-readable secret name to use." },
+        target_url: { type: "string", description: "The destination URL for the outbound request." },
         method: { type: "string", description: "The HTTP method (e.g., POST, GET)." },
         reason: { type: "string", description: "Required. One concise sentence for the owner explaining why this exact request should be sent." },
         body: { type: "string", description: "Optional request body." },
         headers: { type: "object", description: "Optional request headers." },
       },
-      required: ["secretAlias", "targetUrl", "method", "reason"],
+      required: ["secret_alias", "target_url", "method", "reason"],
     },
   },
   agentListCapabilities: {
@@ -49,9 +49,9 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     parameters: {
       type: "object",
       properties: {
-        requestId: { type: "string", description: "The request identifier returned when the request was executed." },
+        request_id: { type: "string", description: "The request identifier returned when the request was executed." },
       },
-      required: ["requestId"],
+      required: ["request_id"],
     },
   },
   agentSubmitGrantRequest: {
@@ -59,7 +59,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     parameters: {
       type: "object",
       properties: {
-        secretAliases: { type: "array", items: { type: "string" }, description: "Human-readable secret names to request." },
+        secret_aliases: { type: "array", items: { type: "string" }, description: "Human-readable secret names to request." },
         write: { type: "object", description: "Outbound request policy including URL scope and methods." },
         read: { type: "object", description: "Inbound response value visibility. The response shape is always visible. `paths` lists which values may be revealed; use `['$']` to reveal the entire response body." },
         operation: { type: "string", description: "The operation type, usually 'dispatch_http'." },

@@ -13,7 +13,7 @@ import { recoverVault, type RecoverVaultOptions, type RecoveredVault } from "./b
 import { createWorkspaceStorage } from "./workspace-storage.js";
 
 export interface OwnerSession {
-  readonly vaultId: string;
+  readonly vault_id: string;
   readonly storage: IStorageProvider;
   readonly nickname?: string;
   isValid(): boolean;
@@ -25,7 +25,6 @@ export interface OwnerSession {
 }
 
 export interface CreateOwnerSessionOptions extends RecoverVaultOptions {
-  ownerIdentity?: CreatedIdentity | { rootAgentId: string };
   signer?: any;
   clock?: Clock;
   skipWarmup?: boolean;
@@ -45,8 +44,8 @@ class DefaultOwnerSession implements OwnerSession {
     private readonly _options: CreateOwnerSessionOptions,
   ) {}
 
-  get vaultId(): string {
-    return this._options.vaultId;
+  get vault_id(): string {
+    return this._options.vault_id;
   }
 
   get nickname(): string | undefined {
@@ -93,17 +92,16 @@ class DefaultOwnerSession implements OwnerSession {
 
   private _assertValid(): void {
     if (this._invalidated) {
-      throw new Error(`OwnerSession for vault '${this._options.vaultId}' has been invalidated`);
+      throw new Error(`OwnerSession for vault '${this._options.vault_id}' has been invalidated`);
     }
   }
 
   private async _createClient(vault: RecoveredVault): Promise<OwnerClient> {
     const clientOptions: CreateOwnerClientOptions = {
       vault: vault.vault,
-      ownerIdentity: this._options.ownerIdentity as any,
       clock: this._options.clock,
       skipWarmup: this._options.skipWarmup,
-      passwordVerifier: vault.verifyPassword,
+      password_verifier: vault.verifyPassword,
       sensitiveActionVerifier: this._options.sensitiveActionVerifier,
     };
     return await createOwnerClient(clientOptions);

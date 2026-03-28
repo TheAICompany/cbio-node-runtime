@@ -13,7 +13,7 @@ export async function writeVaultProfile(
   storage: IStorageProvider,
   profile: VaultProfile,
   vaultWorkingKey: string,
-  _vaultId: string, // Kept for signature compatibility if needed, but unused in flat model
+  _vault_id: string, // Kept for signature compatibility if needed, but unused in flat model
 ): Promise<void> {
   const repo = new SealedJsonRepository<VaultProfile>(storage, VAULT_SEALED_PROFILE_KEY, vaultWorkingKey);
   await repo.write(profile, "vault_profile");
@@ -22,7 +22,7 @@ export async function writeVaultProfile(
 export async function readVaultProfile(
   storage: IStorageProvider,
   vaultWorkingKey: string,
-  _vaultId: string,
+  _vault_id: string,
 ): Promise<VaultProfile | null> {
   const repo = new SealedJsonRepository<VaultProfile>(storage, VAULT_SEALED_PROFILE_KEY, vaultWorkingKey);
   return await repo.read(null as any);
