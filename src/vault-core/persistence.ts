@@ -434,7 +434,7 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     policy: new DefaultPolicyEngine(),
     replayGuard: { assertNotReplayed: async () => {} },
     agentProofVerifier: { verify: async () => {} },
-    session_tokens: { 
+    sessionTokenRegistry: {
         issue: async () => "dummy",
         verify: async () => true,
         revoke: async () => {},

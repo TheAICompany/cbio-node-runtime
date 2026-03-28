@@ -29,7 +29,7 @@ const signer = new LocalSigner({
   privateKey: agentRecord.private_key 
 });
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
-const replaySessionTokens = new InMemorySessionTokenRegistry();
+const replaySessionTokenRegistry = new InMemorySessionTokenRegistry();
 const authority = createVaultCore({
   vault_id: { value: "vault-replay" },
   secrets: new InMemorySecretRepository(),
@@ -44,10 +44,10 @@ const authority = createVaultCore({
       })
   },
   agentRecords: replayAgentIdentities,
-  agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities, replaySessionTokens),
+  agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities, replaySessionTokenRegistry),
   agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
   secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
-  session_tokens: replaySessionTokens,
+  sessionTokenRegistry: replaySessionTokenRegistry,
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
   ids: new RandomIdGenerator(),

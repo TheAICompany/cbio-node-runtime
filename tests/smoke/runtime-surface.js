@@ -64,7 +64,7 @@ async function runSmokeTest() {
   };
 
   const runtimeSurfaceAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const runtimeSurfaceSessionTokens = new InMemorySessionTokenRegistry();
+  const runtimeSurfaceSessionTokenRegistry = new InMemorySessionTokenRegistry();
   const authority = createVaultCore({
     vault_id: { value: "vault-runtime-surface" },
     secrets: new InMemorySecretRepository(),
@@ -75,8 +75,8 @@ async function runSmokeTest() {
     agentRecords: runtimeSurfaceAgentIdentities,
     agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
     secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
-    agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokens),
-    session_tokens: runtimeSurfaceSessionTokens,
+    agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokenRegistry),
+    sessionTokenRegistry: runtimeSurfaceSessionTokenRegistry,
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),
@@ -114,6 +114,21 @@ async function runSmokeTest() {
   assert.equal(result.status, "SUCCEEDED");
   assert.equal(seenAuthHeader, "Bearer secret-v1");
 
+  const replacementSession = await client.ownerIssueSessionToken({ root_agent_id: importedAgentId });
+  await assert.rejects(
+    agent.agentDispatch({
+      secret_alias: "api-token",
+      target_url: "https://api.example.com/endpoint",
+      method: "POST",
+      reason: "Superseded token should fail",
+    }),
+    /invalid or expired session token/,
+  );
+
+  const listedAgents = await client.ownerListAgents();
+  const listedAgent = listedAgents.find((entry) => entry.root_agent_id === importedAgentId);
+  assert.equal(listedAgent?.session_token?.token, replacementSession.token);
+
   let releaseSlowDispatch;
   const slowDispatchStarted = new Promise((resolve) => {
     releaseSlowDispatch = resolve;
@@ -124,7 +139,7 @@ async function runSmokeTest() {
     return new Response("slow-ok", { status: 200 });
   };
   const slowAgentIdentities = new InMemoryAgentIdentityRegistry();
-  const slowSessionTokens = new InMemorySessionTokenRegistry();
+  const slowSessionTokenRegistry = new InMemorySessionTokenRegistry();
 
   const slowAuthority = createVaultCore({
     vault_id: { value: "vault-runtime-surface-slow" },
@@ -136,8 +151,8 @@ async function runSmokeTest() {
     agentRecords: slowAgentIdentities,
     agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
     secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
-    agentProofVerifier: new SignatureAgentProofVerifier(slowAgentIdentities, slowSessionTokens),
-    session_tokens: slowSessionTokens,
+    agentProofVerifier: new SignatureAgentProofVerifier(slowAgentIdentities, slowSessionTokenRegistry),
+    sessionTokenRegistry: slowSessionTokenRegistry,
     replayGuard: new InMemoryReplayGuard(),
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),

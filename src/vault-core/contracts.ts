@@ -522,14 +522,13 @@ export interface AgentIdentityRecord {
   private_key?: string;
   metadata?: Record<string, any>;
   nickname?: string;
-  session_tokens?: readonly StoredSessionToken[];
+  session_token?: StoredSessionToken;
 }
 
 export interface StoredSessionToken {
   token: string;
   root_agent_id: string;
   issued_at: string;
-  expires_at?: string;
 }
 
 export interface OwnerAuditRequest {

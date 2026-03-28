@@ -36,9 +36,9 @@
 
 ***
 
-### session\_tokens?
+### session\_token?
 
-> `optional` **session\_tokens?**: readonly `StoredSessionToken`[]
+> `optional` **session\_token?**: `StoredSessionToken`
 
 ***
 

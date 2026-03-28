@@ -64,7 +64,7 @@ The system uses a domain-level white-list model:
 
 ### Deployment Models
 1. **Managed**: The runtime handles private keys internally.
-2. **Session-based**: Agents use short-lived `sat_...` tokens issued by the owner.
+2. **Session-based**: Agents use revocable `sat_...` session tokens issued by the owner. In the default in-memory runtime, each agent has exactly one current token at a time.
 
 ### Storage Layout
 - `profile.sealed`: Vault metadata.

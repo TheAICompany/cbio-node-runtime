@@ -115,7 +115,7 @@ export interface VaultCoreDependencies {
 
   agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;
-  session_tokens: ISessionTokenRegistry;
+  sessionTokenRegistry: ISessionTokenRegistry;
   clock: Clock;
   ids: IdGenerator;
 }

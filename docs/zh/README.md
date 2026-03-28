@@ -9,7 +9,7 @@ cbio Vault Runtime 采用 **Vault（保险箱）** 架构：管理权限扎根�
 - **库优先**：纯 JavaScript/TypeScript 库，无 CLI 或 TUI。
 - **权限中心化**：管理权限绑定于保险箱主密码，而非外部身份密钥。
 - **Agent 身份托管**：支持在保险箱内直接生成并加密存储 Agent 私钥。
-- **Agent Session Token**：为 Agent 发放可撤销的 session token，避免在消费进程中持有原始私钥。
+- **Agent Session Token**：为 Agent 发放可撤销的 session token，避免在消费进程中持有原始私钥。默认内存实现中，每个 Agent 任意时刻只保留一个当前 token。
 - **进程隔离**：安全进程（Security Process）与 Agent 进程（Consumer Process）物理分离。
 - **零泄露发现**：保险箱元数据全加密，未解锁前对外部完全透明。
 
@@ -67,7 +67,7 @@ const createdAgent = await session.withClient((client) =>
 
 const ownerClient = await session.client();
 const agents = await ownerClient.ownerListAgents();
-// ownerListAgents() 会直接返回每个 agent 当前的 sessionTokens
+// ownerListAgents() 会直接返回每个 agent 当前的 session_token
 
 session.invalidate();
 ```

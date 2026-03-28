@@ -88,9 +88,9 @@
 
 ***
 
-### session\_tokens?
+### sessionTokenRegistry?
 
-> `optional` **session\_tokens?**: `ISessionTokenRegistry`
+> `optional` **sessionTokenRegistry?**: `ISessionTokenRegistry`
 
 ***
 

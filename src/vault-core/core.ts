@@ -650,14 +650,12 @@ export class VaultCore {
   async ownerListAgents(actor: VaultPrincipal & { kind: "owner" }): Promise<readonly AgentIdentityRecord[]> {
     this._assertOwnerPrincipal(actor);
     const identities = await this._deps.agentRecords.list(this._deps.vault_id);
-    const session_tokens = await this._deps.session_tokens.list();
-    const tokensByAgentId = new Map<string, StoredSessionToken[]>();
-    for (const st of session_tokens) {
-      const list = tokensByAgentId.get(st.root_agent_id) ?? [];
-      list.push(st);
-      tokensByAgentId.set(st.root_agent_id, list);
+    const sessionTokens = await this._deps.sessionTokenRegistry.list();
+    const tokensByAgentId = new Map<string, StoredSessionToken>();
+    for (const st of sessionTokens) {
+      tokensByAgentId.set(st.root_agent_id, st);
     }
-    const result = identities.map(id => ({ ...id, session_tokens: tokensByAgentId.get(id.root_agent_id) ?? [] }));
+    const result = identities.map(id => ({ ...id, session_token: tokensByAgentId.get(id.root_agent_id) }));
     await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_LIST_AGENTS, "allowed", "succeeded", "agent identity list accessed"));
     return result;
   }
@@ -698,7 +696,7 @@ export class VaultCore {
 
   async ownerIssueSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal; root_agent_id: string }) {
     this._assertOwnerPrincipal(request.actor);
-    const token = await this._deps.session_tokens.issue(request.root_agent_id);
+    const token = await this._deps.sessionTokenRegistry.issue(request.root_agent_id);
     await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditOperation.IDENTITY_ISSUE_TOKEN, "allowed", "succeeded", `session token issued for agent: "${request.root_agent_id}"`, { root_agent_id: request.root_agent_id }));
     return { token, root_agent_id: request.root_agent_id, issued_at: this._deps.clock.nowIso() };
   }
@@ -711,7 +709,7 @@ export class VaultCore {
 
   async ownerRevokeSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal; token: string }) {
     this._assertOwnerPrincipal(request.actor);
-    await this._deps.session_tokens.revoke(request.token);
+    await this._deps.sessionTokenRegistry.revoke(request.token);
     await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditOperation.IDENTITY_REVOKE_TOKEN, "allowed", "succeeded", "session token revoked"));
   }
 

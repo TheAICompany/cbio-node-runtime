@@ -18,7 +18,7 @@ A principal represented by a public/private keypair managed *outside* the vault.
 An identity whose public/private keypair is generated and stored **inside** the vault. 
 - The vault acts as the custodian of the private key.
 - This is the preferred model for preventing lost keys in isolated agent processes.
-- **Session Tokens**: Managed identities can be accessed via revocable session tokens (`sat_...`), allowing agents to authenticate without holding the private key in memory.
+- **Session Tokens**: Managed identities can be accessed via revocable session tokens (`sat_...`), allowing agents to authenticate without holding the private key in memory. In the default in-memory runtime, each managed agent has exactly one current session token.
 
 ## Identifying Principals
 

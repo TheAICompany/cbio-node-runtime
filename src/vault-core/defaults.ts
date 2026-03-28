@@ -336,31 +336,47 @@ export class DefaultPolicyEngine implements PolicyEngine {
 }
 
 export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
-  private readonly _tokens = new Map<string, StoredSessionToken>();
+  private readonly _tokensByAgentId = new Map<string, StoredSessionToken>();
+  private readonly _agentIdByToken = new Map<string, string>();
 
   async issue(root_agent_id: string): Promise<string> {
+    const existing = this._tokensByAgentId.get(root_agent_id);
+    if (existing) {
+      this._agentIdByToken.delete(existing.token);
+    }
     const token = `sat_${crypto.randomBytes(16).toString("hex")}`;
-    this._tokens.set(token, {
+    const stored = {
       token,
       root_agent_id,
       issued_at: new Date().toISOString(),
-    });
+    };
+    this._tokensByAgentId.set(root_agent_id, stored);
+    this._agentIdByToken.set(token, root_agent_id);
     return token;
   }
 
   async verify(token: string, root_agent_id: string): Promise<boolean> {
-    const stored = this._tokens.get(token);
+    const stored = this._tokensByAgentId.get(root_agent_id);
     if (!stored) return false;
-    return stored.root_agent_id === root_agent_id;
+    return stored.token === token;
   }
 
   async revoke(token: string): Promise<void> {
-    this._tokens.delete(token);
+    const root_agent_id = this._agentIdByToken.get(token);
+    if (!root_agent_id) return;
+    this._agentIdByToken.delete(token);
+    const stored = this._tokensByAgentId.get(root_agent_id);
+    if (stored?.token === token) {
+      this._tokensByAgentId.delete(root_agent_id);
+    }
   }
 
   async list(root_agent_id?: string): Promise<readonly StoredSessionToken[]> {
-    const tokens = [...this._tokens.values()];
-    return root_agent_id ? tokens.filter((token) => token.root_agent_id === root_agent_id) : tokens;
+    if (root_agent_id) {
+      const stored = this._tokensByAgentId.get(root_agent_id);
+      return stored ? [stored] : [];
+    }
+    return [...this._tokensByAgentId.values()];
   }
 }
 
@@ -373,7 +389,7 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
 
   constructor(
     private _identities: AgentIdentityRegistry,
-    private _session_tokens: ISessionTokenRegistry,
+    private _sessionTokenRegistry: ISessionTokenRegistry,
     options: SignatureAgentProofVerifierOptions = {},
   ) {
     this._maxSkewMs = options.maxSkewMs ?? (5 * 60 * 1000);
@@ -388,7 +404,7 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
 
     // Try token authentication first
     if (proof.token) {
-      const valid = await this._session_tokens.verify(proof.token, proof.root_agent_id);
+      const valid = await this._sessionTokenRegistry.verify(proof.token, proof.root_agent_id);
       if (valid) {
         return; // Token is valid, skip signature check
       }
@@ -503,7 +519,7 @@ export interface VaultCoreDependenciesOptions {
   policy?: DefaultPolicyEngineOptions;
   proofVerifier?: SignatureAgentProofVerifierOptions;
   replayGuard?: ReplayGuard;
-  session_tokens?: ISessionTokenRegistry;
+  sessionTokenRegistry?: ISessionTokenRegistry;
   clock?: Clock;
 }
 
@@ -511,7 +527,7 @@ export function createVaultCoreDependencies(
   options: VaultCoreDependenciesOptions = {},
 ): VaultCoreDependencies {
   const agentRecords = new InMemoryAgentIdentityRegistry();
-  const session_tokens = options.session_tokens ?? new InMemorySessionTokenRegistry();
+  const sessionTokenRegistry = options.sessionTokenRegistry ?? new InMemorySessionTokenRegistry();
   return {
     vault_id: { value: options.vault_id ?? `vault_${crypto.randomUUID()}` },
     secrets: new InMemorySecretRepository(),
@@ -524,12 +540,12 @@ export function createVaultCoreDependencies(
       options.authPrefix,
     ),
     agentRecords,
-    agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, session_tokens, options.proofVerifier),
+    agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, sessionTokenRegistry, options.proofVerifier),
     agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
     secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
     requests: new InMemoryRequestRecordRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
-    session_tokens,
+    sessionTokenRegistry,
     clock: options.clock ?? new SystemClock(),
     ids: new RandomIdGenerator(),
   };

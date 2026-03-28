@@ -29,5 +29,6 @@ const listed = await client.ownerListAgents();
 const found = listed.find((agent) => agent.root_agent_id === provisioned.agent.root_agent_id);
 assert.equal(found?.nickname, "After");
 assert.deepEqual(found?.metadata, { team: "platform" });
+assert.equal(found?.session_token?.token, provisioned.session_token.token);
 
 console.log("owner update agent smoke ok");
