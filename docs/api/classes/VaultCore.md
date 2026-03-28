@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
+[**CBIO Node Runtime Agent API v1.64.0**](../README.md)
 
 ***
 
@@ -709,22 +709,6 @@
 ##### command
 
 `OwnerUpdateSecretCommand`
-
-#### Returns
-
-`Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
-
-***
-
-### ownerWriteSecret()
-
-> **ownerWriteSecret**(`command`): `Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
-
-#### Parameters
-
-##### command
-
-`any`
 
 #### Returns
 

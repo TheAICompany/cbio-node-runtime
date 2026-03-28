@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
+[**CBIO Node Runtime Agent API v1.64.0**](../README.md)
 
 ***
 
@@ -489,22 +489,6 @@
 ##### request
 
 `OwnerUpdateSecretCommand`
-
-#### Returns
-
-`Promise`\<[`SecretRecord`](SecretRecord.md)\>
-
-***
-
-### ownerWriteSecret()
-
-> **ownerWriteSecret**(`request`): `Promise`\<[`SecretRecord`](SecretRecord.md)\>
-
-#### Parameters
-
-##### request
-
-`VaultWriteSecretCommand`
 
 #### Returns
 

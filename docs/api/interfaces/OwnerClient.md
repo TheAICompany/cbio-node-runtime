@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
+[**CBIO Node Runtime Agent API v1.64.0**](../README.md)
 
 ***
 
@@ -42,17 +42,33 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ### ownerCreateSecret()
 
+#### Call Signature
+
 > **ownerCreateSecret**(`input`): `Promise`\<[`SecretRecord`](SecretRecord.md)\>
 
-#### Parameters
+##### Parameters
 
-##### input
+###### input
 
 [`OwnerCreateSecretInput`](OwnerCreateSecretInput.md)
 
-#### Returns
+##### Returns
 
 `Promise`\<[`SecretRecord`](SecretRecord.md)\>
+
+#### Call Signature
+
+> **ownerCreateSecret**(`input`): `Promise`\<[`SecretRecord`](SecretRecord.md)[]\>
+
+##### Parameters
+
+###### input
+
+[`OwnerCreateSecretInput`](OwnerCreateSecretInput.md)[]
+
+##### Returns
+
+`Promise`\<[`SecretRecord`](SecretRecord.md)[]\>
 
 ***
 
@@ -388,14 +404,30 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ### ownerUpdateSecret()
 
+#### Call Signature
+
 > **ownerUpdateSecret**(`input`): `Promise`\<[`SecretRecord`](SecretRecord.md)\>
 
-#### Parameters
+##### Parameters
 
-##### input
+###### input
 
 [`OwnerUpdateSecretInput`](OwnerUpdateSecretInput.md)
 
-#### Returns
+##### Returns
 
 `Promise`\<[`SecretRecord`](SecretRecord.md)\>
+
+#### Call Signature
+
+> **ownerUpdateSecret**(`input`): `Promise`\<[`SecretRecord`](SecretRecord.md)[]\>
+
+##### Parameters
+
+###### input
+
+[`OwnerUpdateSecretInput`](OwnerUpdateSecretInput.md)[]
+
+##### Returns
+
+`Promise`\<[`SecretRecord`](SecretRecord.md)[]\>
