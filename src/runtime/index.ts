@@ -60,30 +60,63 @@ export {
   type CreatePersistentVaultCoreDependenciesOptions,
   PersistentVaultAgentIdentityRegistry,
   PersistentVaultAuditLog,
-  PersistentVaultCapabilityRegistry,
-  PersistentVaultCapabilityRevocationRegistry,
+  PersistentVaultAgentSecretGrantRegistry,
+  PersistentVaultSecretDestinationGrantRegistry,
   PersistentVaultCustomHttpFlowRegistry,
-  PersistentVaultRateLimitStore,
-  PersistentVaultReplayGuard,
   PersistentVaultSecretCustody,
   PersistentVaultSecretRepository,
 } from "../vault-core/index.js";
 
+export type {
+  AgentId,
+  AgentSecretGrant,
+  SecretDestinationGrant,
+  GrantStatus,
+  AgentIdentityRecord,
+  AgentVisibleSecretRecord,
+  AgentRuntimeManifest,
+  AgentVisibleRequestRecord,
+  OwnerVisibleRequestRecord,
+  OwnerRequestRecord,
+  AgentRequestResult,
+  DispatchApprovalDecision,
+  CustomHttpFlowDefinition,
+  AuditEntry,
+  DispatchAuthorization,
+  DispatchInstruction,
+  DispatchRequest,
+  DispatchResult,
+  RequestRecord,
+  SecretAlias,
+  SecretId,
+  SecretLifecycleStatus,
+  SecretRecord,
+  VaultPrincipal,
+  VaultPrincipalKind,
+  VaultId,
+} from "../vault-core/index.js";
+
 export {
-  createVaultClient,
-  type VaultClient,
-  type CreateVaultClientOptions,
-  type VaultIdentity,
-  type VaultSigner,
+  DispatchStatus,
+  AuditAction,
+  AuditOutcome,
+} from "../vault-core/index.js";
+
+export {
+  createOwnerClient,
+  type OwnerClient,
+  type CreateOwnerClientOptions,
   type VaultAuditQueryInput,
   type VaultExportSecretInput,
   type VaultReadSecretPlaintextInput,
   type VaultReadAgentPrivateKeyInput,
   type OwnerSensitiveActionConfirmation,
   type OwnerSensitiveActionContext,
-  type VaultGrantCapabilityInput,
-  type VaultGrantCapabilityRequest,
-  type OwnerGrantCapabilityInput,
+  type VaultGrantAgentSecretInput,
+  type VaultGrantSecretDestinationInput,
+  type VaultRevokeAgentSecretInput,
+  type VaultRevokeSecretDestinationInput,
+  type VaultListGrantsInput,
   type VaultRegisterFlowInput,
   type VaultImportAgentInput,
   type VaultCreateAgentInput,
@@ -93,13 +126,11 @@ export {
   type OwnerRemoveSecretInput,
   type VaultUpdateAgentInput,
   type VaultListAgentsInput,
-  type VaultListCapabilitiesInput,
+  type VaultListRequestsInput,
+  type VaultGetRequestInput,
   type VaultListSecretsInput,
-  type VaultRevokeCapabilityInput,
   type VaultIssueSessionTokenInput,
   type VaultRevokeSessionTokenInput,
-  type VaultSubmitCapabilityRequestInput,
-  type VaultApproveCapabilityRequestInput,
   type VaultApproveDispatchInput,
 } from "../clients/owner/index.js";
 
@@ -108,39 +139,22 @@ export {
   type AgentClient,
   type CreateAgentClientOptions,
   type AgentIdentity,
-  type AgentCapabilityEnvelope,
   type AgentDispatchIntent,
   type AgentDispatchTransport,
   type AgentSigner,
-  type AgentSubmitCapabilityRequestInput,
-  type AgentVisibleSecretRecord,
 } from "../clients/agent/index.js";
-
-export type {
-  OwnerClient,
-  CreateOwnerClientOptions,
-  OwnerAgentView,
-  OwnerSecretView,
-  OwnerPendingApprovalView,
-  OwnerRequestSummaryView,
-  OwnerRequestDetailView,
-} from "../public-types.js";
 
 export {
   createVaultService,
-  wrapVaultCoreAsVaultService,
-  createOwnerHttpFlowBoundary,
-  createStandardAcquireBoundary,
-  createStandardDispatchBoundary,
-  AgentDispatchHttpTransport,
+  type VaultService,
+} from "../vault-ingress/index.js";
+
+export {
   handleVaultHttpDispatch,
   handleVaultAgentControlHttp,
-} from "../vault-ingress/index.js";
-/*
- * Owner remote control is intentionally not re-exported right now.
- * Restore `handleVaultOwnerControlHttp` here after owner remote auth exists.
- */
+} from "../vault-ingress/server-utils.js";
 
+export { AgentDispatchHttpTransport } from "../vault-ingress/remote-transport.js";
 export { LocalVaultTransport } from "../vault-ingress/defaults.js";
 
 /**
@@ -156,7 +170,6 @@ export interface CbioRuntime {
   MemoryStorageProvider: typeof import("../storage/memory.js").MemoryStorageProvider;
   LocalSigner: typeof import("../protocol/crypto.js").LocalSigner;
   SystemClock: typeof import("../vault-core/index.js").SystemClock;
-  PersistentVaultCapabilityRevocationRegistry: typeof import("../vault-core/index.js").PersistentVaultCapabilityRevocationRegistry;
   createIdentity: typeof import("./identity.js").createIdentity;
   restoreIdentity: typeof import("./identity.js").restoreIdentity;
   listVaults: typeof import("./bootstrap.js").listVaults;
@@ -164,15 +177,11 @@ export interface CbioRuntime {
   recoverVault: typeof import("./bootstrap.js").recoverVault;
   createOwnerSession: typeof import("./owner-session.js").createOwnerSession;
   deriveVaultWorkingKeyFromPassword: typeof import("../protocol/crypto.js").deriveVaultWorkingKeyFromPassword;
-  createVaultClient: typeof import("../clients/owner/index.js").createVaultClient;
+  createOwnerClient: typeof import("../clients/owner/index.js").createOwnerClient;
   createAgentClient: typeof import("../clients/agent/index.js").createAgentClient;
   createVaultCore: typeof import("../vault-core/index.js").createVaultCore;
   createVaultCoreDependencies: typeof import("../vault-core/index.js").createVaultCoreDependencies;
   createVaultService: typeof import("../vault-ingress/index.js").createVaultService;
-  wrapVaultCoreAsVaultService: typeof import("../vault-ingress/index.js").wrapVaultCoreAsVaultService;
-  createOwnerHttpFlowBoundary: typeof import("../vault-ingress/index.js").createOwnerHttpFlowBoundary;
-  createStandardAcquireBoundary: typeof import("../vault-ingress/index.js").createStandardAcquireBoundary;
-  createStandardDispatchBoundary: typeof import("../vault-ingress/index.js").createStandardDispatchBoundary;
   LocalVaultTransport: typeof import("../vault-ingress/defaults.js").LocalVaultTransport;
   AgentDispatchHttpTransport: typeof import("../vault-ingress/remote-transport.js").AgentDispatchHttpTransport;
   handleVaultHttpDispatch: typeof import("../vault-ingress/server-utils.js").handleVaultHttpDispatch;

@@ -7,10 +7,9 @@ export type {
 } from "./client.js";
 
 export type {
-  AgentCapabilityEnvelope,
   AgentDispatchIntent,
   AgentDispatchTransport,
   AgentSigner,
-  AgentSubmitCapabilityRequestInput,
   AgentVisibleSecretRecord,
+  AgentVisibleRequestRecord,
 } from "./contracts.js";

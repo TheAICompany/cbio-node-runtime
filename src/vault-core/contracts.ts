@@ -1,3 +1,5 @@
+export type AgentId = string;
+
 export type VaultPrincipalKind =
   | "owner"
   | "trusted_issuer"
@@ -58,6 +60,32 @@ export interface SecretSourceInput {
   kind: "manual" | "request";
   requestId?: string;
 }
+
+// ─── Grant Types ───────────────────────────────────────────────────────────────
+
+export type GrantStatus = "pending" | "approved";
+
+export interface AgentSecretGrant {
+  vaultId: VaultId;
+  agentId: string;
+  secretAlias: string;
+  status: GrantStatus;
+  requestedAt: string;
+  grantedAt?: string;
+}
+
+export interface SecretDestinationGrant {
+  vaultId: VaultId;
+  secretAlias: string;
+  domain: string;
+  status: GrantStatus;
+  requestedAt: string;
+  grantedAt?: string;
+}
+
+export type DispatchApprovalDecision = "allow_once" | "allow_and_grant" | "deny";
+
+// ─── Secret Commands ───────────────────────────────────────────────────────────
 
 export interface OwnerCreateSecretCommand {
   kind: "owner.create_secret";
@@ -124,6 +152,42 @@ export interface OwnerUpdateAgentIdentityCommand {
   requestedAt: string;
 }
 
+export interface OwnerGrantAgentSecretCommand {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  agentId: string;
+  secretAlias: string;
+  requestedAt: string;
+}
+
+export interface OwnerGrantSecretDestinationCommand {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  secretAlias: string;
+  domain: string;
+  requestedAt: string;
+}
+
+export interface OwnerRevokeAgentSecretCommand {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  agentId: string;
+  secretAlias: string;
+  requestedAt: string;
+}
+
+export interface OwnerRevokeSecretDestinationCommand {
+  vaultId: VaultId;
+  requestId: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  secretAlias: string;
+  domain: string;
+  requestedAt: string;
+}
+
 export interface CustomHttpFlowDefinition {
   vaultId: VaultId;
   flowId: string;
@@ -159,51 +223,6 @@ export interface OwnerRegisterCustomHttpFlowCommand {
   requestedAt: string;
 }
 
-export interface OwnerRegisterCapabilityCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal & { kind: "owner" };
-  capability: AgentCapability;
-  requestedAt: string;
-}
-
-export interface OwnerRevokeCapabilityCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal & { kind: "owner" };
-  agentId: string;
-  capabilityId: string;
-  requestedAt: string;
-}
-
-export interface CapabilityWritePolicy {
-  secretIds?: readonly string[];
-  scope: string;
-  methods: readonly string[];
-}
-
-export interface CapabilityReadPolicy {
-  paths: readonly string[];
-}
-
-export interface AgentCapability {
-  vaultId: VaultId;
-  capabilityId: string;
-  agentId: string;
-  operation: "dispatch_http" | "custom_http";
-  customFlowId?: string;
-  write: CapabilityWritePolicy;
-  read: CapabilityReadPolicy;
-  issuedAt: string;
-  expiresAt?: string;
-  revocationVersion?: number;
-  rateLimit?: {
-    maxRequests: number;
-    windowMs: number;
-  };
-  skipAudit?: boolean;
-}
-
 export interface AgentProof {
   agentId: string;
   requestId: string;
@@ -222,12 +241,7 @@ export interface AgentVisibleSecretRecord {
   source: SecretSource;
   createdAt: string;
   updatedAt: string;
-  isAuthorizedForAgent?: boolean;
-  authorizedCapabilities?: readonly {
-    capabilityId: string;
-    write: CapabilityWritePolicy;
-    read: CapabilityReadPolicy;
-  }[];
+  granted: boolean;
 }
 
 export interface AgentGetRuntimeManifestRequest {
@@ -253,50 +267,16 @@ export interface AgentSelfContext {
   metadata?: Record<string, any>;
 }
 
-export type AgentCapabilityStateSource = "owner_grant" | "explicit_request" | "dispatch_discovery";
-export type CapabilityWriteGrant = "none" | "once" | "always";
-
-export interface AgentCapabilityState {
-  source: AgentCapabilityStateSource;
-  agentId: string;
-  requestId?: string;
-  capabilityId?: string;
-  operation: "dispatch_http" | "custom_http";
-  customFlowId?: string;
-  write: CapabilityWritePolicy;
-  read: CapabilityReadPolicy;
-  issuedAt?: string;
-  requestedAt: string;
-  expiresAt?: string;
-  rateLimit?: {
-    maxRequests: number;
-    windowMs: number;
-  };
-  skipAudit?: boolean;
-  writeGrant: CapabilityWriteGrant | null;
-  writeGrantedAt?: string;
-  readGrant: readonly string[] | null;
-  readGrantedAt?: string;
-  reason?: string;
-  secretId?: string;
-  targetUrl?: string;
-}
-
-export interface CapabilityStateRecord extends AgentCapabilityState {
-  vaultId: VaultId;
-  proof?: AgentProof;
-  headers?: Record<string, string>;
-  body?: string;
-  decidedAt?: string;
-}
-
 export interface AgentRuntimeManifest {
   agentId: string;
   vaultId: string;
   vaultNickname?: string;
   issuedAt: string;
   agent: AgentSelfContext;
-  capabilities: readonly AgentCapabilityState[];
+  grants: {
+    agentSecrets: readonly AgentSecretGrant[];
+    secretDestinations: readonly SecretDestinationGrant[];
+  };
   tools: readonly VaultToolDefinition[];
 }
 
@@ -305,15 +285,13 @@ export interface RequestRecord {
   requestId: string;
   agentId: string;
   reason: string;
-  capabilityId?: string;
-  operation: "dispatch_http" | "custom_http";
   createdAt: string;
   request: {
     targetUrl: string;
     method: string;
     headers?: Record<string, string>;
     body?: string;
-    secretId?: string;
+    secretAlias?: string;
   };
   response?: {
     status?: number;
@@ -324,22 +302,21 @@ export interface RequestRecord {
   execution: {
     status: DispatchStatus;
   };
+  missingGrants?: {
+    agentSecret?: boolean;
+    secretDestination?: boolean;
+  };
 }
 
 export interface AgentVisibleRequestRecord {
   requestId: string;
   createdAt: string;
   reason: string;
-  capabilityId?: string;
-  operation: "dispatch_http" | "custom_http";
   targetUrl: string;
-  method: string;
   executionStatus: DispatchStatus;
   responseStatus?: number;
   error?: string;
-  readGrant: readonly string[] | null;
   hasResponseBody: boolean;
-  resultVisible: boolean;
 }
 
 export interface OwnerVisibleRequestRecord {
@@ -347,16 +324,15 @@ export interface OwnerVisibleRequestRecord {
   createdAt: string;
   agentId: string;
   reason: string;
-  capabilityId?: string;
-  operation: "dispatch_http" | "custom_http";
   targetUrl: string;
-  method: string;
   executionStatus: DispatchStatus;
   responseStatus?: number;
   error?: string;
-  writeGrant: CapabilityWriteGrant | null;
-  readGrant: readonly string[] | null;
   hasResponseBody: boolean;
+  missingGrants?: {
+    agentSecret?: boolean;
+    secretDestination?: boolean;
+  };
 }
 
 export interface OwnerRequestRecord {
@@ -364,14 +340,11 @@ export interface OwnerRequestRecord {
   createdAt: string;
   agentId: string;
   reason: string;
-  capabilityId?: string;
-  operation: "dispatch_http" | "custom_http";
   request: {
     targetUrl: string;
-    method: string;
     headers?: Record<string, string>;
     body?: string;
-    secretId?: string;
+    secretAlias?: string;
   };
   response?: {
     status?: number;
@@ -379,11 +352,11 @@ export interface OwnerRequestRecord {
     body?: string;
     error?: string;
   };
-  writeGrant: CapabilityWriteGrant | null;
-  writeGrantedAt?: string;
-  readGrant: readonly string[] | null;
-  readGrantedAt?: string;
   executionStatus: DispatchStatus;
+  missingGrants?: {
+    agentSecret?: boolean;
+    secretDestination?: boolean;
+  };
 }
 
 export interface VaultToolDefinition {
@@ -392,7 +365,7 @@ export interface VaultToolDefinition {
   parameters: Record<string, any>; // JSON-Schema
 }
 
-export interface AgentListCapabilitiesRequest {
+export interface AgentListGrantsRequest {
   vaultId: VaultId;
   requestId: string;
   requestedAt: string;
@@ -441,82 +414,21 @@ export interface OwnerGetRequestRequest {
   requestedAt: string;
 }
 
-export interface AgentSubmitCapabilityRequestCommand {
+export interface OwnerApproveDispatchCommand {
   vaultId: VaultId;
   requestId: string;
-  requestedAt: string;
-  agent: VaultPrincipal & { kind: "agent" };
-  proof: AgentProof;
-  capability: CapabilityRequestScope;
-  secretAliases?: readonly string[];
-  reason: string;
-}
-
-export interface CapabilityRequestScope {
-  operation: "dispatch_http" | "custom_http";
-  write: CapabilityWritePolicy;
-  read: CapabilityReadPolicy;
-  rateLimit?: {
-    maxRequests: number;
-    windowMs: number;
-  };
-  skipAudit?: boolean;
-  expiresAt?: string;
-}
-
-export interface SubmitCapabilityRequestCommand {
-  vaultId: VaultId;
-  requestId: string;
-  requester: VaultPrincipal;
-  agentId: string;
-  capability: CapabilityRequestScope;
-  reason?: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  decision: DispatchApprovalDecision;
   requestedAt: string;
 }
-
-export interface OwnerListCapabilityStatesRequest {
-  vaultId: VaultId;
-  owner: VaultPrincipal;
-  agentId?: string;
-  writeGranted?: boolean;
-  readGranted?: boolean;
-}
-
-export interface OwnerApproveCapabilityReadCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
-  read?: CapabilityReadPolicy;
-}
-
-export interface OwnerAllowOnceCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
-}
-
-export interface OwnerAllowAlwaysCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
-}
-
-export interface OwnerDenyCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal;
-}
-
 
 export interface DispatchRequest {
   vaultId: VaultId;
   requestId: string;
   requestedAt: string;
   agent: VaultPrincipal & { kind: "agent" };
-  capability?: AgentCapability;
   proof: AgentProof;
   secretAlias?: string;
-  secretId?: string;
   reason: string;
   targetUrl: string;
   method: string;
@@ -532,7 +444,10 @@ export interface DispatchAuthorization {
   decision: DispatchDecision;
   reason: string | null;
   secretId: SecretId | null;
-  capability?: AgentCapability;
+  missingGrants?: {
+    agentSecret?: boolean;
+    secretDestination?: boolean;
+  };
 }
 
 export interface DispatchInstruction {
@@ -573,6 +488,7 @@ export interface AgentRequestResult {
 }
 
 export interface AuditQuery {
+  vaultId: VaultId;
   actorId?: string;
   secretAlias?: string;
   requestId?: string;
@@ -583,13 +499,10 @@ export enum AuditAction {
   REGISTER_AGENT_IDENTITY = "REGISTER_AGENT_IDENTITY",
   UPDATE_AGENT_IDENTITY = "UPDATE_AGENT_IDENTITY",
   REGISTER_CUSTOM_FLOW = "REGISTER_CUSTOM_FLOW",
-  REGISTER_CAPABILITY = "REGISTER_CAPABILITY",
-  SUBMIT_CAPABILITY_REQUEST = "SUBMIT_CAPABILITY_REQUEST",
-  APPROVE_CAPABILITY_WRITE = "APPROVE_CAPABILITY_WRITE",
-  APPROVE_CAPABILITY_READ = "APPROVE_CAPABILITY_READ",
-  REJECT_CAPABILITY_WRITE = "REJECT_CAPABILITY_WRITE",
-  REJECT_CAPABILITY_READ = "REJECT_CAPABILITY_READ",
-  REVOKE_CAPABILITY = "REVOKE_CAPABILITY",
+  GRANT_AGENT_SECRET = "GRANT_AGENT_SECRET",
+  GRANT_SECRET_DESTINATION = "GRANT_SECRET_DESTINATION",
+  REVOKE_AGENT_SECRET = "REVOKE_AGENT_SECRET",
+  REVOKE_SECRET_DESTINATION = "REVOKE_SECRET_DESTINATION",
   WRITE_SECRET = "WRITE_SECRET",
   EXPORT_SECRET = "EXPORT_SECRET",
   REASSIGN_ALIAS = "REASSIGN_ALIAS",
@@ -597,7 +510,7 @@ export enum AuditAction {
   AUTHORIZE_DISPATCH = "AUTHORIZE_DISPATCH",
   DISPATCH_SECRET = "DISPATCH_SECRET",
   LIST_AGENTS = "LIST_AGENTS",
-  LIST_CAPABILITIES = "LIST_CAPABILITIES",
+  LIST_GRANTS = "LIST_GRANTS",
   LIST_REQUESTS = "LIST_REQUESTS",
   READ_REQUEST = "READ_REQUEST",
   READ_AUDIT = "READ_AUDIT",
@@ -619,16 +532,15 @@ export enum AuditOutcome {
 export interface AuditEntry {
   entryId: string;
   occurredAt: string;
-  vaultId: string;
+  vaultId: VaultId;
   actor: VaultPrincipal;
   action: AuditAction;
   requestId?: string;
-  capabilityId?: string;
-  operation?: AgentCapability["operation"] | AuditAction;
   targetUrl?: string;
   secretAlias?: string;
   secretId?: string;
   agentId?: string;
+  domain?: string;
   outcome: AuditOutcome;
   detail: string;
 }
@@ -650,7 +562,6 @@ export interface StoredSessionToken {
   issuedAt: string;
   expiresAt?: string;
 }
-
 
 export interface OwnerAuditRequest {
   vaultId: VaultId;
@@ -683,11 +594,12 @@ export interface OwnerListAgentsRequest {
   requestedAt: string;
 }
 
-export interface OwnerListCapabilitiesRequest {
+export interface OwnerListGrantsRequest {
   vaultId: VaultId;
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
   agentId?: string;
+  secretAlias?: string;
   requestedAt: string;
 }
 

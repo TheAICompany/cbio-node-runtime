@@ -16,13 +16,12 @@ export class LocalVaultTransport implements AgentDispatchTransport {
       requestedAt: request.requestedAt,
       agentId: request.agent.id,
       reason: request.reason,
-      capabilityId: request.capability?.capabilityId,
       secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
       method: request.method,
       headers: request.headers,
       body: request.body,
-      proof: { token: request.proof.token },
+      proof: { token: request.proof.token, signature: request.proof.signature },
     });
     if (!response.ok) {
       throw new Error(`${response.error.code}:${response.error.message}`);
@@ -30,8 +29,17 @@ export class LocalVaultTransport implements AgentDispatchTransport {
     return response.result;
   }
 
-  async agentListCapabilities(request: import("../vault-core/index.js").AgentListCapabilitiesRequest) {
-    return this._vault.agentListCapabilities(request);
+  async agentListGrants(request: import("../vault-core/index.js").AgentListGrantsRequest) {
+    const response = await this._vault.agentHandleControl({
+      action: "get_manifest",
+      vaultId: request.vaultId.value,
+      requestId: request.requestId,
+      requestedAt: request.requestedAt,
+      agentId: request.agent.id,
+      proof: { token: request.proof.token, signature: request.proof.signature },
+    });
+    if (!response.ok) throw new Error(`${response.error.code}:${response.error.message}`);
+    return (response.result as import("../vault-core/index.js").AgentRuntimeManifest).grants;
   }
 
   async agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest) {
@@ -48,9 +56,5 @@ export class LocalVaultTransport implements AgentDispatchTransport {
 
   async agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest) {
     return this._vault.agentGetRuntimeManifest(request);
-  }
-
-  async agentSubmitCapabilityRequest(request: import("../vault-core/index.js").AgentSubmitCapabilityRequestCommand) {
-    return this._vault.agentSubmitCapabilityRequest(request);
   }
 }

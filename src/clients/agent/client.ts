@@ -1,13 +1,10 @@
-import type { CreatedIdentity } from "../../runtime/identity.js";
 import { createRequestIdValue } from "../../internal/id-factory.js";
 import { SystemClock, type Clock } from "../../vault-core/index.js";
 import { LocalVaultTransport } from "../../vault-ingress/defaults.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
-  AgentCapabilityEnvelope,
   AgentDispatchIntent,
   AgentDispatchTransport,
-  AgentSubmitCapabilityRequestInput,
   AgentVisibleRequestRecord,
   AgentVisibleSecretRecord,
 } from "./contracts.js";
@@ -18,47 +15,40 @@ export interface AgentIdentity {
 
 /**
  * A client for agents to perform authorized operations (e.g., dispatch HTTP requests with secrets).
- * This client uses a delegated capability granted by the owner.
+ * This client uses a session token managed by the owner.
  * Agents can use secrets and request broader access, but they do not directly manage
- * the secret lifecycle inside the vault. Newly obtained credentials are persisted only
- * through owner actions or owner-configured vault flows that explicitly capture them.
+ * the secret lifecycle inside the vault.
  */
 export interface AgentClient {
   /**
    * Dispatches a session-token-authenticated request to a target using a vault secret.
-   *
-   * @param intent - The destination, method, and secret alias to use.
-   * @returns The result of the remote operation.
-   *
-   * @example
-   * ```ts
-   * const result = await agent.agentDispatch({
-   *   targetUrl: 'https://api.example.com/data',
-   *   method: 'POST',
-   *   secretAlias: 'api-token',
-   *   body: JSON.stringify({ key: 'value' })
-   * });
-   * ```
+   * If the grant is missing, it will return a PENDING status.
    */
   agentDispatch(intent: AgentDispatchIntent): Promise<import("../../vault-core/index.js").DispatchResult>;
-  agentListCapabilities(): Promise<readonly import("../../vault-core/index.js").AgentCapabilityState[]>;
-  agentListSecrets(): Promise<readonly AgentVisibleSecretRecord[]>;
-  agentListRequests(): Promise<readonly AgentVisibleRequestRecord[]>;
-  agentGetRequest(requestId: string): Promise<import("../../vault-core/index.js").AgentRequestResult>;
+  
   /**
-   * Introspects the current runtime environment, providing identity, capabilities, and a toolbox manifest.
-   * Equivalent to '--help' or 'llms.txt' for the agent.
-   * This is the primary place where an agent should learn its operational boundary:
-   * it can use existing secrets and request more permission, but it cannot directly
-   * create, update, or remove secrets in the vault.
+   * List secrets the agent can see, including whether they are granted or not.
+   */
+  agentListSecrets(): Promise<readonly AgentVisibleSecretRecord[]>;
+  
+  /**
+   * List previous requests sent by this agent.
+   */
+  agentListRequests(): Promise<readonly AgentVisibleRequestRecord[]>;
+  
+  /**
+   * Get details of a specific request.
+   */
+  agentGetRequest(requestId: string): Promise<import("../../vault-core/index.js").AgentRequestResult>;
+  
+  /**
+   * Introspects the current runtime environment, providing identity, grants, and a toolbox manifest.
    */
   agentIntrospect(): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
-  agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput): Promise<import("../../vault-core/index.js").CapabilityStateRecord>;
 }
 
 export interface CreateAgentClientOptions {
-  agentIdentity: CreatedIdentity | AgentIdentity;
-  capability: AgentCapabilityEnvelope;
+  agentIdentity: AgentIdentity | { id: string };
   vault?: VaultService;
   transport?: AgentDispatchTransport;
   token: string;
@@ -68,7 +58,6 @@ export interface CreateAgentClientOptions {
 class DefaultAgentClient implements AgentClient {
   constructor(
     private readonly _identity: AgentIdentity,
-    private readonly _capability: AgentCapabilityEnvelope,
     private readonly _transport: AgentDispatchTransport,
     private readonly _clock: Clock,
     private readonly _token: string,
@@ -83,26 +72,12 @@ class DefaultAgentClient implements AgentClient {
     }
 
     return this._transport.agentDispatch({
-      vaultId: this._capability.vaultId,
+      vaultId: { value: "" }, // Will be filled by transport/vault if needed, or ignored if local
       requestId,
       requestedAt,
       agent: {
         kind: "agent",
         id: this._identity.agentId,
-      },
-      capability: {
-        vaultId: this._capability.vaultId,
-        capabilityId: this._capability.capabilityId,
-        agentId: this._capability.agentId,
-        operation: this._capability.operation,
-        customFlowId: this._capability.customFlowId,
-        write: this._capability.write,
-        read: this._capability.read,
-        issuedAt: this._capability.issuedAt,
-        expiresAt: this._capability.expiresAt,
-        revocationVersion: this._capability.revocationVersion,
-        rateLimit: this._capability.rateLimit,
-        skipAudit: this._capability.skipAudit,
       },
       proof: {
         agentId: this._identity.agentId,
@@ -122,8 +97,6 @@ class DefaultAgentClient implements AgentClient {
   private async _createProof(
     requestId: string,
     requestedAt: string,
-    _action: string,
-    _payload: Record<string, unknown> = {},
   ) {
     return {
       agentId: this._identity.agentId,
@@ -133,27 +106,15 @@ class DefaultAgentClient implements AgentClient {
     };
   }
 
-  async agentListCapabilities() {
-    const requestedAt = this._clock.nowIso();
-    const requestId = createRequestIdValue("list_capabilities");
-    return this._transport.agentListCapabilities({
-      vaultId: this._capability.vaultId,
-      requestId,
-      requestedAt,
-      agent: { kind: "agent", id: this._identity.agentId },
-      proof: await this._createProof(requestId, requestedAt, "list_capabilities"),
-    });
-  }
-
   async agentListSecrets() {
     const requestedAt = this._clock.nowIso();
     const requestId = createRequestIdValue("list_secrets");
     return this._transport.agentListSecrets({
-      vaultId: this._capability.vaultId,
+      vaultId: { value: "" },
       requestId,
       requestedAt,
       agent: { kind: "agent", id: this._identity.agentId },
-      proof: await this._createProof(requestId, requestedAt, "list_secrets"),
+      proof: await this._createProof(requestId, requestedAt),
     });
   }
 
@@ -161,11 +122,11 @@ class DefaultAgentClient implements AgentClient {
     const requestedAt = this._clock.nowIso();
     const requestId = createRequestIdValue("get_manifest");
     return this._transport.agentGetRuntimeManifest({
-      vaultId: this._capability.vaultId,
+      vaultId: { value: "" },
       requestId,
       requestedAt,
       agent: { kind: "agent", id: this._identity.agentId },
-      proof: await this._createProof(requestId, requestedAt, "get_manifest"),
+      proof: await this._createProof(requestId, requestedAt),
     });
   }
 
@@ -173,11 +134,11 @@ class DefaultAgentClient implements AgentClient {
     const requestedAt = this._clock.nowIso();
     const requestId = createRequestIdValue("list_requests");
     return this._transport.agentListRequests({
-      vaultId: this._capability.vaultId,
+      vaultId: { value: "" },
       requestId,
       requestedAt,
       agent: { kind: "agent", id: this._identity.agentId },
-      proof: await this._createProof(requestId, requestedAt, "list_requests"),
+      proof: await this._createProof(requestId, requestedAt),
     });
   }
 
@@ -185,66 +146,20 @@ class DefaultAgentClient implements AgentClient {
     const requestedAt = this._clock.nowIso();
     const requestId = createRequestIdValue("read_request_result");
     return this._transport.agentGetRequest({
-      vaultId: this._capability.vaultId,
+      vaultId: { value: "" },
       requestId,
       requestedAt,
       targetRequestId,
       agent: { kind: "agent", id: this._identity.agentId },
-      proof: await this._createProof(requestId, requestedAt, "read_request_result", { targetRequestId }),
+      proof: await this._createProof(requestId, requestedAt),
     });
   }
-
-  async agentSubmitCapabilityRequest(input: AgentSubmitCapabilityRequestInput) {
-    const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("submit_capability_request");
-    const reason = input.reason.trim();
-    if (!reason) {
-      throw new Error("agentSubmitCapabilityRequest requires a non-empty reason for owner review");
-    }
-    const payload = {
-      write: {
-        ...input.write,
-        secretAliases: input.secretAliases ?? null,
-      },
-      read: input.read,
-      operation: input.operation ?? "dispatch_http",
-      reason,
-    };
-    return this._transport.agentSubmitCapabilityRequest({
-      vaultId: this._capability.vaultId,
-      requestId,
-      requestedAt,
-      agent: { kind: "agent", id: this._identity.agentId },
-      proof: await this._createProof(requestId, requestedAt, "submit_capability_request", payload),
-      capability: {
-        operation: input.operation ?? "dispatch_http",
-        write: {
-          scope: input.write.scope,
-          methods: [...input.write.methods],
-        },
-        read: { paths: [...input.read.paths] },
-      },
-      secretAliases: input.secretAliases ? [...input.secretAliases] : undefined,
-      reason,
-    });
-  }
-}
-
-function isCreateAgentClientOptions(value: unknown): value is CreateAgentClientOptions {
-  return typeof value === "object" && value !== null && "agentIdentity" in value && "capability" in value;
 }
 
 function resolveAgentIdentity(options: CreateAgentClientOptions): AgentIdentity {
   return "agentId" in options.agentIdentity
     ? options.agentIdentity
-    : { agentId: options.agentIdentity.identityId };
-}
-
-function resolveAgentToken(options: CreateAgentClientOptions): string {
-  if (!options.token) {
-    throw new Error("createAgentClient() requires a session token; raw private-key execution is not supported");
-  }
-  return options.token;
+    : { agentId: (options.agentIdentity as any).id };
 }
 
 function resolveAgentTransport(
@@ -261,28 +176,12 @@ function resolveAgentTransport(
 
 /**
  * Creates an {@link AgentClient} for a delegated identity.
- *
- * @param options - Configuration including agent identity, capability, and transport.
- * @returns An initialized {@link AgentClient}.
- *
- * @example
- * ```ts
- * const agent = createAgentClient({
- *   agentIdentity,
- *   capability,
- *   vault
- * });
- * ```
  */
 export function createAgentClient(options: CreateAgentClientOptions): AgentClient {
-  if (!isCreateAgentClientOptions(options)) {
-    throw new Error("createAgentClient() requires a single options object");
-  }
   return new DefaultAgentClient(
     resolveAgentIdentity(options),
-    options.capability,
     resolveAgentTransport(options),
     options.clock ?? new SystemClock(),
-    resolveAgentToken(options),
+    options.token,
   );
 }

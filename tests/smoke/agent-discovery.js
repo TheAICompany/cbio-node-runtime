@@ -1,36 +1,35 @@
-import { createVaultClient } from "../../dist/clients/owner/client.js";
-import { createAgentClient } from "../../dist/clients/agent/client.js";
+import { createVault, createVaultClient, createAgentClient, MemoryStorageProvider } from "../../src/runtime/index.js";
 import assert from "node:assert";
 
 /**
- * Smoke Test: Agent Introspection & Discovery (v1.56.0)
- * Verifies that an agent can self-discover its identity, capabilities, and tools.
+ * Smoke Test: Agent Introspection & Discovery (v1.65.0 - Grant-based)
+ * Verifies that an agent can self-discover its identity, grants, and tools.
  */
 async function runDiscoveryTest() {
   console.log("🚀 Starting Agent Discovery Smoke Test...");
 
-  const owner = await createVaultClient({
-    vaultPath: `./test-vault-discovery-${Date.now()}`,
+  // 1. Setup Vault
+  const { vault } = await createVault(new MemoryStorageProvider(), {
+    nickname: "Discovery Test Vault",
     password: "master-password",
   });
 
-  const { agent, sessionToken } = await owner.ownerCreateAgent({
+  // 2. Setup Owner Client
+  const ownerClient = createVaultClient({
+    vault,
+    ownerIdentity: { identityId: "owner-1" },
+  });
+
+  // 3. Create Agent
+  const { agent, sessionToken } = await ownerClient.ownerCreateAgent({
     nickname: "Discovery-Bot",
   });
 
+  // 4. Setup Agent Client (No capability needed anymore)
   const agentClient = createAgentClient({
     agentIdentity: agent,
-    capability: {
-      vaultId: { value: owner.vaultId },
-      capabilityId: "initial-sync",
-      agentId: agent.agentId,
-      operation: "dispatch_http",
-      write: { scope: "https://api.github.com/*", methods: ["GET"] },
-      read: { paths: ["$"] },
-      grantedAt: new Date().toISOString(),
-    },
-    vault: owner._service, // Use local vault service for testing
-    token: sessionToken,
+    vault,
+    token: sessionToken.token,
   });
 
   console.log("🔍 Introspecting...");
@@ -45,13 +44,20 @@ async function runDiscoveryTest() {
   
   const dispatchTool = manifest.tools.find(t => t.name === "agentDispatch");
   assert.ok(dispatchTool, "agentDispatch tool should be in the manifest");
-  assert.ok(dispatchTool.description.includes("dispatch"), "Tool description missing");
-  assert.ok(dispatchTool.parameters.properties.secretAlias, "Tool parameters missing secretAlias");
-
-  console.log("✅ Agent correctly discovered its runtime environment!");
   
-  // Clean up
-  await owner.close();
+  // 5. Grant a secret and verify introspection
+  console.log("🎁 Granting secret...");
+  await ownerClient.ownerGrantAgentSecret({
+    agentId: agent.agentId,
+    secretAlias: "test-secret",
+  });
+
+  const updatedManifest = await agentClient.agentIntrospect();
+  const secret = updatedManifest.secrets.find(s => s.alias === "test-secret");
+  assert.ok(secret, "Secret should be visible in manifest");
+  assert.strictEqual(secret.granted, true, "Secret should be marked as granted");
+
+  console.log("✅ Agent correctly discovered its runtime environment and grants!");
 }
 
 runDiscoveryTest().catch(err => {

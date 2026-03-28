@@ -2,7 +2,6 @@ import * as crypto from "node:crypto";
 import {
   createAgentIdValue,
   createAuditEntryIdValue,
-  createCapabilityIdValue,
   createFlowIdValue,
   createRequestIdValue,
   createSecretIdValue,
@@ -10,8 +9,8 @@ import {
 } from "../internal/id-factory.js";
 import { verifySignature } from "../protocol/crypto.js";
 import type {
-  AgentCapability,
-  CapabilityStateRecord,
+  AgentSecretGrant,
+  SecretDestinationGrant,
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
@@ -31,17 +30,16 @@ import { VaultCoreError } from "./errors.js";
 import { DispatchStatus } from "./contracts.js";
 import type {
   AuditLog,
-  CapabilityRevocationRegistry,
   CustomHttpFlowRegistry,
   PolicyEngine,
-  RateLimitStore,
   TrustedExecutor,
   VaultCoreDependencies,
 } from "./ports.js";
 import {
   AgentIdentityRegistry,
   AgentProofVerifier,
-  CapabilityStateRegistry,
+  AgentSecretGrantRegistry,
+  SecretDestinationGrantRegistry,
   Clock,
   IdGenerator,
   ISessionTokenRegistry,
@@ -55,8 +53,6 @@ export interface DefaultPolicyEngineOptions {
   now?: () => Date;
   trustedIssuerIds?: readonly string[];
   trustedIssuerIdResolver?: (issuerId: string) => Promise<boolean> | boolean;
-  capabilityRevocationRegistry?: CapabilityRevocationRegistry;
-  rateLimitStore?: RateLimitStore;
 }
 
 export interface SignatureAgentProofVerifierOptions {
@@ -64,79 +60,12 @@ export interface SignatureAgentProofVerifierOptions {
   now?: () => Date;
 }
 
-interface CanonicalHttpTarget {
-  origin: string;
-  url: string;
-  method: string;
-  path: string;
-}
-
-interface RateLimitBucket {
-  count: number;
-  resetAt: number;
-}
-
-function canonicalizeHttpTarget(targetUrl: string, method: string): CanonicalHttpTarget {
-  let parsed: URL;
-  try {
-    parsed = new URL(targetUrl);
-  } catch {
-    throw new VaultCoreError("target normalization failed", "VAULT_DISPATCH_DENIED");
-  }
-  if (parsed.username || parsed.password) {
-    throw new VaultCoreError("target credentials not allowed", "VAULT_DISPATCH_DENIED");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new VaultCoreError("target scheme denied", "VAULT_DISPATCH_DENIED");
-  }
-  if (!parsed.hostname) {
-    throw new VaultCoreError("target hostname missing", "VAULT_DISPATCH_DENIED");
-  }
-  parsed.protocol = parsed.protocol.toLowerCase();
-  parsed.hostname = parsed.hostname.toLowerCase();
-  parsed.hash = "";
-  parsed.search = "";
-  if ((parsed.protocol === "https:" && parsed.port === "443") || (parsed.protocol === "http:" && parsed.port === "80")) {
-    parsed.port = "";
-  }
-  const path = parsed.pathname || "/";
-  parsed.pathname = path;
-  return {
-    origin: parsed.origin,
-    url: parsed.toString(),
-    method: method.toUpperCase(),
-    path,
-  };
-}
-
-function matchesScope(scope: string, targetUrl: string): boolean {
-  if (scope.endsWith("*")) {
-    return canonicalRequestPrefix(scope).startsWith("__INVALID__")
-      ? false
-      : canonicalizeHttpTarget(targetUrl, "GET").url.startsWith(canonicalRequestPrefix(scope));
-  }
-  return canonicalizeAllowedTarget(scope) === canonicalizeHttpTarget(targetUrl, "GET").url;
-}
-
-function canonicalizeAllowedTarget(targetUrl: string): string {
-  return canonicalizeHttpTarget(targetUrl, "GET").url;
-}
-
-function canonicalRequestPrefix(scope: string): string {
-  try {
-    return canonicalizeAllowedTarget(scope.slice(0, -1));
-  } catch {
-    return "__INVALID__";
-  }
-}
-
 function createDispatchBinding(request: DispatchRequest): string {
   return JSON.stringify({
     requestId: request.requestId,
     requestedAt: request.requestedAt,
     agentId: request.agent.id,
-    capabilityId: request.capability?.capabilityId ?? null,
-    secretId: request.secretId ?? null,
+    secretAlias: request.secretAlias ?? null,
     targetUrl: request.targetUrl,
     method: request.method,
     body: request.body ?? null,
@@ -171,10 +100,6 @@ export class RandomIdGenerator implements IdGenerator {
 
   newAgentId(): string {
     return createAgentIdValue();
-  }
-
-  newCapabilityId(): string {
-    return createCapabilityIdValue();
   }
 
   newFlowId(): string {
@@ -288,22 +213,65 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   }
 }
 
+/**
+ * @internal
+ */
+export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
+  private readonly _grants = new Map<string, AgentSecretGrant>();
+
+  private _key(vaultId: VaultId, agentId: string, secretAlias: string): string {
+    return `${vaultId.value}:${agentId}:${secretAlias}`;
+  }
+
+  async upsert(grant: AgentSecretGrant): Promise<void> {
+    this._grants.set(this._key(grant.vaultId, grant.agentId, grant.secretAlias), grant);
+  }
+
+  async get(vaultId: VaultId, agentId: string, secretAlias: string): Promise<AgentSecretGrant | null> {
+    return this._grants.get(this._key(vaultId, agentId, secretAlias)) ?? null;
+  }
+
+  async list(vaultId: VaultId, agentId?: string): Promise<readonly AgentSecretGrant[]> {
+    return Array.from(this._grants.values()).filter((grant) => {
+      if (grant.vaultId.value !== vaultId.value) return false;
+      if (agentId && grant.agentId !== agentId) return false;
+      return true;
+    });
+  }
+
+  async delete(vaultId: VaultId, agentId: string, secretAlias: string): Promise<void> {
+    this._grants.delete(this._key(vaultId, agentId, secretAlias));
+  }
+}
 
 /**
  * @internal
  */
-export class InMemoryCapabilityRevocationRegistry implements CapabilityRevocationRegistry {
-  private readonly _versions = new Map<string, number>();
+export class InMemorySecretDestinationGrantRegistry implements SecretDestinationGrantRegistry {
+  private readonly _grants = new Map<string, SecretDestinationGrant>();
 
-  revoke(vaultId: VaultId, agentId: string, capabilityId: string): number {
-    const key = `${vaultId.value}:${agentId}:${capabilityId}`;
-    const next = (this._versions.get(key) ?? 0) + 1;
-    this._versions.set(key, next);
-    return next;
+  private _key(vaultId: VaultId, secretAlias: string, domain: string): string {
+    return `${vaultId.value}:${secretAlias}:${domain}`;
   }
 
-  get(vaultId: VaultId, agentId: string, capabilityId: string): number {
-    return this._versions.get(`${vaultId.value}:${agentId}:${capabilityId}`) ?? 0;
+  async upsert(grant: SecretDestinationGrant): Promise<void> {
+    this._grants.set(this._key(grant.vaultId, grant.secretAlias, grant.domain), grant);
+  }
+
+  async get(vaultId: VaultId, secretAlias: string, domain: string): Promise<SecretDestinationGrant | null> {
+    return this._grants.get(this._key(vaultId, secretAlias, domain)) ?? null;
+  }
+
+  async list(vaultId: VaultId, secretAlias?: string): Promise<readonly SecretDestinationGrant[]> {
+    return Array.from(this._grants.values()).filter((grant) => {
+      if (grant.vaultId.value !== vaultId.value) return false;
+      if (secretAlias && grant.secretAlias !== secretAlias) return false;
+      return true;
+    });
+  }
+
+  async delete(vaultId: VaultId, secretAlias: string, domain: string): Promise<void> {
+    this._grants.delete(this._key(vaultId, secretAlias, domain));
   }
 }
 
@@ -319,53 +287,6 @@ export class InMemoryCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
 
   async get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null> {
     return this._flows.get(`${vaultId.value}:${flowId}`) ?? null;
-  }
-}
-
-/**
- * @internal
- */
-export class InMemoryCapabilityRegistry implements CapabilityStateRegistry {
-  private readonly _capabilities = new Map<string, CapabilityStateRecord>();
-
-  async upsert(capability: CapabilityStateRecord): Promise<void> {
-    for (const [key, candidate] of this._capabilities.entries()) {
-      const sameRequest = capability.requestId && candidate.requestId === capability.requestId;
-      const sameCapability = capability.capabilityId && candidate.capabilityId === capability.capabilityId;
-      if (candidate.vaultId.value === capability.vaultId.value && candidate.agentId === capability.agentId && (sameRequest || sameCapability)) {
-        this._capabilities.delete(key);
-      }
-    }
-    this._capabilities.set(
-      `${capability.vaultId.value}:${capability.agentId}:${capability.capabilityId ?? capability.requestId ?? "state"}`,
-      capability,
-    );
-  }
-
-  async getByCapabilityId(vaultId: VaultId, agentId: string, capabilityId: string): Promise<CapabilityStateRecord | null> {
-    return this._capabilities.get(`${vaultId.value}:${agentId}:${capabilityId}`) ?? null;
-  }
-
-  async getByRequestId(vaultId: VaultId, requestId: string): Promise<CapabilityStateRecord | null> {
-    return Array.from(this._capabilities.values()).find((record) =>
-      record.vaultId.value === vaultId.value && record.requestId === requestId,
-    ) ?? null;
-  }
-
-  async deleteByRequestId(vaultId: VaultId, requestId: string): Promise<void> {
-    for (const [key, record] of this._capabilities.entries()) {
-      if (record.vaultId.value === vaultId.value && record.requestId === requestId) {
-        this._capabilities.delete(key);
-      }
-    }
-  }
-
-  async list(vaultId: VaultId, agentId?: string): Promise<readonly CapabilityStateRecord[]> {
-    const prefix = `${vaultId.value}:`;
-    const agentPrefix = agentId ? `${prefix}${agentId}:` : prefix;
-    return Array.from(this._capabilities.entries())
-      .filter(([key]) => key.startsWith(agentPrefix))
-      .map(([, capability]) => capability);
   }
 }
 
@@ -392,34 +313,8 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
 /**
  * @internal
  */
-export class InMemoryRateLimitStore implements RateLimitStore {
-  private readonly _buckets = new Map<string, RateLimitBucket>();
-
-  async consume(key: string, maxRequests: number, windowMs: number, nowMs: number): Promise<void> {
-    const current = this._buckets.get(key);
-    if (!current || nowMs >= current.resetAt) {
-      this._buckets.set(key, {
-        count: 1,
-        resetAt: nowMs + windowMs,
-      });
-      return;
-    }
-    if (current.count >= maxRequests) {
-      throw new VaultCoreError("capability rate limit exceeded", "VAULT_DISPATCH_DENIED");
-    }
-    current.count += 1;
-  }
-}
-
-/**
- * @internal
- */
 export class DefaultPolicyEngine implements PolicyEngine {
-  private readonly _rateLimitStore: RateLimitStore;
-
-  constructor(private readonly _options: DefaultPolicyEngineOptions = {}) {
-    this._rateLimitStore = this._options.rateLimitStore ?? new InMemoryRateLimitStore();
-  }
+  constructor(private readonly _options: DefaultPolicyEngineOptions = {}) {}
 
   private validateRequestedAt(requestedAt: string, fieldName: string): void {
     const parsed = Date.parse(requestedAt);
@@ -438,22 +333,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
     return false;
   }
 
-  private async assertCapabilityRateLimit(request: DispatchRequest): Promise<void> {
-    const rateLimit = request.capability?.rateLimit;
-    if (!rateLimit) {
-      return;
-    }
-    if (!Number.isInteger(rateLimit.maxRequests) || rateLimit.maxRequests <= 0) {
-      throw new VaultCoreError("capability rate limit invalid", "VAULT_DISPATCH_DENIED");
-    }
-    if (!Number.isInteger(rateLimit.windowMs) || rateLimit.windowMs <= 0) {
-      throw new VaultCoreError("capability rate limit invalid", "VAULT_DISPATCH_DENIED");
-    }
-    const now = this._options.now?.().getTime() ?? Date.now();
-    const key = `${request.vaultId.value}:${request.agent.id}:${request.capability?.capabilityId}`;
-    await this._rateLimitStore.consume(key, rateLimit.maxRequests, rateLimit.windowMs, now);
-  }
-
   async authorizeWrite(command: import("./contracts.js").VaultWriteSecretCommand): Promise<void> {
     if (!command.alias.trim()) {
       throw new VaultCoreError("secret alias required", "VAULT_WRITE_DENIED");
@@ -469,76 +348,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
     if (!await this.isTrustedIssuer(command.issuer.id)) {
       throw new VaultCoreError("trusted issuer required", "VAULT_WRITE_DENIED");
     }
-  }
-
-  async authorizeDispatch(request: DispatchRequest, record?: SecretRecord | null): Promise<void> {
-    const { capability } = request;
-    if (!capability) {
-      throw new VaultCoreError("capability required for authorization", "VAULT_DISPATCH_DENIED");
-    }
-
-    const now = this._options.now?.() ?? new Date();
-    const canonicalRequestTarget = canonicalizeHttpTarget(request.targetUrl, request.method);
-    if (capability.vaultId.value !== request.vaultId.value) {
-      throw new VaultCoreError("capability vault mismatch", "VAULT_DISPATCH_DENIED");
-    }
-    if (record && record.vaultId.value !== request.vaultId.value) {
-      throw new VaultCoreError("record vault mismatch", "VAULT_DISPATCH_DENIED");
-    }
-    if (capability.expiresAt) {
-      const expiresAt = Date.parse(capability.expiresAt);
-      if (Number.isNaN(expiresAt) || expiresAt < now.getTime()) {
-        throw new VaultCoreError("capability expired", "VAULT_DISPATCH_DENIED");
-      }
-    }
-    if (capability.agentId !== request.agent.id) {
-      throw new VaultCoreError("capability agent mismatch", "VAULT_DISPATCH_DENIED");
-    }
-    if (capability.operation !== "dispatch_http" && capability.operation !== "custom_http") {
-      throw new VaultCoreError("operation denied", "VAULT_DISPATCH_DENIED");
-    }
-    const issuedAt = Date.parse(capability.issuedAt);
-    if (Number.isNaN(issuedAt) || issuedAt > now.getTime()) {
-      throw new VaultCoreError("capability issuedAt invalid", "VAULT_DISPATCH_DENIED");
-    }
-    if (record) {
-      if (capability.write.secretIds?.length) {
-        if (!capability.write.secretIds.includes(record.secretId.value)) {
-          throw new VaultCoreError("secret id denied", "VAULT_DISPATCH_DENIED");
-        }
-      }
-    } else {
-      if (capability.operation !== "custom_http") {
-        throw new VaultCoreError("secret id required", "VAULT_DISPATCH_DENIED");
-      }
-      if (capability.write.secretIds?.length) {
-        throw new VaultCoreError("secret scope denied", "VAULT_DISPATCH_DENIED");
-      }
-    }
-    if (!matchesScope(capability.write.scope, request.targetUrl)) {
-      throw new VaultCoreError("scope denied", "VAULT_DISPATCH_DENIED");
-    }
-    if (!capability.write.methods.includes(canonicalRequestTarget.method)) {
-      throw new VaultCoreError("method denied", "VAULT_DISPATCH_DENIED");
-    }
-    const currentRevocationVersion = this._options.capabilityRevocationRegistry
-      ? await this._options.capabilityRevocationRegistry.get(
-        capability.vaultId,
-        capability.agentId,
-        capability.capabilityId,
-      )
-      : 0;
-    if ((capability.revocationVersion ?? 0) < currentRevocationVersion) {
-      throw new VaultCoreError("capability revoked", "VAULT_DISPATCH_DENIED");
-    }
-    await this.assertCapabilityRateLimit(request);
-  }
-
-  async revokeCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> {
-    if (!this._options.capabilityRevocationRegistry) {
-      throw new VaultCoreError("revocation not supported", "VAULT_DISPATCH_DENIED");
-    }
-    return await this._options.capabilityRevocationRegistry.revoke(vaultId, agentId, capabilityId);
   }
 }
 
@@ -571,11 +380,6 @@ export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
   }
 }
 
-export interface SignatureAgentProofVerifierOptions {
-  maxSkewMs?: number;
-  now?: () => Date;
-}
-
 /**
  * @internal
  */
@@ -593,7 +397,7 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
   }
 
   async verify(request: DispatchRequest): Promise<void> {
-    const { vaultId, agent, capability, proof, requestId, requestedAt } = request;
+    const { vaultId, agent, proof, requestId, requestedAt } = request;
     if (proof.agentId !== agent.id) {
       throw new VaultCoreError("agent identity mismatch", "VAULT_DISPATCH_DENIED");
     }
@@ -737,7 +541,8 @@ export function createVaultCoreDependencies(
     ),
     agentIdentities,
     agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
-    capabilityStates: new InMemoryCapabilityRegistry(),
+    agentSecretGrants: new InMemoryAgentSecretGrantRegistry(),
+    secretDestinationGrants: new InMemorySecretDestinationGrantRegistry(),
     requests: new InMemoryRequestRecordRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),

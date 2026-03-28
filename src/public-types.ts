@@ -1,16 +1,59 @@
-/**
- * Public application-facing aliases.
- *
- * These names are intentionally stable and are meant to be used by downstream
- * service layers and dashboards instead of reaching for lower-level protocol
- * record names directly.
- */
+export type {
+  AgentId,
+  AgentSecretGrant,
+  SecretDestinationGrant,
+  GrantStatus,
+  AgentIdentityRecord,
+  AgentVisibleSecretRecord,
+  AgentRuntimeManifest,
+  AgentVisibleRequestRecord,
+  OwnerVisibleRequestRecord,
+  OwnerRequestRecord,
+  AgentRequestResult,
+  DispatchApprovalDecision,
+  CustomHttpFlowDefinition,
+  AuditEntry,
+  DispatchAuthorization,
+  DispatchInstruction,
+  DispatchRequest,
+  DispatchResult,
+  RequestRecord,
+  SecretAlias,
+  SecretId,
+  SecretLifecycleStatus,
+  SecretRecord,
+  VaultPrincipal,
+  VaultPrincipalKind,
+  VaultId,
+} from "./vault-core/index.js";
 
-export type OwnerClient = import("./clients/owner/index.js").VaultClient;
-export type CreateOwnerClientOptions = import("./clients/owner/index.js").CreateVaultClientOptions;
+export {
+  DispatchStatus,
+  AuditAction,
+  AuditOutcome,
+} from "./vault-core/index.js";
 
-export type OwnerAgentView = import("./vault-core/index.js").AgentIdentityRecord;
-export type OwnerSecretView = import("./vault-core/index.js").AgentVisibleSecretRecord;
-export type OwnerPendingApprovalView = import("./vault-core/index.js").CapabilityStateRecord;
-export type OwnerRequestSummaryView = import("./vault-core/index.js").OwnerVisibleRequestRecord;
-export type OwnerRequestDetailView = import("./vault-core/index.js").OwnerRequestRecord;
+export type {
+  VaultService,
+  VaultAgentControlRequest,
+  VaultAgentControlResponse,
+  VaultOwnerControlRequest,
+  VaultOwnerControlResponse,
+} from "./vault-ingress/index.js";
+
+export type {
+  AgentClient,
+  AgentDispatchIntent,
+  AgentDispatchTransport,
+  CreateAgentClientOptions,
+} from "./clients/agent/index.js";
+
+export type {
+  OwnerClient,
+  CreateOwnerClientOptions,
+  OwnerCreateSecretInput,
+  OwnerUpdateSecretInput,
+  VaultGrantAgentSecretInput,
+  VaultGrantSecretDestinationInput,
+  VaultApproveDispatchInput,
+} from "./clients/owner/index.js";

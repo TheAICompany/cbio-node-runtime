@@ -1,5 +1,3 @@
-import type { CapabilityReadPolicy } from "./contracts.js";
-
 const MASKED_VALUE = "******";
 
 function normalizePath(path: string): string {
@@ -32,7 +30,7 @@ function maskJsonValue(value: unknown, visiblePaths: readonly string[], path = "
 
 export function applyResponseReadPolicy(
   body: string | undefined,
-  policy: CapabilityReadPolicy,
+  policy: { paths: readonly string[] },
 ): string | undefined {
   if (body === undefined) return body;
   const visiblePaths = policy.paths.map(normalizePath).filter(Boolean);

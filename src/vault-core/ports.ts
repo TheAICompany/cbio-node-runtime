@@ -1,27 +1,18 @@
 import type {
+  AgentSecretGrant,
+  SecretDestinationGrant,
+  RequestRecord,
+  AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
-  AgentCapability,
-  CapabilityStateRecord,
-  AgentIdentityRecord,
-  AgentProof,
-  OwnerDeleteSecretCommand,
-  OwnerExportSecretRequest,
-  OwnerRegisterAgentIdentityCommand,
-  OwnerRegisterCapabilityCommand,
-  OwnerRegisterCustomHttpFlowCommand,
-  OwnerRevokeCapabilityCommand,
-  OwnerSecretExport,
   CustomHttpFlowDefinition,
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
-  RequestRecord,
   SecretAlias,
   SecretId,
   SecretRecord,
   StoredSessionToken,
-  SubmitCapabilityRequestCommand,
   VaultPrincipal,
   VaultWriteSecretCommand,
   VaultId,
@@ -43,8 +34,6 @@ export interface SecretCustody {
 
 export interface PolicyEngine {
   authorizeWrite(command: VaultWriteSecretCommand): Promise<void>;
-  authorizeDispatch(request: DispatchRequest, record?: SecretRecord | null): Promise<void>;
-  revokeCapability(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number>;
 }
 
 export interface AuditLog {
@@ -65,7 +54,6 @@ export interface IdGenerator {
   newVersion(): { value: string };
   newAuditEntryId(): string;
   newAgentId(): string;
-  newCapabilityId(): string;
   newFlowId(): string;
   newRequestId(action?: string): string;
 }
@@ -92,26 +80,23 @@ export interface ReplayGuard {
   assertNotReplayed(request: DispatchRequest): Promise<void>;
 }
 
-export interface RateLimitStore {
-  consume(key: string, maxRequests: number, windowMs: number, nowMs: number): Promise<void>;
+export interface AgentSecretGrantRegistry {
+  upsert(grant: AgentSecretGrant): Promise<void>;
+  get(vaultId: VaultId, agentId: string, secretAlias: string): Promise<AgentSecretGrant | null>;
+  list(vaultId: VaultId, agentId?: string): Promise<readonly AgentSecretGrant[]>;
+  delete(vaultId: VaultId, agentId: string, secretAlias: string): Promise<void>;
 }
 
-export interface CapabilityRevocationRegistry {
-  get(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> | number;
-  revoke(vaultId: VaultId, agentId: string, capabilityId: string): Promise<number> | number;
+export interface SecretDestinationGrantRegistry {
+  upsert(grant: SecretDestinationGrant): Promise<void>;
+  get(vaultId: VaultId, secretAlias: string, domain: string): Promise<SecretDestinationGrant | null>;
+  list(vaultId: VaultId, secretAlias?: string): Promise<readonly SecretDestinationGrant[]>;
+  delete(vaultId: VaultId, secretAlias: string, domain: string): Promise<void>;
 }
 
 export interface CustomHttpFlowRegistry {
   register(flow: CustomHttpFlowDefinition): Promise<void>;
   get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null>;
-}
-
-export interface CapabilityStateRegistry {
-  upsert(record: CapabilityStateRecord): Promise<void>;
-  getByCapabilityId(vaultId: VaultId, agentId: string, capabilityId: string): Promise<CapabilityStateRecord | null>;
-  getByRequestId(vaultId: VaultId, requestId: string): Promise<CapabilityStateRecord | null>;
-  deleteByRequestId(vaultId: VaultId, requestId: string): Promise<void>;
-  list(vaultId: VaultId, agentId?: string): Promise<readonly CapabilityStateRecord[]>;
 }
 
 export interface RequestRecordRegistry {
@@ -128,7 +113,8 @@ export interface VaultCoreDependencies {
   audit: AuditLog;
   executor: TrustedExecutor;
   agentIdentities: AgentIdentityRegistry;
-  capabilityStates: CapabilityStateRegistry;
+  agentSecretGrants: AgentSecretGrantRegistry;
+  secretDestinationGrants: SecretDestinationGrantRegistry;
   requests: RequestRecordRegistry;
   customFlows: CustomHttpFlowRegistry;
   agentProofVerifier: AgentProofVerifier;

@@ -1,237 +1,55 @@
-# CBIO Vault Runtime Reference (v1.48.4)
+# CBIO Vault Runtime Reference (v1.65.1)
 
 This document describes the current implemented runtime surface for the **Sovereign Vault**. 
 
 ## Primary API Surface
 
-The v1.48.4 runtime centers on a simplified, authority-centric model with managed agency and session tokens, featuring a **Discovery-first** HITL workflow and real-time observers.
+The v1.65.1 runtime centers on a streamlined **Grant-based** authorization model, providing a "Zero-Configuration" workflow for agents.
 
 ### Main Constructors and Entrypoints
 
 - `createVault(...)` - Initialize a new vault using a master password.
 - `recoverVault(...)` - Reopen an existing vault using its master password.
-- `listVaults(...)` - Scan the workspace for available vault IDs.
-- `updateVaultMetadata(...)` - Update the nickname or other metadata of an unlocked vault.
-- `createOwnerSession(...)` - Create an SDK-managed owner session handle for long-running apps such as GUIs.
-- `createVaultClient(...)` - Create an administrative client for the current runtime. Best for short-lived scripts or one-shot tasks.
-- `createAgentClient(...)` - Create a delegated client for an agent.
-- `createIdentity(...)` - Generate a standalone cryptographic identity keypair.
-- `restoreIdentity(...)` - Restore an identity from a private key.
+- `createOwnerClient(...)` - Create an administrative client (Owner).
+- `createAgentClient(...)` - Create an agent client (Consumer).
 
-### Recommended Type Imports
+## Identity and Access Control
 
-For downstream application code, import public runtime types from the package root:
+### 1. Agent Identities
+- `ownerCreateAgent(...)`: Provision a new agent identity and return a session token.
+- `ownerListAgents()`: Enumerate all registered agents.
 
-- `@the-ai-company/cbio-node-runtime`
+### 2. Grant Management (Access Control)
+The system uses a domain-level white-list model:
+- `ownerGrantAgentSecret(...)`: Authorize an agent to use a specific secret alias.
+- `ownerGrantSecretDestination(...)`: Authorize a secret alias for a specific domain.
+- `ownerRevokeAgentSecret(...)`: Remove agent-secret authorization.
+- `ownerRevokeSecretDestination(...)`: Remove secret-domain authorization.
+- `ownerListGrants(...)`: Review all active or pending grants.
 
-Recommended stable names:
+### 3. Dispatch and Approval (HITL)
+- `agentDispatch(...)`: Attempt a secret-driven HTTP request. Returns `SUCCEEDED` or `PENDING`.
+- `ownerListRequests(...)`: Review blocked (PENDING) or history of dispatches.
+- `ownerApproveDispatch(...)`: Resolve a pending request.
+    - `allow_once`: Execute once, no permanent change.
+    - `allow_and_grant`: Execute and automatically provision permanent grants.
+    - `deny`: Reject the request.
 
-- `OwnerClient`
-- `CreateOwnerClientOptions`
-- `AgentClient`
-- `CreateAgentClientOptions`
-- `OwnerAgentView`
-- `OwnerSecretView`
-- `OwnerPendingApprovalView`
-- `OwnerRequestSummaryView`
-- `OwnerRequestDetailView`
+## Storage and Lifecycle
 
-Legacy protocol-oriented names such as `VaultClient`, `CapabilityStateRecord`, and `OwnerRequestRecord`
-remain supported, but application code is encouraged to prefer the public aliases above when defining its
-own service and UI boundaries.
+### Deployment Models
+1. **Managed**: The runtime handles private keys internally.
+2. **Session-based**: Agents use short-lived `sat_...` tokens issued by the owner.
 
-### Vault Lifecycle
-
-#### `createVault(storage, { password, nickname, metadata })`
-Creates a secure vault. 
-- **Authority**: Rooted in the `password`.
-- **Storage**: All data is encrypted using a key derived from the password via `scrypt`.
-- **Vault ID**: Generated internally by the runtime.
-
-#### `recoverVault(storage, { vaultId, password })`
-Unlocks and reopens a vault. 
-- Returns a `RecoveredVault` object containing the `VaultService` and metadata.
-
-#### `createOwnerSession(storage, { vaultId, password, ... })`
-Creates a first-class owner session for GUI and other long-running processes.
-- Hold the `OwnerSession`, not a raw `VaultClient`.
-- Call `session.client()` or `session.withClient(...)` when you need an owner client.
-- Invalidate the session explicitly when the vault is locked or the app unloads.
-
-### Owner Session Lifecycle
-
-- `createVaultClient(...)` is not a long-lived session handle.
-- Do not cache a raw `VaultClient` across HMR, module reloads, runtime swaps, or similar process-local lifecycle changes.
-- For long-running apps, keep an `OwnerSession` and let the SDK recreate owner clients on demand.
-- For short-lived scripts, `recoverVault(...)` plus `createVaultClient(...)` remains appropriate.
-
-#### `listVaults(storage)`
-Returns a `string[]` of vault IDs found in the storage. 
-- **Privacy**: No metadata (like nicknames) is leaked during listing. You must recover a vault to see its details.
-
-## Identity Models
-
-### 1. Managed Identity (Recommended)
-Identity material (private keys) generated and stored securely within the vault's own registry. 
-- Use `client.ownerCreateAgent(...)` to manage these.
-- **Session Tokens**: Owners can issue revocable `sat_...` tokens for managed agents to enable stateless authentication without raw private keys.
-
-### 2. External Identity
-Identity material already managed elsewhere can be imported into vault custody via `client.ownerImportAgent({ privateKey, ... })`.
-
-## Vault Client (Owner/Admin)
-
-The `VaultClient` provides the administrative interface for the vault.
-
-### Stable Owner API Checklist
-
-The following owner-side methods are part of the supported public surface and are intended to be called through an owner session or a short-lived owner client:
-
-- `ownerCreateSecret(...)`
-- `ownerUpdateSecret(...)`
-- `ownerReadSecretPlaintext(...)`
-- `ownerExportSecret(...)`
-- `ownerCreateAgent(...)`
-- `ownerImportAgent(...)`
-- `ownerUpdateAgent(...)`
-- `ownerReadAgentPrivateKey(...)`
-- `ownerListAgents(...)`
-- `ownerGrantCapability(...)`
-- `ownerRevokeCapability(...)`
-- `ownerListCapabilities(...)`
-- `ownerListSecrets(...)`
-- `ownerRegisterFlow(...)`
-- `ownerSubmitCapabilityRequest(...)`
-- `ownerListCapabilityStates(...)`
-- `ownerApproveCapabilityRead(...)`
-- `ownerAllowOnce(...)`
-- `ownerAllowAlways(...)`
-- `ownerDeny(...)`
-- `ownerOnCapabilityState(...)`
-- `ownerIssueSessionToken(...)`
-- `ownerIssueAllSessionTokens()`
-- `ownerRevokeSessionToken(...)`
-- `ownerReadAudit(...)`
-
-### Core Operations
-- `ownerCreateSecret(...)`: Insert a new active secret. The call fails if the alias already has an active record.
-- `ownerUpdateSecret(...)`: Insert a new successor version for the active alias and mark the previous version as superseded.
-- `ownerCreateAgent(...)`: Generate and host a new agent identity, then return its public record plus a session token.
-- `ownerImportAgent(...)`: Import an existing private key into vault custody, then return its public record plus a session token.
-- `ownerUpdateAgent(...)`: Update an agent's stored nickname and metadata.
-- `ownerListAgents()`: Enumerate authorized agents. Private keys are redacted from the default list response.
-- Each listed agent also includes its current `sessionTokens`.
-- `ownerGrantCapability(...)`: Assign specific secret-use permissions to an agent. Capability IDs are generated internally.
-- `ownerSubmitCapabilityRequest(...)`: Create a capability carrier for later owner review.
-- `ownerListCapabilityStates(...)`: Read capability carriers, optionally filtered by `agentId`, `writeGranted`, or `readGranted`.
-- `ownerApproveCapabilityRead({ requestId, read? })`: Approve the inbound read action separately on the same carrier after write approval. Pass `read` to replace the pending read policy at approval time with a `paths` whitelist. Response shape is always visible; `read.paths` only unlocks values, and `['$']` unlocks the full body.
-- `ownerAllowOnce({ requestId })`: Execute a write-approved pending request once, then delete the carrier. This is only valid for dispatch-discovery carriers with a concrete blocked request.
-- `ownerAllowAlways({ requestId })`: Persist the carrier as an active capability. For dispatch discovery this also executes the blocked request; for explicit requests it grants the capability without sending network traffic. Capability IDs are generated internally.
-- `ownerDeny(requestId)`: Reject the currently pending action on the carrier.
-- `ownerOnCapabilityState(callback)`: Register a real-time observer for capability-carrier changes.
-- `ownerIssueSessionToken(input)`: Issue a session token for a specific agent.
-- `ownerIssueAllSessionTokens()`: Batch-issue session tokens for all registered agents.
-- `ownerRevokeSessionToken({ token })`: Invalidate a specific session token.
-- `ownerReadSecretPlaintext({ alias, password })`: Read one secret's plaintext after re-entering the vault password.
-- `ownerExportSecret({ alias, password })`: Export a secret's full plaintext record after re-entering the vault password.
-- `ownerReadAgentPrivateKey({ agentId, password })`: Read one managed agent private key after re-entering the vault password.
-- `ownerReadAudit(...)`: Access the append-only record of all vault actions.
-
-### Sensitive Action Contract
-
-The following owner operations are sensitive actions:
-
-- `ownerReadSecretPlaintext(...)`
-- `ownerExportSecret(...)`
-- `ownerReadAgentPrivateKey(...)`
-- `ownerRemoveSecret(...)`
-
-All four require:
-
-- `password`
-- optional `verificationCode`
-
-Client configuration:
-
-- `createVaultClient(...)` may be configured with `sensitiveActionVerifier(confirmation, context)`
-- if no `sensitiveActionVerifier` is provided, `passwordVerifier(password)` is required for these operations
-
-Stable owner client error codes:
-
-- `SENSITIVE_ACTION_PASSWORD_REQUIRED`
-- `SENSITIVE_ACTION_VERIFIER_REQUIRED`
-- `SENSITIVE_ACTION_REJECTED`
-- `SENSITIVE_ACTION_INVALID_PASSWORD`
-- `AGENT_PRIVATE_KEY_NOT_FOUND`
-- `INVALID_CREATE_VAULT_CLIENT_OPTIONS`
-
-Recommended GUI behavior:
-
-- Keep an `OwnerSession`, not a raw `VaultClient`
-- Call `session.client()` or `session.withClient(...)` for each owner operation
-- Show a single reusable confirmation dialog for sensitive actions
-- Always collect the password
-- Optionally collect a second factor such as a 6-digit verification code
-- Branch UI behavior on `OwnerClientError.code` rather than parsing error strings
-- Normalize SDK records into app-owned view models at your own service boundary instead of passing runtime
-  records directly into UI components
-
-## Agent Client (Consumer)
-
-The `AgentClient` is used by delegated processes (e.g., LLMs or background workers) to perform authorized actions.
-
-### Core Operations
-- `agentDispatch(...)`: Use a granted capability to send a secret to an authorized target.
-  - **Status**: Returns `SUCCEEDED`, `FAILED`, or `PENDING`.
-  - **Execution Semantics**: This is the method that attempts the real task immediately.
-  - **Owner Context**: A non-empty `reason` string is required and is recorded for owner review.
-  - **Result Delivery**: The full result is stored in a sealed request record; use `agentListRequests()` and `agentGetRequest(...)` to inspect it later.
-  - **Discovery Flow**: If an agent attempts an action not explicitly in its white-list, the request is automatically stalled as `PENDING` for owner review. 
-- `agentListCapabilities()`: Read the agent's capability carriers, including current `write` and `read` action states.
-- `agentListSecrets()`: Read all secret metadata in the vault, with per-secret authorization markers showing which entries the agent can currently use.
-- `agentListRequests()`: Read the agent's request history with partially redacted metadata.
-- `agentGetRequest(...)`: Read one request record and receive the result body only if the corresponding read action has been approved.
-- `ownerListRequests()`: Read request history as owner, including approval states.
-- `ownerGetRequest(...)`: Read the full sealed request record as owner, including response content before read release.
-- `agentIntrospect()`: Read the vault-known self context (`agentId`, `identityId`, `nickname`, `metadata`) plus capability carriers and the tool manifest.
-- `agentSubmitCapabilityRequest(...)`: Ask the owner for a broader `scope + methods` grant without executing any request. A non-empty `reason` string is required for owner review.
-- **Security**: The agent never handles the vault's master password. Agent execution uses **Session Tokens** rather than raw private-key dispatch.
-- **Auditing**: Dispatches are audited by default. Set `skipAudit: true` in the capability (or during approval) to disable logging for specific actions.
-
-## Capability Action Approval
-
-The runtime uses capability carriers with two independently approved actions:
-
-- **Dispatch discovery**: A concrete dispatch misses existing capability coverage and creates a carrier with `write.status = PENDING`.
-- **Capability request**: An external planner or controller creates a broader carrier before any dispatch is attempted.
-
-This is useful for LLM-driven planners that can infer the needed scope ahead of time, for example:
-- scope `https://api.example.com/users/*`
-- methods `["GET"]`
-
-The carrier remains actionable until the owner approves or rejects its pending actions:
-- `ownerSubmitCapabilityRequest(...)` creates the carrier.
-- `ownerListCapabilityStates({ writeGranted: false })` reads the current queue.
-- `ownerAllowOnce(...)` executes a write-approved discovery request once and removes the pending carrier.
-- `ownerAllowAlways(...)` persists a real capability carrier and also executes the blocked request when the carrier came from dispatch discovery.
-- `ownerApproveCapabilityRead(...)` can be applied later on the same carrier to release response visibility.
-- `ownerDeny(...)` marks the currently pending action rejected.
-- `ownerOnCapabilityState(...)` supports push-style owner interfaces.
-
-The proactive request flow does not replace dispatch discovery. Both flows now produce the same carrier shape with independent write/read action states.
-
-## Storage Layout
-
-The vault uses a unified encrypted partition:
-- `vaults/<vaultId>_v1/profile.sealed`: Unified vault profile.
-- `vaults/<vaultId>_v1/secrets.sealed`: Secret registry.
-- `vaults/<vaultId>_v1/agents.sealed`: Agent identity registry.
-- `vaults/<vaultId>_v1/capabilities.sealed`: Capability registry.
-- `vaults/<vaultId>_v1/requests.sealed`: Sealed request-record registry.
-- `vaults/<vaultId>_v1/custom-flows.sealed`: Owner-defined HTTP request template registry.
-- `vaults/<vaultId>_v1/audit.jsonl`: Tamper-evident audit log.
-- `vaults/<vaultId>_v1/working-key.sealed`: Sealed working-key custody blob.
-- `vaults/<vaultId>_v1/secret-<secretId>.sealed`: Encrypted secret material.
+### Storage Layout
+- `profile.sealed`: Vault metadata.
+- `secrets/`: Secret records.
+- `custody/`: Secret plaintext.
+- `agents/`: Agent records.
+- `grants/agent_secrets/`: Agent-Secret white-list.
+- `grants/secret_destinations/`: Secret-Domain white-list.
+- `requests/`: Dispatch history and pending queue.
+- `audit/`: Append-only audit trail.
 
 ## Build & Integration
 

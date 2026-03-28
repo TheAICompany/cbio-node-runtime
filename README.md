@@ -1,4 +1,4 @@
-# cbio Vault Runtime
+# cbio Vault Runtime (v1.65.1)
 
 Node.js vault runtime with a **Sovereign Vault** architecture: authority is rooted in a master password, and agent identities are fully managed within the vault's encrypted storage.
 
@@ -9,12 +9,11 @@ Node.js vault runtime with a **Sovereign Vault** architecture: authority is root
 ## Key Features
 
 - **No CLI / No TUI**: Pure library for integration into Node.js applications.
-- **Authority-centric**: Administrative control is tied to the vault's master password, not an external identity.
+- **Authority-centric**: Administrative control is tied to the vault's master password.
+- **Grant-Based Authorization**: Simplified, domain-level white-listing replaced the legacy capability model.
+- **Zero-Configuration Discovery**: Agents can self-introspect to discover their identity, grants, and toolset.
 - **Managed Agent Custody**: Generate and store agent private keys securely inside the vault.
-- **Agent Session Tokens**: Issue revocable, short-lived (or long-lived) tokens for agents to avoid handling raw private keys.
-- **Zero-Configuration Discovery**: Agents can self-introspect to discover their identity, capabilities, and toolset (v1.56.0+).
 - **Process Isolation**: Hard separation between the Security Process (Master) and Agent Processes (Consumers).
-- **Zero-Leak Discovery**: Vault metadata is fully encrypted and hidden until unlocked.
 
 ## Install
 
@@ -26,257 +25,97 @@ npm install @the-ai-company/cbio-node-runtime
 
 ## Usage
 
-### 1. Bootstrap a New Vault
-
-The Sovereign Vault requires only a storage provider and a master password.
+### 1. Bootstrap and Recover
 
 ```ts
-import { 
-  createVault, 
-  FsStorageProvider, 
-  createWorkspaceStorage 
-} from '@the-ai-company/cbio-node-runtime';
+import { createVault, recoverVault, FsStorageProvider } from '@the-ai-company/cbio-node-runtime';
 
 const storage = new FsStorageProvider('./my-vaults');
 
+// Create
 const myVault = await createVault(storage, {
   password: 'your-secure-password',
   nickname: 'Production Vault'
 });
 
-console.log(`Vault created: ${myVault.nickname}`);
-```
-
-### 2. Recover an Existing Vault
-
-```ts
-import { recoverVault, FsStorageProvider } from '@the-ai-company/cbio-node-runtime';
-
+// Recover
 const vault = await recoverVault(storage, {
   vaultId: myVault.core.vaultId.value,
   password: 'your-secure-password'
 });
 ```
 
-### 3. Owner Sessions for GUI Apps
-
-For long-running processes such as GUI apps, keep an `OwnerSession`, not a raw `VaultClient`.
-
-`createVaultClient(...)` creates an owner client for the current runtime. It is not intended to be cached across HMR, module reloads, or runtime swaps. `OwnerSession` gives you a stable SDK-managed handle and recreates owner clients on demand.
+### 2. Manage Agents and Grants (Owner)
 
 ```ts
-import { createOwnerSession, FsStorageProvider } from '@the-ai-company/cbio-node-runtime';
+import { createOwnerClient } from '@the-ai-company/cbio-node-runtime';
 
-const session = createOwnerSession(storage, {
-  vaultId: myVault.core.vaultId.value,
-  password: 'your-secure-password',
-});
-
-const createdAgent = await session.withClient((client) =>
-  client.ownerCreateAgent({ nickname: 'Background Worker' })
-);
-
-const ownerClient = await session.client();
-const agents = await ownerClient.ownerListAgents();
-
-// Invalidate the session when your app unloads or explicitly locks the vault.
-session.invalidate();
-```
-
-If you are writing a short-lived script, `recoverVault(...)` plus `createVaultClient(...)` is still fine.
-
-### 4. Managed Agent Identities
-
-You can generate and register agents directly within the vault. The vault holds the private keys for full custody.
-
-```ts
-import { createVaultClient } from '@the-ai-company/cbio-node-runtime';
-
-const client = createVaultClient({
+const client = createOwnerClient({
   vault: vault.vault,
   passwordVerifier: vault.verifyPassword
 });
 
-// Generate and register a new agent in one step
-const createdAgent = await client.ownerCreateAgent({
-  nickname: 'Background Worker'
-});
+// 1. Create an agent
+const { agent, sessionToken } = await client.ownerCreateAgent({ nickname: 'Bot' });
 
-const agentId = createdAgent.agent.agentId;
-console.log(`Agent public key: ${createdAgent.agent.publicKey}`);
-console.log(`Identity ID: ${createdAgent.agent.identityId}`);
-const session = createdAgent.sessionToken;
+// 2. Create a secret
+const secret = await client.ownerCreateSecret({ alias: 'api-key', plaintext: 'sk-...' });
 
-// RECOMENDED (v1.48.4+): Batch issue tokens for all agents at once
-const tokens = await client.ownerIssueAllSessionTokens();
-
-// ownerListAgents() also includes current session tokens for each agent
-const agents = await client.ownerListAgents();
+// 3. Grant access (Whitelist)
+await client.ownerGrantAgentSecret({ agentId: agent.agentId, secretAlias: 'api-key' });
+await client.ownerGrantSecretDestination({ secretAlias: 'api-key', domain: 'api.openai.com' });
 ```
 
-### 5. Secret Management (Owner)
+### 3. Dispatch Secrets (Agent)
 
-```ts
-// Create a secret. Active aliases must stay unique.
-const record = await client.ownerCreateSecret({
-  alias: 'api-token',
-  plaintext: 'super-secret-value'
-});
+Agents use a "Zero-Configuration" workflow. They don't need to know their permissions up front; the system guides them.
 
-// 4. Grant agent capabilities
-await client.ownerGrantCapability({
-  agentId,
-  write: {
-    secretIds: [record.secretId.value],
-    scope: 'https://api.example.com/*',
-    methods: ['POST']
-  },
-  read: { paths: ['$'] }
-});
-```
-
-### 6. Consuming Secrets (Agent)
-
-Agents run in isolated processes and communicate with the vault via a transport. Agent execution now requires a **Session Token** issued by the owner.
-
-#### Using a Session Token (Stateless/Token-based)
 ```ts
 import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
 
-const agent = createAgentClient({
-  agentIdentity: { agentId },
-  capability: myCapability, 
-  token: session.token,
+const agentClient = createAgentClient({
+  agentIdentity: agent,
+  token: sessionToken.token,
   vault: vault.vault
 });
 
-const result = await agent.agentDispatch({ ... });
-const requests = await agent.agentListRequests();
-const request = await agent.agentGetRequest(result.requestId);
-const ownerView = await client.ownerGetRequest({ requestId: result.requestId });
+// Dispatch request
+const result = await agentClient.agentDispatch({
+  targetUrl: 'https://api.openai.com/v1/chat/completions',
+  method: 'POST',
+  secretAlias: 'api-key',
+  reason: 'Processing user request'
+});
+
+if (result.status === 'PENDING') {
+  console.log("Stalled for HITL approval. Request ID:", result.requestId);
+}
 ```
 
-The agent process does not execute directly with its raw private key. If it has an identity key, it still needs to exchange that trust for a session token before dispatching.
+### 4. Human-in-the-Loop (Owner Approval)
 
-LLM-facing rule of thumb:
-- `agentDispatch(...)` means "do the task now". It attempts real execution immediately.
-- `agentDispatch(...)` requires a one-sentence `reason` for the owner explaining why this exact request should be sent.
-- `agentSubmitCapabilityRequest(...)` means "ask for permission". It never executes the task by itself.
-- `agentSubmitCapabilityRequest(...)` also requires a one-sentence `reason` so the owner understands why the broader permission is needed.
-- `agentListRequests()` / `agentGetRequest(...)` are how the agent checks asynchronous results after execution.
-- `ownerListRequests()` / `ownerGetRequest(...)` are how the owner reviews the full sealed request record before approving read.
-
-### 7. Proactive Capability Requests
-
-If an LLM or orchestration layer already knows it needs a broader scope, it can create a capability carrier up front instead of discovering one URL at a time through failed dispatch attempts.
+If a dispatch is blocked (status `PENDING`), the owner reviews the request record:
 
 ```ts
-const request = await client.ownerSubmitCapabilityRequest({
-  requester: { kind: 'trusted_executor', id: 'llm-planner' },
-  agentId,
-  write: {
-    secretIds: [record.secretId.value],
-    scope: 'https://api.example.com/users/*',
-    methods: ['GET']
-  },
-  read: { paths: ['$'] },
-  reason: 'Need collection-level user read access'
-});
+// List pending requests
+const pending = await client.ownerListRequests({ status: 'PENDING' });
 
-const pendingRequests = await client.ownerListCapabilityStates({ writeGranted: false });
-
-await client.ownerAllowAlways({
-  requestId: pendingRequests[0].requestId
-});
-
-await client.ownerApproveCapabilityRead({
-  requestId: pendingRequests[0].requestId,
-  read: { paths: ['data.id', 'data.status'] }
+// Approve with the "Allow & Grant" shortcut
+await client.ownerApproveDispatch({
+  requestId: pending[0].requestId,
+  decision: 'allow_and_grant' // Approves THIS request AND provisions permanent grants
 });
 ```
 
-This uses the same carrier model as dispatch discovery:
-- `ownerSubmitCapabilityRequest(...)` creates a capability carrier for owner review.
-- `ownerOnCapabilityState(...)` pushes new carrier changes to the owner UI or controller.
-- `ownerAllowAlways(...)` persists the carrier as an active capability. For dispatch discovery it also executes the blocked request; for explicit requests it grants the capability without sending network traffic.
-- `ownerAllowOnce(...)` executes the approved write action once and then deletes the carrier record. This option is only valid for dispatch discovery carriers that already contain a concrete blocked request.
-- `ownerApproveCapabilityRead(...)` approves response release separately on the same carrier record and may replace the pending `read` policy with a narrower `paths` whitelist.
-- Response shape is always visible. `read.paths` only controls which values are revealed, and `['$']` means the full response body is visible.
-- `ownerDeny(...)` rejects the currently pending action on the carrier.
-
-### 8. Zero-Configuration Agent Discovery (v1.56.0+)
-
-Instead of hard-coding the agent's capabilities or tools, the agent can self-introspect at runtime. This is the "--help" and "llms.txt" for your agent.
-
-```ts
-const manifest = await agent.agentIntrospect();
-
-console.log(manifest.agent.agentId);      // Vault-known agent ID
-console.log(manifest.agent.identityId);   // Stable identity ID
-console.log(manifest.agent.nickname);     // Optional nickname
-console.log(manifest.capabilities);       // Capability carriers with write/read action states
-console.log(manifest.tools);              // List of available API tools with JSON-Schema
-```
-
-This manifest can be directly fed into an LLM's system prompt or tool-calling configuration to enable fully autonomous, zero-config integration.
-
-`agentListCapabilities()` returns the same carrier view used by the manifest, and `agentListRequests()` / `agentGetRequest()` expose sealed request history and per-request results through controlled interfaces.
+Decisions can be:
+- `allow_once`: Execute once, no permanent whitelist update.
+- `allow_and_grant`: Execute and add to the permanent whitelist (Zero-Config).
+- `deny`: Reject the request.
 
 ---
 
 ## Documentation
 
-- [Custody Model](docs/CUSTODY_MODEL.md) - Understanding managed agency and key storage.
-- [Process Isolation](docs/PROCESS_ISOLATION.md) - Guidelines for A/B architecture.
-
-## Architecture Rules
-
-1. **Secret Isolation**: Plane-text secrets never leave the Security Process.
-2. **Authority Root**: The master password is the only source of administrative authority.
-3. **Auditability**: Every administrative and agent action is recorded in the vault's audit log under the `vault-master` or agent principal.
-4. **Binary Discovery**: Either the vault is unlocked and visible, or it is a silent directory of encrypted shards.
-
-### Human-in-the-Loop (HITL) Workflow
-
-If an agent attempts an action not explicitly in its white-list, the dispatch returns `PENDING` and the runtime records a capability carrier whose `write` action is still pending owner approval:
-
-```ts
-// In Agent process
-const result = await agent.agentDispatch({ ... });
-if (result.status === 'PENDING') {
-  console.log("Discovery needed: Waiting for owner approval...");
-}
-
-// OR: Use the observer for real-time push
-client.ownerOnCapabilityState((state) => {
-  if (state.writeGrant === null) {
-    console.log("New pending capability carrier:", state.requestId);
-  }
-});
-
-// In Owner process (GUI or Script)
-const pending = await client.ownerListCapabilityStates({ writeGranted: false });
-if (pending.length > 0) {
-  await client.ownerAllowAlways({
-    requestId: pending[0].requestId
-  });
-  await client.ownerApproveCapabilityRead({
-    requestId: pending[0].requestId
-  });
-}
-```
-
-## Build & Test
-
-```bash
-npm run build
-npm test
-```
-```ts
-// 9. Sensitive actions (v1.55.0+)
-// Sensitive reads require the vault password again for verification
-const plaintext = await client.ownerReadSecretPlaintext({
-  alias: 'api-token',
-  password: 'your-secure-password'
-});
-```
+- [Architecture](docs/ARCHITECTURE.md) - Deep dive into the Sovereign Vault model.
+- [Reference](docs/REFERENCE.md) - API surface and type definitions.
+- [Migration Guide](docs/MIGRATION-1.65.md) - Moving from v1.4x (Capabilities) to v1.65 (Grants).
