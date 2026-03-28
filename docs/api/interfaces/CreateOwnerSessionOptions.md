@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.65.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.66.0**](../README.md)
 
 ***
 
@@ -10,9 +10,79 @@
 
 ## Properties
 
+### authHeaderName?
+
+> `optional` **authHeaderName?**: `string`
+
+#### Inherited from
+
+[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md).[`authHeaderName`](CreatePersistentVaultCoreDependenciesOptions.md#authheadername)
+
+***
+
+### authPrefix?
+
+> `optional` **authPrefix?**: `string`
+
+#### Inherited from
+
+[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md).[`authPrefix`](CreatePersistentVaultCoreDependenciesOptions.md#authprefix)
+
+***
+
 ### clock?
 
 > `optional` **clock?**: `Clock`
+
+***
+
+### fetchImpl?
+
+> `optional` **fetchImpl?**: \{(`input`, `init?`): `Promise`\<`Response`\>; (`input`, `init?`): `Promise`\<`Response`\>; \}
+
+#### Call Signature
+
+> (`input`, `init?`): `Promise`\<`Response`\>
+
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/Window/fetch)
+
+##### Parameters
+
+###### input
+
+`URL` \| `RequestInfo`
+
+###### init?
+
+`RequestInit`
+
+##### Returns
+
+`Promise`\<`Response`\>
+
+#### Call Signature
+
+> (`input`, `init?`): `Promise`\<`Response`\>
+
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/Window/fetch)
+
+##### Parameters
+
+###### input
+
+`string` \| `URL` \| `Request`
+
+###### init?
+
+`RequestInit`
+
+##### Returns
+
+`Promise`\<`Response`\>
+
+#### Inherited from
+
+[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md).[`fetchImpl`](CreatePersistentVaultCoreDependenciesOptions.md#fetchimpl)
 
 ***
 
@@ -23,6 +93,26 @@
 #### Inherited from
 
 [`RecoverVaultOptions`](RecoverVaultOptions.md).[`password`](RecoverVaultOptions.md#password)
+
+***
+
+### proofVerifier?
+
+> `optional` **proofVerifier?**: `SignatureAgentProofVerifierOptions`
+
+#### Inherited from
+
+[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md).[`proofVerifier`](CreatePersistentVaultCoreDependenciesOptions.md#proofverifier)
+
+***
+
+### replayGuard?
+
+> `optional` **replayGuard?**: `ReplayGuard`
+
+#### Inherited from
+
+[`CreatePersistentVaultCoreDependenciesOptions`](CreatePersistentVaultCoreDependenciesOptions.md).[`replayGuard`](CreatePersistentVaultCoreDependenciesOptions.md#replayguard)
 
 ***
 
