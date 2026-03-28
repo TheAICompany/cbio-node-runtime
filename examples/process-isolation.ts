@@ -59,13 +59,13 @@ async function startVaultServer(port: number) {
 }
 
 // --- Process A: The LLM Agent Logic ---
-async function runAgentDemo(port: number, agentIdentity: any, token: string) {
+async function runAgentDemo(port: number, agentRecord: any, token: string) {
   // Process A ONLY knows the remote URL and its own Agent Identity.
   // It has NO access to the Vault's master key or storage.
   const transport = new AgentDispatchHttpTransport(`http://localhost:${port}/dispatch`);
   
   const agentClient = createAgentClient({
-    agentIdentity,
+    agentRecord: agentRecord,
     transport,
     token,
   });
@@ -97,17 +97,17 @@ async function main() {
   const { ownerIdentity, vault, server } = await startVaultServer(PORT);
   
   // 2. Setup: Owner (in Process B's context) grants permission to an Agent
-  const agentIdentity = createIdentity({ nickname: "llm-agent-1" });
+  const agentRecord = createIdentity({ nickname: "llm-agent-1" });
   
-  // Owner registers the agent and a capability (simulated local call for setup)
+  // Owner registers the agent and a grant (simulated local call for setup)
   await vault.ownerRegisterAgentIdentity({
     vaultId: vault.vaultId,
     requestId: `setup:${Date.now()}:register_agent`,
     owner: { kind: "owner", id: ownerIdentity.rootAgentId },
-    agentIdentity: {
+    agentRecord: {
       vaultId: vault.vaultId,
-      agentId: agentIdentity.rootAgentId,
-      publicKey: agentIdentity.publicKey,
+      rootAgentId: agentRecord.rootAgentId,
+      publicKey: agentRecord.publicKey,
     },
     requestedAt: new Date().toISOString(),
   });
@@ -127,7 +127,7 @@ async function main() {
   // Owner grants permissions (New Grant-based API)
   await vault.ownerGrantAgentSecret(
     { kind: "owner", id: ownerIdentity.rootAgentId },
-    agentIdentity.rootAgentId,
+    agentRecord.rootAgentId,
     "api-token"
   );
 
@@ -141,12 +141,12 @@ async function main() {
     vaultId: vault.vaultId,
     requestId: `setup:${Date.now()}:issue_session_token`,
     actor: { kind: "owner", id: ownerIdentity.rootAgentId },
-    agentId: agentIdentity.rootAgentId,
+    rootAgentId: agentRecord.rootAgentId,
     requestedAt: new Date().toISOString(),
   });
 
   // 3. Run the "LLM Agent" (Process A)
-  await runAgentDemo(PORT, agentIdentity, session.token);
+  await runAgentDemo(PORT, agentRecord, session.token);
 
   // 4. Cleanup
   server.close();

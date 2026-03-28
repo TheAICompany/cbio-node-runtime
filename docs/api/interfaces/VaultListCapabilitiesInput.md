@@ -6,9 +6,9 @@
 
 ## Properties
 
-### agentId?
+### rootAgentId?
 
-> `optional` **agentId?**: `string`
+> `optional` **rootAgentId?**: `string`
 
 ***
 

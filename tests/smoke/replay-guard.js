@@ -9,7 +9,7 @@ import {
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryAuditLog,
-  InMemoryCapabilityRegistry,
+  InMemoryGrantRegistry,
   InMemoryCustomHttpFlowRegistry,
   InMemoryReplayGuard,
   InMemorySessionTokenRegistry,
@@ -22,8 +22,8 @@ import {
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 import { LocalSigner } from "../../dist/protocol/crypto.js";
 
-const agentIdentity = createIdentity();
-const signer = new LocalSigner(agentIdentity);
+const agentRecord = createIdentity();
+const signer = new LocalSigner(agentRecord);
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
 const replaySessionTokens = new InMemorySessionTokenRegistry();
 const authority = createVaultCore({
@@ -33,9 +33,9 @@ const authority = createVaultCore({
   policy: new DefaultPolicyEngine(),
   audit: new InMemoryAuditLog(),
   executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
-  agentIdentities: replayAgentIdentities,
+  rootAgentIdentities: replayAgentIdentities,
   agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities, replaySessionTokens),
-  capabilityStates: new InMemoryCapabilityRegistry(),
+  grantStates: new InMemoryGrantRegistry(),
   customFlows: new InMemoryCustomHttpFlowRegistry(),
   sessionTokens: replaySessionTokens,
   replayGuard: new InMemoryReplayGuard(),
@@ -49,9 +49,9 @@ const client = createOwnerClient({
   skipWarmup: true,
 });
 const importedAgent = await client.ownerImportAgent({
-  privateKey: agentIdentity.privateKey,
+  privateKey: agentRecord.privateKey,
 });
-const vaultAgentId = importedAgent.agent.agentId;
+const vaultAgentId = importedAgent.agent.id;
 
 const replayRecord = await client.ownerCreateSecret({
   alias: "replay-token",
@@ -59,8 +59,8 @@ const replayRecord = await client.ownerCreateSecret({
   requestedAt: new Date().toISOString(),
 });
 
-const replayCapability = await client.ownerGrantCapability({
-  agentId: vaultAgentId,
+const replayGrant = await client.ownerGrantGrant({
+  rootAgentId: vaultAgentId,
   write: {
     secretIds: [replayRecord.secretId.value],
     scope: "https://allowed.example.com/replay",
@@ -74,8 +74,8 @@ const requestedAt = new Date().toISOString();
 const binding = JSON.stringify({
   requestId,
   requestedAt,
-  agentId: vaultAgentId,
-  capabilityId: replayCapability.capabilityId,
+  rootAgentId: vaultAgentId,
+  grantId: replayGrant.grantId,
   secretId: replayRecord.secretId.value,
   targetUrl: "https://allowed.example.com/replay",
   method: "POST",
@@ -88,18 +88,18 @@ const request = {
   requestId,
   requestedAt,
   agent: { kind: "agent", id: vaultAgentId },
-  capability: {
+  grant: {
     vaultId: authority.vaultId,
-    capabilityId: replayCapability.capabilityId,
-    agentId: vaultAgentId,
-    operation: replayCapability.operation,
-    write: replayCapability.write,
-    read: replayCapability.read,
-    issuedAt: replayCapability.issuedAt,
-    skipAudit: replayCapability.skipAudit,
+    grantId: replayGrant.grantId,
+    rootAgentId: vaultAgentId,
+    operation: replayGrant.operation,
+    write: replayGrant.write,
+    read: replayGrant.read,
+    issuedAt: replayGrant.issuedAt,
+    skipAudit: replayGrant.skipAudit,
   },
   proof: {
-    agentId: vaultAgentId,
+    rootAgentId: vaultAgentId,
     signature,
     requestId,
     requestedAt,

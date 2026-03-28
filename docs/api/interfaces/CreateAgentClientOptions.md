@@ -6,15 +6,15 @@
 
 ## Properties
 
-### agentIdentity
+### rootAgentIdentity
 
-> **agentIdentity**: `CreatedIdentity` \| [`AgentIdentity`](AgentIdentity.md)
+> **rootAgentIdentity**: `CreatedIdentity` \| [`AgentIdentity`](AgentIdentity.md)
 
 ***
 
-### capability
+### grant
 
-> **capability**: `AgentCapability`
+> **grant**: `AgentGrant`
 
 ***
 

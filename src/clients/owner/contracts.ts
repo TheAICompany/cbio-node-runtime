@@ -41,7 +41,7 @@ export interface VaultReadSecretPlaintextInput {
 }
 
 export interface VaultReadAgentPrivateKeyInput {
-  agentId: string;
+  rootAgentId: string;
   password: string;
   verificationCode?: string;
   requestedAt?: string;
@@ -80,7 +80,7 @@ export interface VaultRegisterFlowInput extends OwnerHttpFlowBoundary {
 }
 
 export interface VaultGrantAgentSecretInput {
-  agentId: string;
+  rootAgentId: string;
   secretAlias: string;
   requestedAt?: string;
 }
@@ -98,7 +98,7 @@ export interface VaultApproveDispatchInput {
 }
 
 export interface VaultUpdateAgentInput {
-  agentId: string;
+  rootAgentId: string;
   nickname?: string;
   metadata?: Record<string, any>;
   requestedAt?: string;
@@ -109,13 +109,13 @@ export interface VaultListAgentsInput {
 }
 
 export interface VaultListGrantsInput {
-  agentId?: string;
+  rootAgentId?: string;
   secretAlias?: string;
   requestedAt?: string;
 }
 
 export interface VaultListRequestsInput {
-  agentId?: string;
+  rootAgentId?: string;
   requestedAt?: string;
 }
 
@@ -129,7 +129,7 @@ export interface VaultListSecretsInput {
 }
 
 export interface VaultRevokeAgentSecretInput {
-  agentId: string;
+  rootAgentId: string;
   secretAlias: string;
   requestedAt?: string;
 }
@@ -141,7 +141,7 @@ export interface VaultRevokeSecretDestinationInput {
 }
 
 export interface VaultIssueSessionTokenInput {
-  agentId: string;
+  rootAgentId: string;
   requestedAt?: string;
 }
 

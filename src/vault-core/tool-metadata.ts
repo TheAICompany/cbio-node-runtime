@@ -54,7 +54,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
       required: ["requestId"],
     },
   },
-  agentSubmitCapabilityRequest: {
+  agentSubmitGrantRequest: {
     description: "Ask the owner for broader permission without executing any request. This creates an approval carrier only; it does not send network traffic and it does not store secret material. You must provide a one-sentence reason for the owner explaining why this approval is needed. Use this when you need access you do not currently have. If a workflow needs to capture and persist a newly issued API key, JWT, or token, that persistence must happen through an owner action or an owner-configured vault acquisition/custom flow.",
     parameters: {
       type: "object",
@@ -63,7 +63,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
         write: { type: "object", description: "Outbound request policy including URL scope and methods." },
         read: { type: "object", description: "Inbound response value visibility. The response shape is always visible. `paths` lists which values may be revealed; use `['$']` to reveal the entire response body." },
         operation: { type: "string", description: "The operation type, usually 'dispatch_http'." },
-        reason: { type: "string", description: "Required. One concise sentence for the owner explaining why this capability is needed." },
+        reason: { type: "string", description: "Required. One concise sentence for the owner explaining why this grant is needed." },
       },
       required: ["write", "read", "reason"],
     },

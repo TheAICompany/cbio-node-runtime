@@ -28,7 +28,7 @@ The runtime distinguishes between administrative authority and delegated agency:
 
 ## Simplified Authorization Model (Grants)
 
-The legacy "Capability" system has been replaced by a streamlined **Grant** model:
+The legacy "Grant" system has been replaced by a streamlined **Grant** model:
 
 1. **Agent-Secret Grants**: Explicitly authorize an agent to use a specific secret alias.
 2. **Secret-Destination Grants**: Explicitly authorize a secret alias to be dispatched to a specific domain (e.g., `api.example.com`).

@@ -56,8 +56,7 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
   const keyPair: RootAgentIdentity = createProtocolIdentity();
   const nickname = normalizeNickname(options.nickname);
   return {
-    rootAgentId: (keyPair as any).rootAgentId,
-    nickname,
+    rootAgentId: deriveRootAgentId(keyPair.publicKey),
     publicKey: keyPair.publicKey,
     privateKey: keyPair.privateKey,
   };
@@ -103,7 +102,6 @@ export function restoreIdentity(privateKey: string, options: RestoreIdentityOpti
   const nickname = normalizeNickname(options.nickname);
   return {
     rootAgentId: deriveRootAgentId(publicKey),
-    nickname,
     publicKey,
     privateKey: normalizedPrivateKey,
   };

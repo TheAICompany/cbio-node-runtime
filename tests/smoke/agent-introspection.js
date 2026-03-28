@@ -19,11 +19,11 @@ const authority = createVaultCore(deps);
 const vault = wrapVaultCoreAsVaultService(authority);
 const ownerClient = createOwnerClient({ vault, skipWarmup: true });
 
-const agentIdentity = createIdentity({ nickname: "introspector" });
+const agentRecord = createIdentity({ nickname: "introspector" });
 const importedAgent = await ownerClient.ownerImportAgent({
-  privateKey: agentIdentity.privateKey,
+  privateKey: agentRecord.privateKey,
 });
-const vaultAgentId = importedAgent.agent.agentId;
+const vaultAgentId = importedAgent.agent.rootAgentId;
 const crmRecord = await ownerClient.ownerCreateSecret({
   alias: "crm-token",
   plaintext: "secret-crm-token",
@@ -32,8 +32,8 @@ await ownerClient.ownerCreateSecret({
   alias: "payroll-token",
   plaintext: "secret-payroll-token",
 });
-await ownerClient.ownerGrantCapability({
-  agentId: vaultAgentId,
+await ownerClient.ownerGrantGrant({
+  rootAgentId: vaultAgentId,
   write: {
     secretIds: [crmRecord.secretId.value],
     scope: "https://api.example.com/users/*",
@@ -42,11 +42,11 @@ await ownerClient.ownerGrantCapability({
   read: { paths: ["$"] },
 });
 
-const capabilities = await ownerClient.ownerListCapabilities({ agentId: vaultAgentId });
-const session = await ownerClient.ownerIssueSessionToken({ agentId: vaultAgentId });
+const capabilities = await ownerClient.ownerListCapabilities({ rootAgentId: vaultAgentId });
+const session = await ownerClient.ownerIssueSessionToken({ rootAgentId: vaultAgentId });
 const agentClient = createAgentClient({
-  agentIdentity: { agentId: vaultAgentId },
-  capability: capabilities[0],
+  agentRecord: { rootAgentId: vaultAgentId },
+  grant: capabilities[0],
   vault,
   token: session.token,
 });
@@ -62,14 +62,14 @@ assert.equal(visibleSecrets.find((record) => record.alias.value === "crm-token")
 assert.equal(visibleSecrets.find((record) => record.alias.value === "payroll-token")?.isAuthorizedForAgent, false);
 
 const requestedAt = new Date().toISOString();
-const requestId = `${agentIdentity.rootAgentId}:${requestedAt}:submit_capability_request`;
+const requestId = `${agentRecord.rootAgentId}:${requestedAt}:submit_grant_request`;
 
 const httpResult = await handleVaultAgentControlHttp(vault, {
-  action: "submit_capability_request",
+  action: "submit_grant_request",
   vaultId: vault.vaultId.value,
   requestId,
   requestedAt,
-  agentId: vaultAgentId,
+  rootAgentId: vaultAgentId,
   proof: { token: session.token },
   operation: "dispatch_http",
   write: {
@@ -82,12 +82,12 @@ const httpResult = await handleVaultAgentControlHttp(vault, {
 });
 
 assert.equal(httpResult.ok, true);
-const pending = await ownerClient.ownerListCapabilityStates({ writeGranted: false });
+const pending = await ownerClient.ownerListGrantStates({ writeGranted: false });
 assert.equal(pending.length, 1);
 assert.equal(pending[0].write.scope, "https://api.example.com/admin/*");
 
 const manifest = await agentClient.agentIntrospect();
-assert.equal(manifest.agent.agentId, vaultAgentId);
+assert.equal(manifest.agent.rootAgentId, vaultAgentId);
 assert.equal(manifest.agent.rootAgentId, importedAgent.agent.rootAgentId);
 assert.equal(manifest.agent.publicKey, importedAgent.agent.publicKey);
 assert.equal(manifest.capabilities.some((entry) => entry.writeGrant === "always" && entry.write.scope === "https://api.example.com/users/*"), true);
@@ -100,9 +100,9 @@ assert.equal(
   true,
 );
 
-const capabilityView = await agentClient.agentListCapabilities();
+const grantView = await agentClient.agentListCapabilities();
 assert.equal(
-  capabilityView.some((entry) => entry.writeGrant === null && entry.write.scope === "https://api.example.com/admin/*"),
+  grantView.some((entry) => entry.writeGrant === null && entry.write.scope === "https://api.example.com/admin/*"),
   true,
 );
 

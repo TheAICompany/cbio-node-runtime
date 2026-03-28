@@ -2,13 +2,13 @@
 
 ***
 
-# Interface: VaultApproveCapabilityRequestInput
+# Interface: VaultApproveGrantRequestInput
 
 ## Properties
 
 ### read?
 
-> `optional` **read?**: `CapabilityReadPolicy`
+> `optional` **read?**: `GrantReadPolicy`
 
 ***
 

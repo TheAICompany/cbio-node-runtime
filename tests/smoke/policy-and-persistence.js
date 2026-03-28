@@ -44,7 +44,7 @@ async function runPersistenceTest() {
     // 2. Grant permissions
     console.log("🎁 Granting permissions...");
     await ownerClient.ownerGrantAgentSecret({
-      agentId: agent.agentId,
+      rootAgentId: agent.id,
       secretAlias: "persistent-secret",
     });
     
@@ -54,7 +54,7 @@ async function runPersistenceTest() {
     });
 
     // 3. Verify initial state
-    const initialGrants = await ownerClient.ownerListGrants({ agentId: agent.agentId });
+    const initialGrants = await ownerClient.ownerListGrants({ rootAgentId: agent.id });
     assert.strictEqual(initialGrants.agentSecrets.length, 1);
     assert.strictEqual(initialGrants.secretDestinations.length, 1);
 
@@ -79,7 +79,7 @@ async function runPersistenceTest() {
       ownerIdentity: { rootAgentId: "owner-1" },
     });
 
-    const reloadedGrants = await ownerClient2.ownerListGrants({ agentId: agent.agentId });
+    const reloadedGrants = await ownerClient2.ownerListGrants({ rootAgentId: agent.id });
     
     // 5. Assertions
     console.log("验证持久化数据...");

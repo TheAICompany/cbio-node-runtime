@@ -194,19 +194,19 @@ export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
     this._baseDir = path.join(baseDir, "agents");
   }
 
-  private _getPath(vaultId: VaultId, agentId: string) {
-    return path.join(this._baseDir, vaultId.value, `${agentId}.json`);
+  private _getPath(vaultId: VaultId, rootAgentId: string) {
+    return path.join(this._baseDir, vaultId.value, `${rootAgentId}.json`);
   }
 
   async register(identity: AgentIdentityRecord): Promise<void> {
-    const filePath = this._getPath(identity.vaultId, identity.agentId);
+    const filePath = this._getPath(identity.vaultId, identity.rootAgentId);
     await ensureDir(path.dirname(filePath));
     await fs.writeFile(filePath, JSON.stringify(identity, null, 2));
   }
 
-  async get(vaultId: VaultId, agentId: string): Promise<AgentIdentityRecord | null> {
+  async get(vaultId: VaultId, rootAgentId: string): Promise<AgentIdentityRecord | null> {
     try {
-      const content = await fs.readFile(this._getPath(vaultId, agentId), "utf-8");
+      const content = await fs.readFile(this._getPath(vaultId, rootAgentId), "utf-8");
       return JSON.parse(content);
     } catch {
       return null;
@@ -236,30 +236,30 @@ export class FileAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
     this._baseDir = path.join(baseDir, "grants", "agent_secrets");
   }
 
-  private _getPath(vaultId: VaultId, agentId: string, secretAlias: string) {
-    return path.join(this._baseDir, vaultId.value, agentId, `${Buffer.from(secretAlias).toString("hex")}.json`);
+  private _getPath(vaultId: VaultId, rootAgentId: string, secretAlias: string) {
+    return path.join(this._baseDir, vaultId.value, rootAgentId, `${Buffer.from(secretAlias).toString("hex")}.json`);
   }
 
   async upsert(grant: AgentSecretGrant): Promise<void> {
-    const filePath = this._getPath(grant.vaultId, grant.agentId, grant.secretAlias);
+    const filePath = this._getPath(grant.vaultId, grant.rootAgentId, grant.secretAlias);
     await ensureDir(path.dirname(filePath));
     await fs.writeFile(filePath, JSON.stringify(grant, null, 2));
   }
 
-  async get(vaultId: VaultId, agentId: string, secretAlias: string): Promise<AgentSecretGrant | null> {
+  async get(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<AgentSecretGrant | null> {
     try {
-      const content = await fs.readFile(this._getPath(vaultId, agentId, secretAlias), "utf-8");
+      const content = await fs.readFile(this._getPath(vaultId, rootAgentId, secretAlias), "utf-8");
       return JSON.parse(content);
     } catch {
       return null;
     }
   }
 
-  async list(vaultId: VaultId, agentId?: string): Promise<readonly AgentSecretGrant[]> {
+  async list(vaultId: VaultId, rootAgentId?: string): Promise<readonly AgentSecretGrant[]> {
     try {
       const results: AgentSecretGrant[] = [];
       const vaultDir = path.join(this._baseDir, vaultId.value);
-      const agentDirs = agentId ? [agentId] : await fs.readdir(vaultDir);
+      const agentDirs = rootAgentId ? [rootAgentId] : await fs.readdir(vaultDir);
       for (const aid of agentDirs) {
         const agentDir = path.join(vaultDir, aid);
         try {
@@ -278,9 +278,9 @@ export class FileAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
     }
   }
 
-  async delete(vaultId: VaultId, agentId: string, secretAlias: string): Promise<void> {
+  async delete(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<void> {
     try {
-      await fs.unlink(this._getPath(vaultId, agentId, secretAlias));
+      await fs.unlink(this._getPath(vaultId, rootAgentId, secretAlias));
     } catch {}
   }
 }
@@ -367,7 +367,7 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
     }
   }
 
-  async list(vaultId: VaultId, agentId?: string): Promise<readonly RequestRecord[]> {
+  async list(vaultId: VaultId, rootAgentId?: string): Promise<readonly RequestRecord[]> {
     const dir = path.join(this._baseDir, vaultId.value);
     try {
       const files = await fs.readdir(dir);
@@ -377,7 +377,7 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
           return JSON.parse(content) as RequestRecord;
         })
       );
-      return agentId ? records.filter(r => r.agentId === agentId) : records;
+      return rootAgentId ? records.filter(r => r.rootAgentId === rootAgentId) : records;
     } catch {
       return [];
     }
@@ -449,7 +449,7 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     vaultId: { value: options.vaultId },
     ids: new RandomIdGenerator(),
     clock: new SystemClock(),
-    agentIdentities: new FileAgentIdentityRegistry(baseDir),
+    agentRecords: new FileAgentIdentityRegistry(baseDir),
     agentSecretGrants: new FileAgentSecretGrantRegistry(baseDir),
     secretDestinationGrants: new FileSecretDestinationGrantRegistry(baseDir),
     customFlows: new FileCustomHttpFlowRegistry(baseDir),

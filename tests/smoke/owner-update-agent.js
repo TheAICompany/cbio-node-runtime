@@ -17,7 +17,7 @@ const provisioned = await client.ownerCreateAgent({
 });
 
 const updated = await client.ownerUpdateAgent({
-  agentId: provisioned.agent.agentId,
+  rootAgentId: provisioned.agent.id,
   nickname: "After",
   metadata: { team: "platform" },
 });
@@ -26,7 +26,7 @@ assert.equal(updated.nickname, "After");
 assert.deepEqual(updated.metadata, { team: "platform" });
 
 const listed = await client.ownerListAgents();
-const found = listed.find((agent) => agent.agentId === provisioned.agent.agentId);
+const found = listed.find((agent) => agent.id === provisioned.agent.id);
 assert.equal(found?.nickname, "After");
 assert.deepEqual(found?.metadata, { team: "platform" });
 

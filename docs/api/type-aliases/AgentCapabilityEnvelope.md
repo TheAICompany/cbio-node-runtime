@@ -2,6 +2,6 @@
 
 ***
 
-# Type Alias: AgentCapabilityEnvelope
+# Type Alias: AgentGrantEnvelope
 
-> **AgentCapabilityEnvelope** = `AgentCapability`
+> **AgentGrantEnvelope** = `AgentGrant`

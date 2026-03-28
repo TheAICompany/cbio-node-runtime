@@ -2,6 +2,6 @@
 
 ***
 
-# Type Alias: OwnerGrantCapabilityInput
+# Type Alias: OwnerGrantGrantInput
 
-> **OwnerGrantCapabilityInput** = [`VaultGrantCapabilityInput`](../interfaces/VaultGrantCapabilityInput.md) \| [`VaultGrantCapabilityRequest`](../interfaces/VaultGrantCapabilityRequest.md)
+> **OwnerGrantGrantInput** = [`VaultGrantGrantInput`](../interfaces/VaultGrantGrantInput.md) \| [`VaultGrantGrantRequest`](../interfaces/VaultGrantGrantRequest.md)

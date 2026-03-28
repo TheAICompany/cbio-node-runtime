@@ -2,13 +2,13 @@
 
 ***
 
-# Interface: VaultGrantCapabilityRequest
+# Interface: VaultGrantGrantRequest
 
 ## Properties
 
-### capability
+### grant
 
-> **capability**: `AgentCapability` & `object`
+> **grant**: `AgentGrant` & `object`
 
 #### Type Declaration
 

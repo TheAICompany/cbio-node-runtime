@@ -4,7 +4,7 @@ This guide documents the transition from the legacy "Capability" model to the ne
 
 ## Overview of Changes
 
-The heavyweight `Capability` system has been removed in favor of two simple, context-free white-list tables:
+The heavyweight `Grant` system has been removed in favor of two simple, context-free white-list tables:
 1. **Agent-Secret Grants**: Who (Agent) can use What (Secret).
 2. **Secret-Destination Grants**: Where (Secret) can be sent (Domain).
 
@@ -14,10 +14,10 @@ The heavyweight `Capability` system has been removed in favor of two simple, con
 
 | Legacy Method (v1.4x) | New Method (v1.65+) | Notes |
 | :--- | :--- | :--- |
-| `ownerGrantCapability` | `ownerGrantAgentSecret` / `ownerGrantSecretDestination` | Now split into two discrete grant types. |
-| `ownerRevokeCapability` | `ownerRevokeAgentSecret` / `ownerRevokeSecretDestination` | |
+| `ownerGrantGrant` | `ownerGrantAgentSecret` / `ownerGrantSecretDestination` | Now split into two discrete grant types. |
+| `ownerRevokeGrant` | `ownerRevokeAgentSecret` / `ownerRevokeSecretDestination` | |
 | `ownerListCapabilities` | `ownerListGrants` | Returns both types of grants. |
-| `ownerApproveCapabilityRead` | (Internalized) | Response visibility is now simpler. |
+| `ownerApproveGrantRead` | (Internalized) | Response visibility is now simpler. |
 | `ownerAllowAlways` | `ownerApproveDispatch(..., 'allow_and_grant')` | Integrated into the dispatch approval flow. |
 | `ownerAllowOnce` | `ownerApproveDispatch(..., 'allow_once')` | Integrated into the dispatch approval flow. |
 
@@ -35,7 +35,7 @@ The storage layout for authorization has changed:
 - **New**: `vaults/<id>_v1/grants/agent_secrets/` and `vaults/<id>_v1/grants/secret_destinations/`
 
 > [!IMPORTANT]
-> Automatic migration of legacy capability records is NOT provided in the runtime core. It is recommended to re-authorize agents using the new "Zero-Configuration" HITL flow (Dispatch -> Approve & Grant).
+> Automatic migration of legacy grant records is NOT provided in the runtime core. It is recommended to re-authorize agents using the new "Zero-Configuration" HITL flow (Dispatch -> Approve & Grant).
 
 ## Runtime Export Changes (Breaking)
 

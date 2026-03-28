@@ -35,7 +35,7 @@ async function test() {
       requestId: "r-1",
       requestedAt: "2024-01-01T00:00:00Z",
       agent: { id: "a-1" },
-      capability: { capabilityId: "c-1" },
+      grant: { grantId: "c-1" },
       secretId: "s-1",
       targetUrl: "https://example.com",
       method: "GET",

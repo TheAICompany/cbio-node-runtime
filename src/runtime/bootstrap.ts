@@ -169,7 +169,6 @@ export async function createVault(
     ...options.metadata,
   }, vaultWorkingKey, vaultId);
 
-
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),

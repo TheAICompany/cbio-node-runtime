@@ -6,9 +6,9 @@
 
 ## Properties
 
-### capabilityRevocationRegistry?
+### grantRevocationRegistry?
 
-> `optional` **capabilityRevocationRegistry?**: `CapabilityRevocationRegistry`
+> `optional` **grantRevocationRegistry?**: `GrantRevocationRegistry`
 
 ***
 

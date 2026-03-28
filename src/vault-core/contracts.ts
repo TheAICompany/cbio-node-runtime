@@ -1,4 +1,4 @@
-export type AgentId = string;
+export type AgentId = string; // Now represents rootAgentId
 
 export type VaultPrincipalKind =
   | "owner"
@@ -67,7 +67,7 @@ export type GrantStatus = "pending" | "approved";
 
 export interface AgentSecretGrant {
   vaultId: VaultId;
-  agentId: string;
+  rootAgentId: string;
   secretAlias: string;
   status: GrantStatus;
   requestedAt: string;
@@ -138,7 +138,7 @@ export interface OwnerRegisterAgentIdentityCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal & { kind: "owner" };
-  agentIdentity: AgentIdentityRecord;
+  agentRecord: AgentIdentityRecord;
   requestedAt: string;
 }
 
@@ -146,7 +146,7 @@ export interface OwnerUpdateAgentIdentityCommand {
   vaultId: VaultId;
   requestId: string;
   owner: VaultPrincipal & { kind: "owner" };
-  agentId: string;
+  rootAgentId: string;
   nickname?: string;
   metadata?: Record<string, any>;
   requestedAt: string;
@@ -156,7 +156,7 @@ export interface OwnerGrantAgentSecretCommand {
   vaultId: VaultId;
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
-  agentId: string;
+  rootAgentId: string;
   secretAlias: string;
   requestedAt: string;
 }
@@ -174,7 +174,7 @@ export interface OwnerRevokeAgentSecretCommand {
   vaultId: VaultId;
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
-  agentId: string;
+  rootAgentId: string;
   secretAlias: string;
   requestedAt: string;
 }
@@ -224,7 +224,7 @@ export interface OwnerRegisterCustomHttpFlowCommand {
 }
 
 export interface AgentProof {
-  agentId: string;
+  rootAgentId: string;
   requestId: string;
   requestedAt: string;
   signature?: string;
@@ -260,15 +260,14 @@ export interface AgentGetRuntimeManifestCommand {
 }
 
 export interface AgentSelfContext {
-  agentId: string;
   rootAgentId: string;
-  publicKey: string;
+    publicKey: string;
   nickname?: string;
   metadata?: Record<string, any>;
 }
 
 export interface AgentRuntimeManifest {
-  agentId: string;
+  rootAgentId: string;
   vaultId: string;
   vaultNickname?: string;
   issuedAt: string;
@@ -283,7 +282,7 @@ export interface AgentRuntimeManifest {
 export interface RequestRecord {
   vaultId: VaultId;
   requestId: string;
-  agentId: string;
+  rootAgentId: string;
   reason: string;
   createdAt: string;
   request: {
@@ -322,7 +321,7 @@ export interface AgentVisibleRequestRecord {
 export interface OwnerVisibleRequestRecord {
   requestId: string;
   createdAt: string;
-  agentId: string;
+  rootAgentId: string;
   reason: string;
   targetUrl: string;
   executionStatus: DispatchStatus;
@@ -338,10 +337,11 @@ export interface OwnerVisibleRequestRecord {
 export interface OwnerRequestRecord {
   requestId: string;
   createdAt: string;
-  agentId: string;
+  rootAgentId: string;
   reason: string;
   request: {
     targetUrl: string;
+    method: string;
     headers?: Record<string, string>;
     body?: string;
     secretAlias?: string;
@@ -402,7 +402,7 @@ export interface OwnerListRequestsRequest {
   vaultId: VaultId;
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
-  agentId?: string;
+  rootAgentId?: string;
   requestedAt: string;
 }
 
@@ -539,7 +539,7 @@ export interface AuditEntry {
   targetUrl?: string;
   secretAlias?: string;
   secretId?: string;
-  agentId?: string;
+  rootAgentId?: string;
   domain?: string;
   outcome: AuditOutcome;
   detail: string;
@@ -547,9 +547,8 @@ export interface AuditEntry {
 
 export interface AgentIdentityRecord {
   vaultId: VaultId;
-  agentId: string;
   rootAgentId: string;
-  publicKey: string;
+    publicKey: string;
   privateKey?: string;
   metadata?: Record<string, any>;
   nickname?: string;
@@ -558,7 +557,7 @@ export interface AgentIdentityRecord {
 
 export interface StoredSessionToken {
   token: string;
-  agentId: string;
+  rootAgentId: string;
   issuedAt: string;
   expiresAt?: string;
 }
@@ -598,7 +597,7 @@ export interface OwnerListGrantsRequest {
   vaultId: VaultId;
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
-  agentId?: string;
+  rootAgentId?: string;
   secretAlias?: string;
   requestedAt: string;
 }
@@ -607,12 +606,12 @@ export interface OwnerIssueSessionTokenRequest {
   vaultId: VaultId;
   requestId: string;
   actor: VaultPrincipal & { kind: "owner" };
-  agentId: string;
+  rootAgentId: string;
   requestedAt: string;
 }
 
 export interface OwnerSessionToken {
   token: string;
-  agentId: string;
+  rootAgentId: string;
   issuedAt: string;
 }

@@ -55,20 +55,20 @@ async function main() {
 
   console.log("Registering agent...");
   await client.registerAgent({
-    agentId: "agent-1",
+    rootAgentId: "agent-1",
     publicKey: "PUB_AGENT_1",
   });
 
   console.log("Listing agents (1)...");
   const agentsUpdated = await client.listAgents();
-  console.log("Agents:", agentsUpdated.length, agentsUpdated[0].agentId);
+  console.log("Agents:", agentsUpdated.length, agentsUpdated[0].rootAgentId);
 
-  console.log("Granting capability...");
-  await client.grantCapability({
-    capability: {
+  console.log("Granting secret access...");
+  await client.grantGrant({
+    grant: {
       vaultId,
-      agentId: "agent-1",
-      capabilityId: "cap-1",
+      rootAgentId: "agent-1",
+      grantId: "cap-1",
       operation: "dispatch_http",
       allowedTargets: ["*"],
       allowedMethods: ["GET"],
@@ -78,23 +78,23 @@ async function main() {
   });
 
   console.log("Listing capabilities...");
-  const caps = await client.listCapabilities({ agentId: "agent-1" });
-  console.log("Capabilities:", caps.length, caps[0].capabilityId);
+  const caps = await client.listCapabilities({ rootAgentId: "agent-1" });
+  console.log("Capabilities:", caps.length, caps[0].grantId);
 
-  console.log("Revoking capability...");
-  await client.revokeCapability({
-    agentId: "agent-1",
-    capabilityId: "cap-1",
+  console.log("Revoking secret access...");
+  await client.revokeGrant({
+    rootAgentId: "agent-1",
+    grantId: "cap-1",
   });
 
   console.log("Verifying revocation (list capabilities)...");
-  const capsAfter = await client.listCapabilities({ agentId: "agent-1" });
+  const capsAfter = await client.listCapabilities({ rootAgentId: "agent-1" });
   // Note: listing usually shows both active and revoked in some systems, 
   // but let's see what our implementation does.
   // Our implementation returns what's in the registry. 
   // In our current Registry implementations (InMemory/File), revoke might NOT 
   // remove it from the list if it's just a version bump.
-  // Wait, our DefaultPolicyEngine.revokeCapability bumps the version in the revocation registry.
+  // Wait, our DefaultPolicyEngine.revokeGrant bumps the version in the revocation registry.
   console.log("Capabilities after revoke:", capsAfter.length);
 
   console.log("Management API test completed successfully!");

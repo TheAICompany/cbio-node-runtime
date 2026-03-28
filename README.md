@@ -10,7 +10,7 @@ Node.js vault runtime with a **Sovereign Vault** architecture: authority is root
 
 - **No CLI / No TUI**: Pure library for integration into Node.js applications.
 - **Authority-centric**: Administrative control is tied to the vault's master password.
-- **Grant-Based Authorization**: Simplified, domain-level white-listing replaced the legacy capability model.
+- **Grant-Based Authorization**: Simplified, domain-level white-listing replaced the legacy grant model.
 - **Zero-Configuration Discovery**: Agents can self-introspect to discover their identity, grants, and toolset.
 - **Managed Agent Custody**: Generate and store agent private keys securely inside the vault.
 - **Process Isolation**: Hard separation between the Security Process (Master) and Agent Processes (Consumers).
@@ -62,7 +62,7 @@ const { agent, sessionToken } = await client.ownerCreateAgent({ nickname: 'Bot' 
 const secret = await client.ownerCreateSecret({ alias: 'api-key', plaintext: 'sk-...' });
 
 // 3. Grant access (Whitelist)
-await client.ownerGrantAgentSecret({ agentId: agent.agentId, secretAlias: 'api-key' });
+await client.ownerGrantAgentSecret({ rootAgentId: agent.rootAgentId, secretAlias: 'api-key' });
 await client.ownerGrantSecretDestination({ secretAlias: 'api-key', domain: 'api.openai.com' });
 ```
 
@@ -74,7 +74,7 @@ Agents use a "Zero-Configuration" workflow. They don't need to know their permis
 import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
 
 const agentClient = createAgentClient({
-  agentIdentity: agent,
+  rootAgentIdentity: agent,
   token: sessionToken.token,
   vault: vault.vault
 });

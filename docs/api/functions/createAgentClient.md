@@ -14,7 +14,7 @@ Creates an [AgentClient](../interfaces/AgentClient.md) for a delegated identity.
 
 [`CreateAgentClientOptions`](../interfaces/CreateAgentClientOptions.md)
 
-Configuration including agent identity, capability, and transport.
+Configuration including agent identity, grant, and transport.
 
 ## Returns
 
@@ -26,8 +26,8 @@ An initialized [AgentClient](../interfaces/AgentClient.md).
 
 ```ts
 const agent = createAgentClient({
-  agentIdentity,
-  capability,
+  rootAgentIdentity,
+  grant,
   vault
 });
 ```

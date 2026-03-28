@@ -34,7 +34,7 @@ These are now explicit sensitive reads:
 
 - `ownerReadSecretPlaintext({ alias, password, verificationCode? })`
 - `ownerExportSecret({ alias, password, verificationCode? })`
-- `ownerReadAgentPrivateKey({ agentId, password, verificationCode? })`
+- `ownerReadAgentPrivateKey({ rootAgentId, password, verificationCode? })`
 
 `ownerListAgents()` no longer exposes private keys.
 
@@ -48,7 +48,7 @@ GUI clients should branch on `error.code` instead of parsing raw message text.
 ### Agent read model
 
 - `ownerListAgents()` returns the stable public agent record:
-  - `agentId`
+  - `rootAgentId`
   - `rootAgentId`
   - `publicKey`
   - `nickname`
@@ -57,21 +57,21 @@ GUI clients should branch on `error.code` instead of parsing raw message text.
 
 ### Agent creation and import
 
-- `ownerCreateAgent(...)` no longer accepts caller-supplied `agentId`
-- `ownerImportAgent(...)` no longer accepts caller-supplied `agentId`
+- `ownerCreateAgent(...)` no longer accepts caller-supplied `rootAgentId`
+- `ownerImportAgent(...)` no longer accepts caller-supplied `rootAgentId`
 - Both now return:
   - `agent`
   - `sessionToken`
 
-Use `result.agent.agentId` as the vault-internal agent ID.
+Use `result.agent.rootAgentId` as the vault-internal agent ID.
 
-### Capability creation
+### Grant creation
 
-- `ownerGrantCapability(...)` no longer accepts caller-supplied `capabilityId`
-- `ownerExecuteCapabilityStateAndGrant(...)` no longer accepts caller-supplied `capabilityId`
-- Capability IDs are generated internally
+- `ownerGrantGrant(...)` no longer accepts caller-supplied `grantId`
+- `ownerExecuteGrantStateAndGrant(...)` no longer accepts caller-supplied `grantId`
+- Grant IDs are generated internally
 
-`ownerGrantCapability(...)` now returns the created capability so the caller can read the generated ID immediately.
+`ownerGrantGrant(...)` now returns the created grant so the caller can read the generated ID immediately.
 
 ### Custom flow creation
 
@@ -82,17 +82,17 @@ Use `result.agent.agentId` as the vault-internal agent ID.
 
 ## New Public API
 
-- `ownerUpdateAgent({ agentId, nickname?, metadata? })`
+- `ownerUpdateAgent({ rootAgentId, nickname?, metadata? })`
 
 This updates the stored owner-side agent profile and persists it. The operation is audited.
 
 ## Recommended GUI changes
 
 - Remove UI inputs for:
-  - `agentId` during create/import
-  - `capabilityId`
+  - `rootAgentId` during create/import
+  - `grantId`
   - `flowId`
-- Treat `agentId`, `capabilityId`, and `flowId` as SDK-managed internal identifiers
+- Treat `rootAgentId`, `grantId`, and `flowId` as SDK-managed internal identifiers
 - Use returned records instead of constructing IDs in the UI
 - Keep an SDK-managed owner session handle instead of caching a raw `createOwnerClient(...)` result across reloads or runtime swaps
 - If you are not using `OwnerSession`, recreate `createOwnerClient(...)` after runtime/module changes rather than reusing an old instance

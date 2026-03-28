@@ -26,7 +26,7 @@ Creates an [AgentClient](AgentClient.md) for a delegated identity.
 
 [`CreateAgentClientOptions`](CreateAgentClientOptions.md)
 
-Configuration including agent identity, capability, and transport.
+Configuration including agent identity, grant, and transport.
 
 #### Returns
 
@@ -38,8 +38,8 @@ An initialized [AgentClient](AgentClient.md).
 
 ```ts
 const agent = createAgentClient({
-  agentIdentity,
-  capability,
+  rootAgentIdentity,
+  grant,
   vault
 });
 ```
@@ -475,9 +475,9 @@ A list of vault IDs.
 
 ***
 
-### PersistentVaultCapabilityRevocationRegistry
+### PersistentVaultGrantRevocationRegistry
 
-> **PersistentVaultCapabilityRevocationRegistry**: *typeof* `FileCapabilityRevocationRegistry`
+> **PersistentVaultGrantRevocationRegistry**: *typeof* `FileGrantRevocationRegistry`
 
 ***
 

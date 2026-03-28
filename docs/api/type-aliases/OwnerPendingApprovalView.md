@@ -4,4 +4,4 @@
 
 # Type Alias: OwnerPendingApprovalView
 
-> **OwnerPendingApprovalView** = `CapabilityStateRecord`
+> **OwnerPendingApprovalView** = `GrantStateRecord`

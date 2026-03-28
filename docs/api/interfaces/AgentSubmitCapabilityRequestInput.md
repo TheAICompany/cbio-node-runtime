@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: AgentSubmitCapabilityRequestInput
+# Interface: AgentSubmitGrantRequestInput
 
 ## Properties
 
@@ -14,7 +14,7 @@
 
 ### read
 
-> **read**: `CapabilityReadPolicy`
+> **read**: `GrantReadPolicy`
 
 ***
 
@@ -38,4 +38,4 @@
 
 ### write
 
-> **write**: `Omit`\<`CapabilityWritePolicy`, `"secretIds"`\>
+> **write**: `Omit`\<`GrantWritePolicy`, `"secretIds"`\>

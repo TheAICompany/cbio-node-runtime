@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import type { IStorageProvider } from "./provider.js";
 
 function joinPrefix(prefix: string, key: string): string {
@@ -9,6 +10,14 @@ export class PrefixStorageProvider implements IStorageProvider {
     private readonly base: IStorageProvider,
     private readonly prefix: string,
   ) {}
+
+  getBaseDir(): string {
+    if (this.base.getBaseDir) {
+      return path.join(this.base.getBaseDir(), this.prefix);
+    }
+    return this.prefix;
+  }
+
 
   private key(key: string): string {
     return joinPrefix(this.prefix, key);

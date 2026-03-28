@@ -53,7 +53,6 @@ export interface IdGenerator {
   newSecretId(): SecretId;
   newVersion(): { value: string };
   newAuditEntryId(): string;
-  newAgentId(): string;
   newFlowId(): string;
   newRequestId(action?: string): string;
 }
@@ -63,15 +62,15 @@ export interface AgentProofVerifier {
 }
 
 export interface ISessionTokenRegistry {
-  issue(agentId: string): Promise<string>;
-  verify(token: string, agentId: string): Promise<boolean>;
+  issue(rootAgentId: string): Promise<string>;
+  verify(token: string, rootAgentId: string): Promise<boolean>;
   revoke(token: string): Promise<void>;
-  list(agentId?: string): Promise<readonly StoredSessionToken[]>;
+  list(rootAgentId?: string): Promise<readonly StoredSessionToken[]>;
 }
 
 export interface AgentIdentityRegistry {
   register(identity: AgentIdentityRecord): Promise<void>;
-  get(vaultId: VaultId, agentId: string): Promise<AgentIdentityRecord | null>;
+  get(vaultId: VaultId, rootAgentId: string): Promise<AgentIdentityRecord | null>;
   list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]>;
 }
 
@@ -82,9 +81,9 @@ export interface ReplayGuard {
 
 export interface AgentSecretGrantRegistry {
   upsert(grant: AgentSecretGrant): Promise<void>;
-  get(vaultId: VaultId, agentId: string, secretAlias: string): Promise<AgentSecretGrant | null>;
-  list(vaultId: VaultId, agentId?: string): Promise<readonly AgentSecretGrant[]>;
-  delete(vaultId: VaultId, agentId: string, secretAlias: string): Promise<void>;
+  get(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<AgentSecretGrant | null>;
+  list(vaultId: VaultId, rootAgentId?: string): Promise<readonly AgentSecretGrant[]>;
+  delete(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<void>;
 }
 
 export interface SecretDestinationGrantRegistry {
@@ -102,7 +101,7 @@ export interface CustomHttpFlowRegistry {
 export interface RequestRecordRegistry {
   save(record: RequestRecord): Promise<void>;
   get(vaultId: VaultId, requestId: string): Promise<RequestRecord | null>;
-  list(vaultId: VaultId, agentId?: string): Promise<readonly RequestRecord[]>;
+  list(vaultId: VaultId, rootAgentId?: string): Promise<readonly RequestRecord[]>;
 }
 
 export interface VaultCoreDependencies {
@@ -112,7 +111,7 @@ export interface VaultCoreDependencies {
   policy: PolicyEngine;
   audit: AuditLog;
   executor: TrustedExecutor;
-  agentIdentities: AgentIdentityRegistry;
+  agentRecords: AgentIdentityRegistry;
   agentSecretGrants: AgentSecretGrantRegistry;
   secretDestinationGrants: SecretDestinationGrantRegistry;
   requests: RequestRecordRegistry;

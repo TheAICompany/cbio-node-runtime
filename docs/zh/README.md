@@ -88,7 +88,7 @@ const createdAgent = await client.ownerCreateAgent({
   nickname: '后台处理插件',
 });
 
-const agentId = createdAgent.agent.agentId;
+const rootAgentId = createdAgent.agent.rootAgentId;
 const sessionToken = createdAgent.sessionToken;
 ```
 
@@ -101,7 +101,7 @@ const record = await client.ownerCreateSecret({
 });
 
 await client.ownerGrantAgentSecret({
-  agentId,
+  rootAgentId,
   secretAlias: 'api-token',
 });
 
@@ -117,7 +117,7 @@ await client.ownerGrantSecretDestination({
 import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
 
 const agent = createAgentClient({
-  agentIdentity: { agentId },
+  rootAgentIdentity: { rootAgentId },
   token: sessionToken.token,
   vault: vault.vault
 });
@@ -133,8 +133,8 @@ Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身�
 给 LLM 的直白规则：
 - `agentDispatch(...)` = 立刻尝试执行真实任务
 - `agentDispatch(...)` 必须带一条给 owner 看的 `reason`，说明为什么要发这个请求
-- `agentSubmitCapabilityRequest(...)` = 只申请权限，不会执行任务
-- `agentSubmitCapabilityRequest(...)` 也必须带 `reason`，说明为什么需要这项权限
+- `agentSubmitGrantRequest(...)` = 只申请权限，不会执行任务
+- `agentSubmitGrantRequest(...)` 也必须带 `reason`，说明为什么需要这项权限
 - `agentListRequests()` / `agentGetRequest(...)` = 在请求执行后查看异步结果
 - `ownerListRequests()` / `ownerGetRequest(...)` = owner 查看完整请求记录，用于决定是否放行 read
 - `read.paths` 只控制哪些响应值可见；响应结构始终可见，`['$']` 表示整个 body 都可见
@@ -142,7 +142,7 @@ Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身�
 ```ts
 const manifest = await agent.agentIntrospect();
 
-console.log(manifest.agent.agentId);
+console.log(manifest.agent.rootAgentId);
 console.log(manifest.agent.rootAgentId);
 console.log(manifest.agent.nickname);
 console.log(manifest.capabilities); // 同一组能力载体里包含 write/read 动作状态
@@ -160,18 +160,18 @@ if (result.status === 'PENDING') {
   console.log('触发发现流程：等待所有者审批...');
 }
 
-client.ownerOnCapabilityState((state) => {
+client.ownerOnGrantState((state) => {
   if (state.writeGrant === null) {
     console.log('收到新的待审批能力状态:', state.requestId);
   }
 });
 
-const pending = await client.ownerListCapabilityStates({ writeGranted: false });
+const pending = await client.ownerListGrantStates({ writeGranted: false });
 if (pending.length > 0) {
   await client.ownerAllowAlways({
     requestId: pending[0].requestId
   });
-  await client.ownerApproveCapabilityRead({
+  await client.ownerApproveGrantRead({
     requestId: pending[0].requestId,
     read: { paths: ['data.id', 'data.status'] }
   });

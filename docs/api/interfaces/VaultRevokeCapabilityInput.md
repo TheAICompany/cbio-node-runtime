@@ -2,19 +2,19 @@
 
 ***
 
-# Interface: VaultRevokeCapabilityInput
+# Interface: VaultRevokeGrantInput
 
 ## Properties
 
-### agentId
+### rootAgentId
 
-> **agentId**: `string`
+> **rootAgentId**: `string`
 
 ***
 
-### capabilityId
+### grantId
 
-> **capabilityId**: `string`
+> **grantId**: `string`
 
 ***
 

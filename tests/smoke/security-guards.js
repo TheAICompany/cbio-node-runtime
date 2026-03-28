@@ -11,8 +11,8 @@ import {
 import { wrapVaultCoreAsVaultService } from "../../dist/vault-ingress/index.js";
 import { LocalSigner } from "../../dist/protocol/crypto.js";
 
-const agentIdentity = createIdentity();
-const signer = new LocalSigner(agentIdentity);
+const agentRecord = createIdentity();
+const signer = new LocalSigner(agentRecord);
 
 const authority = createVaultCore(createVaultCoreDependencies({
   vaultId: "vault-security",
@@ -24,9 +24,9 @@ const client = createOwnerClient({
   vault,
 });
 const importedAgent = await client.ownerImportAgent({
-  privateKey: agentIdentity.privateKey,
+  privateKey: agentRecord.privateKey,
 });
-const vaultAgentId = importedAgent.agent.agentId;
+const vaultAgentId = importedAgent.agent.id;
 
 const guardedRecord = await client.ownerCreateSecret({
   alias: "guarded-token",
@@ -38,8 +38,8 @@ const expiredRequestId = "expired-request";
 const expiredBinding = JSON.stringify({
   requestId: expiredRequestId,
   requestedAt: expiredRequestedAt,
-  agentId: vaultAgentId,
-  capabilityId: "cap-expired",
+  rootAgentId: vaultAgentId,
+  grantId: "cap-expired",
   secretId: guardedRecord.secretId.value,
   targetUrl: "https://guarded.example.com/endpoint",
   method: "POST",
@@ -53,10 +53,10 @@ await assert.rejects(
     requestId: expiredRequestId,
     requestedAt: expiredRequestedAt,
     agent: { kind: "agent", id: vaultAgentId },
-    capability: {
+    grant: {
       vaultId: authority.vaultId,
-      capabilityId: "cap-expired",
-      agentId: vaultAgentId,
+      grantId: "cap-expired",
+      rootAgentId: vaultAgentId,
       operation: "dispatch_http",
       write: {
         secretIds: [guardedRecord.secretId.value],
@@ -69,7 +69,7 @@ await assert.rejects(
       auditRequired: true,
     },
     proof: {
-      agentId: vaultAgentId,
+      rootAgentId: vaultAgentId,
       signature: expiredSignature,
       requestId: expiredRequestId,
       requestedAt: expiredRequestedAt,
@@ -77,7 +77,7 @@ await assert.rejects(
     secretId: guardedRecord.secretId.value,
     targetUrl: "https://guarded.example.com/endpoint",
     method: "POST",
-    reason: "Need to verify expired capability rejection.",
+    reason: "Need to verify expired grant rejection.",
   }),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);
@@ -91,8 +91,8 @@ const validRequestId = "valid-security-request";
 const badBinding = JSON.stringify({
   requestId: validRequestId,
   requestedAt: validRequestedAt,
-  agentId: vaultAgentId,
-  capabilityId: "cap-valid",
+  rootAgentId: vaultAgentId,
+  grantId: "cap-valid",
   secretId: guardedRecord.secretId.value,
   targetUrl: "https://guarded.example.com/endpoint",
   method: "POST",
@@ -106,10 +106,10 @@ await assert.rejects(
     requestId: validRequestId,
     requestedAt: validRequestedAt,
     agent: { kind: "agent", id: vaultAgentId },
-    capability: {
+    grant: {
       vaultId: authority.vaultId,
-      capabilityId: "cap-valid",
-      agentId: vaultAgentId,
+      grantId: "cap-valid",
+      rootAgentId: vaultAgentId,
       operation: "dispatch_http",
       write: {
         secretIds: [guardedRecord.secretId.value],
@@ -121,7 +121,7 @@ await assert.rejects(
       auditRequired: true,
     },
     proof: {
-      agentId: vaultAgentId,
+      rootAgentId: vaultAgentId,
       signature: badSignature,
       requestId: validRequestId,
       requestedAt: validRequestedAt,
@@ -151,10 +151,10 @@ await assert.rejects(
     vaultId: { value: "mismatch-vault" },
     requestId: unauthorizedIdentityRequestId,
     owner: { kind: "owner", id: "vault-master" },
-    agentIdentity: {
+    agentRecord: {
       vaultId: authority.vaultId,
-      agentId: "agent-forged",
-      publicKey: agentIdentity.publicKey,
+      rootAgentId: "agent-forged",
+      publicKey: agentRecord.publicKey,
     },
     requestedAt: unauthorizedIdentityRequestedAt,
   }),

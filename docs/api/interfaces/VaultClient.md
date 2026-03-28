@@ -17,7 +17,7 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 
 ##### input
 
-[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+[`VaultApproveGrantRequestInput`](VaultApproveGrantRequestInput.md)
 
 #### Returns
 
@@ -33,7 +33,7 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 
 ##### input
 
-[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+[`VaultApproveGrantRequestInput`](VaultApproveGrantRequestInput.md)
 
 #### Returns
 
@@ -41,19 +41,19 @@ In Sovereign Vault model, administrative actions are implicitly authorized by th
 
 ***
 
-### ownerApproveCapabilityRead()
+### ownerApproveGrantRead()
 
-> **ownerApproveCapabilityRead**(`input`): `Promise`\<`CapabilityStateRecord`\>
+> **ownerApproveGrantRead**(`input`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
 ##### input
 
-[`VaultApproveCapabilityRequestInput`](VaultApproveCapabilityRequestInput.md)
+[`VaultApproveGrantRequestInput`](VaultApproveGrantRequestInput.md)
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>
 
 ***
 
@@ -96,7 +96,7 @@ Inserts a new active secret into the vault.
 
 ### ownerDeny()
 
-> **ownerDeny**(`requestId`): `Promise`\<`CapabilityStateRecord`\>
+> **ownerDeny**(`requestId`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
@@ -106,7 +106,7 @@ Inserts a new active secret into the vault.
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>
 
 ***
 
@@ -144,21 +144,21 @@ Exports a secret's plaintext.
 
 ***
 
-### ownerGrantCapability()
+### ownerGrantGrant()
 
-> **ownerGrantCapability**(`input`): `Promise`\<`AgentCapability`\>
+> **ownerGrantGrant**(`input`): `Promise`\<`AgentGrant`\>
 
-Grants a specific capability to an agent.
+Grants a specific grant to an agent.
 
 #### Parameters
 
 ##### input
 
-[`OwnerGrantCapabilityInput`](../type-aliases/OwnerGrantCapabilityInput.md)
+[`OwnerGrantGrantInput`](../type-aliases/OwnerGrantGrantInput.md)
 
 #### Returns
 
-`Promise`\<`AgentCapability`\>
+`Promise`\<`AgentGrant`\>
 
 ***
 
@@ -224,7 +224,7 @@ Lists all agents registered in the vault.
 
 ### ownerListCapabilities()
 
-> **ownerListCapabilities**(`input?`): `Promise`\<readonly `AgentCapability`[]\>
+> **ownerListCapabilities**(`input?`): `Promise`\<readonly `AgentGrant`[]\>
 
 Lists all active capabilities granted to agents.
 
@@ -236,23 +236,23 @@ Lists all active capabilities granted to agents.
 
 #### Returns
 
-`Promise`\<readonly `AgentCapability`[]\>
+`Promise`\<readonly `AgentGrant`[]\>
 
 ***
 
-### ownerListCapabilityStates()
+### ownerListGrantStates()
 
-> **ownerListCapabilityStates**(`input?`): `Promise`\<readonly `CapabilityStateRecord`[]\>
+> **ownerListGrantStates**(`input?`): `Promise`\<readonly `GrantStateRecord`[]\>
 
 #### Parameters
 
 ##### input?
 
-`VaultListCapabilityStatesInput`
+`VaultListGrantStatesInput`
 
 #### Returns
 
-`Promise`\<readonly `CapabilityStateRecord`[]\>
+`Promise`\<readonly `GrantStateRecord`[]\>
 
 ***
 
@@ -288,9 +288,9 @@ Lists all active capabilities granted to agents.
 
 ***
 
-### ownerOnCapabilityState()
+### ownerOnGrantState()
 
-> **ownerOnCapabilityState**(`callback`): () => `void`
+> **ownerOnGrantState**(`callback`): () => `void`
 
 #### Parameters
 
@@ -390,17 +390,17 @@ Logically removes the current active secret.
 
 ***
 
-### ownerRevokeCapability()
+### ownerRevokeGrant()
 
-> **ownerRevokeCapability**(`input`): `Promise`\<`void`\>
+> **ownerRevokeGrant**(`input`): `Promise`\<`void`\>
 
-Revokes a previously granted capability.
+Revokes a previously granted grant.
 
 #### Parameters
 
 ##### input
 
-[`VaultRevokeCapabilityInput`](VaultRevokeCapabilityInput.md)
+[`VaultRevokeGrantInput`](VaultRevokeGrantInput.md)
 
 #### Returns
 
@@ -424,19 +424,19 @@ Revokes a previously granted capability.
 
 ***
 
-### ownerSubmitCapabilityRequest()
+### ownerSubmitGrantRequest()
 
-> **ownerSubmitCapabilityRequest**(`input`): `Promise`\<`CapabilityStateRecord`\>
+> **ownerSubmitGrantRequest**(`input`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
 ##### input
 
-[`VaultSubmitCapabilityRequestInput`](VaultSubmitCapabilityRequestInput.md)
+[`VaultSubmitGrantRequestInput`](VaultSubmitGrantRequestInput.md)
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>
 
 ***
 

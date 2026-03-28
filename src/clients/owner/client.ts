@@ -1,6 +1,5 @@
 import { OwnerClientError, OwnerClientErrorCode } from "../../errors.js";
 import {
-  createAgentIdValue,
   createFlowIdValue,
   createRequestIdValue,
 } from "../../internal/id-factory.js";
@@ -201,7 +200,7 @@ class DefaultOwnerClient implements OwnerClient {
       verificationCode: input.verificationCode,
     }, {
       action: "read_agent_private_key",
-      subject: input.agentId,
+      subject: input.rootAgentId,
     });
     const agents = await this._vault.ownerListAgents({
       vaultId: this._vault.vaultId,
@@ -212,7 +211,7 @@ class DefaultOwnerClient implements OwnerClient {
         id: this._rootAgentId,
       },
     });
-    const agent = agents.find((record) => record.agentId === input.agentId);
+    const agent = agents.find((record) => record.rootAgentId === input.rootAgentId);
     if (!agent?.privateKey) {
       throw new OwnerClientError(
         OwnerClientErrorCode.AGENT_PRIVATE_KEY_NOT_FOUND,
@@ -223,7 +222,6 @@ class DefaultOwnerClient implements OwnerClient {
   }
 
   private async _ownerRegisterManagedAgentIdentity(input: {
-    agentId: string;
     rootAgentId: string;
     publicKey: string;
     privateKey?: string;
@@ -232,10 +230,9 @@ class DefaultOwnerClient implements OwnerClient {
     requestedAt?: string;
   }): Promise<import("../../vault-core/index.js").AgentIdentityRecord> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("register_agent_identity");
-    const agentIdentity = {
+    const requestId = createRequestIdValue("register_agent.identity");
+    const agentRecord = {
       vaultId: this._vault.vaultId,
-      agentId: input.agentId,
       rootAgentId: input.rootAgentId,
       publicKey: input.publicKey,
       privateKey: input.privateKey,
@@ -250,16 +247,15 @@ class DefaultOwnerClient implements OwnerClient {
         kind: "owner",
         id: this._rootAgentId,
       },
-      agentIdentity,
+      agentRecord,
       requestedAt,
     });
-    return agentIdentity;
+    return agentRecord;
   }
 
   async ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult> {
     const identity = restoreIdentity(input.privateKey, { nickname: input.nickname });
     const agent = await this._ownerRegisterManagedAgentIdentity({
-      agentId: createAgentIdValue(),
       rootAgentId: identity.rootAgentId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
@@ -268,7 +264,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestedAt: input.requestedAt,
     });
     const sessionToken = await this.ownerIssueSessionToken({
-      agentId: agent.agentId,
+      rootAgentId: agent.rootAgentId,
       requestedAt: input.requestedAt,
     });
     return {
@@ -283,7 +279,6 @@ class DefaultOwnerClient implements OwnerClient {
   async ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult> {
     const identity = createIdentity();
     const agent = await this._ownerRegisterManagedAgentIdentity({
-      agentId: createAgentIdValue(),
       rootAgentId: identity.rootAgentId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
@@ -292,7 +287,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestedAt: input.requestedAt,
     });
     const sessionToken = await this.ownerIssueSessionToken({
-      agentId: agent.agentId,
+      rootAgentId: agent.rootAgentId,
       requestedAt: input.requestedAt,
     });
     return {
@@ -306,7 +301,7 @@ class DefaultOwnerClient implements OwnerClient {
 
   async ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord> {
     const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const requestId = createRequestIdValue("update_agent_identity");
+    const requestId = createRequestIdValue("update_agent.identity");
     const updated = await this._vault.ownerUpdateAgentIdentity({
       vaultId: this._vault.vaultId,
       requestId,
@@ -314,9 +309,9 @@ class DefaultOwnerClient implements OwnerClient {
         kind: "owner",
         id: this._rootAgentId,
       },
-      agentId: input.agentId,
-      nickname: input.nickname,
       metadata: input.metadata,
+      rootAgentId: input.rootAgentId,
+      nickname: input.nickname,
       requestedAt,
     });
     return {
@@ -331,7 +326,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("grant_agent_secret"),
       actor: { kind: "owner", id: this._rootAgentId },
-      agentId: input.agentId,
+      rootAgentId: input.rootAgentId,
       secretAlias: input.secretAlias,
       requestedAt,
     });
@@ -355,7 +350,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("revoke_agent_secret"),
       actor: { kind: "owner", id: this._rootAgentId },
-      agentId: input.agentId,
+      rootAgentId: input.rootAgentId,
       secretAlias: input.secretAlias,
       requestedAt,
     });
@@ -379,8 +374,6 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("list_grants"),
       actor: { kind: "owner", id: this._rootAgentId },
-      agentId: input.agentId,
-      secretAlias: input.secretAlias,
       requestedAt,
     });
   }
@@ -472,11 +465,8 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       requestId,
       requestedAt,
-      actor: {
-        kind: "owner",
-        id: this._rootAgentId,
-      },
-      agentId: input.agentId,
+      actor: { kind: "owner", id: this._rootAgentId },
+      rootAgentId: input.rootAgentId,
     });
   }
 
@@ -515,12 +505,12 @@ class DefaultOwnerClient implements OwnerClient {
 
     return this._vault.ownerIssueSessionToken({
       vaultId: this._vault.vaultId,
+      requestId,
+      rootAgentId: input.rootAgentId,
       actor: {
         kind: "owner",
         id: this._rootAgentId,
       },
-      agentId: input.agentId,
-      requestId,
       requestedAt,
     });
   }

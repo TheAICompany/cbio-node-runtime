@@ -37,7 +37,7 @@ The runtime enforces a hard process boundary (A/B Architecture):
 
 ## Export / Reveal Policy
 
-Exporting secret plaintext is a first-class capability of the Sovereign Vault.
+Exporting secret plaintext is a first-class grant of the Sovereign Vault.
 - `exportSecret(...)` is a valid, audited administrative operation.
 - Requires the vault to be in an unlocked (operational) state.
 

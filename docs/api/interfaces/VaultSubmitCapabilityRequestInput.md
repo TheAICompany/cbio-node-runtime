@@ -2,13 +2,13 @@
 
 ***
 
-# Interface: VaultSubmitCapabilityRequestInput
+# Interface: VaultSubmitGrantRequestInput
 
 ## Properties
 
-### agentId
+### rootAgentId
 
-> **agentId**: `string`
+> **rootAgentId**: `string`
 
 ***
 
@@ -40,7 +40,7 @@
 
 ### read
 
-> **read**: `CapabilityReadPolicy`
+> **read**: `GrantReadPolicy`
 
 ***
 
@@ -70,4 +70,4 @@
 
 ### write
 
-> **write**: `CapabilityWritePolicy`
+> **write**: `GrantWritePolicy`

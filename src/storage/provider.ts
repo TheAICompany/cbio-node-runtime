@@ -14,4 +14,6 @@ export interface IStorageProvider {
     withLock?<T>(key: string, task: () => Promise<T>): Promise<T>;
     /** Optional. Returns sub-keys (names) under a given prefix. */
     list?(prefix: string): Promise<string[]>;
+    /** Optional. Returns the base directory for file-system based storage. */
+    getBaseDir?(): string;
 }

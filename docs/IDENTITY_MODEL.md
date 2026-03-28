@@ -24,7 +24,7 @@ An identity whose public/private keypair is generated and stored **inside** the 
 
 ### Root Agent ID
 A stable, public-key-derived identifier (via `deriveRootAgentId(...)`). 
-- Used for internal registries, capability assignment, and audit logs.
+- Used for internal registries, grant assignment, and audit logs.
 - Decoupled from human-readable labels.
 
 ### Nicknames
@@ -47,5 +47,5 @@ To achieve the Sovereign Vault's simplicity, the following legacy concepts were 
 | Actor | Source of Authority | Registry |
 | :--- | :--- | :--- |
 | **Owner** | Master Password | Implicit (via Unlock) |
-| **Managed Agent** | Vault Registry (Internal Key) | `agentIdentities` registry |
-| **External Agent** | External Signer (Public Key) | `agentIdentities` registry |
+| **Managed Agent** | Vault Registry (Internal Key) | `rootAgentIdentities` registry |
+| **External Agent** | External Signer (Public Key) | `rootAgentIdentities` registry |

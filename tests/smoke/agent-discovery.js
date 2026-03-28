@@ -25,9 +25,9 @@ async function runDiscoveryTest() {
     nickname: "Discovery-Bot",
   });
 
-  // 4. Setup Agent Client (No capability needed anymore)
+  // 4. Setup Agent Client (No grant needed anymore)
   const agentClient = createAgentClient({
-    agentIdentity: agent,
+    agentRecord: agent,
     vault,
     token: sessionToken.token,
   });
@@ -35,11 +35,11 @@ async function runDiscoveryTest() {
   console.log("🔍 Introspecting...");
   const manifest = await agentClient.agentIntrospect();
 
-  console.log("Agent ID:", manifest.agentId);
+  console.log("Agent ID:", manifest.rootAgentId);
   console.log("Vault ID:", manifest.vaultId);
   console.log("Tools Count:", manifest.tools.length);
 
-  assert.strictEqual(manifest.agentId, agent.agentId, "Agent ID mismatch");
+  assert.strictEqual(manifest.rootAgentId, agent.id, "Agent ID mismatch");
   assert.ok(manifest.tools.length >= 4, "Should have at least 4 tools");
   
   const dispatchTool = manifest.tools.find(t => t.name === "agentDispatch");
@@ -48,7 +48,7 @@ async function runDiscoveryTest() {
   // 5. Grant a secret and verify introspection
   console.log("🎁 Granting secret...");
   await ownerClient.ownerGrantAgentSecret({
-    agentId: agent.agentId,
+    rootAgentId: agent.id,
     secretAlias: "test-secret",
   });
 

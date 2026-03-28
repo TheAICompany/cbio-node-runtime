@@ -6,6 +6,6 @@
 
 ## Properties
 
-### agentId
+### rootAgentId
 
-> **agentId**: `string`
+> **rootAgentId**: `string`

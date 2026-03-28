@@ -19,8 +19,8 @@ import { createAgentClient, AgentDispatchHttpTransport } from '@the-ai-company/c
 const transport = new AgentDispatchHttpTransport('http://localhost:3000/dispatch');
 
 const agent = createAgentClient({
-  agentIdentity, // Process A ONLY knows its own identity
-  capability,    // Process A knows its granted permissions
+  rootAgentIdentity, // Process A ONLY knows its own identity
+  grant,    // Process A knows its granted permissions
   transport,
 });
 

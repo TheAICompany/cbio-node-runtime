@@ -1,6 +1,5 @@
 import * as crypto from "node:crypto";
 import {
-  createAgentIdValue,
   createAuditEntryIdValue,
   createFlowIdValue,
   createRequestIdValue,
@@ -64,7 +63,7 @@ function createDispatchBinding(request: DispatchRequest): string {
   return JSON.stringify({
     requestId: request.requestId,
     requestedAt: request.requestedAt,
-    agentId: request.agent.id,
+    rootAgentId: request.agent.id,
     secretAlias: request.secretAlias ?? null,
     targetUrl: request.targetUrl,
     method: request.method,
@@ -98,9 +97,6 @@ export class RandomIdGenerator implements IdGenerator {
     return createAuditEntryIdValue();
   }
 
-  newAgentId(): string {
-    return createAgentIdValue();
-  }
 
   newFlowId(): string {
     return createFlowIdValue();
@@ -198,11 +194,11 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   private readonly _identities = new Map<string, AgentIdentityRecord>();
 
   async register(identity: AgentIdentityRecord): Promise<void> {
-    this._identities.set(`${identity.vaultId.value}:${identity.agentId}`, identity);
+    this._identities.set(`${identity.vaultId.value}:${identity.rootAgentId}`, identity);
   }
 
-  async get(vaultId: VaultId, agentId: string): Promise<AgentIdentityRecord | null> {
-    return this._identities.get(`${vaultId.value}:${agentId}`) ?? null;
+  async get(vaultId: VaultId, rootAgentId: string): Promise<AgentIdentityRecord | null> {
+    return this._identities.get(`${vaultId.value}:${rootAgentId}`) ?? null;
   }
 
   async list(vaultId: VaultId): Promise<readonly AgentIdentityRecord[]> {
@@ -219,28 +215,28 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
 export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
   private readonly _grants = new Map<string, AgentSecretGrant>();
 
-  private _key(vaultId: VaultId, agentId: string, secretAlias: string): string {
-    return `${vaultId.value}:${agentId}:${secretAlias}`;
+  private _key(vaultId: VaultId, rootAgentId: string, secretAlias: string): string {
+    return `${vaultId.value}:${rootAgentId}:${secretAlias}`;
   }
 
   async upsert(grant: AgentSecretGrant): Promise<void> {
-    this._grants.set(this._key(grant.vaultId, grant.agentId, grant.secretAlias), grant);
+    this._grants.set(this._key(grant.vaultId, grant.rootAgentId, grant.secretAlias), grant);
   }
 
-  async get(vaultId: VaultId, agentId: string, secretAlias: string): Promise<AgentSecretGrant | null> {
-    return this._grants.get(this._key(vaultId, agentId, secretAlias)) ?? null;
+  async get(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<AgentSecretGrant | null> {
+    return this._grants.get(this._key(vaultId, rootAgentId, secretAlias)) ?? null;
   }
 
-  async list(vaultId: VaultId, agentId?: string): Promise<readonly AgentSecretGrant[]> {
+  async list(vaultId: VaultId, rootAgentId?: string): Promise<readonly AgentSecretGrant[]> {
     return Array.from(this._grants.values()).filter((grant) => {
       if (grant.vaultId.value !== vaultId.value) return false;
-      if (agentId && grant.agentId !== agentId) return false;
+      if (rootAgentId && grant.rootAgentId !== rootAgentId) return false;
       return true;
     });
   }
 
-  async delete(vaultId: VaultId, agentId: string, secretAlias: string): Promise<void> {
-    this._grants.delete(this._key(vaultId, agentId, secretAlias));
+  async delete(vaultId: VaultId, rootAgentId: string, secretAlias: string): Promise<void> {
+    this._grants.delete(this._key(vaultId, rootAgentId, secretAlias));
   }
 }
 
@@ -301,10 +297,10 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
     return this._records.get(`${vaultId.value}:${requestId}`) ?? null;
   }
 
-  async list(vaultId: VaultId, agentId?: string): Promise<readonly RequestRecord[]> {
+  async list(vaultId: VaultId, rootAgentId?: string): Promise<readonly RequestRecord[]> {
     return Array.from(this._records.values()).filter((record) => {
       if (record.vaultId.value !== vaultId.value) return false;
-      if (agentId && record.agentId !== agentId) return false;
+      if (rootAgentId && record.rootAgentId !== rootAgentId) return false;
       return true;
     });
   }
@@ -354,29 +350,29 @@ export class DefaultPolicyEngine implements PolicyEngine {
 export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
   private readonly _tokens = new Map<string, StoredSessionToken>();
 
-  async issue(agentId: string): Promise<string> {
+  async issue(rootAgentId: string): Promise<string> {
     const token = `sat_${crypto.randomBytes(16).toString("hex")}`;
     this._tokens.set(token, {
       token,
-      agentId,
+      rootAgentId,
       issuedAt: new Date().toISOString(),
     });
     return token;
   }
 
-  async verify(token: string, agentId: string): Promise<boolean> {
+  async verify(token: string, rootAgentId: string): Promise<boolean> {
     const stored = this._tokens.get(token);
     if (!stored) return false;
-    return stored.agentId === agentId;
+    return stored.rootAgentId === rootAgentId;
   }
 
   async revoke(token: string): Promise<void> {
     this._tokens.delete(token);
   }
 
-  async list(agentId?: string): Promise<readonly StoredSessionToken[]> {
+  async list(rootAgentId?: string): Promise<readonly StoredSessionToken[]> {
     const tokens = [...this._tokens.values()];
-    return agentId ? tokens.filter((token) => token.agentId === agentId) : tokens;
+    return rootAgentId ? tokens.filter((token) => token.rootAgentId === rootAgentId) : tokens;
   }
 }
 
@@ -398,13 +394,13 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
 
   async verify(request: DispatchRequest): Promise<void> {
     const { vaultId, agent, proof, requestId, requestedAt } = request;
-    if (proof.agentId !== agent.id) {
-      throw new VaultCoreError("agent identity mismatch", "VAULT_DISPATCH_DENIED");
+    if (proof.rootAgentId !== agent.id) {
+      throw new VaultCoreError("agent.identity mismatch", "VAULT_DISPATCH_DENIED");
     }
 
     // Try token authentication first
     if (proof.token) {
-      const valid = await this._sessionTokens.verify(proof.token, proof.agentId);
+      const valid = await this._sessionTokens.verify(proof.token, proof.rootAgentId);
       if (valid) {
         return; // Token is valid, skip signature check
       }
@@ -428,9 +424,9 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
       throw new VaultCoreError("proof timestamp out of range", "VAULT_DISPATCH_DENIED");
     }
 
-    const identity = await this._identities.get(vaultId, proof.agentId);
+    const identity = await this._identities.get(vaultId, proof.rootAgentId);
     if (!identity) {
-      throw new VaultCoreError("agent identity not registered", "VAULT_DISPATCH_DENIED");
+      throw new VaultCoreError("agent.identity not registered", "VAULT_DISPATCH_DENIED");
     }
 
     const binding = createDispatchBinding(request);
@@ -526,7 +522,7 @@ export interface VaultCoreDependenciesOptions {
 export function createVaultCoreDependencies(
   options: VaultCoreDependenciesOptions = {},
 ): VaultCoreDependencies {
-  const agentIdentities = new InMemoryAgentIdentityRegistry();
+  const agentRecords = new InMemoryAgentIdentityRegistry();
   const sessionTokens = options.sessionTokens ?? new InMemorySessionTokenRegistry();
   return {
     vaultId: { value: options.vaultId ?? `vault_${crypto.randomUUID()}` },
@@ -539,8 +535,8 @@ export function createVaultCoreDependencies(
       options.authHeaderName,
       options.authPrefix,
     ),
-    agentIdentities,
-    agentProofVerifier: new SignatureAgentProofVerifier(agentIdentities, sessionTokens, options.proofVerifier),
+    agentRecords,
+    agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, sessionTokens, options.proofVerifier),
     agentSecretGrants: new InMemoryAgentSecretGrantRegistry(),
     secretDestinationGrants: new InMemorySecretDestinationGrantRegistry(),
     requests: new InMemoryRequestRecordRegistry(),

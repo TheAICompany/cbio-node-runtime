@@ -14,7 +14,7 @@ export class LocalVaultTransport implements AgentDispatchTransport {
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       reason: request.reason,
       secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
@@ -35,7 +35,7 @@ export class LocalVaultTransport implements AgentDispatchTransport {
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       proof: { token: request.proof.token, signature: request.proof.signature },
     });
     if (!response.ok) throw new Error(`${response.error.code}:${response.error.message}`);

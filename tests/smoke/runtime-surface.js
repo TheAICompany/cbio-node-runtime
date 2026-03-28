@@ -27,7 +27,7 @@ import {
   HttpDispatchExecutor,
   InMemoryAgentIdentityRegistry,
   InMemoryAuditLog,
-  InMemoryCapabilityRegistry,
+  InMemoryGrantRegistry,
   InMemoryCustomHttpFlowRegistry,
   InMemoryReplayGuard,
   InMemorySecretCustody,
@@ -56,16 +56,16 @@ assert.equal(typeof IdentityErrorCode, "object");
 assert.equal(typeof createWorkspaceStorage, "function");
 assert.equal(typeof getDefaultWorkspaceDir, "function");
 
-const agentIdentity = createIdentity({ nickname: "agent-1" });
-const restoredAgentIdentity = restoreIdentity(agentIdentity.privateKey, { nickname: "agent-1-restored" });
+const agentRecord = createIdentity({ nickname: "agent-1" });
+const restoredAgentIdentity = restoreIdentity(agentRecord.privateKey, { nickname: "agent-1-restored" });
 
-assert.equal(typeof agentIdentity.privateKey, "string");
-assert.equal(typeof agentIdentity.publicKey, "string");
-assert.equal(typeof agentIdentity.rootAgentId, "string");
-assert.equal(agentIdentity.nickname, "agent-1");
-assert.equal(restoredAgentIdentity.privateKey, agentIdentity.privateKey);
-assert.equal(restoredAgentIdentity.publicKey, agentIdentity.publicKey);
-assert.equal(restoredAgentIdentity.rootAgentId, agentIdentity.rootAgentId);
+assert.equal(typeof agentRecord.privateKey, "string");
+assert.equal(typeof agentRecord.publicKey, "string");
+assert.equal(typeof agentRecord.rootAgentId, "string");
+assert.equal(agentRecord.nickname, "agent-1");
+assert.equal(restoredAgentIdentity.privateKey, agentRecord.privateKey);
+assert.equal(restoredAgentIdentity.publicKey, agentRecord.publicKey);
+assert.equal(restoredAgentIdentity.rootAgentId, agentRecord.rootAgentId);
 assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
 
 let seenAuthHeader = null;
@@ -82,7 +82,7 @@ const runtimeSurfaceFetch = async (url, init) => {
 const runtimeSurfaceAgentIdentities = new InMemoryAgentIdentityRegistry();
 const runtimeSurfaceCustomFlows = new InMemoryCustomHttpFlowRegistry();
 const runtimeSurfaceSessionTokens = new InMemorySessionTokenRegistry();
-const runtimeSurfaceCapabilityStates = new InMemoryCapabilityRegistry();
+const runtimeSurfaceGrantStates = new InMemoryGrantRegistry();
 const authority = createVaultCore({
   vaultId: { value: "vault-runtime-surface" },
   secrets: new InMemorySecretRepository(),
@@ -90,8 +90,8 @@ const authority = createVaultCore({
   policy: new DefaultPolicyEngine(),
   audit: new InMemoryAuditLog(),
   executor: new HttpDispatchExecutor(runtimeSurfaceFetch),
-  agentIdentities: runtimeSurfaceAgentIdentities,
-  capabilityStates: runtimeSurfaceCapabilityStates,
+  rootAgentIdentities: runtimeSurfaceAgentIdentities,
+  grantStates: runtimeSurfaceGrantStates,
   agentProofVerifier: new SignatureAgentProofVerifier(runtimeSurfaceAgentIdentities, runtimeSurfaceSessionTokens),
   customFlows: runtimeSurfaceCustomFlows,
   sessionTokens: runtimeSurfaceSessionTokens,
@@ -110,9 +110,9 @@ const client = createOwnerClient({
 });
 assert.equal(typeof client.ownerCreateSecret, "function");
 await client.ownerImportAgent({
-  privateKey: agentIdentity.privateKey,
+  privateKey: agentRecord.privateKey,
 });
-const importedAgentId = (await client.ownerListAgents()).find((agent) => agent.rootAgentId === agentIdentity.rootAgentId)?.agentId;
+const importedAgentId = (await client.ownerListAgents()).find((agent) => agent.id === agentRecord.rootAgentId)?.rootAgentId;
 assert.equal(typeof importedAgentId, "string");
 const ownedRecord = await client.ownerCreateSecret({
   alias: "api-token",
@@ -135,10 +135,10 @@ assert.equal(exportedSecret.plaintext, "super-secret-v2");
 assert.equal(exportedSecret.alias.value, "api-token");
 assert.equal(await client.ownerReadSecretPlaintext({ alias: "api-token", password: "runtime-surface-password" }), "super-secret-v2");
 
-const dispatchCapability = {
+const dispatchGrant = {
   vaultId: authority.vaultId,
-  capabilityId: "cap-1",
-  agentId: importedAgentId,
+  grantId: "cap-1",
+  rootAgentId: importedAgentId,
   operation: "dispatch_http",
   write: {
     secretIds: [updatedRecord.secretId.value],
@@ -149,13 +149,13 @@ const dispatchCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await client.ownerGrantCapability({ capability: dispatchCapability });
-const agent1Session = await client.ownerIssueSessionToken({ agentId: importedAgentId });
+await client.ownerGrantGrant({ grant: dispatchGrant });
+const agent1Session = await client.ownerIssueSessionToken({ rootAgentId: importedAgentId });
 
 const agent = createAgentClient({
-  agentIdentity: { agentId: importedAgentId },
-  capability: {
-    ...dispatchCapability,
+  agentRecord: { rootAgentId: importedAgentId },
+  grant: {
+    ...dispatchGrant,
   },
   vault,
   token: agent1Session.token,
@@ -179,7 +179,7 @@ assert.equal(dispatchedRequest.resultVisible, true);
 assert.equal(dispatchedRequest.executionStatus, "SUCCEEDED");
 const hiddenResult = await agent.agentGetRequest(result.requestId);
 assert.equal(hiddenResult.responseBody, "ok");
-const ownerRequestHistory = await client.ownerListRequests({ agentId: importedAgentId });
+const ownerRequestHistory = await client.ownerListRequests({ rootAgentId: importedAgentId });
 const ownerRequestSummary = ownerRequestHistory.find((entry) => entry.requestId === result.requestId);
 assert.ok(ownerRequestSummary);
 assert.deepEqual(ownerRequestSummary.readGrant, ["$"]);
@@ -187,10 +187,10 @@ const ownerRequest = await client.ownerGetRequest({ requestId: result.requestId 
 assert.equal(ownerRequest.request.secretId, updatedRecord.secretId.value);
 assert.equal(ownerRequest.response?.body, "ok");
 
-const customStatusCapability = {
+const customStatusGrant = {
   vaultId: authority.vaultId,
-  capabilityId: "cap-custom-status-standard",
-  agentId: importedAgentId,
+  grantId: "cap-custom-status-standard",
+  rootAgentId: importedAgentId,
   operation: "dispatch_http",
   write: {
     secretIds: [updatedRecord.secretId.value],
@@ -201,11 +201,11 @@ const customStatusCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await client.ownerGrantCapability({ capability: customStatusCapability });
+await client.ownerGrantGrant({ grant: customStatusGrant });
 const standardCustomStatusAgent = createAgentClient({
-  agentIdentity: { agentId: importedAgentId },
-  capability: {
-    ...customStatusCapability,
+  agentRecord: { rootAgentId: importedAgentId },
+  grant: {
+    ...customStatusGrant,
   },
   vault,
   token: agent1Session.token,
@@ -218,12 +218,12 @@ const filteredDispatch = await standardCustomStatusAgent.agentDispatch({
   body: '{"mode":"discover"}',
 });
 assert.equal(filteredDispatch.status, "SUCCEEDED");
-await runtimeSurfaceCapabilityStates.upsert({
+await runtimeSurfaceGrantStates.upsert({
   source: "owner_grant",
   vaultId: authority.vaultId,
   requestId: filteredDispatch.requestId,
-  capabilityId: customStatusCapability.capabilityId,
-  agentId: importedAgentId,
+  grantId: customStatusGrant.grantId,
+  rootAgentId: importedAgentId,
   operation: "dispatch_http",
   write: {
     secretIds: [updatedRecord.secretId.value],
@@ -232,16 +232,16 @@ await runtimeSurfaceCapabilityStates.upsert({
   },
   read: { paths: [] },
   requestedAt: new Date().toISOString(),
-  issuedAt: customStatusCapability.issuedAt,
+  issuedAt: customStatusGrant.issuedAt,
   writeGrant: "always",
-  writeGrantedAt: customStatusCapability.issuedAt,
+  writeGrantedAt: customStatusGrant.issuedAt,
   readGrant: null,
   secretId: updatedRecord.secretId.value,
   targetUrl: "https://api.example.com/custom-status",
 });
 const filteredOwnerView = await client.ownerGetRequest({ requestId: filteredDispatch.requestId });
 assert.equal(filteredOwnerView.response?.body, JSON.stringify({ state: "ok", nested: { code: 200 } }));
-await client.ownerApproveCapabilityRead({
+await client.ownerApproveGrantRead({
   requestId: filteredDispatch.requestId,
   read: { paths: ["nested.code"] },
 });
@@ -255,10 +255,10 @@ const shapeOnlyFlow = await client.ownerRegisterFlow({
   responseVisibility: "shape_only",
 });
 
-const customCapability = {
+const customGrant = {
   vaultId: authority.vaultId,
-  capabilityId: "cap-custom",
-  agentId: importedAgentId,
+  grantId: "cap-custom",
+  rootAgentId: importedAgentId,
   customFlowId: shapeOnlyFlow.flowId,
   operation: "custom_http",
   write: {
@@ -270,12 +270,12 @@ const customCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await client.ownerGrantCapability({ capability: customCapability });
+await client.ownerGrantGrant({ grant: customGrant });
 
 const customAgent = createAgentClient({
-  agentIdentity: { agentId: importedAgentId },
-  capability: {
-    ...customCapability,
+  agentRecord: { rootAgentId: importedAgentId },
+  grant: {
+    ...customGrant,
   },
   vault,
   token: agent1Session.token,
@@ -304,10 +304,10 @@ const customAcquireFlow = await client.ownerRegisterFlow({
   },
 });
 
-const customAcquireCapability = {
+const customAcquireGrant = {
   vaultId: authority.vaultId,
-  capabilityId: "cap-custom-acquire",
-  agentId: importedAgentId,
+  grantId: "cap-custom-acquire",
+  rootAgentId: importedAgentId,
   customFlowId: customAcquireFlow.flowId,
   operation: "custom_http",
   write: {
@@ -318,12 +318,12 @@ const customAcquireCapability = {
   issuedAt: new Date().toISOString(),
   auditRequired: true,
 };
-await client.ownerGrantCapability({ capability: customAcquireCapability });
+await client.ownerGrantGrant({ grant: customAcquireGrant });
 
 const customAcquireAgent = createAgentClient({
-  agentIdentity: { agentId: importedAgentId },
-  capability: {
-    ...customAcquireCapability,
+  agentRecord: { rootAgentId: importedAgentId },
+  grant: {
+    ...customAcquireGrant,
   },
   vault,
   token: agent1Session.token,
@@ -458,19 +458,19 @@ try {
   
   // Verify recovery after persistence
   const agentsInVault = await auditClient.ownerListAgents();
-  const foundManaged = agentsInVault.find(a => a.agentId === managedRecord.agentId);
+  const foundManaged = agentsInVault.find(a => a.rootAgentId === managedRecord.rootAgentId);
   assert.equal(foundManaged?.privateKey, undefined, "Default owner agent listing should redact private keys");
-  assert.equal(typeof (await auditClient.ownerReadAgentPrivateKey({ agentId: managedRecord.agentId, password: "password-1" })), "string");
+  assert.equal(typeof (await auditClient.ownerReadAgentPrivateKey({ rootAgentId: managedRecord.rootAgentId, password: "password-1" })), "string");
   console.log("   [OK] Agent creation and private key custody verification passed");
 
-  console.log("-> Verifying Proactive Capability Request Flow...");
-  let pendingCapabilityRequest = null;
-  const unsubscribeCapability = auditClient.ownerOnCapabilityState((record) => {
-    pendingCapabilityRequest = record;
+  console.log("-> Verifying Proactive Grant Request Flow...");
+  let pendingGrantRequest = null;
+  const unsubscribeGrant = auditClient.ownerOnGrantState((record) => {
+    pendingGrantRequest = record;
   });
-  const submittedCapabilityRequest = await auditClient.ownerSubmitCapabilityRequest({
+  const submittedGrantRequest = await auditClient.ownerSubmitGrantRequest({
     requester: { kind: "trusted_executor", id: "llm-planner" },
-    agentId: managedRecord.agentId,
+    rootAgentId: managedRecord.rootAgentId,
     write: {
       secretIds: [updatedRecord.secretId.value],
       scope: "https://api.example.com/users/*",
@@ -479,39 +479,39 @@ try {
     read: { paths: ["$"] },
     reason: "Need collection-level user read access",
   });
-  assert.equal(submittedCapabilityRequest.agentId, managedRecord.agentId);
-  assert.equal(submittedCapabilityRequest.write.scope, "https://api.example.com/users/*");
-  assert.equal(submittedCapabilityRequest.writeGrant, null);
-  assert.equal(submittedCapabilityRequest.readGrant, null);
-  assert.ok(pendingCapabilityRequest, "Capability request observer should fire");
-  const pendingCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeGranted: false });
-  assert.equal(pendingCapabilityRequests.length, 1, "Should have one pending capability request");
-  const approvedCapability = await auditClient.ownerAllowAlways({
-    requestId: pendingCapabilityRequests[0].requestId,
+  assert.equal(submittedGrantRequest.rootAgentId, managedRecord.rootAgentId);
+  assert.equal(submittedGrantRequest.write.scope, "https://api.example.com/users/*");
+  assert.equal(submittedGrantRequest.writeGrant, null);
+  assert.equal(submittedGrantRequest.readGrant, null);
+  assert.ok(pendingGrantRequest, "Grant request observer should fire");
+  const pendingGrantRequests = await auditClient.ownerListGrantStates({ writeGranted: false });
+  assert.equal(pendingGrantRequests.length, 1, "Should have one pending grant request");
+  const approvedGrant = await auditClient.ownerAllowAlways({
+    requestId: pendingGrantRequests[0].requestId,
   });
-  unsubscribeCapability();
-  assert.equal(approvedCapability.status, "SUCCEEDED");
-  const grantedCapabilityRequests = await auditClient.ownerListCapabilityStates({ writeGranted: true });
-  const grantedCapabilityRequest = grantedCapabilityRequests.find((record) => record.requestId === pendingCapabilityRequests[0].requestId);
-  assert.ok(grantedCapabilityRequest, "Granted capability request should remain queryable");
-  assert.equal(grantedCapabilityRequest.writeGrant, "always");
-  assert.equal(grantedCapabilityRequest.readGrant, null);
-  const readApprovedCapability = await auditClient.ownerApproveCapabilityRead({
-    requestId: grantedCapabilityRequest.requestId,
+  unsubscribeGrant();
+  assert.equal(approvedGrant.status, "SUCCEEDED");
+  const grantedGrantRequests = await auditClient.ownerListGrantStates({ writeGranted: true });
+  const grantedGrantRequest = grantedGrantRequests.find((record) => record.requestId === pendingGrantRequests[0].requestId);
+  assert.ok(grantedGrantRequest, "Granted grant request should remain queryable");
+  assert.equal(grantedGrantRequest.writeGrant, "always");
+  assert.equal(grantedGrantRequest.readGrant, null);
+  const readApprovedGrant = await auditClient.ownerApproveGrantRead({
+    requestId: grantedGrantRequest.requestId,
   });
-  assert.equal(readApprovedCapability.writeGrant, "always");
-  assert.deepEqual(readApprovedCapability.readGrant, []);
-  const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ agentId: managedRecord.agentId });
+  assert.equal(readApprovedGrant.writeGrant, "always");
+  assert.deepEqual(readApprovedGrant.readGrant, []);
+  const capabilitiesAfterApproval = await auditClient.ownerListCapabilities({ rootAgentId: managedRecord.rootAgentId });
   assert.ok(
     capabilitiesAfterApproval.some((cap) => cap.write.scope === "https://api.example.com/users/*"),
-    "Approved capability should be registered",
+    "Approved grant should be registered",
   );
-  console.log("   [OK] Proactive capability request approval flow passed");
+  console.log("   [OK] Proactive grant request approval flow passed");
 
-  const acquiredCapability = {
+  const acquiredGrant = {
     vaultId: createdVault.core.vaultId,
-    capabilityId: "cap-acquired",
-    agentId: managedRecord.agentId,
+    grantId: "cap-acquired",
+    rootAgentId: managedRecord.rootAgentId,
     operation: "dispatch_http",
     write: {
       secretIds: [persistentExport.secretId.value],
@@ -522,13 +522,13 @@ try {
     issuedAt: new Date().toISOString(),
     auditRequired: true,
   };
-  await auditClient.ownerGrantCapability({ capability: acquiredCapability });
+  await auditClient.ownerGrantGrant({ grant: acquiredGrant });
   const acquiredVault = wrapVaultCoreAsVaultService(recoveredVaultInstance.core);
-  const acquiredAgentSession = await auditClient.ownerIssueSessionToken({ agentId: managedRecord.agentId });
+  const acquiredAgentSession = await auditClient.ownerIssueSessionToken({ rootAgentId: managedRecord.rootAgentId });
   const acquiredAgent = createAgentClient({
-    agentIdentity: { agentId: managedRecord.agentId },
-    capability: {
-      ...acquiredCapability,
+    agentRecord: { rootAgentId: managedRecord.rootAgentId },
+    grant: {
+      ...acquiredGrant,
     },
     vault: acquiredVault,
     token: acquiredAgentSession.token,
@@ -577,9 +577,9 @@ try {
     policy: new DefaultPolicyEngine(),
     audit: new InMemoryAuditLog(),
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
-    agentIdentities: rollbackAgentIdentities,
+    rootAgentIdentities: rollbackAgentIdentities,
     agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
-    capabilityStates: new InMemoryCapabilityRegistry(),
+    grantStates: new InMemoryGrantRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     sessionTokens: rollbackSessionTokens,
     replayGuard: new InMemoryReplayGuard(),
@@ -600,9 +600,9 @@ try {
       },
     },
     executor: new HttpDispatchExecutor(async () => new Response("ok", { status: 200 })),
-    agentIdentities: rollbackAgentIdentities,
+    rootAgentIdentities: rollbackAgentIdentities,
     agentProofVerifier: new SignatureAgentProofVerifier(rollbackAgentIdentities, rollbackSessionTokens),
-    capabilityStates: new InMemoryCapabilityRegistry(),
+    grantStates: new InMemoryGrantRegistry(),
     customFlows: new InMemoryCustomHttpFlowRegistry(),
     sessionTokens: rollbackSessionTokens,
     replayGuard: new InMemoryReplayGuard(),

@@ -37,9 +37,9 @@ This is the primary implementation of the Vault logic.
 
 ## Methods
 
-### \_getCapability()
+### \_getGrant()
 
-> **\_getCapability**(`vaultId`, `agentId`, `capabilityId`): `Promise`\<`AgentCapability` \| `null`\>
+> **\_getGrant**(`vaultId`, `rootAgentId`, `grantId`): `Promise`\<`AgentGrant` \| `null`\>
 
 #### Parameters
 
@@ -47,17 +47,17 @@ This is the primary implementation of the Vault logic.
 
 `VaultId`
 
-##### agentId
+##### rootAgentId
 
 `string`
 
-##### capabilityId
+##### grantId
 
 `string`
 
 #### Returns
 
-`Promise`\<`AgentCapability` \| `null`\>
+`Promise`\<`AgentGrant` \| `null`\>
 
 ***
 
@@ -151,7 +151,7 @@ This is the primary implementation of the Vault logic.
 
 ### agentListCapabilities()
 
-> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentCapabilityState`[]\>
+> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentGrantState`[]\>
 
 #### Parameters
 
@@ -161,7 +161,7 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<readonly `AgentCapabilityState`[]\>
+`Promise`\<readonly `AgentGrantState`[]\>
 
 ***
 
@@ -197,19 +197,19 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### agentSubmitCapabilityRequest()
+### agentSubmitGrantRequest()
 
-> **agentSubmitCapabilityRequest**(`command`): `Promise`\<`CapabilityStateRecord`\>
+> **agentSubmitGrantRequest**(`command`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
 ##### command
 
-`AgentSubmitCapabilityRequestCommand`
+`AgentSubmitGrantRequestCommand`
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>
 
 ***
 
@@ -245,19 +245,19 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerApproveCapabilityRead()
+### ownerApproveGrantRead()
 
-> **ownerApproveCapabilityRead**(`command`): `Promise`\<`CapabilityStateRecord`\>
+> **ownerApproveGrantRead**(`command`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
 ##### command
 
-`OwnerApproveCapabilityReadCommand`
+`OwnerApproveGrantReadCommand`
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>
 
 ***
 
@@ -295,7 +295,7 @@ This is the primary implementation of the Vault logic.
 
 ### ownerDeny()
 
-> **ownerDeny**(`command`): `Promise`\<`CapabilityStateRecord`\>
+> **ownerDeny**(`command`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
@@ -305,7 +305,7 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>
 
 ***
 
@@ -411,7 +411,7 @@ This is the primary implementation of the Vault logic.
 
 ### ownerListCapabilities()
 
-> **ownerListCapabilities**(`actor`, `agentId?`, `request?`): `Promise`\<readonly `AgentCapability`[]\>
+> **ownerListCapabilities**(`actor`, `rootAgentId?`, `request?`): `Promise`\<readonly `AgentGrant`[]\>
 
 #### Parameters
 
@@ -419,39 +419,39 @@ This is the primary implementation of the Vault logic.
 
 `VaultPrincipal` & `object`
 
-##### agentId?
+##### rootAgentId?
 
 `string`
 
 ##### request?
 
-`Omit`\<`OwnerListCapabilitiesRequest`, `"agentId"` \| `"vaultId"` \| `"actor"`\>
+`Omit`\<`OwnerListCapabilitiesRequest`, `"rootAgentId"` \| `"vaultId"` \| `"actor"`\>
 
 #### Returns
 
-`Promise`\<readonly `AgentCapability`[]\>
+`Promise`\<readonly `AgentGrant`[]\>
 
 ***
 
-### ownerListCapabilityStates()
+### ownerListGrantStates()
 
-> **ownerListCapabilityStates**(`command`): `Promise`\<readonly `CapabilityStateRecord`[]\>
+> **ownerListGrantStates**(`command`): `Promise`\<readonly `GrantStateRecord`[]\>
 
 #### Parameters
 
 ##### command
 
-`OwnerListCapabilityStatesRequest`
+`OwnerListGrantStatesRequest`
 
 #### Returns
 
-`Promise`\<readonly `CapabilityStateRecord`[]\>
+`Promise`\<readonly `GrantStateRecord`[]\>
 
 ***
 
 ### ownerListRequests()
 
-> **ownerListRequests**(`actor`, `agentId?`, `request?`): `Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
+> **ownerListRequests**(`actor`, `rootAgentId?`, `request?`): `Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
 
 #### Parameters
 
@@ -459,13 +459,13 @@ This is the primary implementation of the Vault logic.
 
 `VaultPrincipal` & `object`
 
-##### agentId?
+##### rootAgentId?
 
 `string`
 
 ##### request?
 
-`Omit`\<`OwnerListRequestsRequest`, `"agentId"` \| `"vaultId"` \| `"actor"`\>
+`Omit`\<`OwnerListRequestsRequest`, `"rootAgentId"` \| `"vaultId"` \| `"actor"`\>
 
 #### Returns
 
@@ -495,9 +495,9 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerOnCapabilityState()
+### ownerOnGrantState()
 
-> **ownerOnCapabilityState**(`callback`): () => `void`
+> **ownerOnGrantState**(`callback`): () => `void`
 
 #### Parameters
 
@@ -551,15 +551,15 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerRegisterCapability()
+### ownerRegisterGrant()
 
-> **ownerRegisterCapability**(`command`): `Promise`\<`void`\>
+> **ownerRegisterGrant**(`command`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### command
 
-`OwnerRegisterCapabilityCommand`
+`OwnerRegisterGrantCommand`
 
 #### Returns
 
@@ -599,15 +599,15 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerRevokeCapability()
+### ownerRevokeGrant()
 
-> **ownerRevokeCapability**(`command`): `Promise`\<`void`\>
+> **ownerRevokeGrant**(`command`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### command
 
-`OwnerRevokeCapabilityCommand`
+`OwnerRevokeGrantCommand`
 
 #### Returns
 
@@ -641,19 +641,19 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerSubmitCapabilityRequest()
+### ownerSubmitGrantRequest()
 
-> **ownerSubmitCapabilityRequest**(`command`): `Promise`\<`CapabilityStateRecord`\>
+> **ownerSubmitGrantRequest**(`command`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
 ##### command
 
-`SubmitCapabilityRequestCommand`
+`SubmitGrantRequestCommand`
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>
 
 ***
 

@@ -20,8 +20,8 @@ import { createAgentClient, AgentDispatchHttpTransport } from '@the-ai-company/c
 const transport = new AgentDispatchHttpTransport('http://localhost:3000/dispatch');
 
 const agent = createAgentClient({
-  agentIdentity, // 进程 A 仅持有自己的身份私钥
-  capability,    // 进程 A 仅了解被授予的权限
+  rootAgentIdentity, // 进程 A 仅持有自己的身份私钥
+  grant,    // 进程 A 仅了解被授予的权限
   transport,
 });
 

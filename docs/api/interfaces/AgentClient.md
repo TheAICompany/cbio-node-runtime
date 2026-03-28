@@ -5,7 +5,7 @@
 # Interface: AgentClient
 
 A client for agents to perform authorized operations (e.g., dispatch HTTP requests with secrets).
-This client uses a delegated capability granted by the owner.
+This client uses a delegated grant granted by the owner.
 Agents can use secrets and request broader access, but they do not directly manage
 the secret lifecycle inside the vault. Newly obtained credentials are persisted only
 through owner actions or owner-configured vault flows that explicitly capture them.
@@ -79,11 +79,11 @@ create, update, or remove secrets in the vault.
 
 ### agentListCapabilities()
 
-> **agentListCapabilities**(): `Promise`\<readonly `AgentCapabilityState`[]\>
+> **agentListCapabilities**(): `Promise`\<readonly `AgentGrantState`[]\>
 
 #### Returns
 
-`Promise`\<readonly `AgentCapabilityState`[]\>
+`Promise`\<readonly `AgentGrantState`[]\>
 
 ***
 
@@ -107,16 +107,16 @@ create, update, or remove secrets in the vault.
 
 ***
 
-### agentSubmitCapabilityRequest()
+### agentSubmitGrantRequest()
 
-> **agentSubmitCapabilityRequest**(`input`): `Promise`\<`CapabilityStateRecord`\>
+> **agentSubmitGrantRequest**(`input`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
 ##### input
 
-[`AgentSubmitCapabilityRequestInput`](AgentSubmitCapabilityRequestInput.md)
+[`AgentSubmitGrantRequestInput`](AgentSubmitGrantRequestInput.md)
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>

@@ -32,9 +32,9 @@ import {
 ## 아키텍처
 
 1. secret 평문은 `vault-core` 내부에만 존재합니다
-2. `clients/owner`는 소유자 쓰기, 평문 내보내기, 감사 읽기 및 **Agent/권한 관리** (`listAgents`, `listCapabilities`, `revokeCapability`)를 담당합니다.
+2. `clients/owner`는 소유자 쓰기, 평문 내보내기, 감사 읽기 및 **Agent/권한 관리** (`listAgents`, `listGrants`, `revokeGrant`)를 담당합니다.
 3. `clients/agent` 는 agent 서명 dispatch 요청을 만듭니다
-4. `vault-ingress` 는 vault 경계 내부에서 capability 해석과 dispatch ingress 를 처리합니다
+4. `vault-ingress` 는 vault 경계 내부에서 grant 해석과 dispatch ingress 를 처리합니다
 
 권장되는 persistent-vault 주 경로:
 

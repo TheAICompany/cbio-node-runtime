@@ -24,14 +24,14 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* Require justifications for agentDispatch and agentSubmitCapabilityRequest, enhancing accountability and clarity in request handling. ([47130fe](https://github.com/TheAICompany/cbio-node-runtime/commit/47130febd9af84b8c7868e577c4a6e4f18641745))
+* Require justifications for agentDispatch and agentSubmitGrantRequest, enhancing accountability and clarity in request handling. ([47130fe](https://github.com/TheAICompany/cbio-node-runtime/commit/47130febd9af84b8c7868e577c4a6e4f18641745))
 
 ## [1.61.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.60.0...v1.61.0) (2026-03-27)
 
 
 ### Features
 
-* Enhance ownerApproveCapabilityRead method to support custom read policies, updating related documentation and interfaces for improved clarity on read action approvals. ([1b6ad0a](https://github.com/TheAICompany/cbio-node-runtime/commit/1b6ad0a9df6dab9562ff934c99e1171ab87a70b7))
+* Enhance ownerApproveGrantRead method to support custom read policies, updating related documentation and interfaces for improved clarity on read action approvals. ([1b6ad0a](https://github.com/TheAICompany/cbio-node-runtime/commit/1b6ad0a9df6dab9562ff934c99e1171ab87a70b7))
 
 ## [1.60.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.59.1...v1.60.0) (2026-03-27)
 
@@ -54,7 +54,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* Refactor capability management in API, replacing pending request methods with a unified capability state model, and update documentation to reflect changes in version 1.57.0. ([75d61e0](https://github.com/TheAICompany/cbio-node-runtime/commit/75d61e047ebfdc8469c36a70fce9c3cc9c321b08))
+* Refactor grant management in API, replacing pending request methods with a unified grant state model, and update documentation to reflect changes in version 1.57.0. ([75d61e0](https://github.com/TheAICompany/cbio-node-runtime/commit/75d61e047ebfdc8469c36a70fce9c3cc9c321b08))
 
 ## [1.57.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.56.0...v1.57.0) (2026-03-26)
 
@@ -101,7 +101,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* Add owner sensitive action context and vault read agent private key/secret plaintext capabilities, and update `ownerGrantCapability` return type. ([1cb274e](https://github.com/TheAICompany/cbio-node-runtime/commit/1cb274e8b761566191952e4affd59598006a8a8c))
+* Add owner sensitive action context and vault read agent private key/secret plaintext capabilities, and update `ownerGrantGrant` return type. ([1cb274e](https://github.com/TheAICompany/cbio-node-runtime/commit/1cb274e8b761566191952e4affd59598006a8a8c))
 
 ## [1.51.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.50.0...v1.51.0) (2026-03-26)
 
@@ -116,14 +116,14 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* Introduce agent capability approval and secret listing features, and update documentation. ([a0e9eb2](https://github.com/TheAICompany/cbio-node-runtime/commit/a0e9eb23ae6841da708bab63f8df63ebb6425b25))
+* Introduce agent grant approval and secret listing features, and update documentation. ([a0e9eb2](https://github.com/TheAICompany/cbio-node-runtime/commit/a0e9eb23ae6841da708bab63f8df63ebb6425b25))
 
 ## [1.49.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.6...v1.49.0) (2026-03-26)
 
 
 ### Features
 
-* Refactor capability granting to use `scope` and `methods` and add capability request workflows. ([7acb59b](https://github.com/TheAICompany/cbio-node-runtime/commit/7acb59bd23bde9944f814ba656db53e8db7f948f))
+* Refactor grant granting to use `scope` and `methods` and add grant request workflows. ([7acb59b](https://github.com/TheAICompany/cbio-node-runtime/commit/7acb59bd23bde9944f814ba656db53e8db7f948f))
 
 ### [1.48.6](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.48.5...v1.48.6) (2026-03-26)
 
@@ -190,7 +190,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* Add agent and capability management APIs including list and revoke, and simplify vault storage initialization. ([7bca236](https://github.com/TheAICompany/cbio-node-runtime/commit/7bca2363f964f54e7fe82a44bfaed79937268f9f))
+* Add agent and grant management APIs including list and revoke, and simplify vault storage initialization. ([7bca236](https://github.com/TheAICompany/cbio-node-runtime/commit/7bca2363f964f54e7fe82a44bfaed79937268f9f))
 * Add functions to list identities and vaults, leveraging new storage provider capabilities. ([d896ac9](https://github.com/TheAICompany/cbio-node-runtime/commit/d896ac92e1a3fc567754ffc713f9df783e7077b8))
 * Add secret deletion functionality and transition public metadata to encrypted discovery with anchored storage. ([5b138be](https://github.com/TheAICompany/cbio-node-runtime/commit/5b138be7bcc1cf9178a0709f4df39bc6b5d3c239))
 * Allow custom public metadata and ensure owner ID is stored in the vault's public profile. ([4abdad9](https://github.com/TheAICompany/cbio-node-runtime/commit/4abdad905c6ec30fe90ad4abd807f5b9dcee3011))

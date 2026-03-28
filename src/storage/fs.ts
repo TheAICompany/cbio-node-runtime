@@ -14,14 +14,18 @@ function sleep(ms: number): Promise<void> {
  * @internal
  */
 export class FsStorageProvider implements IStorageProvider {
-    constructor(private baseDir?: string) {}
+    constructor(private readonly _baseDir?: string) {}
+
+    getBaseDir(): string {
+        return this._baseDir || process.cwd();
+    }
 
     private static readonly DIRECTORY_MODE = 0o700;
     private static readonly FILE_MODE = 0o600;
 
     private resolve(key: string): string {
-        if (this.baseDir) {
-            return path.join(this.baseDir, key);
+        if (this._baseDir) {
+            return path.join(this._baseDir, key);
         }
         const dir = path.dirname(key);
         if (dir && dir !== '.') {

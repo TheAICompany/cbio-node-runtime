@@ -21,7 +21,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       reason: request.reason,
       secretAlias: request.secretAlias,
       targetUrl: request.targetUrl,
@@ -61,7 +61,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as { agentSecrets: readonly AgentSecretGrant[], secretDestinations: readonly SecretDestinationGrant[] };
@@ -73,7 +73,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as readonly import("../vault-core/index.js").AgentVisibleSecretRecord[];
@@ -85,7 +85,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as readonly import("../vault-core/index.js").AgentVisibleRequestRecord[];
@@ -98,7 +98,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       requestId: request.requestId,
       requestedAt: request.requestedAt,
       targetRequestId: request.targetRequestId,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as import("../vault-core/index.js").AgentRequestResult;
@@ -110,7 +110,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
       vaultId: request.vaultId.value,
       requestId: request.requestId,
       requestedAt: request.requestedAt,
-      agentId: request.agent.id,
+      rootAgentId: request.agent.id,
       proof: { token: request.proof.token },
     });
     return payload as import("../vault-core/index.js").AgentRuntimeManifest;

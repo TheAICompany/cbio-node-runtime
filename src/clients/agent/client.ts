@@ -10,7 +10,7 @@ import type {
 } from "./contracts.js";
 
 export interface AgentIdentity {
-  agentId: string;
+  rootAgentId: string;
 }
 
 /**
@@ -48,7 +48,7 @@ export interface AgentClient {
 }
 
 export interface CreateAgentClientOptions {
-  agentIdentity: AgentIdentity | { id: string };
+  agentRecord: AgentIdentity | { id: string };
   vault?: VaultService;
   transport?: AgentDispatchTransport;
   token: string;
@@ -77,11 +77,10 @@ class DefaultAgentClient implements AgentClient {
       requestedAt,
       agent: {
         kind: "agent",
-        id: this._identity.agentId,
+        id: this._identity.rootAgentId,
       },
       proof: {
-        agentId: this._identity.agentId,
-        token: this._token,
+        rootAgentId: this._identity.rootAgentId,
         requestId,
         requestedAt,
       },
@@ -99,8 +98,7 @@ class DefaultAgentClient implements AgentClient {
     requestedAt: string,
   ) {
     return {
-      agentId: this._identity.agentId,
-      token: this._token,
+      rootAgentId: this._identity.rootAgentId,
       requestId,
       requestedAt,
     };
@@ -113,7 +111,7 @@ class DefaultAgentClient implements AgentClient {
       vaultId: { value: "" },
       requestId,
       requestedAt,
-      agent: { kind: "agent", id: this._identity.agentId },
+      agent: { kind: "agent", id: this._identity.rootAgentId },
       proof: await this._createProof(requestId, requestedAt),
     });
   }
@@ -125,7 +123,7 @@ class DefaultAgentClient implements AgentClient {
       vaultId: { value: "" },
       requestId,
       requestedAt,
-      agent: { kind: "agent", id: this._identity.agentId },
+      agent: { kind: "agent", id: this._identity.rootAgentId },
       proof: await this._createProof(requestId, requestedAt),
     });
   }
@@ -137,7 +135,7 @@ class DefaultAgentClient implements AgentClient {
       vaultId: { value: "" },
       requestId,
       requestedAt,
-      agent: { kind: "agent", id: this._identity.agentId },
+      agent: { kind: "agent", id: this._identity.rootAgentId },
       proof: await this._createProof(requestId, requestedAt),
     });
   }
@@ -150,16 +148,16 @@ class DefaultAgentClient implements AgentClient {
       requestId,
       requestedAt,
       targetRequestId,
-      agent: { kind: "agent", id: this._identity.agentId },
+      agent: { kind: "agent", id: this._identity.rootAgentId },
       proof: await this._createProof(requestId, requestedAt),
     });
   }
 }
 
 function resolveAgentIdentity(options: CreateAgentClientOptions): AgentIdentity {
-  return "agentId" in options.agentIdentity
-    ? options.agentIdentity
-    : { agentId: (options.agentIdentity as any).id };
+  return "rootAgentId" in options.agentRecord
+    ? options.agentRecord
+    : { rootAgentId: (options.agentRecord as any).id };
 }
 
 function resolveAgentTransport(

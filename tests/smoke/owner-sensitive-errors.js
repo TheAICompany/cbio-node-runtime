@@ -38,7 +38,7 @@ async function main() {
   let missingPrivateKeyCode;
   try {
     await client.ownerReadAgentPrivateKey({
-      agentId: "missing",
+      rootAgentId: "missing",
       password: "hunter2",
     });
   } catch (error) {

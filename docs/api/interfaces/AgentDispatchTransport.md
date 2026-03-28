@@ -56,7 +56,7 @@
 
 ### agentListCapabilities()
 
-> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentCapabilityState`[]\>
+> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentGrantState`[]\>
 
 #### Parameters
 
@@ -66,7 +66,7 @@
 
 #### Returns
 
-`Promise`\<readonly `AgentCapabilityState`[]\>
+`Promise`\<readonly `AgentGrantState`[]\>
 
 ***
 
@@ -102,16 +102,16 @@
 
 ***
 
-### agentSubmitCapabilityRequest()
+### agentSubmitGrantRequest()
 
-> **agentSubmitCapabilityRequest**(`request`): `Promise`\<`CapabilityStateRecord`\>
+> **agentSubmitGrantRequest**(`request`): `Promise`\<`GrantStateRecord`\>
 
 #### Parameters
 
 ##### request
 
-`AgentSubmitCapabilityRequestCommand`
+`AgentSubmitGrantRequestCommand`
 
 #### Returns
 
-`Promise`\<`CapabilityStateRecord`\>
+`Promise`\<`GrantStateRecord`\>

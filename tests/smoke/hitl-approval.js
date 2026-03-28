@@ -25,7 +25,7 @@ async function runHitlTest() {
   });
 
   const agentClient = createAgentClient({
-    agentIdentity: agent,
+    agentRecord: agent,
     vault,
     token: sessionToken.token,
   });
@@ -50,13 +50,13 @@ async function runHitlTest() {
   
   // 5. Verify NO grants were created yet (Decoupled model)
   console.log("验证权限表此时应保持为空...");
-  const earlyGrants = await ownerClient.ownerListGrants({ agentId: agent.agentId, secretAlias: "my-key" });
+  const earlyGrants = await ownerClient.ownerListGrants({ rootAgentId: agent.id, secretAlias: "my-key" });
   assert.strictEqual(earlyGrants.agentSecrets.length, 0, "No agent secret grant should exist before approval");
   assert.strictEqual(earlyGrants.secretDestinations.length, 0, "No destination grant should exist before approval");
 
   // 6. Owner list pending and approve "allow_and_grant"
   console.log("🎁 Approving always...");
-  const pendingRequests = await ownerClient.ownerListRequests({ agentId: agent.agentId });
+  const pendingRequests = await ownerClient.ownerListRequests({ rootAgentId: agent.id });
   const req = pendingRequests.find(r => r.status === "PENDING");
   assert.ok(req, "Should find pending request");
 
@@ -70,7 +70,7 @@ async function runHitlTest() {
 
   // 6. Verify grants were created
   console.log("验证权限是否自动创建...");
-  const grants = await ownerClient.ownerListGrants({ agentId: agent.agentId, secretAlias: "my-key" });
+  const grants = await ownerClient.ownerListGrants({ rootAgentId: agent.id, secretAlias: "my-key" });
   assert.ok(grants.agentSecrets.length > 0, "Agent secret grant should be created");
   assert.ok(grants.secretDestinations.some(d => d.domain === "api.example.com"), "Destination grant should be created");
 
