@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import {
   createAuditEntryIdValue,
-  createFlowIdValue,
+
   createRequestIdValue,
   createSecretIdValue,
   createVersionIdValue,
@@ -13,7 +13,7 @@ import type {
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
-  CustomHttpFlowDefinition,
+
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
@@ -29,7 +29,7 @@ import { VaultCoreError } from "./errors.js";
 import { DispatchStatus } from "./contracts.js";
 import type {
   AuditLog,
-  CustomHttpFlowRegistry,
+
   PolicyEngine,
   TrustedExecutor,
   VaultCoreDependencies,
@@ -98,9 +98,7 @@ export class RandomIdGenerator implements IdGenerator {
   }
 
 
-  newFlowId(): string {
-    return createFlowIdValue();
-  }
+
 
   newRequestId(action?: string): string {
     return createRequestIdValue(action);
@@ -274,17 +272,7 @@ export class InMemorySecretDestinationGrantRegistry implements SecretDestination
 /**
  * @internal
  */
-export class InMemoryCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
-  private readonly _flows = new Map<string, CustomHttpFlowDefinition>();
 
-  async register(flow: CustomHttpFlowDefinition): Promise<void> {
-    this._flows.set(`${flow.vaultId.value}:${flow.flowId}`, flow);
-  }
-
-  async get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null> {
-    return this._flows.get(`${vaultId.value}:${flowId}`) ?? null;
-  }
-}
 
 export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
   private readonly _records = new Map<string, RequestRecord>();
@@ -540,7 +528,6 @@ export function createVaultCoreDependencies(
     agentSecretGrants: new InMemoryAgentSecretGrantRegistry(),
     secretDestinationGrants: new InMemorySecretDestinationGrantRegistry(),
     requests: new InMemoryRequestRecordRegistry(),
-    customFlows: new InMemoryCustomHttpFlowRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
     sessionTokens,
     clock: options.clock ?? new SystemClock(),

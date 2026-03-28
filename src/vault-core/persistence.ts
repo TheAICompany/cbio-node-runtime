@@ -10,7 +10,7 @@ import {
   type AgentIdentityRecord,
   type AuditEntry,
   type AuditQuery,
-  type CustomHttpFlowDefinition,
+
   type RequestRecord,
   type SecretId,
   type SecretRecord,
@@ -22,7 +22,7 @@ import type {
   AgentSecretGrantRegistry,
   SecretDestinationGrantRegistry,
   AuditLog,
-  CustomHttpFlowRegistry,
+
   RequestRecordRegistry,
   SecretCustody,
   SecretRepository,
@@ -384,32 +384,7 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
   }
 }
 
-export class FileCustomHttpFlowRegistry implements CustomHttpFlowRegistry {
-  private readonly _baseDir: string;
 
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "flows");
-  }
-
-  private _getPath(vaultId: VaultId, flowId: string) {
-    return path.join(this._baseDir, vaultId.value, `${flowId}.json`);
-  }
-
-  async register(flow: CustomHttpFlowDefinition): Promise<void> {
-    const filePath = this._getPath(flow.vaultId, flow.flowId);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(flow, null, 2));
-  }
-
-  async get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null> {
-    try {
-      const content = await fs.readFile(this._getPath(vaultId, flowId), "utf-8");
-      return JSON.parse(content);
-    } catch {
-      return null;
-    }
-  }
-}
 
 export const DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY = "master_key.sealed";
 
@@ -451,8 +426,6 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     clock: new SystemClock(),
     agentRecords: new FileAgentIdentityRegistry(baseDir),
     agentSecretGrants: new FileAgentSecretGrantRegistry(baseDir),
-    secretDestinationGrants: new FileSecretDestinationGrantRegistry(baseDir),
-    customFlows: new FileCustomHttpFlowRegistry(baseDir),
     audit: new FileAuditLog(baseDir),
     requests: new FileRequestRecordRegistry(baseDir),
     custody: new FileSecretCustody(baseDir, options.vaultWorkingKey),

@@ -11,7 +11,7 @@ export type {
   VaultExportSecretInput,
   VaultReadSecretPlaintextInput,
   VaultReadAgentPrivateKeyInput,
-  VaultRegisterFlowInput,
+
   VaultImportAgentInput,
   VaultCreateAgentInput,
   VaultUpdateAgentInput,

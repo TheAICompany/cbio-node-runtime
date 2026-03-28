@@ -46,7 +46,7 @@ The `AuditAction` enum has been refactored to use business-oriented, semantic na
 | `ALLOW_DISPATCH` | `APPROVE_DISPATCH` | Owner approved a pending request. |
 | `DENY_DISPATCH` | `REJECT_DISPATCH` | Owner rejected a pending request. |
 | `AUTHORIZE_DISPATCH` | `EVALUATE_DISPATCH_POLICY` | Result of an automated policy evaluation. |
-| `REGISTER_CUSTOM_FLOW`| `REGISTER_HTTP_FLOW` | Semantic renaming of custom flows. |
+
 
 ### 4. Error Code Changes
 

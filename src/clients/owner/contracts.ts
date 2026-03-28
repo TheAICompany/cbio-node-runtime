@@ -1,4 +1,4 @@
-import type { OwnerHttpFlowBoundary } from "../../vault-ingress/flow-factories.js";
+
 
 export interface OwnerCreateSecretInput {
   alias: string;
@@ -75,9 +75,7 @@ export interface OwnerAgentProvisionResult {
   sessionToken: import("../../vault-core/index.js").OwnerSessionToken;
 }
 
-export interface VaultRegisterFlowInput extends OwnerHttpFlowBoundary {
-  requestedAt?: string;
-}
+
 
 export interface VaultGrantAgentSecretInput {
   rootAgentId: string;
@@ -184,7 +182,7 @@ export interface OwnerClient {
   ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord>;
-  ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition>;
+
   ownerRemoveSecret(input: OwnerRemoveSecretInput): Promise<void>;
   ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;
   ownerListRequests(input?: VaultListRequestsInput): Promise<readonly import("../../vault-core/index.js").OwnerVisibleRequestRecord[]>;

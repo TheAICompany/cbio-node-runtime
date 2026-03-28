@@ -11,7 +11,7 @@ export type {
   OwnerRequestRecord,
   AgentRequestResult,
   DispatchApprovalDecision,
-  CustomHttpFlowDefinition,
+
   AuditEntry,
   DispatchAuthorization,
   DispatchInstruction,

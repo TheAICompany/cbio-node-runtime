@@ -9,7 +9,7 @@ export {
   InMemoryAgentIdentityRegistry,
   InMemoryAgentSecretGrantRegistry,
   InMemorySecretDestinationGrantRegistry,
-  InMemoryCustomHttpFlowRegistry,
+
   InMemoryAuditLog,
   InMemorySessionTokenRegistry,
   InMemorySecretCustody,
@@ -28,7 +28,7 @@ export {
   FileAuditLog as PersistentVaultAuditLog,
   FileAgentSecretGrantRegistry as PersistentVaultAgentSecretGrantRegistry,
   FileSecretDestinationGrantRegistry as PersistentVaultSecretDestinationGrantRegistry,
-  FileCustomHttpFlowRegistry as PersistentVaultCustomHttpFlowRegistry,
+
   FileSecretCustody as PersistentVaultSecretCustody,
   FileSecretRepository as PersistentVaultSecretRepository,
 } from "./persistence.js";
@@ -68,7 +68,7 @@ export type {
   OwnerGetRequestRequest,
   OwnerRegisterAgentIdentityCommand,
   OwnerUpdateAgentIdentityCommand,
-  OwnerRegisterCustomHttpFlowCommand,
+
   OwnerIssueSessionTokenRequest,
   OwnerSessionToken,
   OwnerSecretExport,
@@ -79,7 +79,7 @@ export type {
   OwnerListGrantsRequest,
   OwnerApproveDispatchCommand,
   DispatchApprovalDecision,
-  CustomHttpFlowDefinition,
+
   AuditEntry,
   AuditQuery,
   DispatchAuthorization,
@@ -117,7 +117,7 @@ export type {
   Clock,
   IdGenerator,
   PolicyEngine,
-  CustomHttpFlowRegistry,
+
   SecretRepository,
   SecretCustody,
   TrustedExecutor,

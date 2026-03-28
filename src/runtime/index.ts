@@ -62,7 +62,7 @@ export {
   PersistentVaultAuditLog,
   PersistentVaultAgentSecretGrantRegistry,
   PersistentVaultSecretDestinationGrantRegistry,
-  PersistentVaultCustomHttpFlowRegistry,
+
   PersistentVaultSecretCustody,
   PersistentVaultSecretRepository,
 } from "../vault-core/index.js";
@@ -80,7 +80,7 @@ export type {
   OwnerRequestRecord,
   AgentRequestResult,
   DispatchApprovalDecision,
-  CustomHttpFlowDefinition,
+
   AuditEntry,
   DispatchAuthorization,
   DispatchInstruction,
@@ -117,7 +117,7 @@ export {
   type VaultRevokeAgentSecretInput,
   type VaultRevokeSecretDestinationInput,
   type VaultListGrantsInput,
-  type VaultRegisterFlowInput,
+
   type VaultImportAgentInput,
   type VaultCreateAgentInput,
   type OwnerAgentProvisionResult,

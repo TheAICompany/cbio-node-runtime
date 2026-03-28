@@ -8,7 +8,7 @@ import { deriveVaultWorkingKeyFromPassword } from "../protocol/crypto.js";
 import {
   wrapVaultCoreAsVaultService,
   type VaultService,
-  type VaultCustomFlowResolver,
+
 } from "../vault-ingress/index.js";
 import { createPrefixedStorage } from "../storage/prefix.js";
 import { FsStorageProvider } from "../storage/fs.js";
@@ -46,7 +46,7 @@ export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDepend
   metadata?: Record<string, any>;
   password: string;
   vault?: {
-    customFlows?: VaultCustomFlowResolver;
+
     fetchImpl?: typeof fetch;
   };
 }
@@ -79,7 +79,7 @@ export interface RecoverVaultOptions extends Omit<CreatePersistentVaultCoreDepen
   vaultId: string;
   password: string;
   vault?: {
-    customFlows?: VaultCustomFlowResolver;
+
     fetchImpl?: typeof fetch;
   };
 }

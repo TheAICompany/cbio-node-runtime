@@ -306,21 +306,6 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ***
 
-### ownerRegisterFlow()
-
-> **ownerRegisterFlow**(`input`): `Promise`\<[`CustomHttpFlowDefinition`](CustomHttpFlowDefinition.md)\>
-
-#### Parameters
-
-##### input
-
-[`VaultRegisterFlowInput`](VaultRegisterFlowInput.md)
-
-#### Returns
-
-`Promise`\<[`CustomHttpFlowDefinition`](CustomHttpFlowDefinition.md)\>
-
-***
 
 ### ownerRemoveSecret()
 

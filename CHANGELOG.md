@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [1.63.5](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.4...v1.63.5) (2026-03-28)
 
+### Breaking Changes
+* **Purged Custom HTTP Flows**: Completely removed the `ownerRegisterFlow` feature and `CustomHttpFlowDefinition` logic to simplify the vault's secret acquisition model.
+    * Deleted `VaultRegisterFlowInput` and `CustomHttpFlowRegistry` interfaces.
+    * Deleted the helper file `src/vault-ingress/flow-factories.ts`.
+    * Simplified `VaultCoreDependencies` by removing Custom Flow support.
+
 ### [1.63.4](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.3...v1.63.4) (2026-03-28)
 
 ### [1.63.3](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.63.2...v1.63.3) (2026-03-27)

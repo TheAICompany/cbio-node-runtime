@@ -5,7 +5,7 @@ import type {
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
-  CustomHttpFlowDefinition,
+
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
@@ -53,7 +53,7 @@ export interface IdGenerator {
   newSecretId(): SecretId;
   newVersion(): { value: string };
   newAuditEntryId(): string;
-  newFlowId(): string;
+
   newRequestId(action?: string): string;
 }
 
@@ -93,10 +93,7 @@ export interface SecretDestinationGrantRegistry {
   delete(vaultId: VaultId, secretAlias: string, siteId: string): Promise<void>;
 }
 
-export interface CustomHttpFlowRegistry {
-  register(flow: CustomHttpFlowDefinition): Promise<void>;
-  get(vaultId: VaultId, flowId: string): Promise<CustomHttpFlowDefinition | null>;
-}
+
 
 export interface RequestRecordRegistry {
   save(record: RequestRecord): Promise<void>;
@@ -115,7 +112,7 @@ export interface VaultCoreDependencies {
   agentSecretGrants: AgentSecretGrantRegistry;
   secretDestinationGrants: SecretDestinationGrantRegistry;
   requests: RequestRecordRegistry;
-  customFlows: CustomHttpFlowRegistry;
+
   agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;
   sessionTokens: ISessionTokenRegistry;

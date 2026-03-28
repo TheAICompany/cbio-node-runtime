@@ -9,8 +9,7 @@ import {
   type OwnerExportSecretRequest,
   type OwnerListAgentsRequest,
   type OwnerRegisterAgentIdentityCommand,
-  type OwnerRegisterCustomHttpFlowCommand,
-  type CustomHttpFlowDefinition,
+
   type OwnerSecretExport,
   type SecretRecord,
   type AgentIdentityRecord,
@@ -123,7 +122,7 @@ export interface VaultService {
   // Owner Management
   ownerRegisterAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void>;
   ownerUpdateAgentIdentity(request: import("../vault-core/index.js").OwnerUpdateAgentIdentityCommand): Promise<AgentIdentityRecord>;
-  ownerRegisterCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void>;
+
   ownerCreateSecret(request: import("../vault-core/index.js").OwnerCreateSecretCommand): Promise<SecretRecord>;
   ownerUpdateSecret(request: import("../vault-core/index.js").OwnerUpdateSecretCommand): Promise<SecretRecord>;
   ownerRemoveSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void>;
@@ -161,8 +160,7 @@ export interface VaultService {
   agentGetRequest(request: import("../vault-core/index.js").AgentGetRequestRequest): Promise<import("../vault-core/index.js").AgentRequestResult>;
   agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest>;
   
-  // Custom Flow Support
-  ownerHandleCustomFlow?(flowId: string, input: any): Promise<any>;
+
   
   // Protocols
   agentHandleDispatch(request: VaultAgentDispatchRequest): Promise<VaultAgentDispatchResponse | VaultAgentDispatchErrorResponse>;
@@ -170,9 +168,7 @@ export interface VaultService {
   ownerHandleControl(request: VaultOwnerControlRequest): Promise<VaultOwnerControlResponse | VaultOwnerControlErrorResponse>;
 }
 
-export interface VaultCustomFlowResolver {
-  resolve(flowId: string, input: any): Promise<any>;
-}
+
 
 class LocalVaultService implements VaultService {
   constructor(
@@ -192,9 +188,7 @@ class LocalVaultService implements VaultService {
     return this._authority.ownerUpdateAgentIdentity(request);
   }
 
-  ownerRegisterCustomFlow(request: OwnerRegisterCustomHttpFlowCommand): Promise<void> {
-    return this._authority.ownerRegisterCustomFlow(request);
-  }
+
 
   ownerCreateSecret(request: import("../vault-core/index.js").OwnerCreateSecretCommand): Promise<SecretRecord> {
     return this._authority.ownerCreateSecret(request);
@@ -379,7 +373,7 @@ class LocalVaultService implements VaultService {
   }
 }
 
-export function createVaultService(authority: VaultCore, options?: { fetchImpl?: typeof fetch; customFlows?: VaultCustomFlowResolver }): VaultService {
+export function createVaultService(authority: VaultCore, options?: { fetchImpl?: typeof fetch }): VaultService {
   return new LocalVaultService(authority, options?.fetchImpl);
 }
 

@@ -34,29 +34,6 @@
 
 ## Methods
 
-### \_storeCustomFlowSecret()
-
-> **\_storeCustomFlowSecret**(`flow`, `alias`, `plaintext`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### flow
-
-[`CustomHttpFlowDefinition`](../interfaces/CustomHttpFlowDefinition.md)
-
-##### alias
-
-`string`
-
-##### plaintext
-
-`string`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
 
 ### agentAuthorizeDispatch()
 
@@ -558,39 +535,6 @@
 
 ***
 
-### ownerRegisterCustomFlow()
-
-> **ownerRegisterCustomFlow**(`command`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### command
-
-###### flow
-
-`any`
-
-###### owner
-
-[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
-
-###### requestedAt
-
-`string`
-
-###### requestId
-
-`string`
-
-###### vaultId
-
-[`VaultId`](../interfaces/VaultId.md)
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
 
 ### ownerRemoveSecret()
 

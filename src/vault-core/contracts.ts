@@ -188,40 +188,9 @@ export interface OwnerRevokeSecretDestinationCommand {
   requestedAt: string;
 }
 
-export interface CustomHttpFlowDefinition {
-  vaultId: VaultId;
-  flowId: string;
-  ownerId: string;
-  mode: "acquire_secret" | "send_secret" | "bidirectional_secret";
-  targetUrl: string;
-  method: string;
-  responseVisibility: "passthrough" | "shape_only";
-  responseSecret?: {
-    kind: "json_field";
-    field: string;
-    storeAlias: string;
-  };
-  createdAt: string;
-}
 
-export interface OwnerRegisterCustomHttpFlowCommand {
-  vaultId: VaultId;
-  requestId: string;
-  owner: VaultPrincipal & { kind: "owner" };
-  flow: {
-    flowId: string;
-    mode: "acquire_secret" | "send_secret" | "bidirectional_secret";
-    targetUrl: string;
-    method: string;
-    responseVisibility: "passthrough" | "shape_only";
-    responseSecret?: {
-      kind: "json_field";
-      field: string;
-      storeAlias: string;
-    };
-  };
-  requestedAt: string;
-}
+
+
 
 export interface AgentProof {
   rootAgentId: string;
@@ -498,7 +467,7 @@ export interface AuditQuery {
 export enum AuditAction {
   REGISTER_AGENT_IDENTITY = "REGISTER_AGENT_IDENTITY",
   UPDATE_AGENT_IDENTITY = "UPDATE_AGENT_IDENTITY",
-  REGISTER_HTTP_FLOW = "REGISTER_HTTP_FLOW",
+
   GRANT_AGENT_SECRET = "GRANT_AGENT_SECRET",
   GRANT_SECRET_DESTINATION = "GRANT_SECRET_DESTINATION",
   REVOKE_AGENT_SECRET = "REVOKE_AGENT_SECRET",

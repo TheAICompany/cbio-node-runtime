@@ -1,6 +1,5 @@
 import { OwnerClientError, OwnerClientErrorCode } from "../../errors.js";
 import {
-  createFlowIdValue,
   createRequestIdValue,
 } from "../../internal/id-factory.js";
 import { createIdentity, restoreIdentity, type CreatedIdentity } from "../../runtime/identity.js";
@@ -11,7 +10,7 @@ import type {
   VaultExportSecretInput,
   VaultReadSecretPlaintextInput,
   VaultReadAgentPrivateKeyInput,
-  VaultRegisterFlowInput,
+
   VaultImportAgentInput,
   VaultCreateAgentInput,
   OwnerAgentProvisionResult,
@@ -378,41 +377,7 @@ class DefaultOwnerClient implements OwnerClient {
     });
   }
 
-  async ownerRegisterFlow(input: VaultRegisterFlowInput): Promise<import("../../vault-core/index.js").CustomHttpFlowDefinition> {
-    const requestedAt = input.requestedAt ?? this._clock.nowIso();
-    const flowId = createFlowIdValue();
-    const requestId = createRequestIdValue("register_custom_flow");
-    const flow = {
-      flowId,
-      mode: input.mode,
-      targetUrl: input.targetUrl,
-      method: input.method,
-      responseVisibility: input.responseVisibility,
-      responseSecret: input.responseSecret,
-    };
-    
-    await this._vault.ownerRegisterCustomFlow({
-      vaultId: this._vault.vaultId,
-      requestId,
-      owner: {
-        kind: "owner",
-        id: this._rootAgentId,
-      },
-      flow,
-      requestedAt,
-    });
-    return {
-      vaultId: this._vault.vaultId,
-      flowId,
-      ownerId: this._rootAgentId,
-      mode: input.mode,
-      targetUrl: input.targetUrl,
-      method: input.method,
-      responseVisibility: input.responseVisibility,
-      responseSecret: input.responseSecret,
-      createdAt: requestedAt,
-    };
-  }
+
 
   async ownerRemoveSecret(input: OwnerRemoveSecretInput): Promise<void> {
     await this._confirmSensitiveAction({

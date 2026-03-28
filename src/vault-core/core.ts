@@ -8,7 +8,7 @@ import {
   type AgentVisibleSecretRecord,
   type AuditEntry,
   type AuditQuery,
-  type CustomHttpFlowDefinition,
+
   type DispatchAuthorization,
   type DispatchDecision,
   type DispatchInstruction,
@@ -736,19 +736,7 @@ export class VaultCore {
     await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditAction.REVOKE_SESSION_TOKEN, AuditOutcome.SUCCEEDED, "session token revoked"));
   }
 
-  // ─── Custom Flows ─────────────────────────────────────────────────────────────
 
-  async ownerRegisterCustomFlow(command: { vaultId: VaultId; requestId: string; owner: VaultPrincipal; flow: any; requestedAt: string }) {
-    this._assertOwnerPrincipal(command.owner);
-    const flow: CustomHttpFlowDefinition = { ...command.flow, vaultId: this._deps.vaultId, ownerId: command.owner.id, createdAt: command.requestedAt };
-    await this._deps.customFlows.register(flow);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.REGISTER_HTTP_FLOW, AuditOutcome.SUCCEEDED, `http flow registered: "${flow.flowId}" (-> ${flow.targetUrl})`, { detail: flow.flowId }));
-  }
-
-  async _storeCustomFlowSecret(flow: CustomHttpFlowDefinition, alias: string, plaintext: string) {
-    const source = { kind: "request" as const, requestId: `flow:${flow.flowId}:${Date.now()}` };
-    await this.ownerWriteSecret({ vaultId: flow.vaultId, alias, plaintext, source, issuerSiteId: flow.ownerId, requestedAt: this._deps.clock.nowIso() });
-  }
 
   // ─── Event Observers ──────────────────────────────────────────────────────────
 

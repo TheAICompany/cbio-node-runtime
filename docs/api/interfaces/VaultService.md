@@ -236,25 +236,6 @@
 
 ***
 
-### ownerHandleCustomFlow()?
-
-> `optional` **ownerHandleCustomFlow**(`flowId`, `input`): `Promise`\<`any`\>
-
-#### Parameters
-
-##### flowId
-
-`string`
-
-##### input
-
-`any`
-
-#### Returns
-
-`Promise`\<`any`\>
-
-***
 
 ### ownerIssueAllAgentSessionTokens()
 
@@ -410,21 +391,6 @@
 
 ***
 
-### ownerRegisterCustomFlow()
-
-> **ownerRegisterCustomFlow**(`request`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### request
-
-`OwnerRegisterCustomHttpFlowCommand`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
 
 ### ownerRemoveSecret()
 
