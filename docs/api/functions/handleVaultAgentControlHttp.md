@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -10,7 +10,7 @@
 
 ### service
 
-`VaultService`
+[`VaultService`](../interfaces/VaultService.md)
 
 ### body
 

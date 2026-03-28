@@ -1,22 +1,22 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
 # Interface: AgentClient
 
 A client for agents to perform authorized operations (e.g., dispatch HTTP requests with secrets).
-This client uses a delegated grant granted by the owner.
+This client uses a session token managed by the owner.
 Agents can use secrets and request broader access, but they do not directly manage
-the secret lifecycle inside the vault. Newly obtained credentials are persisted only
-through owner actions or owner-configured vault flows that explicitly capture them.
+the secret lifecycle inside the vault.
 
 ## Methods
 
 ### agentDispatch()
 
-> **agentDispatch**(`intent`): `Promise`\<`DispatchResult`\>
+> **agentDispatch**(`intent`): `Promise`\<[`DispatchResult`](DispatchResult.md)\>
 
 Dispatches a session-token-authenticated request to a target using a vault secret.
+If the grant is missing, it will return a PENDING status.
 
 #### Parameters
 
@@ -24,30 +24,17 @@ Dispatches a session-token-authenticated request to a target using a vault secre
 
 [`AgentDispatchIntent`](AgentDispatchIntent.md)
 
-The destination, method, and secret alias to use.
-
 #### Returns
 
-`Promise`\<`DispatchResult`\>
-
-The result of the remote operation.
-
-#### Example
-
-```ts
-const result = await agent.agentDispatch({
-  targetUrl: 'https://api.example.com/data',
-  method: 'POST',
-  secretAlias: 'api-token',
-  body: JSON.stringify({ key: 'value' })
-});
-```
+`Promise`\<[`DispatchResult`](DispatchResult.md)\>
 
 ***
 
 ### agentGetRequest()
 
-> **agentGetRequest**(`requestId`): `Promise`\<`AgentRequestResult`\>
+> **agentGetRequest**(`requestId`): `Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
+
+Get details of a specific request.
 
 #### Parameters
 
@@ -57,66 +44,40 @@ const result = await agent.agentDispatch({
 
 #### Returns
 
-`Promise`\<`AgentRequestResult`\>
+`Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
 
 ***
 
 ### agentIntrospect()
 
-> **agentIntrospect**(): `Promise`\<`AgentRuntimeManifest`\>
+> **agentIntrospect**(): `Promise`\<[`AgentRuntimeManifest`](AgentRuntimeManifest.md)\>
 
-Introspects the current runtime environment, providing identity, capabilities, and a toolbox manifest.
-Equivalent to '--help' or 'llms.txt' for the agent.
-This is the primary place where an agent should learn its operational boundary:
-it can use existing secrets and request more permission, but it cannot directly
-create, update, or remove secrets in the vault.
+Introspects the current runtime environment, providing identity, grants, and a toolbox manifest.
 
 #### Returns
 
-`Promise`\<`AgentRuntimeManifest`\>
-
-***
-
-### agentListCapabilities()
-
-> **agentListCapabilities**(): `Promise`\<readonly `AgentGrantState`[]\>
-
-#### Returns
-
-`Promise`\<readonly `AgentGrantState`[]\>
+`Promise`\<[`AgentRuntimeManifest`](AgentRuntimeManifest.md)\>
 
 ***
 
 ### agentListRequests()
 
-> **agentListRequests**(): `Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+> **agentListRequests**(): `Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
+
+List previous requests sent by this agent.
 
 #### Returns
 
-`Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+`Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
 
 ***
 
 ### agentListSecrets()
 
-> **agentListSecrets**(): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+> **agentListSecrets**(): `Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+
+List secrets the agent can see, including whether they are granted or not.
 
 #### Returns
 
-`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
-
-***
-
-### agentSubmitGrantRequest()
-
-> **agentSubmitGrantRequest**(`input`): `Promise`\<`GrantStateRecord`\>
-
-#### Parameters
-
-##### input
-
-[`AgentSubmitGrantRequestInput`](AgentSubmitGrantRequestInput.md)
-
-#### Returns
-
-`Promise`\<`GrantStateRecord`\>
+`Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -6,24 +6,44 @@
 
 ## Properties
 
-### overwrite?
+### password?
 
-> `optional` **overwrite?**: `boolean`
-
-***
-
-### storageKey?
-
-> `optional` **storageKey?**: `string`
+> `optional` **password?**: `string`
 
 ***
 
-### vaultRecoveryKey?
+### storage
 
-> `optional` **vaultRecoveryKey?**: `string`
+> **storage**: `object`
 
-***
+#### read()
 
-### vaultWorkingKey?
+> **read**(`key`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\> \| `null`\>
 
-> `optional` **vaultWorkingKey?**: `string`
+##### Parameters
+
+###### key
+
+`string`
+
+##### Returns
+
+`Promise`\<`Uint8Array`\<`ArrayBufferLike`\> \| `null`\>
+
+#### write()
+
+> **write**(`key`, `data`): `Promise`\<`void`\>
+
+##### Parameters
+
+###### key
+
+`string`
+
+###### data
+
+`Uint8Array`
+
+##### Returns
+
+`Promise`\<`void`\>

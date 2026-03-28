@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -14,20 +14,6 @@ Creates an [AgentClient](../interfaces/AgentClient.md) for a delegated identity.
 
 [`CreateAgentClientOptions`](../interfaces/CreateAgentClientOptions.md)
 
-Configuration including agent identity, grant, and transport.
-
 ## Returns
 
 [`AgentClient`](../interfaces/AgentClient.md)
-
-An initialized [AgentClient](../interfaces/AgentClient.md).
-
-## Example
-
-```ts
-const agent = createAgentClient({
-  rootAgentIdentity,
-  grant,
-  vault
-});
-```

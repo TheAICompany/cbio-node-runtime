@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -22,6 +22,18 @@ Enables Cloud, Mobile, and Edge runtimes to use custom storage.
 #### Returns
 
 `Promise`\<`void`\>
+
+***
+
+### getBaseDir()?
+
+> `optional` **getBaseDir**(): `string`
+
+Optional. Returns the base directory for file-system based storage.
+
+#### Returns
+
+`string`
 
 ***
 

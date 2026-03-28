@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -26,23 +26,9 @@ Creates an [AgentClient](AgentClient.md) for a delegated identity.
 
 [`CreateAgentClientOptions`](CreateAgentClientOptions.md)
 
-Configuration including agent identity, grant, and transport.
-
 #### Returns
 
 [`AgentClient`](AgentClient.md)
-
-An initialized [AgentClient](AgentClient.md).
-
-#### Example
-
-```ts
-const agent = createAgentClient({
-  rootAgentIdentity,
-  grant,
-  vault
-});
-```
 
 ***
 
@@ -75,19 +61,19 @@ console.log(identity.rootAgentId);
 
 ***
 
-### createOwnerHttpFlowBoundary
+### createOwnerClient
 
-> **createOwnerHttpFlowBoundary**: (`boundary`) => `OwnerHttpFlowBoundary`
+> **createOwnerClient**: (`options`) => `Promise`\<[`OwnerClient`](OwnerClient.md)\>
 
 #### Parameters
 
-##### boundary
+##### options
 
-`OwnerHttpFlowBoundary`
+[`CreateOwnerClientOptions`](CreateOwnerClientOptions.md)
 
 #### Returns
 
-`OwnerHttpFlowBoundary`
+`Promise`\<[`OwnerClient`](OwnerClient.md)\>
 
 ***
 
@@ -126,58 +112,6 @@ console.log(identity.rootAgentId);
 ##### Returns
 
 [`OwnerSession`](OwnerSession.md)
-
-***
-
-### createStandardAcquireBoundary
-
-> **createStandardAcquireBoundary**: (`input`) => `OwnerHttpFlowBoundary`
-
-#### Parameters
-
-##### input
-
-###### method?
-
-`string`
-
-###### responseField
-
-`"access_token"` \| `"refresh_token"` \| `"id_token"`
-
-###### storeAlias
-
-`string`
-
-###### targetUrl
-
-`string`
-
-#### Returns
-
-`OwnerHttpFlowBoundary`
-
-***
-
-### createStandardDispatchBoundary
-
-> **createStandardDispatchBoundary**: (`input`) => `OwnerHttpFlowBoundary`
-
-#### Parameters
-
-##### input
-
-###### method
-
-`string`
-
-###### targetUrl
-
-`string`
-
-#### Returns
-
-`OwnerHttpFlowBoundary`
 
 ***
 
@@ -240,37 +174,6 @@ Configuration for the new vault.
 
 ***
 
-### createOwnerClient
-
-> **createOwnerClient**: (`options`) => [`OwnerClient`](OwnerClient.md)
-
-Creates a [OwnerClient](OwnerClient.md) instance for a specific vault owner.
-
-#### Parameters
-
-##### options
-
-[`CreateOwnerClientOptions`](CreateOwnerClientOptions.md)
-
-Configuration including optional owner identity and the vault service.
-
-#### Returns
-
-[`OwnerClient`](OwnerClient.md)
-
-An initialized [OwnerClient](OwnerClient.md).
-
-#### Example
-
-```ts
-const client = createOwnerClient({
-  ownerIdentity,
-  vault
-});
-```
-
-***
-
 ### createVaultCore
 
 > **createVaultCore**: (`deps`) => [`VaultCore`](../classes/VaultCore.md)
@@ -305,19 +208,15 @@ const client = createOwnerClient({
 
 ### createVaultService
 
-> **createVaultService**: (`deps`, `options`) => `VaultService`
+> **createVaultService**: (`authority`, `options?`) => [`VaultService`](VaultService.md)
 
 #### Parameters
 
-##### deps
+##### authority
 
-`VaultCoreDependencies`
+[`VaultCore`](../classes/VaultCore.md)
 
 ##### options?
-
-###### clock?
-
-`Clock`
 
 ###### customFlows?
 
@@ -329,7 +228,7 @@ const client = createOwnerClient({
 
 #### Returns
 
-`VaultService`
+[`VaultService`](VaultService.md)
 
 ***
 
@@ -370,7 +269,7 @@ Using scrypt for memory-hard key derivation to resist brute-force attacks.
 
 ##### service
 
-`VaultService`
+[`VaultService`](VaultService.md)
 
 ##### body
 
@@ -393,7 +292,7 @@ This can be used in any HTTP server framework (Express, Fastify, etc.).
 
 ##### service
 
-`VaultService`
+[`VaultService`](VaultService.md)
 
 The VaultService instance to handle the request.
 
@@ -472,12 +371,6 @@ A list of vault IDs.
 ### OwnerClientErrorCode
 
 > **OwnerClientErrorCode**: *typeof* [`OwnerClientErrorCode`](../enumerations/OwnerClientErrorCode.md)
-
-***
-
-### PersistentVaultGrantRevocationRegistry
-
-> **PersistentVaultGrantRevocationRegistry**: *typeof* `FileGrantRevocationRegistry`
 
 ***
 
@@ -583,33 +476,3 @@ const identity = restoreIdentity('MIIB...');
 ### VaultCoreError
 
 > **VaultCoreError**: *typeof* [`VaultCoreError`](../classes/VaultCoreError.md)
-
-***
-
-### wrapVaultCoreAsVaultService
-
-> **wrapVaultCoreAsVaultService**: (`core`, `options`) => `VaultService`
-
-#### Parameters
-
-##### core
-
-[`VaultCore`](../classes/VaultCore.md)
-
-##### options?
-
-###### clock?
-
-`Clock`
-
-###### customFlows?
-
-`VaultCustomFlowResolver`
-
-###### fetchImpl?
-
-\{(`input`, `init?`): `Promise`\<`Response`\>; (`input`, `init?`): `Promise`\<`Response`\>; \}
-
-#### Returns
-
-`VaultService`

@@ -1,21 +1,18 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
 # Class: VaultCore
 
-The Sovereign Vault Core.
-This is the primary implementation of the Vault logic.
-
 ## Constructors
 
 ### Constructor
 
-> **new VaultCore**(`_deps`): `VaultCore`
+> **new VaultCore**(`deps`): `VaultCore`
 
 #### Parameters
 
-##### \_deps
+##### deps
 
 `VaultCoreDependencies`
 
@@ -29,47 +26,23 @@ This is the primary implementation of the Vault logic.
 
 #### Get Signature
 
-> **get** **vaultId**(): `VaultId`
+> **get** **vaultId**(): [`VaultId`](../interfaces/VaultId.md)
 
 ##### Returns
 
-`VaultId`
+[`VaultId`](../interfaces/VaultId.md)
 
 ## Methods
 
-### \_getGrant()
-
-> **\_getGrant**(`vaultId`, `rootAgentId`, `grantId`): `Promise`\<`AgentGrant` \| `null`\>
-
-#### Parameters
-
-##### vaultId
-
-`VaultId`
-
-##### rootAgentId
-
-`string`
-
-##### grantId
-
-`string`
-
-#### Returns
-
-`Promise`\<`AgentGrant` \| `null`\>
-
-***
-
 ### \_storeCustomFlowSecret()
 
-> **\_storeCustomFlowSecret**(`flow`, `alias`, `plaintext`): `Promise`\<`SecretRecord`\>
+> **\_storeCustomFlowSecret**(`flow`, `alias`, `plaintext`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### flow
 
-`CustomHttpFlowDefinition`
+[`CustomHttpFlowDefinition`](../interfaces/CustomHttpFlowDefinition.md)
 
 ##### alias
 
@@ -81,189 +54,193 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<`SecretRecord`\>
+`Promise`\<`void`\>
 
 ***
 
 ### agentAuthorizeDispatch()
 
-> **agentAuthorizeDispatch**(`request`): `Promise`\<`DispatchAuthorization`\>
+> **agentAuthorizeDispatch**(`request`): `Promise`\<[`DispatchAuthorization`](../interfaces/DispatchAuthorization.md)\>
 
 #### Parameters
 
 ##### request
 
-`DispatchRequest`
+[`DispatchRequest`](../interfaces/DispatchRequest.md)
 
 #### Returns
 
-`Promise`\<`DispatchAuthorization`\>
+`Promise`\<[`DispatchAuthorization`](../interfaces/DispatchAuthorization.md)\>
 
 ***
 
 ### agentDispatchSecret()
 
-> **agentDispatchSecret**(`request`): `Promise`\<`DispatchResult`\>
+> **agentDispatchSecret**(`request`): `Promise`\<[`DispatchResult`](../interfaces/DispatchResult.md)\>
 
 #### Parameters
 
 ##### request
 
-`DispatchRequest`
+[`DispatchRequest`](../interfaces/DispatchRequest.md)
 
 #### Returns
 
-`Promise`\<`DispatchResult`\>
+`Promise`\<[`DispatchResult`](../interfaces/DispatchResult.md)\>
 
 ***
 
 ### agentGetRequest()
 
-> **agentGetRequest**(`request`): `Promise`\<`AgentRequestResult`\>
+> **agentGetRequest**(`command`): `Promise`\<`any`\>
 
 #### Parameters
 
-##### request
+##### command
 
-`AgentGetRequestRequest`
+###### agent
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+###### proof
+
+`any`
+
+###### requestedAt
+
+`string`
+
+###### requestId
+
+`string`
+
+###### targetRequestId
+
+`string`
 
 #### Returns
 
-`Promise`\<`AgentRequestResult`\>
+`Promise`\<`any`\>
 
 ***
 
 ### agentGetRuntimeManifest()
 
-> **agentGetRuntimeManifest**(`command`): `Promise`\<`AgentRuntimeManifest`\>
+> **agentGetRuntimeManifest**(`command`): `Promise`\<[`AgentRuntimeManifest`](../interfaces/AgentRuntimeManifest.md)\>
 
 #### Parameters
 
 ##### command
 
-`AgentGetRuntimeManifestRequest`
+###### agent
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+###### proof
+
+`any`
+
+###### requestedAt
+
+`string`
+
+###### requestId
+
+`string`
 
 #### Returns
 
-`Promise`\<`AgentRuntimeManifest`\>
-
-***
-
-### agentListCapabilities()
-
-> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentGrantState`[]\>
-
-#### Parameters
-
-##### request
-
-`AgentListCapabilitiesRequest`
-
-#### Returns
-
-`Promise`\<readonly `AgentGrantState`[]\>
+`Promise`\<[`AgentRuntimeManifest`](../interfaces/AgentRuntimeManifest.md)\>
 
 ***
 
 ### agentListRequests()
 
-> **agentListRequests**(`request`): `Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+> **agentListRequests**(`command`): `Promise`\<readonly [`AgentVisibleRequestRecord`](../interfaces/AgentVisibleRequestRecord.md)[]\>
 
 #### Parameters
 
-##### request
+##### command
 
-`AgentListRequestsRequest`
+###### agent
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+###### proof
+
+`any`
+
+###### requestedAt
+
+`string`
+
+###### requestId
+
+`string`
 
 #### Returns
 
-`Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+`Promise`\<readonly [`AgentVisibleRequestRecord`](../interfaces/AgentVisibleRequestRecord.md)[]\>
 
 ***
 
 ### agentListSecrets()
 
-> **agentListSecrets**(`request`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
-
-#### Parameters
-
-##### request
-
-`AgentListSecretsRequest`
-
-#### Returns
-
-`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
-
-***
-
-### agentSubmitGrantRequest()
-
-> **agentSubmitGrantRequest**(`command`): `Promise`\<`GrantStateRecord`\>
+> **agentListSecrets**(`command`): `Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
 
 #### Parameters
 
 ##### command
 
-`AgentSubmitGrantRequestCommand`
+###### agent
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+###### proof
+
+`any`
+
+###### requestedAt
+
+`string`
+
+###### requestId
+
+`string`
 
 #### Returns
 
-`Promise`\<`GrantStateRecord`\>
+`Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
 
 ***
 
-### ownerAllowAlways()
+### ownerApproveDispatch()
 
-> **ownerAllowAlways**(`command`): `Promise`\<`DispatchResult`\>
-
-#### Parameters
-
-##### command
-
-`OwnerAllowAlwaysCommand`
-
-#### Returns
-
-`Promise`\<`DispatchResult`\>
-
-***
-
-### ownerAllowOnce()
-
-> **ownerAllowOnce**(`command`): `Promise`\<`DispatchResult`\>
+> **ownerApproveDispatch**(`actor`, `requestId`, `decision`): `Promise`\<[`DispatchResult`](../interfaces/DispatchResult.md) \| `null`\>
 
 #### Parameters
 
-##### command
+##### actor
 
-`OwnerAllowOnceCommand`
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-#### Returns
+##### requestId
 
-`Promise`\<`DispatchResult`\>
+`string`
 
-***
+##### decision
 
-### ownerApproveGrantRead()
-
-> **ownerApproveGrantRead**(`command`): `Promise`\<`GrantStateRecord`\>
-
-#### Parameters
-
-##### command
-
-`OwnerApproveGrantReadCommand`
+[`DispatchApprovalDecision`](../type-aliases/DispatchApprovalDecision.md)
 
 #### Returns
 
-`Promise`\<`GrantStateRecord`\>
+`Promise`\<[`DispatchResult`](../interfaces/DispatchResult.md) \| `null`\>
 
 ***
 
 ### ownerCreateSecret()
 
-> **ownerCreateSecret**(`command`): `Promise`\<`SecretRecord`\>
+> **ownerCreateSecret**(`command`): `Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
 
 #### Parameters
 
@@ -273,215 +250,67 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<`SecretRecord`\>
-
-***
-
-### ownerDeleteSecret()
-
-> **ownerDeleteSecret**(`command`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### command
-
-`OwnerDeleteSecretCommand`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
-
-### ownerDeny()
-
-> **ownerDeny**(`command`): `Promise`\<`GrantStateRecord`\>
-
-#### Parameters
-
-##### command
-
-`OwnerDenyCommand`
-
-#### Returns
-
-`Promise`\<`GrantStateRecord`\>
+`Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
 
 ***
 
 ### ownerExportSecret()
 
-> **ownerExportSecret**(`actor`, `alias`, `request?`): `Promise`\<`OwnerSecretExport`\>
+> **ownerExportSecret**(`actor`, `alias`): `Promise`\<`any`\>
 
 #### Parameters
 
 ##### actor
 
-`VaultPrincipal` & `object`
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
 ##### alias
 
 `string`
 
-##### request?
-
-`Omit`\<`OwnerExportSecretRequest`, `"vaultId"` \| `"actor"` \| `"alias"`\>
-
 #### Returns
 
-`Promise`\<`OwnerSecretExport`\>
+`Promise`\<`any`\>
 
 ***
 
 ### ownerGetRequest()
 
-> **ownerGetRequest**(`actor`, `targetRequestId`, `request?`): `Promise`\<`OwnerRequestRecord`\>
+> **ownerGetRequest**(`actor`, `requestId`): `Promise`\<[`OwnerRequestRecord`](../interfaces/OwnerRequestRecord.md)\>
 
 #### Parameters
 
 ##### actor
 
-`VaultPrincipal` & `object`
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### targetRequestId
+##### requestId
 
 `string`
 
-##### request?
-
-`Omit`\<`OwnerGetRequestRequest`, `"vaultId"` \| `"actor"` \| `"targetRequestId"`\>
-
 #### Returns
 
-`Promise`\<`OwnerRequestRecord`\>
+`Promise`\<[`OwnerRequestRecord`](../interfaces/OwnerRequestRecord.md)\>
 
 ***
 
-### ownerIssueAllAgentSessionTokens()
+### ownerGrantAgentSecret()
 
-> **ownerIssueAllAgentSessionTokens**(`actor`): `Promise`\<`OwnerSessionToken`[]\>
+> **ownerGrantAgentSecret**(`actor`, `rootAgentId`, `secretAlias`, `request?`): `Promise`\<[`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)\>
 
 #### Parameters
 
 ##### actor
 
-`VaultPrincipal` & `object`
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-#### Returns
-
-`Promise`\<`OwnerSessionToken`[]\>
-
-***
-
-### ownerIssueSessionToken()
-
-> **ownerIssueSessionToken**(`request`): `Promise`\<`OwnerSessionToken`\>
-
-#### Parameters
-
-##### request
-
-`OwnerIssueSessionTokenRequest`
-
-#### Returns
-
-`Promise`\<`OwnerSessionToken`\>
-
-***
-
-### ownerListAgents()
-
-> **ownerListAgents**(`actor`, `request?`): `Promise`\<readonly `AgentIdentityRecord`[]\>
-
-#### Parameters
-
-##### actor
-
-`VaultPrincipal` & `object`
-
-##### request?
-
-`Omit`\<`OwnerListAgentsRequest`, `"vaultId"` \| `"actor"`\>
-
-#### Returns
-
-`Promise`\<readonly `AgentIdentityRecord`[]\>
-
-***
-
-### ownerListCapabilities()
-
-> **ownerListCapabilities**(`actor`, `rootAgentId?`, `request?`): `Promise`\<readonly `AgentGrant`[]\>
-
-#### Parameters
-
-##### actor
-
-`VaultPrincipal` & `object`
-
-##### rootAgentId?
+##### rootAgentId
 
 `string`
 
-##### request?
-
-`Omit`\<`OwnerListCapabilitiesRequest`, `"rootAgentId"` \| `"vaultId"` \| `"actor"`\>
-
-#### Returns
-
-`Promise`\<readonly `AgentGrant`[]\>
-
-***
-
-### ownerListGrantStates()
-
-> **ownerListGrantStates**(`command`): `Promise`\<readonly `GrantStateRecord`[]\>
-
-#### Parameters
-
-##### command
-
-`OwnerListGrantStatesRequest`
-
-#### Returns
-
-`Promise`\<readonly `GrantStateRecord`[]\>
-
-***
-
-### ownerListRequests()
-
-> **ownerListRequests**(`actor`, `rootAgentId?`, `request?`): `Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
-
-#### Parameters
-
-##### actor
-
-`VaultPrincipal` & `object`
-
-##### rootAgentId?
+##### secretAlias
 
 `string`
-
-##### request?
-
-`Omit`\<`OwnerListRequestsRequest`, `"rootAgentId"` \| `"vaultId"` \| `"actor"`\>
-
-#### Returns
-
-`Promise`\<readonly `OwnerVisibleRequestRecord`[]\>
-
-***
-
-### ownerListSecrets()
-
-> **ownerListSecrets**(`actor`, `request?`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
-
-#### Parameters
-
-##### actor
-
-`VaultPrincipal` & `object`
 
 ##### request?
 
@@ -491,7 +320,155 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+`Promise`\<[`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)\>
+
+***
+
+### ownerGrantSecretDestination()
+
+> **ownerGrantSecretDestination**(`actor`, `secretAlias`, `domain`, `request?`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### secretAlias
+
+`string`
+
+##### domain
+
+`string`
+
+##### request?
+
+###### requestId?
+
+`string`
+
+#### Returns
+
+`Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)\>
+
+***
+
+### ownerIssueAllAgentSessionTokens()
+
+> **ownerIssueAllAgentSessionTokens**(`actor`): `Promise`\<`object`[]\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+#### Returns
+
+`Promise`\<`object`[]\>
+
+***
+
+### ownerIssueSessionToken()
+
+> **ownerIssueSessionToken**(`request`): `Promise`\<\{ `issuedAt`: `string`; `rootAgentId`: `string`; `token`: `string`; \}\>
+
+#### Parameters
+
+##### request
+
+###### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
+
+###### rootAgentId
+
+`string`
+
+###### vaultId
+
+[`VaultId`](../interfaces/VaultId.md)
+
+#### Returns
+
+`Promise`\<\{ `issuedAt`: `string`; `rootAgentId`: `string`; `token`: `string`; \}\>
+
+***
+
+### ownerListAgents()
+
+> **ownerListAgents**(`actor`): `Promise`\<readonly [`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md)[]\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+#### Returns
+
+`Promise`\<readonly [`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md)[]\>
+
+***
+
+### ownerListGrants()
+
+> **ownerListGrants**(`actor`, `rootAgentId?`, `secretAlias?`): `Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]; \}\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### rootAgentId?
+
+`string`
+
+##### secretAlias?
+
+`string`
+
+#### Returns
+
+`Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]; \}\>
+
+***
+
+### ownerListRequests()
+
+> **ownerListRequests**(`actor`, `rootAgentId?`): `Promise`\<readonly [`OwnerVisibleRequestRecord`](../interfaces/OwnerVisibleRequestRecord.md)[]\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### rootAgentId?
+
+`string`
+
+#### Returns
+
+`Promise`\<readonly [`OwnerVisibleRequestRecord`](../interfaces/OwnerVisibleRequestRecord.md)[]\>
+
+***
+
+### ownerListSecrets()
+
+> **ownerListSecrets**(`actor`): `Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+#### Returns
+
+`Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
 
 ***
 
@@ -511,27 +488,39 @@ This is the primary implementation of the Vault logic.
 
 ***
 
+### ownerOnPendingDispatch()
+
+> **ownerOnPendingDispatch**(`callback`): () => `void`
+
+#### Parameters
+
+##### callback
+
+(`record`) => `void`
+
+#### Returns
+
+() => `void`
+
+***
+
 ### ownerReadAudit()
 
-> **ownerReadAudit**(`actor`, `query`, `request?`): `Promise`\<readonly `AuditEntry`[]\>
+> **ownerReadAudit**(`actor`, `query`): `Promise`\<readonly [`AuditEntry`](../interfaces/AuditEntry.md)[]\>
 
 #### Parameters
 
 ##### actor
 
-`VaultPrincipal` & `object`
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
 ##### query
 
 `AuditQuery`
 
-##### request?
-
-`Omit`\<`OwnerAuditRequest`, `"vaultId"` \| `"actor"` \| `"query"`\>
-
 #### Returns
 
-`Promise`\<readonly `AuditEntry`[]\>
+`Promise`\<readonly [`AuditEntry`](../interfaces/AuditEntry.md)[]\>
 
 ***
 
@@ -543,23 +532,25 @@ This is the primary implementation of the Vault logic.
 
 ##### command
 
-`OwnerRegisterAgentIdentityCommand`
+###### agentRecord
 
-#### Returns
+[`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md)
 
-`Promise`\<`void`\>
+###### owner
 
-***
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
 
-### ownerRegisterGrant()
+###### requestedAt
 
-> **ownerRegisterGrant**(`command`): `Promise`\<`void`\>
+`string`
 
-#### Parameters
+###### requestId
 
-##### command
+`string`
 
-`OwnerRegisterGrantCommand`
+###### vaultId
+
+[`VaultId`](../interfaces/VaultId.md)
 
 #### Returns
 
@@ -575,7 +566,25 @@ This is the primary implementation of the Vault logic.
 
 ##### command
 
-`OwnerRegisterCustomHttpFlowCommand`
+###### flow
+
+`any`
+
+###### owner
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
+
+###### requestedAt
+
+`string`
+
+###### requestId
+
+`string`
+
+###### vaultId
+
+[`VaultId`](../interfaces/VaultId.md)
 
 #### Returns
 
@@ -591,7 +600,29 @@ This is the primary implementation of the Vault logic.
 
 ##### command
 
-`OwnerDeleteSecretCommand`
+###### alias
+
+`string`
+
+###### kind
+
+`"owner.remove_secret"`
+
+###### owner
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
+
+###### requestedAt
+
+`string`
+
+###### requestId
+
+`string`
+
+###### vaultId
+
+[`VaultId`](../interfaces/VaultId.md)
 
 #### Returns
 
@@ -599,15 +630,59 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerRevokeGrant()
+### ownerRevokeAgentSecret()
 
-> **ownerRevokeGrant**(`command`): `Promise`\<`void`\>
+> **ownerRevokeAgentSecret**(`actor`, `rootAgentId`, `secretAlias`, `request?`): `Promise`\<`void`\>
 
 #### Parameters
 
-##### command
+##### actor
 
-`OwnerRevokeGrantCommand`
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### rootAgentId
+
+`string`
+
+##### secretAlias
+
+`string`
+
+##### request?
+
+###### requestId?
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerRevokeSecretDestination()
+
+> **ownerRevokeSecretDestination**(`actor`, `secretAlias`, `domain`, `request?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### secretAlias
+
+`string`
+
+##### domain
+
+`string`
+
+##### request?
+
+###### requestId?
+
+`string`
 
 #### Returns
 
@@ -625,7 +700,7 @@ This is the primary implementation of the Vault logic.
 
 ###### actor
 
-`VaultPrincipal` & `object`
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
 
 ###### token
 
@@ -633,7 +708,7 @@ This is the primary implementation of the Vault logic.
 
 ###### vaultId
 
-`VaultId`
+[`VaultId`](../interfaces/VaultId.md)
 
 #### Returns
 
@@ -641,41 +716,51 @@ This is the primary implementation of the Vault logic.
 
 ***
 
-### ownerSubmitGrantRequest()
-
-> **ownerSubmitGrantRequest**(`command`): `Promise`\<`GrantStateRecord`\>
-
-#### Parameters
-
-##### command
-
-`SubmitGrantRequestCommand`
-
-#### Returns
-
-`Promise`\<`GrantStateRecord`\>
-
-***
-
 ### ownerUpdateAgentIdentity()
 
-> **ownerUpdateAgentIdentity**(`command`): `Promise`\<`AgentIdentityRecord`\>
+> **ownerUpdateAgentIdentity**(`command`): `Promise`\<[`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md)\>
 
 #### Parameters
 
 ##### command
 
-`OwnerUpdateAgentIdentityCommand`
+###### metadata?
+
+`Record`\<`string`, `any`\>
+
+###### nickname?
+
+`string`
+
+###### owner
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
+
+###### requestedAt
+
+`string`
+
+###### requestId
+
+`string`
+
+###### rootAgentId
+
+`string`
+
+###### vaultId
+
+[`VaultId`](../interfaces/VaultId.md)
 
 #### Returns
 
-`Promise`\<`AgentIdentityRecord`\>
+`Promise`\<[`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md)\>
 
 ***
 
 ### ownerUpdateSecret()
 
-> **ownerUpdateSecret**(`command`): `Promise`\<`SecretRecord`\>
+> **ownerUpdateSecret**(`command`): `Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
 
 #### Parameters
 
@@ -685,20 +770,20 @@ This is the primary implementation of the Vault logic.
 
 #### Returns
 
-`Promise`\<`SecretRecord`\>
+`Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
 
 ***
 
 ### ownerWriteSecret()
 
-> **ownerWriteSecret**(`command`): `Promise`\<`SecretRecord`\>
+> **ownerWriteSecret**(`command`): `Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
 
 #### Parameters
 
 ##### command
 
-`VaultWriteSecretCommand`
+`any`
 
 #### Returns
 
-`Promise`\<`SecretRecord`\>
+`Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -6,15 +6,9 @@
 
 ## Properties
 
-### rootAgentIdentity
+### agentRecord
 
-> **rootAgentIdentity**: `CreatedIdentity` \| [`AgentIdentity`](AgentIdentity.md)
-
-***
-
-### grant
-
-> **grant**: `AgentGrant`
+> **agentRecord**: [`AgentIdentity`](AgentIdentity.md) \| \{ `id`: `string`; \}
 
 ***
 
@@ -38,4 +32,4 @@
 
 ### vault?
 
-> `optional` **vault?**: `VaultService`
+> `optional` **vault?**: [`VaultService`](VaultService.md)

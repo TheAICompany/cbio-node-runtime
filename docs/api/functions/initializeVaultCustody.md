@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -10,11 +10,15 @@
 
 ### storage
 
-[`IStorageProvider`](../interfaces/IStorageProvider.md)
+#### read
+
+#### write
 
 ### options?
 
-[`InitializeVaultCustodyOptions`](../interfaces/InitializeVaultCustodyOptions.md) = `{}`
+#### password?
+
+`string`
 
 ## Returns
 

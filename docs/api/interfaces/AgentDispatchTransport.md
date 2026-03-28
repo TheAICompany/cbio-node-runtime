@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -8,23 +8,23 @@
 
 ### agentDispatch()
 
-> **agentDispatch**(`request`): `Promise`\<`DispatchResult`\>
+> **agentDispatch**(`request`): `Promise`\<[`DispatchResult`](DispatchResult.md)\>
 
 #### Parameters
 
 ##### request
 
-`DispatchRequest`
+[`DispatchRequest`](DispatchRequest.md)
 
 #### Returns
 
-`Promise`\<`DispatchResult`\>
+`Promise`\<[`DispatchResult`](DispatchResult.md)\>
 
 ***
 
 ### agentGetRequest()
 
-> **agentGetRequest**(`request`): `Promise`\<`AgentRequestResult`\>
+> **agentGetRequest**(`request`): `Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
 
 #### Parameters
 
@@ -34,13 +34,13 @@
 
 #### Returns
 
-`Promise`\<`AgentRequestResult`\>
+`Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
 
 ***
 
 ### agentGetRuntimeManifest()
 
-> **agentGetRuntimeManifest**(`request`): `Promise`\<`AgentRuntimeManifest`\>
+> **agentGetRuntimeManifest**(`request`): `Promise`\<[`AgentRuntimeManifest`](AgentRuntimeManifest.md)\>
 
 #### Parameters
 
@@ -50,29 +50,13 @@
 
 #### Returns
 
-`Promise`\<`AgentRuntimeManifest`\>
-
-***
-
-### agentListCapabilities()
-
-> **agentListCapabilities**(`request`): `Promise`\<readonly `AgentGrantState`[]\>
-
-#### Parameters
-
-##### request
-
-`AgentListCapabilitiesRequest`
-
-#### Returns
-
-`Promise`\<readonly `AgentGrantState`[]\>
+`Promise`\<[`AgentRuntimeManifest`](AgentRuntimeManifest.md)\>
 
 ***
 
 ### agentListRequests()
 
-> **agentListRequests**(`request`): `Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+> **agentListRequests**(`request`): `Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -82,13 +66,13 @@
 
 #### Returns
 
-`Promise`\<readonly `AgentVisibleRequestRecord`[]\>
+`Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
 
 ***
 
 ### agentListSecrets()
 
-> **agentListSecrets**(`request`): `Promise`\<readonly `AgentVisibleSecretRecord`[]\>
+> **agentListSecrets**(`request`): `Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
 
 #### Parameters
 
@@ -98,20 +82,4 @@
 
 #### Returns
 
-`Promise`\<readonly `AgentVisibleSecretRecord`[]\>
-
-***
-
-### agentSubmitGrantRequest()
-
-> **agentSubmitGrantRequest**(`request`): `Promise`\<`GrantStateRecord`\>
-
-#### Parameters
-
-##### request
-
-`AgentSubmitGrantRequestCommand`
-
-#### Returns
-
-`Promise`\<`GrantStateRecord`\>
+`Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>

@@ -1,24 +1,20 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
 # Function: recoverVaultWorkingKey()
 
-> **recoverVaultWorkingKey**(`storage`, `vaultRecoveryKey`, `storageKey?`): `Promise`\<`string`\>
+> **recoverVaultWorkingKey**(`storage`, `recoveryKey`): `Promise`\<`string`\>
 
 ## Parameters
 
 ### storage
 
-[`IStorageProvider`](../interfaces/IStorageProvider.md)
+#### read
 
-### vaultRecoveryKey
+### recoveryKey
 
 `string`
-
-### storageKey?
-
-`string` = `DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY`
 
 ## Returns
 

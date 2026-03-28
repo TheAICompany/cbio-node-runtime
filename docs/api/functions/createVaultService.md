@@ -1,22 +1,18 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
 # Function: createVaultService()
 
-> **createVaultService**(`deps`, `options?`): `VaultService`
+> **createVaultService**(`authority`, `options?`): [`VaultService`](../interfaces/VaultService.md)
 
 ## Parameters
 
-### deps
+### authority
 
-`VaultCoreDependencies`
+[`VaultCore`](../classes/VaultCore.md)
 
 ### options?
-
-#### clock?
-
-`Clock`
 
 #### customFlows?
 
@@ -28,4 +24,4 @@
 
 ## Returns
 
-`VaultService`
+[`VaultService`](../interfaces/VaultService.md)

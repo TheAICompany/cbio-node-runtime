@@ -1,16 +1,10 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
 # Interface: VaultReadAgentPrivateKeyInput
 
 ## Properties
-
-### rootAgentId
-
-> **rootAgentId**: `string`
-
-***
 
 ### password
 
@@ -21,6 +15,12 @@
 ### requestedAt?
 
 > `optional` **requestedAt?**: `string`
+
+***
+
+### rootAgentId
+
+> **rootAgentId**: `string`
 
 ***
 

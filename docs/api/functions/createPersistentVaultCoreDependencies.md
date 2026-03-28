@@ -1,16 +1,16 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
 # Function: createPersistentVaultCoreDependencies()
 
-> **createPersistentVaultCoreDependencies**(`storage`, `options`): `VaultCoreDependencies`
+> **createPersistentVaultCoreDependencies**(`storage`, `options`): `any`
 
 ## Parameters
 
 ### storage
 
-[`IStorageProvider`](../interfaces/IStorageProvider.md)
+#### getBaseDir
 
 ### options
 
@@ -18,4 +18,4 @@
 
 ## Returns
 
-`VaultCoreDependencies`
+`any`

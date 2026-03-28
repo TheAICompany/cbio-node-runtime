@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -6,9 +6,9 @@
 
 ## Properties
 
-### permanent?
+### decision
 
-> `optional` **permanent?**: `boolean`
+> **decision**: [`DispatchApprovalDecision`](../type-aliases/DispatchApprovalDecision.md)
 
 ***
 
@@ -21,9 +21,3 @@
 ### requestId
 
 > **requestId**: `string`
-
-***
-
-### skipAudit?
-
-> `optional` **skipAudit?**: `boolean`

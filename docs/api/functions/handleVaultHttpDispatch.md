@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.3**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.5**](../README.md)
 
 ***
 
@@ -13,7 +13,7 @@ This can be used in any HTTP server framework (Express, Fastify, etc.).
 
 ### service
 
-`VaultService`
+[`VaultService`](../interfaces/VaultService.md)
 
 The VaultService instance to handle the request.
 
