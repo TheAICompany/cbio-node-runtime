@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.66.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.65.0...v1.66.0) (2026-03-28)
+
+
+### Features
+
+* implement FileSessionTokenRegistry for persistent session token management and update smoke tests ([46727e5](https://github.com/TheAICompany/cbio-node-runtime/commit/46727e5a7173dc209715c791dc2e5ddbbdeeecea))
+* implement persistent runtime security with signature verification, replay protection, and HTTP dispatching ([2206ac3](https://github.com/TheAICompany/cbio-node-runtime/commit/2206ac36e02ae106d32e9fe1ea1b401bc182ac51))
+
 ## [1.65.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.64.0...v1.65.0) (2026-03-28)
 
 
