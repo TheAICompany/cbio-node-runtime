@@ -158,4 +158,19 @@ await assert.rejects(
   },
 );
 
+
+// Case 5: 重复创建秘密（严格 Create 语义：重复别名必须失败）
+await assert.rejects(
+  () => client.ownerCreateSecret({
+    alias: "guarded-token", // 与 line 39 已创建的同名
+    plaintext: "should-be-rejected",
+  }),
+  (error) => {
+    assert.equal(error instanceof VaultCoreError, true);
+    assert.equal(error.code, "VAULT_ALIAS_ALREADY_EXISTS");
+    return true;
+  },
+);
+
 console.log("security guards smoke test passed");
+

@@ -163,7 +163,9 @@ export interface CreateOwnerClientOptions {
  */
 export interface OwnerClient {
   ownerCreateSecret(input: OwnerCreateSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  ownerCreateSecret(input: OwnerCreateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord[]>;
   ownerUpdateSecret(input: OwnerUpdateSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  ownerUpdateSecret(input: OwnerUpdateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord[]>;
   ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
   ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string>;
   ownerReadAgentPrivateKey(input: VaultReadAgentPrivateKeyInput): Promise<string>;

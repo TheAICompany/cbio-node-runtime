@@ -97,11 +97,17 @@ const sessionToken = createdAgent.sessionToken;
 v1.65+ 采用了简化的 **Grant（授权）** 模型，通过白名单控制访问：
 
 ```ts
-// 1. 创建机密
+// 1. 创建机密（严格语义：别名重复则报错）
 const record = await client.ownerCreateSecret({
   alias: 'api-token',
   plaintext: 'secret-value'
 });
+
+// 1b. 批量创建（原子性：全部成功或全部失败）
+await client.ownerCreateSecret([
+  { alias: 'stripe-key', plaintext: 'sk_test_...' },
+  { alias: 'openai-key', plaintext: 'sk-proj-...' }
+]);
 
 // 2. 授权 Agent 使用该机密
 await client.ownerGrantAgentSecret({
@@ -112,7 +118,7 @@ await client.ownerGrantAgentSecret({
 // 3. 授权该机密可发送至的目标域名
 await client.ownerGrantSecretDestination({
   secretAlias: 'api-token',
-  domain: 'api.example.com',
+  siteId: 'api.example.com',
 });
 ```
 

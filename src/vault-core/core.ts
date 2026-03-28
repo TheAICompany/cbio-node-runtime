@@ -579,6 +579,10 @@ export class VaultCore {
   async ownerCreateSecret(command: OwnerCreateSecretCommand): Promise<SecretRecord> {
     this._assertOwnerPrincipal(command.owner);
     await this._deps.policy.authorizeWrite(command);
+    const existing = await this._deps.secrets.getByAlias({ value: command.alias });
+    if (existing) {
+      throw new VaultCoreError(`secret alias already exists: "${command.alias}"`, "VAULT_ALIAS_ALREADY_EXISTS");
+    }
     const secret_id = this._deps.ids.newSecretId();
     const now = this._deps.clock.nowIso();
     const record: SecretRecord = {
@@ -623,35 +627,6 @@ export class VaultCore {
     await this._deps.secrets.delete(record.secret_id);
     await this._deps.custody.delete(record.secret_id);
     await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.SECRET_DELETE, "allowed", "succeeded", `secret deleted: "${command.alias}"`, { secret_alias: command.alias, secret_id: record.secret_id.value }));
-  }
-
-  async ownerWriteSecret(command: any): Promise<SecretRecord> {
-    this._assertOwnerPrincipal(command.owner ?? command.issuer);
-    await this._deps.policy.authorizeWrite(command);
-    const existing = await this._deps.secrets.getByAlias({ value: command.alias });
-    const secret_id = existing ? existing.secret_id : this._deps.ids.newSecretId();
-    const now = this._deps.clock.nowIso();
-    const record: SecretRecord = {
-      vault_id: command.vault_id,
-      secret_id,
-      alias: { value: command.alias },
-      version: this._deps.ids.newVersion(),
-      lifecycle_status: "ACTIVE",
-      issuer_id: command.issuer?.id ?? null,
-      source: command.source,
-      created_at: existing ? existing.created_at : now,
-      updated_at: now,
-    };
-    await this._deps.secrets.save(record);
-    await this._deps.custody.store(secret_id, command.plaintext);
-    // Generic write doesn't have a specific audit message here, assuming it's called by Create/Update which do their own audit.
-    // However, if called directly:
-    if (!existing) {
-       await this._appendAudit(toAuditEntry(this._deps, command.owner ?? command.issuer, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret created via generic write: "${command.alias}"`, { secret_alias: command.alias, secret_id: secret_id.value }));
-    } else {
-       await this._appendAudit(toAuditEntry(this._deps, command.owner ?? command.issuer, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret updated via generic write: "${command.alias}"`, { secret_alias: command.alias, secret_id: secret_id.value }));
-    }
-    return record;
   }
 
   async ownerReadAudit(actor: VaultPrincipal & { kind: "owner" }, query: AuditQuery): Promise<readonly AuditEntry[]> {

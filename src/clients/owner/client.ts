@@ -93,42 +93,75 @@ class DefaultOwnerClient implements OwnerClient {
     }
   }
 
-  async ownerCreateSecret(input: OwnerCreateSecretInput) {
-    const requested_at = input.requested_at ?? this._clock.nowIso();
-    const request_id = createRequestIdValue("create_secret");
-    
-    return this._vault.ownerCreateSecret({
-      kind: "owner.create_secret",
-      vault_id: this._vault.vault_id,
-      request_id,
-      owner: {
-        kind: "owner",
-        id: this._root_agent_id,
-      },
-      alias: input.alias,
-      plaintext: input.plaintext,
-      source: { kind: "manual" },
-      requested_at,
-    });
+  async ownerCreateSecret(input: OwnerCreateSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  async ownerCreateSecret(input: OwnerCreateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord[]>;
+  async ownerCreateSecret(input: OwnerCreateSecretInput | OwnerCreateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord | import("../../vault-core/index.js").SecretRecord[]> {
+    const isBatch = Array.isArray(input);
+    const items = isBatch ? input : [input];
+    const requested_at = this._clock.nowIso();
+
+    // Phase 1: 并行校验（所有别名不得已存在）
+    // 通过 ownerListSecrets 获取当前所有别名，批量对比，避免逐个网络往返
+    const existing = await this._vault.ownerListSecrets({ vault_id: this._vault.vault_id, owner: { kind: "owner", id: this._root_agent_id } });
+    const existingAliases = new Set(existing.map(s => s.alias.value));
+    const duplicates = items.filter(item => existingAliases.has(item.alias));
+    if (duplicates.length > 0) {
+      const names = duplicates.map(d => `"${d.alias}"`).join(", ");
+      const err = new Error(`secret alias already exists: ${names}`) as any;
+      err.code = "VAULT_ALIAS_ALREADY_EXISTS";
+      throw err;
+    }
+
+    // Phase 2: 并行写入（校验全过才到这里）
+    const results = await Promise.all(items.map(item => {
+      return this._vault.ownerCreateSecret({
+        kind: "owner.create_secret",
+        vault_id: this._vault.vault_id,
+        request_id: createRequestIdValue("create_secret"),
+        owner: { kind: "owner", id: this._root_agent_id },
+        alias: item.alias,
+        plaintext: item.plaintext,
+        source: { kind: "manual" },
+        requested_at: item.requested_at ?? requested_at,
+      });
+    }));
+
+    return isBatch ? results : results[0];
   }
 
-  async ownerUpdateSecret(input: OwnerUpdateSecretInput) {
-    const requested_at = input.requested_at ?? this._clock.nowIso();
-    const request_id = createRequestIdValue("update_secret");
-    
-    return this._vault.ownerUpdateSecret({
-      kind: "owner.update_secret",
-      vault_id: this._vault.vault_id,
-      request_id,
-      owner: {
-        kind: "owner",
-        id: this._root_agent_id,
-      },
-      alias: input.alias,
-      plaintext: input.plaintext,
-      source: { kind: "manual" },
-      requested_at,
-    });
+  async ownerUpdateSecret(input: OwnerUpdateSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
+  async ownerUpdateSecret(input: OwnerUpdateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord[]>;
+  async ownerUpdateSecret(input: OwnerUpdateSecretInput | OwnerUpdateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord | import("../../vault-core/index.js").SecretRecord[]> {
+    const isBatch = Array.isArray(input);
+    const items = isBatch ? input : [input];
+    const requested_at = this._clock.nowIso();
+
+    // Phase 1: 并行校验（所有别名必须已存在）
+    const existing = await this._vault.ownerListSecrets({ vault_id: this._vault.vault_id, owner: { kind: "owner", id: this._root_agent_id } });
+    const existingAliases = new Set(existing.map(s => s.alias.value));
+    const missing = items.filter(item => !existingAliases.has(item.alias));
+    if (missing.length > 0) {
+      const names = missing.map(d => `"${d.alias}"`).join(", ");
+      const err = new Error(`secret not found: ${names}`) as any;
+      err.code = "VAULT_SECRET_NOT_FOUND";
+      throw err;
+    }
+
+    // Phase 2: 并行写入
+    const results = await Promise.all(items.map(item => {
+      return this._vault.ownerUpdateSecret({
+        kind: "owner.update_secret",
+        vault_id: this._vault.vault_id,
+        request_id: createRequestIdValue("update_secret"),
+        owner: { kind: "owner", id: this._root_agent_id },
+        alias: item.alias,
+        plaintext: item.plaintext,
+        source: { kind: "manual" },
+        requested_at: item.requested_at ?? requested_at,
+      });
+    }));
+
+    return isBatch ? results : results[0];
   }
 
   async ownerReadAudit(query: VaultAuditQueryInput = {}) {

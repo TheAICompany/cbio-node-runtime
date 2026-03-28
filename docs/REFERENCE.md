@@ -1,4 +1,4 @@
-# CBIO Vault Runtime Reference (v1.65.1)
+# CBIO Vault Runtime Reference (v1.65.2)
 
 This document describes the current implemented runtime surface for the **Vault**. 
 
@@ -14,6 +14,31 @@ The v1.65.1 runtime centers on a streamlined **Grant-based** authorization model
 - `createAgentClient(...)` - Create an agent client (Consumer).
 
 ## Identity and Access Control
+
+## Identity and Access Control
+
+### 0. Secret Management
+
+Alias namespaces are **globally unique** within a Vault. Secrets are managed with strict, predictable semantics:
+
+| Method | Must already exist? | If duplicate alias? | Batch support? |
+|---|---|---|---|
+| `ownerCreateSecret` | No (must be new) | ❌ throws `VAULT_ALIAS_ALREADY_EXISTS` | ✅ Atomic |
+| `ownerUpdateSecret` | Yes (must exist) | N/A | ✅ Atomic |
+| `ownerRemoveSecret` | Yes (must exist) | N/A | No |
+
+**Batch atomicity**: When an array is passed, all preconditions are verified first. If any check fails, nothing is written.
+
+```ts
+// Single
+await client.ownerCreateSecret({ alias: 'key', plaintext: '...' });
+
+// Batch — atomic: all-or-nothing
+await client.ownerCreateSecret([
+  { alias: 'key-a', plaintext: '...' },
+  { alias: 'key-b', plaintext: '...' },
+]);
+```
 
 ### 1. Agent Identities
 - `ownerCreateAgent(...)`: Provision a new agent identity and return a session token.

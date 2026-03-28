@@ -1,4 +1,4 @@
-# cbio Vault Runtime (v1.65.1)
+# cbio Vault Runtime (v1.63.8)
 
 Node.js vault runtime with a **Vault** architecture: authority is rooted in a master password, and agent identities are fully managed within the vault's encrypted storage.
 
@@ -58,12 +58,18 @@ const client = createOwnerClient({
 // 1. Create an agent
 const { agent, sessionToken } = await client.ownerCreateAgent({ nickname: 'Bot' });
 
-// 2. Create a secret
+// 2. Create a secret (Strict Create: fails if alias exists)
 const secret = await client.ownerCreateSecret({ alias: 'api-key', plaintext: 'sk-...' });
+
+// 2b. Batch Create (Atomic: all-or-nothing)
+await client.ownerCreateSecret([
+  { alias: 'stripe-key', plaintext: 'sk_test_...' },
+  { alias: 'openai-key', plaintext: 'sk-proj-...' }
+]);
 
 // 3. Grant access (Whitelist)
 await client.ownerGrantAgentSecret({ rootAgentId: agent.rootAgentId, secretAlias: 'api-key' });
-await client.ownerGrantSecretDestination({ secretAlias: 'api-key', domain: 'api.openai.com' });
+await client.ownerGrantSecretDestination({ secretAlias: 'api-key', siteId: 'api.openai.com' });
 ```
 
 ### 3. Dispatch Secrets (Agent)
