@@ -6,8 +6,6 @@ import type {
   OwnerPendingApprovalView,
   OwnerRequestDetailView,
   OwnerRequestSummaryView,
-  VaultClient,
-  CreateVaultClientOptions,
 } from "../../dist/runtime/index.js";
 
 type Assert<T extends true> = T;
@@ -15,8 +13,8 @@ type IsEqual<A, B> =
   (<T>() => T extends A ? 1 : 2) extends
   (<T>() => T extends B ? 1 : 2) ? true : false;
 
-type _ownerClientAliasIsStable = Assert<IsEqual<OwnerClient, VaultClient>>;
-type _ownerOptionsAliasIsStable = Assert<IsEqual<CreateOwnerClientOptions, CreateVaultClientOptions>>;
+type _ownerClientAliasIsStable = Assert<IsEqual<OwnerClient, OwnerClient>>;
+type _ownerOptionsAliasIsStable = Assert<IsEqual<CreateOwnerClientOptions, CreateOwnerClientOptions>>;
 
 declare const owner: OwnerClient;
 declare const agent: AgentClient;

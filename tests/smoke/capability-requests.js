@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  createVaultClient,
+  createOwnerClient,
 } from "../../dist/runtime/index.js";
 import {
   createVaultCore,
@@ -14,7 +14,7 @@ const deps = createVaultCoreDependencies({
 });
 const authority = createVaultCore(deps);
 const vault = wrapVaultCoreAsVaultService(authority);
-const ownerClient = createVaultClient({
+const ownerClient = createOwnerClient({
   vault,
   skipWarmup: true,
 });

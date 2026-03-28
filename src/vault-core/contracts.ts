@@ -261,7 +261,7 @@ export interface AgentGetRuntimeManifestCommand {
 
 export interface AgentSelfContext {
   agentId: string;
-  identityId: string;
+  rootAgentId: string;
   publicKey: string;
   nickname?: string;
   metadata?: Record<string, any>;
@@ -548,7 +548,7 @@ export interface AuditEntry {
 export interface AgentIdentityRecord {
   vaultId: VaultId;
   agentId: string;
-  identityId: string;
+  rootAgentId: string;
   publicKey: string;
   privateKey?: string;
   metadata?: Record<string, any>;

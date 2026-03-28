@@ -5,7 +5,7 @@
 
 export { IdentityError, IdentityErrorCode, OwnerClientError, OwnerClientErrorCode } from "../errors.js";
 export { derivePublicKey, LocalSigner, type Signer, deriveVaultWorkingKeyFromPassword } from "../protocol/crypto.js";
-export { deriveIdentityId } from "../protocol/identity.js";
+export { deriveRootAgentId } from "../protocol/identity.js";
 export type { IStorageProvider } from "../storage/provider.js";
 export { FsStorageProvider } from "../storage/fs.js";
 export { MemoryStorageProvider } from "../storage/memory.js";

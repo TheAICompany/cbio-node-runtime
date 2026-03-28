@@ -2,9 +2,9 @@
 
 ***
 
-# Function: deriveIdentityId()
+# Function: deriveRootAgentId()
 
-> **deriveIdentityId**(`publicKey`): `string`
+> **deriveRootAgentId**(`publicKey`): `string`
 
 ## Parameters
 

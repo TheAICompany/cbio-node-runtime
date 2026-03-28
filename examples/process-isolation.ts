@@ -59,14 +59,13 @@ async function startVaultServer(port: number) {
 }
 
 // --- Process A: The LLM Agent Logic ---
-async function runAgentDemo(port: number, agentIdentity: any, capability: any, token: string) {
+async function runAgentDemo(port: number, agentIdentity: any, token: string) {
   // Process A ONLY knows the remote URL and its own Agent Identity.
   // It has NO access to the Vault's master key or storage.
   const transport = new AgentDispatchHttpTransport(`http://localhost:${port}/dispatch`);
   
   const agentClient = createAgentClient({
     agentIdentity,
-    capability,
     transport,
     token,
   });
@@ -78,6 +77,7 @@ async function runAgentDemo(port: number, agentIdentity: any, capability: any, t
       secretAlias: "api-token",
       targetUrl: "https://httpbin.org/post",
       method: "POST",
+      reason: "LLM agent needs to perform isolated dispatch",
       body: JSON.stringify({ message: "Hello from isolated Process A" }),
     });
 
@@ -103,59 +103,50 @@ async function main() {
   await vault.ownerRegisterAgentIdentity({
     vaultId: vault.vaultId,
     requestId: `setup:${Date.now()}:register_agent`,
-    owner: { kind: "owner", id: ownerIdentity.identityId },
+    owner: { kind: "owner", id: ownerIdentity.rootAgentId },
     agentIdentity: {
       vaultId: vault.vaultId,
-      agentId: agentIdentity.identityId,
+      agentId: agentIdentity.rootAgentId,
       publicKey: agentIdentity.publicKey,
     },
     requestedAt: new Date().toISOString(),
   });
 
   // Owner writes a secret (simulated local call for setup)
-  const secret = await vault.ownerWriteSecret({
-    kind: "owner.write_secret",
+  const secret = await vault.ownerCreateSecret({
+    kind: "owner.create_secret",
     vaultId: vault.vaultId,
     requestId: `setup:${Date.now()}:write_secret`,
-    owner: { kind: "owner", id: ownerIdentity.identityId },
+    owner: { kind: "owner", id: ownerIdentity.rootAgentId },
     alias: "api-token",
     plaintext: "SK-PROD-12345",
     source: { kind: "manual" },
     requestedAt: new Date().toISOString(),
   });
 
-  const capability = {
-    vaultId: vault.vaultId,
-    capabilityId: "cap-llm-1",
-    agentId: agentIdentity.identityId,
-    operation: "dispatch_http" as const,
-    write: {
-      secretIds: [secret.secretId.value],
-      scope: "https://httpbin.org/post",
-      methods: ["POST"],
-    },
-    read: { mode: "full" },
-    issuedAt: new Date().toISOString(),
-  };
+  // Owner grants permissions (New Grant-based API)
+  await vault.ownerGrantAgentSecret(
+    { kind: "owner", id: ownerIdentity.rootAgentId },
+    agentIdentity.rootAgentId,
+    "api-token"
+  );
 
-  await vault.ownerRegisterCapability({
-    vaultId: vault.vaultId,
-    requestId: `setup:${Date.now()}:register_capability`,
-    owner: { kind: "owner", id: ownerIdentity.identityId },
-    capability,
-    requestedAt: new Date().toISOString(),
-  });
+  await vault.ownerGrantSecretDestination(
+    { kind: "owner", id: ownerIdentity.rootAgentId },
+    "api-token",
+    "httpbin.org"
+  );
 
   const session = await vault.ownerIssueSessionToken({
     vaultId: vault.vaultId,
     requestId: `setup:${Date.now()}:issue_session_token`,
-    actor: { kind: "owner", id: ownerIdentity.identityId },
-    agentId: agentIdentity.identityId,
+    actor: { kind: "owner", id: ownerIdentity.rootAgentId },
+    agentId: agentIdentity.rootAgentId,
     requestedAt: new Date().toISOString(),
   });
 
   // 3. Run the "LLM Agent" (Process A)
-  await runAgentDemo(PORT, agentIdentity, capability, session.token);
+  await runAgentDemo(PORT, agentIdentity, session.token);
 
   // 4. Cleanup
   server.close();

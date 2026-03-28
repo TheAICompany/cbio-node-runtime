@@ -22,11 +22,11 @@ This version suffix is for storage-layout evolution. Future storage rewrites sho
 
 ### Owner client initialization
 
-- `createVaultClient(...)` now has a stable public type for:
+- `createOwnerClient(...)` now has a stable public type for:
   - `passwordVerifier`
   - `sensitiveActionVerifier`
 - If your UI reads secret plaintext or agent private keys, configure one of these verifiers.
-- For long-running GUI processes, prefer `createOwnerSession(...)` and obtain owner clients from the session rather than caching a raw `VaultClient`.
+- For long-running GUI processes, prefer `createOwnerSession(...)` and obtain owner clients from the session rather than caching a raw `OwnerClient`.
 
 ### Sensitive actions
 
@@ -49,7 +49,7 @@ GUI clients should branch on `error.code` instead of parsing raw message text.
 
 - `ownerListAgents()` returns the stable public agent record:
   - `agentId`
-  - `identityId`
+  - `rootAgentId`
   - `publicKey`
   - `nickname`
   - `metadata`
@@ -94,6 +94,6 @@ This updates the stored owner-side agent profile and persists it. The operation 
   - `flowId`
 - Treat `agentId`, `capabilityId`, and `flowId` as SDK-managed internal identifiers
 - Use returned records instead of constructing IDs in the UI
-- Keep an SDK-managed owner session handle instead of caching a raw `createVaultClient(...)` result across reloads or runtime swaps
-- If you are not using `OwnerSession`, recreate `createVaultClient(...)` after runtime/module changes rather than reusing an old instance
+- Keep an SDK-managed owner session handle instead of caching a raw `createOwnerClient(...)` result across reloads or runtime swaps
+- If you are not using `OwnerSession`, recreate `createOwnerClient(...)` after runtime/module changes rather than reusing an old instance
 - Route plaintext/private-key reads through a single sensitive-action confirmation dialog

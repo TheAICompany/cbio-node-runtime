@@ -23,7 +23,7 @@ import {
   listVaults,
   recoverVault,
   createOwnerSession,
-  createVaultClient,
+  createOwnerClient,
   createAgentClient,
   FsStorageProvider,
 } from '@the-ai-company/cbio-node-runtime';
@@ -40,8 +40,8 @@ Ruta principal recomendada para vault persistente:
 
 - crear el vault persistente con `createVault(...)`
 - recuperar el vault persistente con `recoverVault(...)` usando `vaultId` + `password`
-- para GUIs o procesos de larga duración, conservar `createOwnerSession(...)` en lugar de cachear un `createVaultClient(...)` crudo
-- usar `createVaultClient(...)` solo para scripts breves o tareas puntuales en el runtime actual
+- para GUIs o procesos de larga duración, conservar `createOwnerSession(...)` en lugar de cachear un `createOwnerClient(...)` crudo
+- usar `createOwnerClient(...)` solo para scripts breves o tareas puntuales en el runtime actual
 
 La API antigua centrada en `CbioIdentity` ya no es la superficie principal del producto.
 

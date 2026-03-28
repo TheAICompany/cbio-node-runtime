@@ -4,7 +4,7 @@
 
 # Type Alias: OwnerClient
 
-> **OwnerClient** = [`VaultClient`](../interfaces/VaultClient.md)
+> **OwnerClient** = [`OwnerClient`](../interfaces/OwnerClient.md)
 
 Public application-facing aliases.
 

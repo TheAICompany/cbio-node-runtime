@@ -2,7 +2,7 @@ import {
   createIdentity,
   createVault,
   recoverVault,
-  createVaultClient,
+  createOwnerClient,
 } from "../src/runtime/index.js";
 import { LocalSigner } from "../src/protocol/crypto.js";
 import { promises as fs } from "fs";
@@ -25,7 +25,7 @@ async function main() {
   const vaultId = initialized.core.vaultId;
   console.log("Vault created:", vaultId.value);
 
-  const client1 = createVaultClient({
+  const client1 = createOwnerClient({
     ownerIdentity: ownerIdentity as any,
     vault: initialized.vault,
   });
@@ -44,7 +44,7 @@ async function main() {
 
   console.log("Vault recovered successfully.");
 
-  const client = createVaultClient({
+  const client = createOwnerClient({
     ownerIdentity: ownerIdentity as any,
     vault: recovered.vault,
   });

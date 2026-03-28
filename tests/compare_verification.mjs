@@ -3,14 +3,14 @@ import { verifySignature } from "@the-ai-company/cbio-protocol";
 
 const envelope = {
   "payload": {
-    "identityId": "agt_CCG5HSMm98v3S5IsoeVDpJxCOQzmwb70VBMc26RVYC0",
+    "rootAgentId": "agt_CCG5HSMm98v3S5IsoeVDpJxCOQzmwb70VBMc26RVYC0",
     "publicKey": "MCowBQYDK2VwAyEAUXwDuGl7MtZYvYqE9_osbPpWxY8NjajtKmuAORcdIZc"
   },
   "signature": "Wit8K8F0LHL964K-jGcqAau45u0nGhM0GK1FZphUYIrpJIO1g7A5l4ISnoCpj7xUXxLO67I6f00bqGwa0ZSMCA",
   "signer": "MCowBQYDK2VwAyEAUXwDuGl7MtZYvYqE9_osbPpWxY8NjajtKmuAORcdIZc"
 };
 
-const payloadStr = '{"identityId":"agt_CCG5HSMm98v3S5IsoeVDpJxCOQzmwb70VBMc26RVYC0","publicKey":"MCowBQYDK2VwAyEAUXwDuGl7MtZYvYqE9_osbPpWxY8NjajtKmuAORcdIZc"}';
+const payloadStr = '{"rootAgentId":"agt_CCG5HSMm98v3S5IsoeVDpJxCOQzmwb70VBMc26RVYC0","publicKey":"MCowBQYDK2VwAyEAUXwDuGl7MtZYvYqE9_osbPpWxY8NjajtKmuAORcdIZc"}';
 
 async function compare() {
   console.log("Input Payload String:", payloadStr);

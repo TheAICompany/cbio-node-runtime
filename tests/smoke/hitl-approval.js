@@ -1,4 +1,4 @@
-import { createVault, createVaultClient, createAgentClient, MemoryStorageProvider } from "../../src/runtime/index.js";
+import { createVault, createOwnerClient, createAgentClient, MemoryStorageProvider } from "../../src/runtime/index.js";
 import assert from "node:assert";
 
 /**
@@ -15,9 +15,9 @@ async function runHitlTest() {
   });
 
   // 2. Setup Clients
-  const ownerClient = createVaultClient({
+  const ownerClient = createOwnerClient({
     vault,
-    ownerIdentity: { identityId: "owner-1" },
+    ownerIdentity: { rootAgentId: "owner-1" },
   });
 
   const { agent, sessionToken } = await ownerClient.ownerCreateAgent({

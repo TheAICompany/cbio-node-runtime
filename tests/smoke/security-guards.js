@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  createVaultClient,
+  createOwnerClient,
   createIdentity,
 } from "../../dist/runtime/index.js";
 import {
@@ -20,7 +20,7 @@ const authority = createVaultCore(createVaultCoreDependencies({
 }));
 const vault = wrapVaultCoreAsVaultService(authority);
 
-const client = createVaultClient({
+const client = createOwnerClient({
   vault,
 });
 const importedAgent = await client.ownerImportAgent({

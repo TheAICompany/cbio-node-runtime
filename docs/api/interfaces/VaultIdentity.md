@@ -2,10 +2,10 @@
 
 ***
 
-# Interface: VaultIdentity
+# Interface: OwnerIdentity
 
 ## Properties
 
-### identityId
+### rootAgentId
 
-> **identityId**: `string`
+> **rootAgentId**: `string`

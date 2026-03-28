@@ -1,7 +1,7 @@
 import {
   MemoryStorageProvider,
   createVault,
-  createVaultClient,
+  createOwnerClient,
   OwnerClientErrorCode,
 } from "../../dist/runtime/index.js";
 
@@ -11,7 +11,7 @@ async function main() {
     password: "hunter2",
     nickname: "Owner Sensitive Errors",
   });
-  const client = createVaultClient({
+  const client = createOwnerClient({
     vault: vault.vault,
     passwordVerifier: async (password) => password === "hunter2",
     skipWarmup: true,

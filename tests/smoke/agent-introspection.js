@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  createVaultClient,
+  createOwnerClient,
   createAgentClient,
   createIdentity,
   handleVaultAgentControlHttp,
@@ -17,7 +17,7 @@ const deps = createVaultCoreDependencies({
 });
 const authority = createVaultCore(deps);
 const vault = wrapVaultCoreAsVaultService(authority);
-const ownerClient = createVaultClient({ vault, skipWarmup: true });
+const ownerClient = createOwnerClient({ vault, skipWarmup: true });
 
 const agentIdentity = createIdentity({ nickname: "introspector" });
 const importedAgent = await ownerClient.ownerImportAgent({
@@ -62,7 +62,7 @@ assert.equal(visibleSecrets.find((record) => record.alias.value === "crm-token")
 assert.equal(visibleSecrets.find((record) => record.alias.value === "payroll-token")?.isAuthorizedForAgent, false);
 
 const requestedAt = new Date().toISOString();
-const requestId = `${agentIdentity.identityId}:${requestedAt}:submit_capability_request`;
+const requestId = `${agentIdentity.rootAgentId}:${requestedAt}:submit_capability_request`;
 
 const httpResult = await handleVaultAgentControlHttp(vault, {
   action: "submit_capability_request",
@@ -88,7 +88,7 @@ assert.equal(pending[0].write.scope, "https://api.example.com/admin/*");
 
 const manifest = await agentClient.agentIntrospect();
 assert.equal(manifest.agent.agentId, vaultAgentId);
-assert.equal(manifest.agent.identityId, importedAgent.agent.identityId);
+assert.equal(manifest.agent.rootAgentId, importedAgent.agent.rootAgentId);
 assert.equal(manifest.agent.publicKey, importedAgent.agent.publicKey);
 assert.equal(manifest.capabilities.some((entry) => entry.writeGrant === "always" && entry.write.scope === "https://api.example.com/users/*"), true);
 assert.equal(

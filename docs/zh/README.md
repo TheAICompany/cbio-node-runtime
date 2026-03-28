@@ -49,9 +49,9 @@ const vault = await recoverVault(storage, {
 
 ### 3. GUI 的 Owner Session
 
-对于 GUI 这类长生命周期进程，应该持有 `OwnerSession`，而不是长期缓存裸 `VaultClient`。
+对于 GUI 这类长生命周期进程，应该持有 `OwnerSession`，而不是长期缓存裸 `OwnerClient`。
 
-`createVaultClient(...)` 只负责基于当前 runtime 创建 owner client；它不应该跨 HMR、模块重载或 runtime 替换被长期复用。`OwnerSession` 会提供稳定的 SDK 句柄，并按需重新创建 owner client。
+`createOwnerClient(...)` 只负责基于当前 runtime 创建 owner client；它不应该跨 HMR、模块重载或 runtime 替换被长期复用。`OwnerSession` 会提供稳定的 SDK 句柄，并按需重新创建 owner client。
 
 ```ts
 import { createOwnerSession } from '@the-ai-company/cbio-node-runtime';
@@ -72,14 +72,14 @@ const agents = await ownerClient.ownerListAgents();
 session.invalidate();
 ```
 
-如果你写的是一次性脚本，`recoverVault(...)` 配合 `createVaultClient(...)` 仍然是合适的。
+如果你写的是一次性脚本，`recoverVault(...)` 配合 `createOwnerClient(...)` 仍然是合适的。
 
 ### 4. 托管 Agent 身份
 
 ```ts
-import { createVaultClient } from '@the-ai-company/cbio-node-runtime';
+import { createOwnerClient } from '@the-ai-company/cbio-node-runtime';
 
-const client = createVaultClient({
+const client = createOwnerClient({
   vault: vault.vault,
   passwordVerifier: vault.verifyPassword,
 });
@@ -95,19 +95,19 @@ const sessionToken = createdAgent.sessionToken;
 ### 5. 机密管理
 
 ```ts
-const record = await client.ownerWriteSecret({
+const record = await client.ownerCreateSecret({
   alias: 'api-token',
   plaintext: 'secret-value'
 });
 
-await client.ownerGrantCapability({
+await client.ownerGrantAgentSecret({
   agentId,
-  write: {
-    secretIds: [record.secretId.value],
-    scope: 'https://api.example.com/*',
-    methods: ['POST']
-  },
-  read: { paths: ['$'] }
+  secretAlias: 'api-token',
+});
+
+await client.ownerGrantSecretDestination({
+  secretAlias: 'api-token',
+  domain: 'api.example.com',
 });
 ```
 
@@ -118,7 +118,6 @@ import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
 
 const agent = createAgentClient({
   agentIdentity: { agentId },
-  capability: myCapability,
   token: sessionToken.token,
   vault: vault.vault
 });
@@ -144,7 +143,7 @@ Agent 进程不会直接使用原始私钥执行请求。即使 Agent 拥有身�
 const manifest = await agent.agentIntrospect();
 
 console.log(manifest.agent.agentId);
-console.log(manifest.agent.identityId);
+console.log(manifest.agent.rootAgentId);
 console.log(manifest.agent.nickname);
 console.log(manifest.capabilities); // 同一组能力载体里包含 write/read 动作状态
 ```

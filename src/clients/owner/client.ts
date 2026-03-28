@@ -41,11 +41,11 @@ import type {
 const VAULT_MASTER_ID = "vault-master";
 
 class DefaultOwnerClient implements OwnerClient {
-  private readonly _identityId: string;
+  private readonly _rootAgentId: string;
 
   constructor(
     private readonly _vault: VaultService,
-    private readonly _identityIdInput?: string,
+    private readonly _rootAgentIdInput?: string,
     private readonly _signer?: any,
     private readonly _clock: Clock = new SystemClock(),
     private readonly _skipWarmup: boolean = false,
@@ -55,7 +55,7 @@ class DefaultOwnerClient implements OwnerClient {
       context: OwnerSensitiveActionContext,
     ) => Promise<boolean> | boolean,
   ) {
-    this._identityId = _identityIdInput ?? VAULT_MASTER_ID;
+    this._rootAgentId = _rootAgentIdInput ?? VAULT_MASTER_ID;
   }
 
   private async _confirmSensitiveAction(
@@ -85,7 +85,7 @@ class DefaultOwnerClient implements OwnerClient {
     if (!this._passwordVerifier) {
       throw new OwnerClientError(
         OwnerClientErrorCode.SENSITIVE_ACTION_VERIFIER_REQUIRED,
-        "VaultClient: sensitiveActionVerifier or passwordVerifier is required for sensitive reads",
+        "OwnerClient: sensitiveActionVerifier or passwordVerifier is required for sensitive reads",
       );
     }
     const valid = await this._passwordVerifier(normalizedPassword);
@@ -107,7 +107,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       alias: input.alias,
       plaintext: input.plaintext,
@@ -126,7 +126,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       alias: input.alias,
       plaintext: input.plaintext,
@@ -143,7 +143,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       query: { ...query, vaultId: this._vault.vaultId },
       requestId,
@@ -166,7 +166,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       alias: input.alias,
       requestId,
@@ -186,7 +186,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       alias: input.alias,
       requestId: createRequestIdValue("read_secret_plaintext"),
@@ -209,7 +209,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestedAt: input.requestedAt ?? this._clock.nowIso(),
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
     });
     const agent = agents.find((record) => record.agentId === input.agentId);
@@ -224,7 +224,7 @@ class DefaultOwnerClient implements OwnerClient {
 
   private async _ownerRegisterManagedAgentIdentity(input: {
     agentId: string;
-    identityId: string;
+    rootAgentId: string;
     publicKey: string;
     privateKey?: string;
     metadata?: Record<string, any>;
@@ -236,7 +236,7 @@ class DefaultOwnerClient implements OwnerClient {
     const agentIdentity = {
       vaultId: this._vault.vaultId,
       agentId: input.agentId,
-      identityId: input.identityId,
+      rootAgentId: input.rootAgentId,
       publicKey: input.publicKey,
       privateKey: input.privateKey,
       metadata: input.metadata,
@@ -248,7 +248,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       agentIdentity,
       requestedAt,
@@ -260,7 +260,7 @@ class DefaultOwnerClient implements OwnerClient {
     const identity = restoreIdentity(input.privateKey, { nickname: input.nickname });
     const agent = await this._ownerRegisterManagedAgentIdentity({
       agentId: createAgentIdValue(),
-      identityId: identity.identityId,
+      rootAgentId: identity.rootAgentId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
       metadata: input.metadata,
@@ -284,7 +284,7 @@ class DefaultOwnerClient implements OwnerClient {
     const identity = createIdentity();
     const agent = await this._ownerRegisterManagedAgentIdentity({
       agentId: createAgentIdValue(),
-      identityId: identity.identityId,
+      rootAgentId: identity.rootAgentId,
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
       metadata: input.metadata,
@@ -312,7 +312,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       agentId: input.agentId,
       nickname: input.nickname,
@@ -330,7 +330,7 @@ class DefaultOwnerClient implements OwnerClient {
     return this._vault.ownerGrantAgentSecret({
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("grant_agent_secret"),
-      actor: { kind: "owner", id: this._identityId },
+      actor: { kind: "owner", id: this._rootAgentId },
       agentId: input.agentId,
       secretAlias: input.secretAlias,
       requestedAt,
@@ -342,7 +342,7 @@ class DefaultOwnerClient implements OwnerClient {
     return this._vault.ownerGrantSecretDestination({
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("grant_secret_destination"),
-      actor: { kind: "owner", id: this._identityId },
+      actor: { kind: "owner", id: this._rootAgentId },
       secretAlias: input.secretAlias,
       domain: input.domain,
       requestedAt,
@@ -354,7 +354,7 @@ class DefaultOwnerClient implements OwnerClient {
     return this._vault.ownerRevokeAgentSecret({
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("revoke_agent_secret"),
-      actor: { kind: "owner", id: this._identityId },
+      actor: { kind: "owner", id: this._rootAgentId },
       agentId: input.agentId,
       secretAlias: input.secretAlias,
       requestedAt,
@@ -366,7 +366,7 @@ class DefaultOwnerClient implements OwnerClient {
     return this._vault.ownerRevokeSecretDestination({
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("revoke_secret_destination"),
-      actor: { kind: "owner", id: this._identityId },
+      actor: { kind: "owner", id: this._rootAgentId },
       secretAlias: input.secretAlias,
       domain: input.domain,
       requestedAt,
@@ -378,7 +378,7 @@ class DefaultOwnerClient implements OwnerClient {
     return this._vault.ownerListGrants({
       vaultId: this._vault.vaultId,
       requestId: createRequestIdValue("list_grants"),
-      actor: { kind: "owner", id: this._identityId },
+      actor: { kind: "owner", id: this._rootAgentId },
       agentId: input.agentId,
       secretAlias: input.secretAlias,
       requestedAt,
@@ -403,7 +403,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       flow,
       requestedAt,
@@ -411,7 +411,7 @@ class DefaultOwnerClient implements OwnerClient {
     return {
       vaultId: this._vault.vaultId,
       flowId,
-      ownerId: this._identityId,
+      ownerId: this._rootAgentId,
       mode: input.mode,
       targetUrl: input.targetUrl,
       method: input.method,
@@ -438,7 +438,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestId,
       owner: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       alias: input.alias,
       requestedAt,
@@ -455,7 +455,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestedAt,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
     });
     return agents.map((agent) => ({
@@ -474,7 +474,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestedAt,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       agentId: input.agentId,
     });
@@ -490,7 +490,7 @@ class DefaultOwnerClient implements OwnerClient {
       requestedAt,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       targetRequestId: input.requestId,
     });
@@ -503,7 +503,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       owner: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       requestId,
     });
@@ -517,7 +517,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       agentId: input.agentId,
       requestId,
@@ -530,7 +530,7 @@ class DefaultOwnerClient implements OwnerClient {
       vaultId: this._vault.vaultId,
       actor: {
         kind: "owner",
-        id: this._identityId,
+        id: this._rootAgentId,
       },
       token: input.token,
     });
@@ -539,7 +539,7 @@ class DefaultOwnerClient implements OwnerClient {
   async ownerIssueAllSessionTokens() {
     return this._vault.ownerIssueAllAgentSessionTokens({
       kind: "owner",
-      id: this._identityId,
+      id: this._rootAgentId,
     } as any);
   }
 
@@ -548,7 +548,7 @@ class DefaultOwnerClient implements OwnerClient {
     return this._vault.ownerApproveDispatch({
       vaultId: this._vault.vaultId,
       requestId: input.requestId,
-      actor: { kind: "owner", id: this._identityId },
+      actor: { kind: "owner", id: this._rootAgentId },
       decision: input.decision,
       requestedAt,
     });
@@ -559,7 +559,7 @@ class DefaultOwnerClient implements OwnerClient {
     await this._vault.ownerApproveDispatch({
       vaultId: this._vault.vaultId,
       requestId,
-      actor: { kind: "owner", id: this._identityId },
+      actor: { kind: "owner", id: this._rootAgentId },
       decision: "deny",
       requestedAt,
     });
@@ -572,11 +572,11 @@ class DefaultOwnerClient implements OwnerClient {
 
 export async function createOwnerClient(options: CreateOwnerClientOptions): Promise<OwnerClient> {
   const identity = options.ownerIdentity;
-  const identityId = "identityId" in identity ? identity.identityId : undefined;
+  const rootAgentId = identity.rootAgentId;
   
   const client = new DefaultOwnerClient(
     options.vault,
-    identityId,
+    rootAgentId,
     undefined, // signer no longer directly used in simple owner client
     options.clock ?? new SystemClock(),
     options.skipWarmup ?? false,
@@ -588,7 +588,7 @@ export async function createOwnerClient(options: CreateOwnerClientOptions): Prom
     try {
       await client.ownerIssueAllSessionTokens();
     } catch (e) {
-      console.warn("VaultClient warmup failed:", e);
+      console.warn("OwnerClient warmup failed:", e);
     }
   }
 

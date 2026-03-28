@@ -1,15 +1,11 @@
 import type { Clock } from "../vault-core/index.js";
 import type {
-  CreateVaultClientOptions,
-  VaultClient,
-  VaultIdentity,
-  VaultSigner,
-} from "../clients/owner/client.js";
-import type {
+  OwnerClient,
+  CreateOwnerClientOptions,
   OwnerSensitiveActionConfirmation,
   OwnerSensitiveActionContext,
 } from "../clients/owner/contracts.js";
-import { createVaultClient } from "../clients/owner/client.js";
+import { createOwnerClient } from "../clients/owner/client.js";
 import { FsStorageProvider } from "../storage/fs.js";
 import type { IStorageProvider } from "../storage/provider.js";
 import type { CreatedIdentity } from "./identity.js";
@@ -24,13 +20,13 @@ export interface OwnerSession {
   invalidate(): void;
   refresh(): Promise<RecoveredVault>;
   vault(): Promise<RecoveredVault>;
-  client(): Promise<VaultClient>;
-  withClient<T>(callback: (client: VaultClient, vault: RecoveredVault) => Promise<T> | T): Promise<T>;
+  client(): Promise<OwnerClient>;
+  withClient<T>(callback: (client: OwnerClient, vault: RecoveredVault) => Promise<T> | T): Promise<T>;
 }
 
 export interface CreateOwnerSessionOptions extends RecoverVaultOptions {
-  ownerIdentity?: CreatedIdentity | VaultIdentity;
-  signer?: VaultSigner;
+  ownerIdentity?: CreatedIdentity | { rootAgentId: string };
+  signer?: any;
   clock?: Clock;
   skipWarmup?: boolean;
   sensitiveActionVerifier?: (
@@ -83,16 +79,16 @@ class DefaultOwnerSession implements OwnerSession {
     return this._cachedVaultPromise;
   }
 
-  async client(): Promise<VaultClient> {
+  async client(): Promise<OwnerClient> {
     const vault = await this.vault();
     this._assertValid();
-    return this._createClient(vault);
+    return await this._createClient(vault);
   }
 
-  async withClient<T>(callback: (client: VaultClient, vault: RecoveredVault) => Promise<T> | T): Promise<T> {
+  async withClient<T>(callback: (client: OwnerClient, vault: RecoveredVault) => Promise<T> | T): Promise<T> {
     const vault = await this.vault();
     this._assertValid();
-    return callback(this._createClient(vault), vault);
+    return callback(await this._createClient(vault), vault);
   }
 
   private _assertValid(): void {
@@ -101,17 +97,16 @@ class DefaultOwnerSession implements OwnerSession {
     }
   }
 
-  private _createClient(vault: RecoveredVault): VaultClient {
-    const clientOptions: CreateVaultClientOptions = {
+  private async _createClient(vault: RecoveredVault): Promise<OwnerClient> {
+    const clientOptions: CreateOwnerClientOptions = {
       vault: vault.vault,
-      ownerIdentity: this._options.ownerIdentity,
-      signer: this._options.signer,
+      ownerIdentity: this._options.ownerIdentity as any,
       clock: this._options.clock,
       skipWarmup: this._options.skipWarmup,
       passwordVerifier: vault.verifyPassword,
       sensitiveActionVerifier: this._options.sensitiveActionVerifier,
     };
-    return createVaultClient(clientOptions);
+    return await createOwnerClient(clientOptions);
   }
 }
 

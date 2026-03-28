@@ -493,7 +493,7 @@ export class VaultCore {
       issuedAt: this._deps.clock.nowIso(),
       agent: {
         agentId: agentRecord.agentId,
-        identityId: agentRecord.identityId,
+        rootAgentId: agentRecord.rootAgentId,
         publicKey: agentRecord.publicKey,
         nickname: agentRecord.nickname,
         metadata: agentRecord.metadata,
@@ -559,7 +559,7 @@ export class VaultCore {
   async ownerRegisterAgentIdentity(command: { vaultId: VaultId; requestId: string; owner: VaultPrincipal; agentIdentity: AgentIdentityRecord; requestedAt: string }) {
     this._assertOwnerPrincipal(command.owner);
     await this._deps.agentIdentities.register(command.agentIdentity);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.REGISTER_AGENT_IDENTITY, AuditOutcome.SUCCEEDED, `agent identity registered: ${command.agentIdentity.agentId}`, { agentId: command.agentIdentity.agentId }));
+    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditAction.REGISTER_AGENT_IDENTITY, AuditOutcome.SUCCEEDED, `agent identity registered: ${command.agentIdentity.agentId} (${command.agentIdentity.rootAgentId})`, { agentId: command.agentIdentity.agentId }));
   }
 
   async ownerUpdateAgentIdentity(command: { vaultId: VaultId; requestId: string; owner: VaultPrincipal; agentId: string; nickname?: string; metadata?: Record<string, any>; requestedAt: string }): Promise<AgentIdentityRecord> {

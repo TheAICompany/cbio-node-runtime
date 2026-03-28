@@ -151,7 +151,7 @@ export interface VaultRevokeSessionTokenInput {
 
 export interface CreateOwnerClientOptions {
   vault: import("../../vault-ingress/index.js").VaultService;
-  ownerIdentity: { identityId: string };
+  ownerIdentity: { rootAgentId: string };
   clock?: import("../../vault-core/index.js").Clock;
   skipWarmup?: boolean;
   passwordVerifier?: (password: string) => Promise<boolean> | boolean;

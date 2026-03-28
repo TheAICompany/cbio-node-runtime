@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: VaultClient
+# Interface: OwnerClient
 
 A client for vault owners to manage secrets, agents, and capabilities.
 In Sovereign Vault model, administrative actions are implicitly authorized by the working key.

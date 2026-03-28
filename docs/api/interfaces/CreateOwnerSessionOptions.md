@@ -92,7 +92,7 @@
 
 ### ownerIdentity?
 
-> `optional` **ownerIdentity?**: `CreatedIdentity` \| [`VaultIdentity`](VaultIdentity.md)
+> `optional` **ownerIdentity?**: `CreatedIdentity` \| [`OwnerIdentity`](OwnerIdentity.md)
 
 ***
 

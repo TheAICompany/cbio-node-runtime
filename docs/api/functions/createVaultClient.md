@@ -2,30 +2,30 @@
 
 ***
 
-# Function: createVaultClient()
+# Function: createOwnerClient()
 
-> **createVaultClient**(`options`): [`VaultClient`](../interfaces/VaultClient.md)
+> **createOwnerClient**(`options`): [`OwnerClient`](../interfaces/OwnerClient.md)
 
-Creates a [VaultClient](../interfaces/VaultClient.md) instance for a specific vault owner.
+Creates a [OwnerClient](../interfaces/OwnerClient.md) instance for a specific vault owner.
 
 ## Parameters
 
 ### options
 
-[`CreateVaultClientOptions`](../interfaces/CreateVaultClientOptions.md)
+[`CreateOwnerClientOptions`](../interfaces/CreateOwnerClientOptions.md)
 
 Configuration including optional owner identity and the vault service.
 
 ## Returns
 
-[`VaultClient`](../interfaces/VaultClient.md)
+[`OwnerClient`](../interfaces/OwnerClient.md)
 
-An initialized [VaultClient](../interfaces/VaultClient.md).
+An initialized [OwnerClient](../interfaces/OwnerClient.md).
 
 ## Example
 
 ```ts
-const client = createVaultClient({
+const client = createOwnerClient({
   ownerIdentity,
   vault
 });

@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { createVault, createVaultClient, MemoryStorageProvider } from "../../dist/runtime/index.js";
+import { createVault, createOwnerClient, MemoryStorageProvider } from "../../dist/runtime/index.js";
 
 const created = await createVault(new MemoryStorageProvider(), {
   password: "pw-owner-update",
 });
 
-const client = createVaultClient({
+const client = createOwnerClient({
   vault: created.vault,
   passwordVerifier: created.verifyPassword,
   skipWarmup: true,

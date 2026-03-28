@@ -26,11 +26,11 @@
 
 ### client()
 
-> **client**(): `Promise`\<[`VaultClient`](VaultClient.md)\>
+> **client**(): `Promise`\<[`OwnerClient`](OwnerClient.md)\>
 
 #### Returns
 
-`Promise`\<[`VaultClient`](VaultClient.md)\>
+`Promise`\<[`OwnerClient`](OwnerClient.md)\>
 
 ***
 

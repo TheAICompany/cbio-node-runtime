@@ -26,5 +26,5 @@ A CreatedIdentity containing the ID and keys.
 
 ```ts
 const identity = createIdentity({ nickname: 'my-agent' });
-console.log(identity.identityId);
+console.log(identity.rootAgentId);
 ```

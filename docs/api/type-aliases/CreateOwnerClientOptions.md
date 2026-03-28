@@ -4,4 +4,4 @@
 
 # Type Alias: CreateOwnerClientOptions
 
-> **CreateOwnerClientOptions** = [`CreateVaultClientOptions`](../interfaces/CreateVaultClientOptions.md)
+> **CreateOwnerClientOptions** = [`CreateOwnerClientOptions`](../interfaces/CreateOwnerClientOptions.md)

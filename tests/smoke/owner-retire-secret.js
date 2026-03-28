@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import {
   FsStorageProvider,
   createVault,
-  createVaultClient,
+  createOwnerClient,
 } from "../../dist/runtime/index.js";
 
 const tempDir = await mkdtemp(join(tmpdir(), "cbio-retire-secret-"));
@@ -15,7 +15,7 @@ const created = await createVault(storage, {
   nickname: "Retire Secret",
 });
 
-const client = createVaultClient({
+const client = createOwnerClient({
   vault: created.vault,
   passwordVerifier: created.verifyPassword,
   skipWarmup: true,

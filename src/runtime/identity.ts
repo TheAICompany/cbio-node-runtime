@@ -1,7 +1,7 @@
 import { createHmac, createPrivateKey, createPublicKey } from "node:crypto";
 import { derivePublicKey } from "../protocol/crypto.js";
 import { createIdentity as createProtocolIdentity, type RootAgentIdentity } from "../protocol/identity.js";
-import { deriveIdentityId } from "../protocol/identity.js";
+import { deriveRootAgentId } from "../protocol/identity.js";
 
 /**
  * Represents a newly created or restored identity.
@@ -9,7 +9,7 @@ import { deriveIdentityId } from "../protocol/identity.js";
  */
 export interface CreatedIdentity {
   /** The unique identifier for this identity (derived from public key). */
-  identityId: string;
+  rootAgentId: string;
   /** A human-readable label (local only, not part of the crypto identity). */
   nickname?: string;
   /** The base64url-encoded public key. */
@@ -56,7 +56,7 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
   const keyPair: RootAgentIdentity = createProtocolIdentity();
   const nickname = normalizeNickname(options.nickname);
   return {
-    identityId: keyPair.identityId,
+    rootAgentId: (keyPair as any).rootAgentId,
     nickname,
     publicKey: keyPair.publicKey,
     privateKey: keyPair.privateKey,
@@ -72,7 +72,7 @@ function createRootIdentity(options: CreateIdentityOptions = {}): CreatedIdentit
  * @example
  * ```ts
  * const identity = createIdentity({ nickname: 'my-agent' });
- * console.log(identity.identityId);
+ * console.log(identity.rootAgentId);
  * ```
  */
 export function createIdentity(options?: CreateIdentityOptions): CreatedIdentity;
@@ -102,7 +102,7 @@ export function restoreIdentity(privateKey: string, options: RestoreIdentityOpti
   const publicKey = derivePublicKey(normalizedPrivateKey);
   const nickname = normalizeNickname(options.nickname);
   return {
-    identityId: deriveIdentityId(publicKey),
+    rootAgentId: deriveRootAgentId(publicKey),
     nickname,
     publicKey,
     privateKey: normalizedPrivateKey,

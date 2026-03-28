@@ -11,7 +11,7 @@ import {
   listVaults,
   updateVaultMetadata,
   createStandardAcquireBoundary,
-  createVaultClient,
+  createOwnerClient,
   createAgentClient,
   FsStorageProvider,
   VaultCoreError,
@@ -47,7 +47,7 @@ import { MemoryStorageProvider } from "../../dist/storage/memory.js";
 
 assert.equal(typeof createVaultCore, "function");
 assert.equal(typeof createStandardAcquireBoundary, "function");
-assert.equal(typeof createVaultClient, "function");
+assert.equal(typeof createOwnerClient, "function");
 assert.equal(typeof createOwnerSession, "function");
 assert.equal(typeof createAgentClient, "function");
 assert.equal(typeof VaultCoreError, "function");
@@ -61,11 +61,11 @@ const restoredAgentIdentity = restoreIdentity(agentIdentity.privateKey, { nickna
 
 assert.equal(typeof agentIdentity.privateKey, "string");
 assert.equal(typeof agentIdentity.publicKey, "string");
-assert.equal(typeof agentIdentity.identityId, "string");
+assert.equal(typeof agentIdentity.rootAgentId, "string");
 assert.equal(agentIdentity.nickname, "agent-1");
 assert.equal(restoredAgentIdentity.privateKey, agentIdentity.privateKey);
 assert.equal(restoredAgentIdentity.publicKey, agentIdentity.publicKey);
-assert.equal(restoredAgentIdentity.identityId, agentIdentity.identityId);
+assert.equal(restoredAgentIdentity.rootAgentId, agentIdentity.rootAgentId);
 assert.equal(restoredAgentIdentity.nickname, "agent-1-restored");
 
 let seenAuthHeader = null;
@@ -104,7 +104,7 @@ const vault = wrapVaultCoreAsVaultService(authority, {
   fetchImpl: runtimeSurfaceFetch,
 });
 
-const client = createVaultClient({
+const client = createOwnerClient({
   vault,
   passwordVerifier: async (password) => password === "runtime-surface-password",
 });
@@ -112,7 +112,7 @@ assert.equal(typeof client.ownerCreateSecret, "function");
 await client.ownerImportAgent({
   privateKey: agentIdentity.privateKey,
 });
-const importedAgentId = (await client.ownerListAgents()).find((agent) => agent.identityId === agentIdentity.identityId)?.agentId;
+const importedAgentId = (await client.ownerListAgents()).find((agent) => agent.rootAgentId === agentIdentity.rootAgentId)?.agentId;
 assert.equal(typeof importedAgentId, "string");
 const ownedRecord = await client.ownerCreateSecret({
   alias: "api-token",
@@ -377,7 +377,7 @@ try {
     expires_in: 3600,
     scope: "read write",
   });
-  const auditClient = createVaultClient({ vault: persistentVault, passwordVerifier: createdVault.verifyPassword });
+  const auditClient = createOwnerClient({ vault: persistentVault, passwordVerifier: createdVault.verifyPassword });
   const audit = await auditClient.ownerReadAudit({ secretAlias: "issuer-token" });
   assert.ok(audit.length >= 1);
   const persistentExport = await auditClient.ownerExportSecret({ alias: "issuer-token", password: "password-1" });
@@ -394,7 +394,7 @@ try {
   assert.equal(ownerSession.isValid(), true);
   const sessionClientA = await ownerSession.client();
   const sessionClientB = await ownerSession.client();
-  assert.notEqual(sessionClientA, sessionClientB, "OwnerSession should not cache raw VaultClient instances");
+  assert.notEqual(sessionClientA, sessionClientB, "OwnerSession should not cache raw OwnerClient instances");
   const sessionAgents = await ownerSession.withClient((sessionClient) => sessionClient.ownerListAgents());
   assert.ok(Array.isArray(sessionAgents));
   await ownerSession.refresh();
@@ -610,7 +610,7 @@ try {
     ids: new RandomIdGenerator(),
   });
   const rollbackVault = wrapVaultCoreAsVaultService(rollbackAuthority);
-  const rollbackClient = createVaultClient({
+  const rollbackClient = createOwnerClient({
     vault: rollbackVault,
   });
   const custodyDir = join(tempDir, "vaults/vault-runtime-persistent_v1");

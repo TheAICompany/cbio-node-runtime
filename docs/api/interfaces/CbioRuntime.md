@@ -70,7 +70,7 @@ A CreatedIdentity containing the ID and keys.
 
 ```ts
 const identity = createIdentity({ nickname: 'my-agent' });
-console.log(identity.identityId);
+console.log(identity.rootAgentId);
 ```
 
 ***
@@ -240,30 +240,30 @@ Configuration for the new vault.
 
 ***
 
-### createVaultClient
+### createOwnerClient
 
-> **createVaultClient**: (`options`) => [`VaultClient`](VaultClient.md)
+> **createOwnerClient**: (`options`) => [`OwnerClient`](OwnerClient.md)
 
-Creates a [VaultClient](VaultClient.md) instance for a specific vault owner.
+Creates a [OwnerClient](OwnerClient.md) instance for a specific vault owner.
 
 #### Parameters
 
 ##### options
 
-[`CreateVaultClientOptions`](CreateVaultClientOptions.md)
+[`CreateOwnerClientOptions`](CreateOwnerClientOptions.md)
 
 Configuration including optional owner identity and the vault service.
 
 #### Returns
 
-[`VaultClient`](VaultClient.md)
+[`OwnerClient`](OwnerClient.md)
 
-An initialized [VaultClient](VaultClient.md).
+An initialized [OwnerClient](OwnerClient.md).
 
 #### Example
 
 ```ts
-const client = createVaultClient({
+const client = createOwnerClient({
   ownerIdentity,
   vault
 });

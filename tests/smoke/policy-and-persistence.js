@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   createVault,
-  createVaultClient,
+  createOwnerClient,
   createAgentClient,
   FsStorageProvider,
 } from "../../src/runtime/index.js";
@@ -27,9 +27,9 @@ async function runPersistenceTest() {
       password: "master-password",
     });
 
-    const ownerClient = createVaultClient({
+    const ownerClient = createOwnerClient({
       vault,
-      ownerIdentity: { identityId: "owner-1" },
+      ownerIdentity: { rootAgentId: "owner-1" },
     });
 
     const { agent, sessionToken } = await ownerClient.ownerCreateAgent({
@@ -74,9 +74,9 @@ async function runPersistenceTest() {
     // Actually, let's just use the same storage and re-initialize the dependencies
     // To be truly "smoke", we just want to see if the files exist.
     
-    const ownerClient2 = createVaultClient({
+    const ownerClient2 = createOwnerClient({
       vault: reloadedVault,
-      ownerIdentity: { identityId: "owner-1" },
+      ownerIdentity: { rootAgentId: "owner-1" },
     });
 
     const reloadedGrants = await ownerClient2.ownerListGrants({ agentId: agent.agentId });

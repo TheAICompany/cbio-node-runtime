@@ -22,8 +22,8 @@ An identity whose public/private keypair is generated and stored **inside** the 
 
 ## Identifying Principals
 
-### Identity ID
-A stable, public-key-derived identifier (via `deriveIdentityId(...)`). 
+### Root Agent ID
+A stable, public-key-derived identifier (via `deriveRootAgentId(...)`). 
 - Used for internal registries, capability assignment, and audit logs.
 - Decoupled from human-readable labels.
 
