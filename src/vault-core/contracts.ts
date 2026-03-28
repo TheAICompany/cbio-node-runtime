@@ -531,6 +531,10 @@ export interface StoredSessionToken {
   issued_at: string;
 }
 
+export type SessionTokenInspectionResult =
+  | { ok: true; token: StoredSessionToken }
+  | { ok: false; reason: "token_not_found" | "agent_mismatch" };
+
 export interface OwnerAuditRequest {
   vault_id: VaultId;
   actor: VaultPrincipal & { kind: "owner" };

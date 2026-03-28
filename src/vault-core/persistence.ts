@@ -9,6 +9,7 @@ import {
   type AgentIdentityRecord,
   type AuditEntry,
   type AuditQuery,
+  type SessionTokenInspectionResult,
   type StoredSessionToken,
 
   type RequestRecord,
@@ -415,13 +416,24 @@ export class FileSessionTokenRegistry implements ISessionTokenRegistry {
     return token;
   }
 
-  async verify(token: string, root_agent_id: string): Promise<boolean> {
+  async inspect(token: string, root_agent_id: string): Promise<SessionTokenInspectionResult> {
     try {
       const content = await fs.readFile(this._getPath(root_agent_id), "utf-8");
       const stored = JSON.parse(content) as StoredSessionToken;
-      return stored.token === token;
+      if (stored.token === token) {
+        return { ok: true, token: stored };
+      }
+      const tokens = await this.list();
+      if (tokens.some((entry) => entry.token === token)) {
+        return { ok: false, reason: "agent_mismatch" };
+      }
+      return { ok: false, reason: "token_not_found" };
     } catch {
-      return false;
+      const tokens = await this.list();
+      if (tokens.some((entry) => entry.token === token)) {
+        return { ok: false, reason: "agent_mismatch" };
+      }
+      return { ok: false, reason: "token_not_found" };
     }
   }
 

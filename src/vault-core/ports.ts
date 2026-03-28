@@ -9,6 +9,7 @@ import type {
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
+  SessionTokenInspectionResult,
   SecretAlias,
   SecretId,
   SecretRecord,
@@ -63,7 +64,7 @@ export interface AgentProofVerifier {
 
 export interface ISessionTokenRegistry {
   issue(root_agent_id: string): Promise<string>;
-  verify(token: string, root_agent_id: string): Promise<boolean>;
+  inspect(token: string, root_agent_id: string): Promise<SessionTokenInspectionResult>;
   revoke(token: string): Promise<void>;
   list(root_agent_id?: string): Promise<readonly StoredSessionToken[]>;
 }

@@ -122,7 +122,7 @@ async function runSmokeTest() {
       method: "POST",
       reason: "Superseded token should fail",
     }),
-    /invalid or expired session token/,
+    /session token not found/,
   );
 
   const listedAgents = await client.ownerListAgents();

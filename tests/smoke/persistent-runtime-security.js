@@ -78,7 +78,37 @@ async function runPersistentRuntimeSecurityTest() {
       }),
       (error) => {
         assert.equal(error instanceof Error, true);
-        assert.match(error.message, /VAULT_DISPATCH_DENIED:invalid or expired session token/);
+        assert.match(error.message, /VAULT_DISPATCH_DENIED:session token not found/);
+        return true;
+      },
+    );
+
+    const otherAgent = await ownerClient.ownerCreateAgent({
+      nickname: "Other-Agent",
+    });
+    const wrongBindingRequestId = "persistent-agent-mismatch";
+    const wrongBindingRequestedAt = new Date().toISOString();
+    await assert.rejects(
+      core.agentDispatchSecret({
+        vault_id: core.vault_id,
+        request_id: wrongBindingRequestId,
+        requested_at: wrongBindingRequestedAt,
+        agent: { kind: "agent", id: otherAgent.agent.root_agent_id },
+        proof: {
+          root_agent_id: otherAgent.agent.root_agent_id,
+          token: session_token.token,
+          request_id: wrongBindingRequestId,
+          requested_at: wrongBindingRequestedAt,
+        },
+        secret_alias: "persistent-guarded-token",
+        target_url: "https://guarded.example.com/mismatch",
+        method: "POST",
+        reason: "Wrong agent should not be able to use another agent token",
+      }),
+      (error) => {
+        assert.equal(error instanceof VaultCoreError, true);
+        assert.equal(error.code, "VAULT_DISPATCH_DENIED");
+        assert.match(error.message, /session token does not belong to this agent/);
         return true;
       },
     );

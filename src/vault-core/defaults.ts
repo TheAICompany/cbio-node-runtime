@@ -21,6 +21,7 @@ import type {
   SecretAlias,
   SecretId,
   SecretRecord,
+  SessionTokenInspectionResult,
   VaultId,
   VaultPrincipal,
   StoredSessionToken,
@@ -355,10 +356,15 @@ export class InMemorySessionTokenRegistry implements ISessionTokenRegistry {
     return token;
   }
 
-  async verify(token: string, root_agent_id: string): Promise<boolean> {
+  async inspect(token: string, root_agent_id: string): Promise<SessionTokenInspectionResult> {
     const stored = this._tokensByAgentId.get(root_agent_id);
-    if (!stored) return false;
-    return stored.token === token;
+    if (stored?.token === token) {
+      return { ok: true, token: stored };
+    }
+    if (this._agentIdByToken.has(token)) {
+      return { ok: false, reason: "agent_mismatch" };
+    }
+    return { ok: false, reason: "token_not_found" };
   }
 
   async revoke(token: string): Promise<void> {
@@ -404,11 +410,14 @@ export class SignatureAgentProofVerifier implements AgentProofVerifier {
 
     // Try token authentication first
     if (proof.token) {
-      const valid = await this._sessionTokenRegistry.verify(proof.token, proof.root_agent_id);
-      if (valid) {
+      const inspection = await this._sessionTokenRegistry.inspect(proof.token, proof.root_agent_id);
+      if (inspection.ok) {
         return; // Token is valid, skip signature check
       }
-      throw new VaultCoreError("invalid or expired session token", "VAULT_DISPATCH_DENIED");
+      if (inspection.reason === "agent_mismatch") {
+        throw new VaultCoreError("session token does not belong to this agent", "VAULT_DISPATCH_DENIED");
+      }
+      throw new VaultCoreError("session token not found", "VAULT_DISPATCH_DENIED");
     }
 
     // Fallback to signature authentication
