@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -58,11 +58,11 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ### ownerDenyDispatch()
 
-> **ownerDenyDispatch**(`requestId`): `Promise`\<`void`\>
+> **ownerDenyDispatch**(`request_id`): `Promise`\<`void`\>
 
 #### Parameters
 
-##### requestId
+##### request\_id
 
 `string`
 
@@ -196,7 +196,7 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ### ownerListGrants()
 
-> **ownerListGrants**(`input?`): `Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
+> **ownerListGrants**(`input?`): `Promise`\<\{ `agent_secrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secret_destinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
 
 #### Parameters
 
@@ -206,7 +206,7 @@ A client for vault owners to manage secrets, agents, and grants.
 
 #### Returns
 
-`Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
+`Promise`\<\{ `agent_secrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secret_destinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
 
 ***
 

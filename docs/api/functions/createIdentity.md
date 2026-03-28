@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -26,5 +26,5 @@ A CreatedIdentity containing the ID and keys.
 
 ```ts
 const identity = createIdentity({ nickname: 'my-agent' });
-console.log(identity.rootAgentId);
+console.log(identity.root_agent_id);
 ```

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -12,17 +12,17 @@
 
 ***
 
-### missingGrants?
+### missing\_grants?
 
-> `optional` **missingGrants?**: `object`
+> `optional` **missing\_grants?**: `object`
 
-#### agentSecret?
+#### agent\_secret?
 
-> `optional` **agentSecret?**: `boolean`
+> `optional` **agent\_secret?**: `boolean`
 
-#### secretDestination?
+#### secret\_destination?
 
-> `optional` **secretDestination?**: `boolean`
+> `optional` **secret\_destination?**: `boolean`
 
 ***
 
@@ -32,12 +32,12 @@
 
 ***
 
-### secretId
+### secret\_id
 
-> **secretId**: [`SecretId`](SecretId.md) \| `null`
+> **secret\_id**: [`SecretId`](SecretId.md) \| `null`
 
 ***
 
-### vaultId
+### vault\_id
 
-> **vaultId**: [`VaultId`](VaultId.md)
+> **vault\_id**: [`VaultId`](VaultId.md)

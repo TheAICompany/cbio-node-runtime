@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -32,13 +32,13 @@ If the grant is missing, it will return a PENDING status.
 
 ### agentGetRequest()
 
-> **agentGetRequest**(`requestId`): `Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
+> **agentGetRequest**(`request_id`): `Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
 
 Get details of a specific request.
 
 #### Parameters
 
-##### requestId
+##### request\_id
 
 `string`
 

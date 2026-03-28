@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -12,19 +12,9 @@
 
 ***
 
-### ownerIdentity
+### password\_verifier?
 
-> **ownerIdentity**: `object`
-
-#### rootAgentId
-
-> **rootAgentId**: `string`
-
-***
-
-### passwordVerifier?
-
-> `optional` **passwordVerifier?**: (`password`) => `boolean` \| `Promise`\<`boolean`\>
+> `optional` **password\_verifier?**: (`password`) => `boolean` \| `Promise`\<`boolean`\>
 
 #### Parameters
 

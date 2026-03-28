@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -56,7 +56,7 @@ A CreatedIdentity containing the ID and keys.
 
 ```ts
 const identity = createIdentity({ nickname: 'my-agent' });
-console.log(identity.rootAgentId);
+console.log(identity.root_agent_id);
 ```
 
 ***
@@ -230,9 +230,9 @@ Configuration for the new vault.
 
 ### deriveVaultWorkingKeyFromPassword
 
-> **deriveVaultWorkingKeyFromPassword**: (`password`, `vaultId`) => `string`
+> **deriveVaultWorkingKeyFromPassword**: (`password`, `vault_id`) => `string`
 
-Derives a 256-bit working key from a user password and salt (vaultId).
+Derives a 256-bit working key from a user password and salt (vault_id).
 Using scrypt for memory-hard key derivation to resist brute-force attacks.
 
 #### Parameters
@@ -241,7 +241,7 @@ Using scrypt for memory-hard key derivation to resist brute-force attacks.
 
 `string`
 
-##### vaultId
+##### vault\_id
 
 `string`
 
@@ -392,7 +392,7 @@ Workspace storage where the vault was created.
 
 [`RecoverVaultOptions`](RecoverVaultOptions.md)
 
-Recovery options (must include `vaultId` and `password`).
+Recovery options (must include `vault_id` and `password`).
 
 ##### Returns
 
@@ -404,7 +404,7 @@ A [RecoveredVault](RecoveredVault.md) instance.
 
 ```ts
 const vault = await recoverVault({
-  vaultId: 'vault_123',
+  vault_id: 'vault_123',
   password: 'my-strong-password'
 });
 ```
@@ -421,7 +421,7 @@ Recovers an existing vault using the default workspace storage.
 
 [`RecoverVaultOptions`](RecoverVaultOptions.md)
 
-Recovery options including vaultId and password.
+Recovery options including vault_id and password.
 
 ##### Returns
 
@@ -431,13 +431,13 @@ Recovery options including vaultId and password.
 
 ### restoreIdentity
 
-> **restoreIdentity**: (`privateKey`, `options`) => `CreatedIdentity`
+> **restoreIdentity**: (`private_key`, `options`) => `CreatedIdentity`
 
 Restores an identity from an existing private key.
 
 #### Parameters
 
-##### privateKey
+##### private\_key
 
 `string`
 

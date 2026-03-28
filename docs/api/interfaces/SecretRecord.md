@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -12,21 +12,21 @@
 
 ***
 
-### createdAt
+### created\_at
 
-> **createdAt**: `string`
-
-***
-
-### issuerId
-
-> **issuerId**: `string` \| `null`
+> **created\_at**: `string`
 
 ***
 
-### lifecycleStatus
+### issuer\_id
 
-> **lifecycleStatus**: [`SecretLifecycleStatus`](../type-aliases/SecretLifecycleStatus.md)
+> **issuer\_id**: `string` \| `null`
+
+***
+
+### lifecycle\_status
+
+> **lifecycle\_status**: [`SecretLifecycleStatus`](../type-aliases/SecretLifecycleStatus.md)
 
 ***
 
@@ -48,9 +48,9 @@
 
 ***
 
-### secretId
+### secret\_id
 
-> **secretId**: [`SecretId`](SecretId.md)
+> **secret\_id**: [`SecretId`](SecretId.md)
 
 ***
 
@@ -72,15 +72,15 @@
 
 ***
 
-### updatedAt
+### updated\_at
 
-> **updatedAt**: `string`
+> **updated\_at**: `string`
 
 ***
 
-### vaultId
+### vault\_id
 
-> **vaultId**: [`VaultId`](VaultId.md)
+> **vault\_id**: [`VaultId`](VaultId.md)
 
 ***
 

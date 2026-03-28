@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -18,30 +18,30 @@
 
 ***
 
-### privateKey?
+### private\_key?
 
-> `optional` **privateKey?**: `string`
-
-***
-
-### publicKey
-
-> **publicKey**: `string`
+> `optional` **private\_key?**: `string`
 
 ***
 
-### rootAgentId
+### public\_key
 
-> **rootAgentId**: `string`
-
-***
-
-### sessionTokens?
-
-> `optional` **sessionTokens?**: readonly `StoredSessionToken`[]
+> **public\_key**: `string`
 
 ***
 
-### vaultId
+### root\_agent\_id
 
-> **vaultId**: [`VaultId`](VaultId.md)
+> **root\_agent\_id**: `string`
+
+***
+
+### session\_tokens?
+
+> `optional` **session\_tokens?**: readonly `StoredSessionToken`[]
+
+***
+
+### vault\_id
+
+> **vault\_id**: [`VaultId`](VaultId.md)

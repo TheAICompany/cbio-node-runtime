@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -22,11 +22,11 @@
 
 ## Accessors
 
-### vaultId
+### vault\_id
 
 #### Get Signature
 
-> **get** **vaultId**(): [`VaultId`](../interfaces/VaultId.md)
+> **get** **vault\_id**(): [`VaultId`](../interfaces/VaultId.md)
 
 ##### Returns
 
@@ -82,15 +82,15 @@
 
 `any`
 
-###### requestedAt
+###### request_id
 
 `string`
 
-###### requestId
+###### requested_at
 
 `string`
 
-###### targetRequestId
+###### target_request_id
 
 `string`
 
@@ -116,11 +116,11 @@
 
 `any`
 
-###### requestedAt
+###### request_id
 
 `string`
 
-###### requestId
+###### requested_at
 
 `string`
 
@@ -146,11 +146,11 @@
 
 `any`
 
-###### requestedAt
+###### request_id
 
 `string`
 
-###### requestId
+###### requested_at
 
 `string`
 
@@ -176,11 +176,11 @@
 
 `any`
 
-###### requestedAt
+###### request_id
 
 `string`
 
-###### requestId
+###### requested_at
 
 `string`
 
@@ -192,7 +192,7 @@
 
 ### ownerApproveDispatch()
 
-> **ownerApproveDispatch**(`actor`, `requestId`, `decision`): `Promise`\<[`DispatchResult`](../interfaces/DispatchResult.md) \| `null`\>
+> **ownerApproveDispatch**(`actor`, `request_id`, `decision`): `Promise`\<[`DispatchResult`](../interfaces/DispatchResult.md) \| `null`\>
 
 #### Parameters
 
@@ -200,7 +200,7 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### requestId
+##### request\_id
 
 `string`
 
@@ -252,7 +252,7 @@
 
 ### ownerGetRequest()
 
-> **ownerGetRequest**(`actor`, `requestId`): `Promise`\<[`OwnerRequestRecord`](../interfaces/OwnerRequestRecord.md)\>
+> **ownerGetRequest**(`actor`, `request_id`): `Promise`\<[`OwnerRequestRecord`](../interfaces/OwnerRequestRecord.md)\>
 
 #### Parameters
 
@@ -260,7 +260,7 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### requestId
+##### request\_id
 
 `string`
 
@@ -272,7 +272,7 @@
 
 ### ownerGrantAgentSecret()
 
-> **ownerGrantAgentSecret**(`actor`, `rootAgentId`, `secretAlias`, `request?`): `Promise`\<[`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)\>
+> **ownerGrantAgentSecret**(`actor`, `root_agent_id`, `secret_alias`, `request?`): `Promise`\<[`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)\>
 
 #### Parameters
 
@@ -280,17 +280,17 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### rootAgentId
+##### root\_agent\_id
 
 `string`
 
-##### secretAlias
+##### secret\_alias
 
 `string`
 
 ##### request?
 
-###### requestId?
+###### request_id?
 
 `string`
 
@@ -302,7 +302,7 @@
 
 ### ownerGrantSecretDestination()
 
-> **ownerGrantSecretDestination**(`actor`, `secretAlias`, `siteId`, `request?`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)\>
+> **ownerGrantSecretDestination**(`actor`, `secret_alias`, `site_id`, `request?`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)\>
 
 #### Parameters
 
@@ -310,17 +310,17 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### secretAlias
+##### secret\_alias
 
 `string`
 
-##### siteId
+##### site\_id
 
 `string`
 
 ##### request?
 
-###### requestId?
+###### request_id?
 
 `string`
 
@@ -348,7 +348,7 @@
 
 ### ownerIssueSessionToken()
 
-> **ownerIssueSessionToken**(`request`): `Promise`\<\{ `issuedAt`: `string`; `rootAgentId`: `string`; `token`: `string`; \}\>
+> **ownerIssueSessionToken**(`request`): `Promise`\<\{ `issued_at`: `string`; `root_agent_id`: `string`; `token`: `string`; \}\>
 
 #### Parameters
 
@@ -358,17 +358,17 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md)
 
-###### rootAgentId
+###### root_agent_id
 
 `string`
 
-###### vaultId
+###### vault_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
 #### Returns
 
-`Promise`\<\{ `issuedAt`: `string`; `rootAgentId`: `string`; `token`: `string`; \}\>
+`Promise`\<\{ `issued_at`: `string`; `root_agent_id`: `string`; `token`: `string`; \}\>
 
 ***
 
@@ -390,7 +390,7 @@
 
 ### ownerListGrants()
 
-> **ownerListGrants**(`actor`, `rootAgentId?`, `secretAlias?`): `Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]; \}\>
+> **ownerListGrants**(`actor`, `root_agent_id?`, `secret_alias?`): `Promise`\<\{ `agent_secrets`: readonly [`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)[]; `secret_destinations`: readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]; \}\>
 
 #### Parameters
 
@@ -398,23 +398,23 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### rootAgentId?
+##### root\_agent\_id?
 
 `string`
 
-##### secretAlias?
+##### secret\_alias?
 
 `string`
 
 #### Returns
 
-`Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]; \}\>
+`Promise`\<\{ `agent_secrets`: readonly [`AgentSecretGrant`](../interfaces/AgentSecretGrant.md)[]; `secret_destinations`: readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]; \}\>
 
 ***
 
 ### ownerListRequests()
 
-> **ownerListRequests**(`actor`, `rootAgentId?`): `Promise`\<readonly [`OwnerVisibleRequestRecord`](../interfaces/OwnerVisibleRequestRecord.md)[]\>
+> **ownerListRequests**(`actor`, `root_agent_id?`): `Promise`\<readonly [`OwnerVisibleRequestRecord`](../interfaces/OwnerVisibleRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -422,7 +422,7 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### rootAgentId?
+##### root\_agent\_id?
 
 `string`
 
@@ -516,15 +516,15 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md)
 
-###### requestedAt
+###### request_id
 
 `string`
 
-###### requestId
+###### requested_at
 
 `string`
 
-###### vaultId
+###### vault_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
@@ -554,15 +554,15 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md)
 
-###### requestedAt
+###### request_id
 
 `string`
 
-###### requestId
+###### requested_at
 
 `string`
 
-###### vaultId
+###### vault_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
@@ -574,7 +574,7 @@
 
 ### ownerRevokeAgentSecret()
 
-> **ownerRevokeAgentSecret**(`actor`, `rootAgentId`, `secretAlias`, `request?`): `Promise`\<`void`\>
+> **ownerRevokeAgentSecret**(`actor`, `root_agent_id`, `secret_alias`, `request?`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -582,17 +582,17 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### rootAgentId
+##### root\_agent\_id
 
 `string`
 
-##### secretAlias
+##### secret\_alias
 
 `string`
 
 ##### request?
 
-###### requestId?
+###### request_id?
 
 `string`
 
@@ -604,7 +604,7 @@
 
 ### ownerRevokeSecretDestination()
 
-> **ownerRevokeSecretDestination**(`actor`, `secretAlias`, `siteId`, `request?`): `Promise`\<`void`\>
+> **ownerRevokeSecretDestination**(`actor`, `secret_alias`, `site_id`, `request?`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -612,17 +612,17 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### secretAlias
+##### secret\_alias
 
 `string`
 
-##### siteId
+##### site\_id
 
 `string`
 
 ##### request?
 
-###### requestId?
+###### request_id?
 
 `string`
 
@@ -648,7 +648,7 @@
 
 `string`
 
-###### vaultId
+###### vault_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
@@ -678,19 +678,19 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md)
 
-###### requestedAt
+###### request_id
 
 `string`
 
-###### requestId
+###### requested_at
 
 `string`
 
-###### rootAgentId
+###### root_agent_id
 
 `string`
 
-###### vaultId
+###### vault_id
 
 [`VaultId`](../interfaces/VaultId.md)
 

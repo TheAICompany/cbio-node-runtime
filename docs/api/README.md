@@ -1,13 +1,12 @@
-**CBIO Node Runtime Agent API v1.63.7**
+**CBIO Node Runtime Agent API v1.63.8**
 
 ***
 
-# CBIO Node Runtime Agent API v1.63.7
+# CBIO Node Runtime Agent API v1.63.8
 
 ## Enumerations
 
-- [AuditAction](enumerations/AuditAction.md)
-- [AuditOutcome](enumerations/AuditOutcome.md)
+- [AuditOperation](enumerations/AuditOperation.md)
 - [DispatchStatus](enumerations/DispatchStatus.md)
 - [IdentityErrorCode](enumerations/IdentityErrorCode.md)
 - [OwnerClientErrorCode](enumerations/OwnerClientErrorCode.md)

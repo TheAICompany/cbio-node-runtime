@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -13,12 +13,6 @@
 ### clock?
 
 > `optional` **clock?**: `Clock`
-
-***
-
-### ownerIdentity?
-
-> `optional` **ownerIdentity?**: `CreatedIdentity` \| \{ `rootAgentId`: `string`; \}
 
 ***
 
@@ -118,10 +112,10 @@
 
 ***
 
-### vaultId
+### vault\_id
 
-> **vaultId**: `string`
+> **vault\_id**: `string`
 
 #### Inherited from
 
-[`RecoverVaultOptions`](RecoverVaultOptions.md).[`vaultId`](RecoverVaultOptions.md#vaultid)
+[`RecoverVaultOptions`](RecoverVaultOptions.md).[`vault_id`](RecoverVaultOptions.md#vault_id)

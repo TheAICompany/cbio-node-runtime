@@ -1,10 +1,10 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
 # Function: writeVaultProfile()
 
-> **writeVaultProfile**(`storage`, `profile`, `vaultWorkingKey`, `_vaultId`): `Promise`\<`void`\>
+> **writeVaultProfile**(`storage`, `profile`, `vaultWorkingKey`, `_vault_id`): `Promise`\<`void`\>
 
 ## Parameters
 
@@ -20,7 +20,7 @@
 
 `string`
 
-### \_vaultId
+### \_vault\_id
 
 `string`
 

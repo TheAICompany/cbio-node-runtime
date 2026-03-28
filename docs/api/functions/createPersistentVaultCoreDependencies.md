@@ -1,10 +1,10 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
 # Function: createPersistentVaultCoreDependencies()
 
-> **createPersistentVaultCoreDependencies**(`storage`, `options`): `any`
+> **createPersistentVaultCoreDependencies**(`storage`, `options`): `VaultCoreDependencies`
 
 ## Parameters
 
@@ -18,4 +18,4 @@
 
 ## Returns
 
-`any`
+`VaultCoreDependencies`

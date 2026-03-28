@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -6,21 +6,21 @@
 
 ## Properties
 
-### actorId?
+### actor\_id?
 
-> `optional` **actorId?**: `string`
-
-***
-
-### requestId?
-
-> `optional` **requestId?**: `string`
+> `optional` **actor\_id?**: `string`
 
 ***
 
-### secretAlias?
+### request\_id?
 
-> `optional` **secretAlias?**: `string`
+> `optional` **request\_id?**: `string`
+
+***
+
+### secret\_alias?
+
+> `optional` **secret\_alias?**: `string`
 
 ***
 

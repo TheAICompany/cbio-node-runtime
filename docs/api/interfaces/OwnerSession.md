@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -18,9 +18,9 @@
 
 ***
 
-### vaultId
+### vault\_id
 
-> `readonly` **vaultId**: `string`
+> `readonly` **vault\_id**: `string`
 
 ## Methods
 

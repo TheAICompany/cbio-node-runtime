@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -32,11 +32,11 @@
 
 ### delete()
 
-> **delete**(`secretId`): `Promise`\<`void`\>
+> **delete**(`secret_id`): `Promise`\<`void`\>
 
 #### Parameters
 
-##### secretId
+##### secret\_id
 
 [`SecretId`](../interfaces/SecretId.md)
 
@@ -52,11 +52,11 @@
 
 ### load()
 
-> **load**(`secretId`): `Promise`\<`string` \| `null`\>
+> **load**(`secret_id`): `Promise`\<`string` \| `null`\>
 
 #### Parameters
 
-##### secretId
+##### secret\_id
 
 [`SecretId`](../interfaces/SecretId.md)
 
@@ -72,11 +72,11 @@
 
 ### store()
 
-> **store**(`secretId`, `plaintext`): `Promise`\<`void`\>
+> **store**(`secret_id`, `plaintext`): `Promise`\<`void`\>
 
 #### Parameters
 
-##### secretId
+##### secret\_id
 
 [`SecretId`](../interfaces/SecretId.md)
 

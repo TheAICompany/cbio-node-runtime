@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -16,25 +16,25 @@
 
 > **grants**: `object`
 
-#### agentSecrets
+#### agent\_secrets
 
-> **agentSecrets**: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]
+> **agent\_secrets**: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]
 
-#### secretDestinations
+#### secret\_destinations
 
-> **secretDestinations**: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]
-
-***
-
-### issuedAt
-
-> **issuedAt**: `string`
+> **secret\_destinations**: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]
 
 ***
 
-### rootAgentId
+### issued\_at
 
-> **rootAgentId**: `string`
+> **issued\_at**: `string`
+
+***
+
+### root\_agent\_id
+
+> **root\_agent\_id**: `string`
 
 ***
 
@@ -44,12 +44,12 @@
 
 ***
 
-### vaultId
+### vault\_id
 
-> **vaultId**: `string`
+> **vault\_id**: `string`
 
 ***
 
-### vaultNickname?
+### vault\_nickname?
 
-> `optional` **vaultNickname?**: `string`
+> `optional` **vault\_nickname?**: `string`

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -6,9 +6,9 @@
 
 ## Properties
 
-### vaultId
+### vault\_id
 
-> `readonly` **vaultId**: [`VaultId`](VaultId.md)
+> `readonly` **vault\_id**: [`VaultId`](VaultId.md)
 
 ## Methods
 
@@ -286,7 +286,7 @@
 
 ### ownerListGrants()
 
-> **ownerListGrants**(`request`): `Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
+> **ownerListGrants**(`request`): `Promise`\<\{ `agent_secrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secret_destinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
 
 #### Parameters
 
@@ -296,7 +296,7 @@
 
 #### Returns
 
-`Promise`\<\{ `agentSecrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secretDestinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
+`Promise`\<\{ `agent_secrets`: readonly [`AgentSecretGrant`](AgentSecretGrant.md)[]; `secret_destinations`: readonly [`SecretDestinationGrant`](SecretDestinationGrant.md)[]; \}\>
 
 ***
 
@@ -328,11 +328,11 @@
 
 [`VaultPrincipal`](VaultPrincipal.md)
 
-###### requestId?
+###### request_id?
 
 `string`
 
-###### vaultId
+###### vault_id
 
 [`VaultId`](VaultId.md)
 
@@ -454,7 +454,7 @@
 
 `string`
 
-###### vaultId
+###### vault_id
 
 [`VaultId`](VaultId.md)
 

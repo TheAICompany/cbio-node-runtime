@@ -1,12 +1,12 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
 # Function: deriveVaultWorkingKeyFromPassword()
 
-> **deriveVaultWorkingKeyFromPassword**(`password`, `vaultId`): `string`
+> **deriveVaultWorkingKeyFromPassword**(`password`, `vault_id`): `string`
 
-Derives a 256-bit working key from a user password and salt (vaultId).
+Derives a 256-bit working key from a user password and salt (vault_id).
 Using scrypt for memory-hard key derivation to resist brute-force attacks.
 
 ## Parameters
@@ -15,7 +15,7 @@ Using scrypt for memory-hard key derivation to resist brute-force attacks.
 
 `string`
 
-### vaultId
+### vault\_id
 
 `string`
 

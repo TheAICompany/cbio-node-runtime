@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -28,15 +28,15 @@
 
 ### get()
 
-> **get**(`vaultId`, `rootAgentId`): `Promise`\<[`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md) \| `null`\>
+> **get**(`vault_id`, `root_agent_id`): `Promise`\<[`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md) \| `null`\>
 
 #### Parameters
 
-##### vaultId
+##### vault\_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
-##### rootAgentId
+##### root\_agent\_id
 
 `string`
 
@@ -52,11 +52,11 @@
 
 ### list()
 
-> **list**(`vaultId`): `Promise`\<readonly [`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md)[]\>
+> **list**(`vault_id`): `Promise`\<readonly [`AgentIdentityRecord`](../interfaces/AgentIdentityRecord.md)[]\>
 
 #### Parameters
 
-##### vaultId
+##### vault\_id
 
 [`VaultId`](../interfaces/VaultId.md)
 

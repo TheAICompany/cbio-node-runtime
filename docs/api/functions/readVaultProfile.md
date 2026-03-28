@@ -1,10 +1,10 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
 # Function: readVaultProfile()
 
-> **readVaultProfile**(`storage`, `vaultWorkingKey`, `_vaultId`): `Promise`\<[`VaultProfile`](../interfaces/VaultProfile.md) \| `null`\>
+> **readVaultProfile**(`storage`, `vaultWorkingKey`, `_vault_id`): `Promise`\<[`VaultProfile`](../interfaces/VaultProfile.md) \| `null`\>
 
 ## Parameters
 
@@ -16,7 +16,7 @@
 
 `string`
 
-### \_vaultId
+### \_vault\_id
 
 `string`
 

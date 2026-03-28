@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -28,19 +28,19 @@
 
 ### delete()
 
-> **delete**(`vaultId`, `secretAlias`, `siteId`): `Promise`\<`void`\>
+> **delete**(`vault_id`, `secret_alias`, `site_id`): `Promise`\<`void`\>
 
 #### Parameters
 
-##### vaultId
+##### vault\_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
-##### secretAlias
+##### secret\_alias
 
 `string`
 
-##### siteId
+##### site\_id
 
 `string`
 
@@ -56,19 +56,19 @@
 
 ### get()
 
-> **get**(`vaultId`, `secretAlias`, `siteId`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md) \| `null`\>
+> **get**(`vault_id`, `secret_alias`, `site_id`): `Promise`\<[`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md) \| `null`\>
 
 #### Parameters
 
-##### vaultId
+##### vault\_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
-##### secretAlias
+##### secret\_alias
 
 `string`
 
-##### siteId
+##### site\_id
 
 `string`
 
@@ -84,15 +84,15 @@
 
 ### list()
 
-> **list**(`vaultId`, `secretAlias?`): `Promise`\<readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]\>
+> **list**(`vault_id`, `secret_alias?`): `Promise`\<readonly [`SecretDestinationGrant`](../interfaces/SecretDestinationGrant.md)[]\>
 
 #### Parameters
 
-##### vaultId
+##### vault\_id
 
 [`VaultId`](../interfaces/VaultId.md)
 
-##### secretAlias?
+##### secret\_alias?
 
 `string`
 

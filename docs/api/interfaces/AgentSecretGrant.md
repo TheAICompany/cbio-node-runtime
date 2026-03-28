@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -6,27 +6,27 @@
 
 ## Properties
 
-### grantedAt?
+### granted\_at?
 
-> `optional` **grantedAt?**: `string`
-
-***
-
-### requestedAt
-
-> **requestedAt**: `string`
+> `optional` **granted\_at?**: `string`
 
 ***
 
-### rootAgentId
+### requested\_at
 
-> **rootAgentId**: `string`
+> **requested\_at**: `string`
 
 ***
 
-### secretAlias
+### root\_agent\_id
 
-> **secretAlias**: `string`
+> **root\_agent\_id**: `string`
+
+***
+
+### secret\_alias
+
+> **secret\_alias**: `string`
 
 ***
 
@@ -36,6 +36,6 @@
 
 ***
 
-### vaultId
+### vault\_id
 
-> **vaultId**: [`VaultId`](VaultId.md)
+> **vault\_id**: [`VaultId`](VaultId.md)

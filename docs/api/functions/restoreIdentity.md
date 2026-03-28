@@ -1,16 +1,16 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
 # Function: restoreIdentity()
 
-> **restoreIdentity**(`privateKey`, `options?`): `CreatedIdentity`
+> **restoreIdentity**(`private_key`, `options?`): `CreatedIdentity`
 
 Restores an identity from an existing private key.
 
 ## Parameters
 
-### privateKey
+### private\_key
 
 `string`
 

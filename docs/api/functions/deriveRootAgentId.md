@@ -1,14 +1,14 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
 # Function: deriveRootAgentId()
 
-> **deriveRootAgentId**(`publicKey`): `string`
+> **deriveRootAgentId**(`public_key`): `string`
 
 ## Parameters
 
-### publicKey
+### public\_key
 
 `string`
 

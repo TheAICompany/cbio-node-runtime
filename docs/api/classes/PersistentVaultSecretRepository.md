@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -28,11 +28,11 @@
 
 ### delete()
 
-> **delete**(`secretId`): `Promise`\<`void`\>
+> **delete**(`secret_id`): `Promise`\<`void`\>
 
 #### Parameters
 
-##### secretId
+##### secret\_id
 
 [`SecretId`](../interfaces/SecretId.md)
 
@@ -70,11 +70,11 @@
 
 ### getById()
 
-> **getById**(`secretId`): `Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md) \| `null`\>
+> **getById**(`secret_id`): `Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md) \| `null`\>
 
 #### Parameters
 
-##### secretId
+##### secret\_id
 
 [`SecretId`](../interfaces/SecretId.md)
 
@@ -90,11 +90,11 @@
 
 ### list()
 
-> **list**(`vaultId`): `Promise`\<readonly [`SecretRecord`](../interfaces/SecretRecord.md)[]\>
+> **list**(`vault_id`): `Promise`\<readonly [`SecretRecord`](../interfaces/SecretRecord.md)[]\>
 
 #### Parameters
 
-##### vaultId
+##### vault\_id
 
 [`VaultId`](../interfaces/VaultId.md)
 

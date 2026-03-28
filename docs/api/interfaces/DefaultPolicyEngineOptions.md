@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.63.7**](../README.md)
+[**CBIO Node Runtime Agent API v1.63.8**](../README.md)
 
 ***
 
@@ -16,22 +16,22 @@
 
 ***
 
+### trusted\_issuer\_ids?
+
+> `optional` **trusted\_issuer\_ids?**: readonly `string`[]
+
+***
+
 ### trustedIssuerIdResolver?
 
-> `optional` **trustedIssuerIdResolver?**: (`issuerId`) => `boolean` \| `Promise`\<`boolean`\>
+> `optional` **trustedIssuerIdResolver?**: (`issuer_id`) => `boolean` \| `Promise`\<`boolean`\>
 
 #### Parameters
 
-##### issuerId
+##### issuer\_id
 
 `string`
 
 #### Returns
 
 `boolean` \| `Promise`\<`boolean`\>
-
-***
-
-### trustedIssuerIds?
-
-> `optional` **trustedIssuerIds?**: readonly `string`[]
