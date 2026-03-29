@@ -151,7 +151,7 @@ export interface VaultService {
   // Dispatch & Approval
   agentDispatch(request: DispatchRequest): Promise<DispatchResult>;
   ownerApproveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult | null>;
-  ownerOnPendingDispatch(callback: (record: import("../vault-core/index.js").RequestRecord) => void): () => void;
+  ownerOnPendingDispatch(subscription: import("../vault-core/index.js").OwnerPendingDispatchSubscription): () => void;
 
   // Agent Control
   agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]>;
@@ -268,8 +268,8 @@ class LocalVaultService implements VaultService {
     return this._authority.ownerApproveDispatch(request.actor as any, request.request_id, request.decision);
   }
 
-  ownerOnPendingDispatch(callback: (record: import("../vault-core/index.js").RequestRecord) => void): () => void {
-    return this._authority.ownerOnPendingDispatch(callback);
+  ownerOnPendingDispatch(subscription: import("../vault-core/index.js").OwnerPendingDispatchSubscription): () => void {
+    return this._authority.ownerOnPendingDispatch(subscription);
   }
 
   agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]> {

@@ -14,6 +14,7 @@ import {
   type DispatchInstruction,
   type DispatchRequest,
   type DispatchResult,
+  type OwnerPendingDispatchSubscription,
   type OwnerRequestRecord,
   type OwnerVisibleRequestRecord,
   type RequestRecord,
@@ -737,23 +738,8 @@ export class VaultCore {
     await this._deps.sessionTokenRegistry.revoke(request.token);
     await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditOperation.IDENTITY_REVOKE_TOKEN, "allowed", "succeeded", "session token revoked"));
   }
-
-
-
-  // ─── Event Observers ──────────────────────────────────────────────────────────
-
-  private readonly _requestObservers: ((record: RequestRecord) => void)[] = [];
-
-  ownerOnPendingDispatch(callback: (record: RequestRecord) => void): () => void {
-    this._requestObservers.push(callback);
-    return () => {
-      const idx = this._requestObservers.indexOf(callback);
-      if (idx >= 0) this._requestObservers.splice(idx, 1);
-    };
-  }
-
-  ownerOnGrantState(callback: (record: any) => void): () => void {
-    return this.ownerOnPendingDispatch(callback);
+  ownerOnPendingDispatch(subscription: OwnerPendingDispatchSubscription): () => void {
+    return this._deps.requests.subscribePending(this._deps.vault_id, subscription);
   }
 
   // ─── Internal Helpers ──────────────────────────────────────────────────────────
@@ -807,6 +793,15 @@ export class VaultCore {
       },
       execution: { status: DispatchStatus.IN_PROGRESS },
     };
+    const pending_dispatch_event = result.status === DispatchStatus.AWAITING_APPROVAL
+      ? (existing?.pending_dispatch_event ?? (() => {
+        const emitted_at = this._deps.clock.nowIso();
+        return {
+          event_id: `${emitted_at}::${request.request_id}`,
+          emitted_at,
+        };
+      })())
+      : existing?.pending_dispatch_event;
     const record: RequestRecord = {
       ...baseRecord,
       response: {
@@ -817,11 +812,9 @@ export class VaultCore {
       },
       execution: { status: result.status },
       missing_grants,
+      pending_dispatch_event,
     };
     await this._deps.requests.save(record);
-    if (result.status === DispatchStatus.AWAITING_APPROVAL) {
-      this._requestObservers.forEach(obs => obs(record));
-    }
   }
 
   private toAgentVisibleRequestRecord(record: RequestRecord): AgentVisibleRequestRecord {

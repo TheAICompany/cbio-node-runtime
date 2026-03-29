@@ -1,6 +1,7 @@
 import type {
   AgentSecretGrant,
   SecretDestinationGrant,
+  OwnerPendingDispatchSubscription,
   RequestRecord,
   AgentIdentityRecord,
   AuditEntry,
@@ -100,6 +101,7 @@ export interface RequestRecordRegistry {
   save(record: RequestRecord): Promise<void>;
   get(vault_id: VaultId, request_id: string): Promise<RequestRecord | null>;
   list(vault_id: VaultId, root_agent_id?: string): Promise<readonly RequestRecord[]>;
+  subscribePending(vault_id: VaultId, subscription: OwnerPendingDispatchSubscription): () => void;
 }
 
 export interface VaultCoreDependencies {

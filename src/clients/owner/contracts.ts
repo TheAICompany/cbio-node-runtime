@@ -198,5 +198,5 @@ export interface OwnerClient {
   ownerApproveDispatch(input: VaultApproveDispatchInput): Promise<import("../../vault-core/index.js").DispatchResult | null>;
   ownerDenyDispatch(request_id: string): Promise<void>;
   
-  ownerOnPendingDispatch(callback: (record: import("../../vault-core/index.js").RequestRecord) => void): () => void;
+  ownerOnPendingDispatch(subscription: import("../../vault-core/index.js").OwnerPendingDispatchSubscription): () => void;
 }

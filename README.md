@@ -100,17 +100,27 @@ if (result.status === 'PENDING') {
 
 ### 4. Human-in-the-Loop (Owner Approval)
 
-If a dispatch is blocked (status `PENDING`), the owner reviews the request record:
+If a dispatch is blocked (status `AWAITING_APPROVAL`), the owner can review stored request records or subscribe to pending-dispatch events:
 
 ```ts
-// List pending requests
-const pending = await client.ownerListRequests({ status: 'PENDING' });
+const unsubscribe = client.ownerOnPendingDispatch({
+  onEvent: (event) => {
+    console.log("pending dispatch", event.event_id, event.record.request_id);
+  },
+});
+
+const pending = await client.ownerListRequests();
+const awaitingApproval = pending.filter((record) => record.execution_status === "AWAITING_APPROVAL");
 
 // Approve with the "Allow & Grant" shortcut
-await client.ownerApproveDispatch({
-  requestId: pending[0].requestId,
-  decision: 'allow_and_grant' // Approves THIS request AND provisions permanent grants
-});
+if (awaitingApproval.length > 0) {
+  await client.ownerApproveDispatch({
+    request_id: awaitingApproval[0].request_id,
+    decision: "allow_and_grant",
+  });
+}
+
+unsubscribe();
 ```
 
 Decisions can be:

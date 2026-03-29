@@ -3,7 +3,7 @@ import type {
   AgentDispatchIntent,
   CreateOwnerClientOptions,
   OwnerClient,
-  RequestRecord,
+  PendingDispatchEvent,
   OwnerRequestRecord,
   OwnerVisibleRequestRecord,
 } from "../../src/runtime/index.js";
@@ -20,23 +20,28 @@ declare const owner: OwnerClient;
 declare const agent: AgentClient;
 declare const summary: OwnerVisibleRequestRecord;
 declare const detail: OwnerRequestRecord;
-declare const pending: RequestRecord;
+declare const pending: PendingDispatchEvent;
 
 owner.ownerListRequests({ root_agent_id: "agent_123" });
 owner.ownerReadAudit({ root_agent_id: "agent_123" });
 owner.ownerGetRequest({ request_id: summary.request_id });
-owner.ownerOnPendingDispatch((record) => {
-  const id: string | undefined = record.request_id;
-  void id;
+owner.ownerOnPendingDispatch({
+  afterEventId: "2026-03-29T00:00:00.000Z::req_123",
+  onEvent: (event) => {
+    const id: string | undefined = event.record.request_id;
+    void id;
+  },
 });
 
 const detailRequestUrl: string = detail.request.target_url;
 const detailMethod: string = detail.request.method;
-const pendingRequestId: string | undefined = pending.request_id;
+const pendingRequestId: string | undefined = pending.record.request_id;
+const pendingEventId: string = pending.event_id;
 
 void detailRequestUrl;
 void detailMethod;
 void pendingRequestId;
+void pendingEventId;
 
 const dispatchIntent: AgentDispatchIntent = {
   target_url: "https://api.example.com/data",

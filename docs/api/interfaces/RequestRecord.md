@@ -36,6 +36,20 @@
 
 ***
 
+### pending\_dispatch\_event?
+
+> `optional` **pending\_dispatch\_event?**: `object`
+
+#### emitted\_at
+
+> **emitted\_at**: `string`
+
+#### event\_id
+
+> **event\_id**: `string`
+
+***
+
 ### reason
 
 > **reason**: `string`

@@ -89,6 +89,8 @@ export type {
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
+  PendingDispatchEvent,
+  OwnerPendingDispatchSubscription,
   RequestRecord,
   IssuerWriteSecretCommand,
   OwnerUpdateSecretCommand,

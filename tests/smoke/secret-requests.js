@@ -29,8 +29,10 @@ const crmSecret = await ownerClient.ownerCreateSecret({
 });
 
 let observed = null;
-const unsubscribe = ownerClient.ownerOnPendingDispatch((record) => {
-  observed = record;
+const unsubscribe = ownerClient.ownerOnPendingDispatch({
+  onEvent: (event) => {
+    observed = event.record;
+  },
 });
 
 const crmRecord = await ownerClient.ownerGrantAgentSecret({

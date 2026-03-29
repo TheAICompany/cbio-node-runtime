@@ -55,6 +55,7 @@ The system uses a domain-level white-list model:
 ### 3. Dispatch and Approval (HITL)
 - `agentDispatch(...)`: Attempt a secret-driven HTTP request. Returns `SUCCEEDED`, `DENIED`, `FAILED`, or `AWAITING_APPROVAL`.
 - `ownerListRequests(...)`: Review approval-waiting (`AWAITING_APPROVAL`) or historical dispatches.
+- `ownerOnPendingDispatch({ afterEventId, onEvent })`: Subscribe to persisted pending-dispatch events. Each event includes an `event_id` cursor plus the underlying request record, so consumers can resume after reconnecting.
 - `ownerApproveDispatch(...)`: Resolve a pending request.
     - `allow_once`: Execute once, no permanent change.
     - `allow_and_grant`: Execute and automatically provision permanent grants.

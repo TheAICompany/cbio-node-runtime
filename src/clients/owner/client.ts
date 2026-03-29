@@ -547,8 +547,8 @@ class DefaultOwnerClient implements OwnerClient {
     });
   }
 
-  ownerOnPendingDispatch(callback: (record: import("../../vault-core/index.js").RequestRecord) => void): () => void {
-    return this._vault.ownerOnPendingDispatch(callback);
+  ownerOnPendingDispatch(subscription: import("../../vault-core/index.js").OwnerPendingDispatchSubscription): () => void {
+    return this._vault.ownerOnPendingDispatch(subscription);
   }
 }
 

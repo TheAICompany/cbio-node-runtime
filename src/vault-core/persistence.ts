@@ -6,6 +6,8 @@ import {
   DispatchStatus,
   type AgentSecretGrant,
   type SecretDestinationGrant,
+  type OwnerPendingDispatchSubscription,
+  type PendingDispatchEvent,
   type AgentIdentityRecord,
   type AuditEntry,
   type AuditQuery,
@@ -393,6 +395,53 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
     } catch {
       return [];
     }
+  }
+
+  subscribePending(vault_id: VaultId, subscription: OwnerPendingDispatchSubscription): () => void {
+    let closed = false;
+    let scanInFlight: Promise<void> | null = null;
+    const seen = new Set<string>();
+
+    const scan = async (): Promise<void> => {
+      if (closed) return;
+      const pending = (await this.list(vault_id))
+        .map((record) => this._toPendingDispatchEvent(record))
+        .filter((event): event is PendingDispatchEvent => !!event)
+        .filter((event) => !subscription.afterEventId || event.event_id > subscription.afterEventId)
+        .sort((a, b) => a.event_id.localeCompare(b.event_id));
+      for (const event of pending) {
+        if (seen.has(event.event_id)) continue;
+        seen.add(event.event_id);
+        subscription.onEvent(event);
+      }
+    };
+
+    const tick = () => {
+      if (closed || scanInFlight) return;
+      scanInFlight = scan().finally(() => {
+        scanInFlight = null;
+      });
+    };
+
+    tick();
+    const interval = setInterval(tick, 250);
+    interval.unref?.();
+
+    return () => {
+      closed = true;
+      clearInterval(interval);
+    };
+  }
+
+  private _toPendingDispatchEvent(record: RequestRecord): PendingDispatchEvent | null {
+    if (record.execution.status !== DispatchStatus.AWAITING_APPROVAL || !record.pending_dispatch_event) {
+      return null;
+    }
+    return {
+      event_id: record.pending_dispatch_event.event_id,
+      emitted_at: record.pending_dispatch_event.emitted_at,
+      record,
+    };
   }
 }
 

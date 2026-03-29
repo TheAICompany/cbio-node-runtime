@@ -32,7 +32,7 @@
     "prepare": "npm run build && npm run build:docs",
     "test": "npm run build && npm run test:types && npm run test:acceptance",
     "test:types": "tsc -p tsconfig.type-tests.json --noEmit",
-    "test:acceptance": "node tests/smoke/runtime-surface.js && node tests/smoke/policy-and-persistence.js && node tests/smoke/persistent-runtime-security.js && node tests/smoke/replay-guard.js && node tests/smoke/security-guards.js && node tests/smoke/audit-root-agent-activity.js"
+    "test:acceptance": "node tests/smoke/runtime-surface.js && node tests/smoke/policy-and-persistence.js && node tests/smoke/persistent-runtime-security.js && node tests/smoke/replay-guard.js && node tests/smoke/security-guards.js && node tests/smoke/audit-root-agent-activity.js && node tests/smoke/pending-dispatch-subscription.js"
   },
   "keywords": [
     "claw-biometric",

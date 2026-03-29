@@ -87,6 +87,8 @@ export type {
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
+  PendingDispatchEvent,
+  OwnerPendingDispatchSubscription,
   RequestRecord,
   SecretAlias,
   SecretId,

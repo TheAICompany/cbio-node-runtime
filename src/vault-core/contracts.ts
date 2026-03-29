@@ -275,6 +275,21 @@ export interface RequestRecord {
     agent_secret?: boolean;
     secret_destination?: boolean;
   };
+  pending_dispatch_event?: {
+    event_id: string;
+    emitted_at: string;
+  };
+}
+
+export interface PendingDispatchEvent {
+  event_id: string;
+  emitted_at: string;
+  record: RequestRecord;
+}
+
+export interface OwnerPendingDispatchSubscription {
+  afterEventId?: string;
+  onEvent(event: PendingDispatchEvent): void;
 }
 
 export interface AgentVisibleRequestRecord {

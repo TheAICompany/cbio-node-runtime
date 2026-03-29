@@ -13,6 +13,8 @@ import type {
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
+  OwnerPendingDispatchSubscription,
+  PendingDispatchEvent,
 
   DispatchInstruction,
   DispatchRequest,
@@ -278,9 +280,19 @@ export class InMemorySecretDestinationGrantRegistry implements SecretDestination
 
 export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
   private readonly _records = new Map<string, RequestRecord>();
+  private readonly _pendingSubscribers = new Map<string, Set<(event: PendingDispatchEvent) => void>>();
 
   async save(record: RequestRecord): Promise<void> {
-    this._records.set(`${record.vault_id.value}:${record.request_id}`, record);
+    const key = `${record.vault_id.value}:${record.request_id}`;
+    const previous = this._records.get(key);
+    this._records.set(key, record);
+    const event = this._toPendingDispatchEvent(record);
+    if (event && previous?.pending_dispatch_event?.event_id !== event.event_id) {
+      const subscribers = this._pendingSubscribers.get(record.vault_id.value);
+      if (subscribers) {
+        for (const callback of subscribers) callback(event);
+      }
+    }
   }
 
   async get(vault_id: VaultId, request_id: string): Promise<RequestRecord | null> {
@@ -293,6 +305,41 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
       if (root_agent_id && record.root_agent_id !== root_agent_id) return false;
       return true;
     });
+  }
+
+  subscribePending(vault_id: VaultId, subscription: OwnerPendingDispatchSubscription): () => void {
+    const replay = Array.from(this._records.values())
+      .filter((record) => record.vault_id.value === vault_id.value)
+      .map((record) => this._toPendingDispatchEvent(record))
+      .filter((event): event is PendingDispatchEvent => !!event)
+      .filter((event) => !subscription.afterEventId || event.event_id > subscription.afterEventId)
+      .sort((a, b) => a.event_id.localeCompare(b.event_id));
+    for (const event of replay) subscription.onEvent(event);
+
+    let subscribers = this._pendingSubscribers.get(vault_id.value);
+    if (!subscribers) {
+      subscribers = new Set();
+      this._pendingSubscribers.set(vault_id.value, subscribers);
+    }
+    subscribers.add(subscription.onEvent);
+
+    return () => {
+      const current = this._pendingSubscribers.get(vault_id.value);
+      if (!current) return;
+      current.delete(subscription.onEvent);
+      if (current.size === 0) this._pendingSubscribers.delete(vault_id.value);
+    };
+  }
+
+  private _toPendingDispatchEvent(record: RequestRecord): PendingDispatchEvent | null {
+    if (record.execution.status !== DispatchStatus.AWAITING_APPROVAL || !record.pending_dispatch_event) {
+      return null;
+    }
+    return {
+      event_id: record.pending_dispatch_event.event_id,
+      emitted_at: record.pending_dispatch_event.emitted_at,
+      record,
+    };
   }
 }
 

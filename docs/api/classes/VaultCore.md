@@ -448,31 +448,15 @@
 
 ***
 
-### ownerOnGrantState()
-
-> **ownerOnGrantState**(`callback`): () => `void`
-
-#### Parameters
-
-##### callback
-
-(`record`) => `void`
-
-#### Returns
-
-() => `void`
-
-***
-
 ### ownerOnPendingDispatch()
 
-> **ownerOnPendingDispatch**(`callback`): () => `void`
+> **ownerOnPendingDispatch**(`subscription`): () => `void`
 
 #### Parameters
 
-##### callback
+##### subscription
 
-(`record`) => `void`
+[`OwnerPendingDispatchSubscription`](../interfaces/OwnerPendingDispatchSubscription.md)
 
 #### Returns
 

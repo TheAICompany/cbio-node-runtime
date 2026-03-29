@@ -153,14 +153,22 @@ console.log(manifest.grants.agentSecrets); // 已获得的机密授权
 如果 Agent 尝试的请求未获授权，`agentDispatch` 会返回 `AWAITING_APPROVAL` 状态，进入人工审批流。
 
 ```ts
+const unsubscribe = client.ownerOnPendingDispatch({
+  onEvent: (event) => {
+    console.log("pending dispatch", event.event_id, event.record.request_id);
+  },
+});
+
 // 审批待处理的请求
-const pending = await client.ownerListRequests({ rootAgentId });
+const pending = await client.ownerListRequests({ root_agent_id: rootAgentId });
 if (pending.length > 0) {
   await client.ownerApproveDispatch({
-    requestId: pending[0].requestId,
-    decision: 'allow_and_grant' // 允许执行并自动补齐缺少的授权
+    request_id: pending[0].request_id,
+    decision: "allow_and_grant", // 允许执行并自动补齐缺少的授权
   });
 }
+
+unsubscribe();
 
 // 查看语义化审计日志
 const logs = await client.ownerReadAudit({ 

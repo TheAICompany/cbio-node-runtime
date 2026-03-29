@@ -260,13 +260,13 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ### ownerOnPendingDispatch()
 
-> **ownerOnPendingDispatch**(`callback`): () => `void`
+> **ownerOnPendingDispatch**(`subscription`): () => `void`
 
 #### Parameters
 
-##### callback
+##### subscription
 
-(`record`) => `void`
+[`OwnerPendingDispatchSubscription`](OwnerPendingDispatchSubscription.md)
 
 #### Returns
 
