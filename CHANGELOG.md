@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.68.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.67.2...v1.68.0) (2026-03-29)
+
+
+### Features
+
+* implement root agent activity auditing and add corresponding smoke test ([46d625f](https://github.com/TheAICompany/cbio-node-runtime/commit/46d625f20c3dbff4db5d92fdf7438dfd63294df6))
+
 ### [1.67.2](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.67.1...v1.67.2) (2026-03-28)
 
 ### [1.67.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.67.0...v1.67.1) (2026-03-28)
