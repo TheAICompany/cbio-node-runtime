@@ -2,9 +2,7 @@ export type AgentId = string; // Now represents root_agent_id
 
 export type VaultPrincipalKind =
   | "owner"
-  | "trusted_issuer"
-  | "agent"
-  | "trusted_executor";
+  | "agent";
 
 export interface VaultPrincipal {
   kind: VaultPrincipalKind;
@@ -109,17 +107,6 @@ export interface OwnerUpdateSecretCommand {
   requested_at: string;
 }
 
-export interface IssuerWriteSecretCommand {
-  kind: "issuer.write_secret";
-  vault_id: VaultId;
-  issuer: VaultPrincipal & { kind: "trusted_issuer" };
-  alias: string;
-  plaintext: string;
-  issuerSiteId: string;
-  source?: SecretSourceInput;
-  requested_at: string;
-}
-
 export interface OwnerDeleteSecretCommand {
   kind: "owner.remove_secret";
   vault_id: VaultId;
@@ -131,8 +118,7 @@ export interface OwnerDeleteSecretCommand {
 
 export type VaultWriteSecretCommand =
   | OwnerCreateSecretCommand
-  | OwnerUpdateSecretCommand
-  | IssuerWriteSecretCommand;
+  | OwnerUpdateSecretCommand;
 
 export interface OwnerRegisterAgentIdentityCommand {
   vault_id: VaultId;
@@ -519,13 +505,6 @@ export enum AuditOperation {
   DISPATCH_APPROVE = "dispatch.approve",
   DISPATCH_REJECT = "dispatch.reject",
   DISPATCH_HOLD = "dispatch.pending_approval",
-
-  MANAGEMENT_LIST_AGENTS = "management.list_agents",
-  MANAGEMENT_LIST_GRANTS = "management.list_grants",
-  MANAGEMENT_LIST_REQUESTS = "management.list_requests",
-  MANAGEMENT_READ_REQUEST = "management.read_request",
-  MANAGEMENT_READ_AUDIT = "management.read_audit",
-  MANAGEMENT_LIST_SECRETS = "management.list_secrets",
 }
 
 export interface AuditEntry {

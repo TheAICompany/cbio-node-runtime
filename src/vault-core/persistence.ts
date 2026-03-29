@@ -155,6 +155,51 @@ export class FileSecretRepository implements SecretRepository {
   }
 }
 
+const auditSubscribersByVault = new Map<string, Set<(entry: AuditEntry) => void>>();
+const pendingSubscribersByVault = new Map<string, Set<(record: RequestRecord) => void>>();
+
+function publishAuditEntry(entry: AuditEntry) {
+  const subscribers = auditSubscribersByVault.get(entry.vault_id);
+  if (!subscribers) return;
+  for (const callback of subscribers) callback(entry);
+}
+
+function publishRequestRecord(record: RequestRecord) {
+  const subscribers = pendingSubscribersByVault.get(record.vault_id.value);
+  if (!subscribers) return;
+  for (const callback of subscribers) callback(record);
+}
+
+function registerAuditSubscriber(vault_id: string, callback: (entry: AuditEntry) => void): () => void {
+  let subscribers = auditSubscribersByVault.get(vault_id);
+  if (!subscribers) {
+    subscribers = new Set();
+    auditSubscribersByVault.set(vault_id, subscribers);
+  }
+  subscribers.add(callback);
+  return () => {
+    const current = auditSubscribersByVault.get(vault_id);
+    if (!current) return;
+    current.delete(callback);
+    if (current.size === 0) auditSubscribersByVault.delete(vault_id);
+  };
+}
+
+function registerPendingSubscriber(vault_id: string, callback: (record: RequestRecord) => void): () => void {
+  let subscribers = pendingSubscribersByVault.get(vault_id);
+  if (!subscribers) {
+    subscribers = new Set();
+    pendingSubscribersByVault.set(vault_id, subscribers);
+  }
+  subscribers.add(callback);
+  return () => {
+    const current = pendingSubscribersByVault.get(vault_id);
+    if (!current) return;
+    current.delete(callback);
+    if (current.size === 0) pendingSubscribersByVault.delete(vault_id);
+  };
+}
+
 export class FileSecretCustody implements SecretCustody {
   private readonly _baseDir: string;
   private readonly _workingKey: string;
@@ -204,6 +249,7 @@ export class FileAuditLog implements AuditLog {
     const filePath = this._getPath({ value: entry.vault_id });
     await ensureDir(path.dirname(filePath));
     await fs.appendFile(filePath, JSON.stringify(entry) + "\n");
+    publishAuditEntry(entry);
   }
 
   async query(query: AuditQuery): Promise<readonly AuditEntry[]> {
@@ -231,6 +277,13 @@ export class FileAuditLog implements AuditLog {
     const seen = new Set<string>();
     const watchers: nodefs.FSWatcher[] = [];
     const vaultDir = path.join(this._baseDir, vault_id.value);
+    const unregisterInProcess = registerAuditSubscriber(vault_id.value, (entry) => {
+      if (closed) return;
+      if (seen.has(entry.event_id)) return;
+      if (!matchesAuditSubscription(entry, subscription)) return;
+      seen.add(entry.event_id);
+      subscription.onEvent(entry);
+    });
 
     const scan = async (): Promise<void> => {
       if (closed) return;
@@ -266,11 +319,12 @@ export class FileAuditLog implements AuditLog {
       });
     };
 
-    void refreshWatchers();
+    void ensureDir(this._baseDir).then(() => refreshWatchers());
     tick();
 
     return () => {
       closed = true;
+      unregisterInProcess();
       closeWatchers(watchers);
     };
   }
@@ -445,6 +499,7 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
     const filePath = this._getPath(record.vault_id, record.request_id);
     await ensureDir(path.dirname(filePath));
     await fs.writeFile(filePath, JSON.stringify(record, null, 2));
+    publishRequestRecord(record);
   }
 
   async get(vault_id: VaultId, request_id: string): Promise<RequestRecord | null> {
@@ -478,6 +533,15 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
     const seen = new Set<string>();
     const watchers: nodefs.FSWatcher[] = [];
     const vaultDir = path.join(this._baseDir, vault_id.value);
+    const unregisterInProcess = registerPendingSubscriber(vault_id.value, (record) => {
+      if (closed) return;
+      const event = this._toPendingDispatchEvent(record);
+      if (!event) return;
+      if (subscription.afterEventId && event.event_id <= subscription.afterEventId) return;
+      if (seen.has(event.event_id)) return;
+      seen.add(event.event_id);
+      subscription.onEvent(event);
+    });
 
     const scan = async (): Promise<void> => {
       if (closed) return;
@@ -515,11 +579,12 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
       });
     };
 
-    void refreshWatchers();
+    void ensureDir(this._baseDir).then(() => refreshWatchers());
     tick();
 
     return () => {
       closed = true;
+      unregisterInProcess();
       closeWatchers(watchers);
     };
   }

@@ -296,6 +296,7 @@ export class VaultCore {
         target_url: request.target_url,
         method: request.method,
       };
+      await this._updateRequestRecordInternal(request, result, authorization.missing_grants);
       await this._appendAudit(
         toAuditEntry(this._deps, request.agent, AuditOperation.DISPATCH_HOLD, "allowed", "not_executed", "request held for human approval", {
           request_id: request.request_id,
@@ -304,7 +305,6 @@ export class VaultCore {
           secret_alias: request.secret_alias,
         }),
       );
-      await this._updateRequestRecordInternal(request, result, authorization.missing_grants);
       return result;
     }
 
@@ -660,9 +660,7 @@ export class VaultCore {
 
   async ownerReadAudit(actor: VaultPrincipal & { kind: "owner" }, query: AuditQuery): Promise<readonly AuditEntry[]> {
     this._assertOwnerPrincipal(actor);
-    const entries = await this._deps.audit.query(query);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_READ_AUDIT, "allowed", "succeeded", "audit log accessed", { detail: JSON.stringify(query) }));
-    return entries;
+    return this._deps.audit.query(query);
   }
 
   async ownerExportSecret(actor: VaultPrincipal & { kind: "owner" }, alias: string): Promise<OwnerSecretExport> {
@@ -683,15 +681,12 @@ export class VaultCore {
     for (const st of sessionTokens) {
       tokensByAgentId.set(st.root_agent_id, st);
     }
-    const result = identities.map(id => ({ ...id, session_token: tokensByAgentId.get(id.root_agent_id) }));
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_LIST_AGENTS, "allowed", "succeeded", "agent identity list accessed"));
-    return result;
+    return identities.map(id => ({ ...id, session_token: tokensByAgentId.get(id.root_agent_id) }));
   }
 
   async ownerListRequests(actor: VaultPrincipal & { kind: "owner" }, root_agent_id?: string): Promise<readonly OwnerVisibleRequestRecord[]> {
     this._assertOwnerPrincipal(actor);
     const records = await this._deps.requests.list(this._deps.vault_id, root_agent_id);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_LIST_REQUESTS, "allowed", "succeeded", "request list accessed"));
     return records.map(r => this.toOwnerVisibleRequestRecord(r));
   }
 
@@ -699,15 +694,12 @@ export class VaultCore {
     this._assertOwnerPrincipal(actor);
     const record = await this._deps.requests.get(this._deps.vault_id, request_id);
     if (!record) throw new VaultCoreError("request record not found", "VAULT_REQUEST_NOT_FOUND");
-    const result = this.toOwnerRequestRecord(record);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_READ_REQUEST, "allowed", "succeeded", `dispatch request detailed: "${request_id}"`, { request_id }));
-    return result;
+    return this.toOwnerRequestRecord(record);
   }
 
   async ownerListSecrets(actor: VaultPrincipal & { kind: "owner" }): Promise<readonly AgentVisibleSecretRecord[]> {
     this._assertOwnerPrincipal(actor);
     const records = await this._deps.secrets.list(this._deps.vault_id);
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.MANAGEMENT_LIST_SECRETS, "allowed", "succeeded", "secret list accessed"));
     return records.map(r => ({
       vault_id: r.vault_id,
       secret_id: r.secret_id,

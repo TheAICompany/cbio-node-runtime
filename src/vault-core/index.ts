@@ -92,7 +92,6 @@ export type {
   OwnerPendingDispatchSubscription,
   OwnerAuditSubscription,
   RequestRecord,
-  IssuerWriteSecretCommand,
   OwnerUpdateSecretCommand,
   SecretAlias,
   SecretId,
@@ -124,6 +123,6 @@ export type {
 
   SecretRepository,
   SecretCustody,
-  TrustedExecutor,
+  DispatchExecutor,
   VaultCoreDependencies,
 } from "./ports.js";

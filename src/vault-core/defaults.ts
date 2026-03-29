@@ -35,7 +35,7 @@ import type {
   AuditLog,
 
   PolicyEngine,
-  TrustedExecutor,
+  DispatchExecutor,
   VaultCoreDependencies,
 } from "./ports.js";
 import {
@@ -54,8 +54,6 @@ import {
 
 export interface DefaultPolicyEngineOptions {
   now?: () => Date;
-  trusted_issuer_ids?: readonly string[];
-  trustedIssuerIdResolver?: (issuer_id: string) => Promise<boolean> | boolean;
 }
 
 export interface SignatureAgentProofVerifierOptions {
@@ -406,16 +404,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
     }
   }
 
-  private async isTrustedIssuer(issuer_id: string): Promise<boolean> {
-    if (this._options.trustedIssuerIdResolver) {
-      return await this._options.trustedIssuerIdResolver(issuer_id);
-    }
-    if (this._options.trusted_issuer_ids) {
-      return this._options.trusted_issuer_ids.includes(issuer_id);
-    }
-    return false;
-  }
-
   async authorizeWrite(command: import("./contracts.js").VaultWriteSecretCommand): Promise<void> {
     if (!command.alias.trim()) {
       throw new VaultCoreError("secret alias required", "VAULT_WRITE_DENIED");
@@ -425,12 +413,6 @@ export class DefaultPolicyEngine implements PolicyEngine {
     }
     this.validateRequestedAt(command.requested_at, "requested_at");
     if (command.kind === "owner.create_secret" || command.kind === "owner.update_secret") return;
-    if (command.issuer.id !== command.issuerSiteId) {
-      throw new VaultCoreError("issuer identity mismatch", "VAULT_WRITE_DENIED");
-    }
-    if (!await this.isTrustedIssuer(command.issuer.id)) {
-      throw new VaultCoreError("trusted issuer required", "VAULT_WRITE_DENIED");
-    }
   }
 }
 
@@ -575,7 +557,7 @@ export class InMemoryReplayGuard implements ReplayGuard {
 /**
  * @internal
  */
-export class HttpDispatchExecutor implements TrustedExecutor {
+export class HttpDispatchExecutor implements DispatchExecutor {
   constructor(
     private readonly _fetchImpl: typeof fetch = fetch,
     private readonly _authHeaderName = "Authorization",

@@ -45,7 +45,7 @@ export interface AuditLog {
   subscribe(vault_id: VaultId, subscription: OwnerAuditSubscription): () => void;
 }
 
-export interface TrustedExecutor {
+export interface DispatchExecutor {
   dispatch(instruction: DispatchInstruction, secret: { record: SecretRecord; plaintext: string }): Promise<DispatchResult>;
 }
 
@@ -112,7 +112,7 @@ export interface VaultCoreDependencies {
   custody: SecretCustody;
   policy: PolicyEngine;
   audit: AuditLog;
-  executor: TrustedExecutor;
+  executor: DispatchExecutor;
   agentRecords: AgentIdentityRegistry;
   agent_secretGrants: AgentSecretGrantRegistry;
   secret_destinationGrants: SecretDestinationGrantRegistry;
