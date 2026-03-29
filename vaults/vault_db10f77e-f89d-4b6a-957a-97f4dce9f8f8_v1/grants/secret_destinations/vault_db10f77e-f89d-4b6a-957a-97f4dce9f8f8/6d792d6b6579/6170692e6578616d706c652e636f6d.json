@@ -1,0 +1,10 @@
+{
+  "vault_id": {
+    "value": "vault_db10f77e-f89d-4b6a-957a-97f4dce9f8f8"
+  },
+  "secret_alias": "my-key",
+  "site_id": "api.example.com",
+  "status": "approved",
+  "requested_at": "2026-03-28T19:04:08.708Z",
+  "granted_at": "2026-03-28T19:04:08.708Z"
+}

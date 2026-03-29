@@ -1,0 +1,10 @@
+{
+  "vault_id": {
+    "value": "vault_db10f77e-f89d-4b6a-957a-97f4dce9f8f8"
+  },
+  "root_agent_id": "agt_Dji_61oiUlk97-cbOWPHTLvvgh2xhihdmv_SRrmRUok",
+  "secret_alias": "my-key",
+  "status": "approved",
+  "requested_at": "2026-03-28T19:04:08.708Z",
+  "granted_at": "2026-03-28T19:04:08.708Z"
+}

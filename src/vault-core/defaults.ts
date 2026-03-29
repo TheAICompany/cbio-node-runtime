@@ -159,6 +159,7 @@ export class InMemoryAuditLog implements AuditLog {
   async query(query: AuditQuery): Promise<readonly AuditEntry[]> {
     return this._entries.filter((entry) => {
       if (query.actor_id && entry.actor.id !== query.actor_id) return false;
+      if (query.root_agent_id && entry.root_agent_id !== query.root_agent_id) return false;
       if (query.secret_alias && entry.secret_alias !== query.secret_alias) return false;
       if (query.request_id && entry.request_id !== query.request_id) return false;
       if (query.since && entry.ts < query.since) return false;

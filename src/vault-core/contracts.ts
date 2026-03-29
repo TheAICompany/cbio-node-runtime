@@ -459,6 +459,7 @@ export interface AgentRequestResult {
 export interface AuditQuery {
   vault_id: string; // Changed from vault_id to align with others if needed, but keeping vault_id for now if it's an object? No, spec says vault_id is string.
   actor_id?: string;
+  root_agent_id?: string;
   secret_alias?: string;
   request_id?: string;
   since?: string;

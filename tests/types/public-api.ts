@@ -23,6 +23,7 @@ declare const detail: OwnerRequestRecord;
 declare const pending: RequestRecord;
 
 owner.ownerListRequests({ root_agent_id: "agent_123" });
+owner.ownerReadAudit({ root_agent_id: "agent_123" });
 owner.ownerGetRequest({ request_id: summary.request_id });
 owner.ownerOnPendingDispatch((record) => {
   const id: string | undefined = record.request_id;

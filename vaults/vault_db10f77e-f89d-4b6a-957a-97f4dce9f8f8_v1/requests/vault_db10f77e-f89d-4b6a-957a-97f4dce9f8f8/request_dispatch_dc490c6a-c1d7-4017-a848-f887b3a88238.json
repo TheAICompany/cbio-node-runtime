@@ -1,0 +1,25 @@
+{
+  "vault_id": {
+    "value": "vault_db10f77e-f89d-4b6a-957a-97f4dce9f8f8"
+  },
+  "request_id": "request_dispatch_dc490c6a-c1d7-4017-a848-f887b3a88238",
+  "root_agent_id": "agt_Dji_61oiUlk97-cbOWPHTLvvgh2xhihdmv_SRrmRUok",
+  "reason": "Initial test request",
+  "created_at": "2026-03-28T19:04:08.706Z",
+  "request": {
+    "target_url": "https://api.example.com/data",
+    "method": "POST",
+    "body": "ping",
+    "secret_alias": "my-key"
+  },
+  "execution": {
+    "status": "FAILED"
+  },
+  "response": {
+    "error": "fetch failed"
+  },
+  "missing_grants": {
+    "agent_secret": true,
+    "secret_destination": true
+  }
+}

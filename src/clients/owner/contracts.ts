@@ -21,6 +21,7 @@ export interface OwnerRemoveSecretInput {
 
 export interface VaultAuditQueryInput {
   actor_id?: string;
+  root_agent_id?: string;
   secret_alias?: string;
   request_id?: string;
   since?: string;

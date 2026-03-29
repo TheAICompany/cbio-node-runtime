@@ -1,0 +1,9 @@
+{
+  "vault_id": {
+    "value": "vault_db10f77e-f89d-4b6a-957a-97f4dce9f8f8"
+  },
+  "root_agent_id": "agt_Dji_61oiUlk97-cbOWPHTLvvgh2xhihdmv_SRrmRUok",
+  "public_key": "MCowBQYDK2VwAyEAGwMInt7jjZRgOiYyHGrdbIUq7lU0XAvJYzYAjYmrJes",
+  "private_key": "MC4CAQAwBQYDK2VwBCIEIIkhWZCOVSvsI9tqponYWJAtl5nICZ-XfHfX6vNR47Pv",
+  "nickname": "HITL-Bot"
+}

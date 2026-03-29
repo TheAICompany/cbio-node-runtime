@@ -106,6 +106,7 @@ export class VaultCore {
       await this._appendAudit(
         toAuditEntry(this._deps, command.agent, AuditOperation.POLICY_EVALUATE, "denied", "not_executed", `proof verification failed: ${detail}`, {
           request_id: command.request_id,
+          root_agent_id: command.agent.id,
           secret_alias: (command as any).secret_alias,
           ...extraAudit,
         }),
@@ -276,6 +277,7 @@ export class VaultCore {
       await this._appendAudit(
         toAuditEntry(this._deps, request.agent, AuditOperation.POLICY_EVALUATE, "denied", "not_executed", authorization.reason ?? "denied", {
           request_id: request.request_id,
+          root_agent_id: request.agent.id,
           target: { kind: "http", url: request.target_url },
           secret_alias: request.secret_alias,
         }),
@@ -295,6 +297,7 @@ export class VaultCore {
       await this._appendAudit(
         toAuditEntry(this._deps, request.agent, AuditOperation.DISPATCH_HOLD, "allowed", "not_executed", "request held for human approval", {
           request_id: request.request_id,
+          root_agent_id: request.agent.id,
           target: { kind: "http", url: request.target_url },
           secret_alias: request.secret_alias,
         }),
@@ -338,6 +341,7 @@ export class VaultCore {
         result.status === DispatchStatus.SUCCEEDED ? "dispatch completed" : (result.error ?? "dispatch failed"),
         {
           request_id: request.request_id,
+          root_agent_id: request.agent.id,
           target: { kind: "http", url: request.target_url },
           secret_alias: request.secret_alias,
           secret_id: secret_id.value,
@@ -469,6 +473,24 @@ export class VaultCore {
         request_id,
         root_agent_id: record.root_agent_id,
       }),
+    );
+
+    await this._appendAudit(
+      toAuditEntry(
+        this._deps,
+        { kind: "agent", id: record.root_agent_id },
+        AuditOperation.SECRET_DISPATCH,
+        "allowed",
+        result.status === DispatchStatus.SUCCEEDED ? "succeeded" : "failed",
+        result.status === DispatchStatus.SUCCEEDED ? "dispatch completed" : (result.error ?? "dispatch failed"),
+        {
+          request_id,
+          root_agent_id: record.root_agent_id,
+          target: { kind: "http", url: record.request.target_url },
+          secret_alias,
+          secret_id: secret.secret_id.value,
+        },
+      ),
     );
 
     return result;

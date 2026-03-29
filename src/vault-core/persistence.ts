@@ -186,7 +186,11 @@ export class FileAuditLog implements AuditLog {
       const lines = content.split("\n").filter(l => !!l);
       const entries = lines.map(l => JSON.parse(l));
       return entries.filter(e => {
+        if (query.actor_id && e.actor?.id !== query.actor_id) return false;
+        if (query.root_agent_id && e.root_agent_id !== query.root_agent_id) return false;
         if (query.secret_alias && e.secret_alias !== query.secret_alias) return false;
+        if (query.request_id && e.request_id !== query.request_id) return false;
+        if (query.since && e.ts < query.since) return false;
         return true;
       });
     } catch {
