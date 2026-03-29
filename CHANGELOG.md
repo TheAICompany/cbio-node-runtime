@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.69.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.68.0...v1.69.0) (2026-03-29)
+
+
+### Features
+
+* introduce AgentRequestRecord interface and include requested_at and response headers in request tracking ([17b7b6e](https://github.com/TheAICompany/cbio-node-runtime/commit/17b7b6e4bdba70725d13d4a5d34f7cbcb873ad69))
+
 ## [1.68.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.67.2...v1.68.0) (2026-03-29)
 
 
