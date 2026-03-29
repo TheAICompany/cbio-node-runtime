@@ -30,7 +30,7 @@
 
 ### agentGetRequest()
 
-> **agentGetRequest**(`request`): `Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
+> **agentGetRequest**(`request`): `Promise`\<[`AgentRequestRecord`](AgentRequestRecord.md)\>
 
 #### Parameters
 
@@ -40,7 +40,7 @@
 
 #### Returns
 
-`Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
+`Promise`\<[`AgentRequestRecord`](AgentRequestRecord.md)\>
 
 ***
 

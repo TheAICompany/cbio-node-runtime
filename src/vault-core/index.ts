@@ -58,6 +58,7 @@ export type {
   AgentListRequestsRequest,
   AgentGetRequestRequest,
   AgentVisibleRequestRecord,
+  AgentRequestRecord,
   OwnerVisibleRequestRecord,
   OwnerRequestRecord,
   AgentRequestResult,

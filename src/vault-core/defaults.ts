@@ -498,6 +498,10 @@ export class HttpDispatchExecutor implements TrustedExecutor {
         },
         body: instruction.body,
       });
+      const response_headers: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        response_headers[key] = value;
+      });
       return {
         vault_id: instruction.vault_id,
         request_id: instruction.request_id,
@@ -505,6 +509,7 @@ export class HttpDispatchExecutor implements TrustedExecutor {
         target_url: instruction.target_url,
         method: instruction.method,
         response_status: response.status,
+        response_headers,
         response_body: await response.text(),
         error: response.ok ? undefined : `HTTP_${response.status}`,
       };

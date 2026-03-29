@@ -32,7 +32,7 @@ If the grant is missing, it will return an AWAITING_APPROVAL status.
 
 ### agentGetRequest()
 
-> **agentGetRequest**(`request_id`): `Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
+> **agentGetRequest**(`request_id`): `Promise`\<[`AgentRequestRecord`](AgentRequestRecord.md)\>
 
 Get details of a specific request.
 
@@ -44,7 +44,7 @@ Get details of a specific request.
 
 #### Returns
 
-`Promise`\<[`AgentRequestResult`](AgentRequestResult.md)\>
+`Promise`\<[`AgentRequestRecord`](AgentRequestRecord.md)\>
 
 ***
 

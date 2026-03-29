@@ -31,7 +31,7 @@
 - [AgentDispatchTransport](interfaces/AgentDispatchTransport.md)
 - [AgentIdentity](interfaces/AgentIdentity.md)
 - [AgentIdentityRecord](interfaces/AgentIdentityRecord.md)
-- [AgentRequestResult](interfaces/AgentRequestResult.md)
+- [AgentRequestRecord](interfaces/AgentRequestRecord.md)
 - [AgentRuntimeManifest](interfaces/AgentRuntimeManifest.md)
 - [AgentSecretGrant](interfaces/AgentSecretGrant.md)
 - [AgentSigner](interfaces/AgentSigner.md)
@@ -103,6 +103,7 @@
 ## Type Aliases
 
 - [AgentId](type-aliases/AgentId.md)
+- [AgentRequestResult](type-aliases/AgentRequestResult.md)
 - [CbioRuntimeModule](type-aliases/CbioRuntimeModule.md)
 - [DispatchApprovalDecision](type-aliases/DispatchApprovalDecision.md)
 - [GrantStatus](type-aliases/GrantStatus.md)

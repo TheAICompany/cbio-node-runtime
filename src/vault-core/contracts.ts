@@ -254,6 +254,7 @@ export interface RequestRecord {
   root_agent_id: string;
   reason: string;
   created_at: string;
+  requested_at: string;
   request: {
     target_url: string;
     method: string;
@@ -306,6 +307,7 @@ export interface OwnerVisibleRequestRecord {
 export interface OwnerRequestRecord {
   request_id: string;
   created_at: string;
+  requested_at: string;
   root_agent_id: string;
   reason: string;
   request: {
@@ -326,6 +328,27 @@ export interface OwnerRequestRecord {
     agent_secret?: boolean;
     secret_destination?: boolean;
   };
+}
+
+export interface AgentRequestRecord {
+  request_id: string;
+  created_at: string;
+  requested_at: string;
+  reason: string;
+  request: {
+    target_url: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+    secret_alias?: string;
+  };
+  response?: {
+    status?: number;
+    headers?: Record<string, string>;
+    body?: string;
+    error?: string;
+  };
+  execution_status: DispatchStatus;
 }
 
 export interface VaultToolDefinition {
@@ -444,17 +467,12 @@ export interface DispatchResult {
   target_url: string;
   method: string;
   response_status?: number;
+  response_headers?: Record<string, string>;
   response_body?: string;
   error?: string;
 }
 
-export interface AgentRequestResult {
-  request_id: string;
-  execution_status: DispatchStatus;
-  response_status?: number;
-  response_body?: string;
-  error?: string;
-}
+export type AgentRequestResult = AgentRequestRecord;
 
 export interface AuditQuery {
   vault_id: string; // Changed from vault_id to align with others if needed, but keeping vault_id for now if it's an object? No, spec says vault_id is string.

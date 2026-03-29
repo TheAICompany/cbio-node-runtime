@@ -30,6 +30,12 @@
 
 ***
 
+### response\_headers?
+
+> `optional` **response\_headers?**: `Record`\<`string`, `string`\>
+
+***
+
 ### response\_status?
 
 > `optional` **response\_status?**: `number`

@@ -2,7 +2,7 @@
 
 ***
 
-# Interface: RequestRecord
+# Interface: AgentRequestRecord
 
 ## Properties
 
@@ -12,27 +12,9 @@
 
 ***
 
-### execution
+### execution\_status
 
-> **execution**: `object`
-
-#### status
-
-> **status**: [`DispatchStatus`](../enumerations/DispatchStatus.md)
-
-***
-
-### missing\_grants?
-
-> `optional` **missing\_grants?**: `object`
-
-#### agent\_secret?
-
-> `optional` **agent\_secret?**: `boolean`
-
-#### secret\_destination?
-
-> `optional` **secret\_destination?**: `boolean`
+> **execution\_status**: [`DispatchStatus`](../enumerations/DispatchStatus.md)
 
 ***
 
@@ -99,15 +81,3 @@
 #### status?
 
 > `optional` **status?**: `number`
-
-***
-
-### root\_agent\_id
-
-> **root\_agent\_id**: `string`
-
-***
-
-### vault\_id
-
-> **vault\_id**: [`VaultId`](VaultId.md)

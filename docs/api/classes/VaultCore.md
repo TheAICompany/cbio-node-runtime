@@ -68,7 +68,7 @@
 
 ### agentGetRequest()
 
-> **agentGetRequest**(`command`): `Promise`\<`any`\>
+> **agentGetRequest**(`command`): `Promise`\<[`AgentRequestRecord`](../interfaces/AgentRequestRecord.md)\>
 
 #### Parameters
 
@@ -96,7 +96,7 @@
 
 #### Returns
 
-`Promise`\<`any`\>
+`Promise`\<[`AgentRequestRecord`](../interfaces/AgentRequestRecord.md)\>
 
 ***
 

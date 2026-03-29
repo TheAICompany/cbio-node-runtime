@@ -4,6 +4,7 @@ import {
   type AgentIdentityRecord,
   type AgentRuntimeManifest,
   type AgentVisibleRequestRecord,
+  type AgentRequestRecord,
   type AgentVisibleSecretRecord,
   type AuditEntry,
   type AuditQuery,
@@ -31,7 +32,6 @@ import {
 } from "./contracts.js";
 import { type VaultCoreErrorCode, VaultCoreError } from "./errors.js";
 import type { VaultCoreDependencies } from "./ports.js";
-import { applyResponseReadPolicy } from "./read-policy.js";
 import { getAgentToolbox } from "./tool-metadata.js";
 import { InMemoryRequestRecordRegistry } from "./defaults.js";
 
@@ -461,6 +461,7 @@ export class VaultCore {
       ...record,
       response: {
         status: result.response_status,
+        headers: result.response_headers,
         body: result.response_body,
         error: result.error,
       },
@@ -559,25 +560,27 @@ export class VaultCore {
     return records.map(r => this.toAgentVisibleRequestRecord(r));
   }
 
-  async agentGetRequest(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string; target_request_id: string }): Promise<any> {
+  async agentGetRequest(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string; target_request_id: string }): Promise<AgentRequestRecord> {
     await this._verifyAgentControlProof(command, "read_request");
     const record = await this._deps.requests.get(this._deps.vault_id, command.target_request_id);
     if (!record || record.root_agent_id !== command.agent.id) {
       throw new VaultCoreError("request record not found", "VAULT_READ_DENIED");
     }
 
-    // By default, no read-policy is granted anymore in this simplified model.
-    // However, if we wanted to support some response visibility, we'd need another grant table.
-    // For now, let's assume agent can see their own requested status but not necessarily the body 
-    // unless they have a specific grant (omitted for now to focus on dispatch).
-    const parsedResponseBody = applyResponseReadPolicy(record.response?.body, { paths: [] });
-
     return {
       request_id: record.request_id,
+      created_at: record.created_at,
+      requested_at: record.requested_at,
+      reason: record.reason,
+      request: {
+        target_url: record.request.target_url,
+        method: record.request.method,
+        headers: record.request.headers,
+        body: record.request.body,
+        secret_alias: record.request.secret_alias,
+      },
+      response: record.response,
       execution_status: record.execution.status,
-      response_status: record.response?.status,
-      response_body: parsedResponseBody,
-      error: record.response?.error,
     };
   }
 
@@ -765,6 +768,7 @@ export class VaultCore {
       root_agent_id: request.agent.id,
       reason: request.reason,
       created_at: this._deps.clock.nowIso(),
+      requested_at: request.requested_at,
       request: {
         target_url: request.target_url,
         method: request.method,
@@ -793,6 +797,7 @@ export class VaultCore {
       root_agent_id: request.agent.id,
       reason: request.reason,
       created_at: this._deps.clock.nowIso(),
+      requested_at: request.requested_at,
       request: {
         target_url: request.target_url,
         method: request.method,
@@ -806,6 +811,7 @@ export class VaultCore {
       ...baseRecord,
       response: {
         status: result.response_status,
+        headers: result.response_headers,
         body: result.response_body,
         error: result.error,
       },
@@ -850,6 +856,7 @@ export class VaultCore {
     return {
       request_id: record.request_id,
       created_at: record.created_at,
+      requested_at: record.requested_at,
       root_agent_id: record.root_agent_id,
       reason: record.reason,
       request: {

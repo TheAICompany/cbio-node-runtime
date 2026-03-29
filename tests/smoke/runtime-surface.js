@@ -113,6 +113,28 @@ async function runSmokeTest() {
   assert.equal(result.status, "SUCCEEDED");
   assert.equal(seenAuthHeader, "Bearer secret-v1");
 
+  const agentRequestDetail = await agent.agentGetRequest(result.request_id);
+  assert.equal(agentRequestDetail.execution_status, "SUCCEEDED");
+  assert.equal(agentRequestDetail.request.target_url, "https://api.example.com/endpoint");
+  assert.equal(agentRequestDetail.request.method, "POST");
+  assert.equal(agentRequestDetail.request.secret_alias, "api-token");
+  assert.equal(agentRequestDetail.response?.status, 200);
+  assert.equal(agentRequestDetail.response?.body, "ok");
+  assert.equal(agentRequestDetail.response?.headers?.["content-type"], "text/plain;charset=UTF-8");
+  assert.ok(typeof agentRequestDetail.created_at === "string");
+  assert.ok(typeof agentRequestDetail.requested_at === "string");
+
+  const ownerRequestDetail = await client.ownerGetRequest({ request_id: result.request_id });
+  assert.equal(ownerRequestDetail.execution_status, "SUCCEEDED");
+  assert.equal(ownerRequestDetail.request.target_url, "https://api.example.com/endpoint");
+  assert.equal(ownerRequestDetail.request.method, "POST");
+  assert.equal(ownerRequestDetail.request.secret_alias, "api-token");
+  assert.equal(ownerRequestDetail.response?.status, 200);
+  assert.equal(ownerRequestDetail.response?.body, "ok");
+  assert.equal(ownerRequestDetail.response?.headers?.["content-type"], "text/plain;charset=UTF-8");
+  assert.ok(typeof ownerRequestDetail.created_at === "string");
+  assert.ok(typeof ownerRequestDetail.requested_at === "string");
+
   const replacementSession = await client.ownerIssueSessionToken({ root_agent_id: importedAgentId });
   await assert.rejects(
     agent.agentDispatch({

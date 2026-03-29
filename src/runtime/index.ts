@@ -76,6 +76,7 @@ export type {
   AgentVisibleSecretRecord,
   AgentRuntimeManifest,
   AgentVisibleRequestRecord,
+  AgentRequestRecord,
   OwnerVisibleRequestRecord,
   OwnerRequestRecord,
   AgentRequestResult,
