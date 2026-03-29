@@ -199,4 +199,5 @@ export interface OwnerClient {
   ownerDenyDispatch(request_id: string): Promise<void>;
   
   ownerOnPendingDispatch(subscription: import("../../vault-core/index.js").OwnerPendingDispatchSubscription): () => void;
+  ownerOnAudit(subscription: import("../../vault-core/index.js").OwnerAuditSubscription): () => void;
 }

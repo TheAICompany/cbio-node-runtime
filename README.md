@@ -123,6 +123,30 @@ if (awaitingApproval.length > 0) {
 unsubscribe();
 ```
 
+For cross-process or browser-based UIs, you can stream the audit log itself over Server-Sent Events (SSE):
+
+```ts
+import { handleVaultAuditSse } from '@the-ai-company/cbio-node-runtime';
+
+app.get('/api/events', (req, res) => {
+  const response = handleVaultAuditSse(vaultService, {
+    afterEventId: req.header('Last-Event-ID') ?? undefined,
+    signal: req.signal,
+  });
+  res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+  response.body?.pipeTo(new WritableStream({
+    write(chunk) {
+      res.write(chunk);
+    },
+    close() {
+      res.end();
+    },
+  }));
+});
+```
+
+Each SSE message is an append-only audit entry. The log tells the GUI what changed; the GUI should re-query the authoritative data it cares about rather than treating the log payload as a complete object snapshot.
+
 Decisions can be:
 - `allow_once`: Execute once, no permanent whitelist update.
 - `allow_and_grant`: Execute and add to the permanent whitelist (Zero-Config).

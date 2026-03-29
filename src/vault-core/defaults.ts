@@ -10,6 +10,7 @@ import { verifySignature } from "../protocol/crypto.js";
 import type {
   AgentSecretGrant,
   SecretDestinationGrant,
+  OwnerAuditSubscription,
   AgentIdentityRecord,
   AuditEntry,
   AuditQuery,
@@ -153,9 +154,17 @@ export class InMemorySecretRepository implements SecretRepository {
  */
 export class InMemoryAuditLog implements AuditLog {
   private readonly _entries: AuditEntry[] = [];
+  private readonly _subscribers = new Map<string, Set<OwnerAuditSubscription>>();
 
   async append(entry: AuditEntry): Promise<void> {
     this._entries.push(entry);
+    const subscribers = this._subscribers.get(entry.vault_id);
+    if (!subscribers) return;
+    for (const subscription of subscribers) {
+      if (matchesAuditSubscription(entry, subscription)) {
+        subscription.onEvent(entry);
+      }
+    }
   }
 
   async query(query: AuditQuery): Promise<readonly AuditEntry[]> {
@@ -167,6 +176,31 @@ export class InMemoryAuditLog implements AuditLog {
       if (query.since && entry.ts < query.since) return false;
       return true;
     });
+  }
+
+  subscribe(vault_id: VaultId, subscription: OwnerAuditSubscription): () => void {
+    const replay = this._entries
+      .filter((entry) => entry.vault_id === vault_id.value)
+      .filter((entry) => matchesAuditSubscription(entry, subscription))
+      .sort((a, b) => a.event_id.localeCompare(b.event_id));
+
+    for (const entry of replay) {
+      subscription.onEvent(entry);
+    }
+
+    let subscribers = this._subscribers.get(vault_id.value);
+    if (!subscribers) {
+      subscribers = new Set();
+      this._subscribers.set(vault_id.value, subscribers);
+    }
+    subscribers.add(subscription);
+
+    return () => {
+      const current = this._subscribers.get(vault_id.value);
+      if (!current) return;
+      current.delete(subscription);
+      if (current.size === 0) this._subscribers.delete(vault_id.value);
+    };
   }
 }
 
@@ -341,6 +375,22 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
       record,
     };
   }
+}
+
+function matchesAuditSubscription(entry: AuditEntry, subscription: OwnerAuditSubscription): boolean {
+  if (subscription.afterEventId && entry.event_id <= subscription.afterEventId) {
+    return false;
+  }
+  if (subscription.operations && !subscription.operations.includes(entry.operation)) {
+    return false;
+  }
+  if (subscription.root_agent_id && entry.root_agent_id !== subscription.root_agent_id) {
+    return false;
+  }
+  if (subscription.request_id && entry.request_id !== subscription.request_id) {
+    return false;
+  }
+  return true;
 }
 
 /**

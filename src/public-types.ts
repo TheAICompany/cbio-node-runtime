@@ -17,6 +17,7 @@ export type {
   DispatchInstruction,
   DispatchRequest,
   DispatchResult,
+  OwnerAuditSubscription,
   RequestRecord,
   SecretAlias,
   SecretId,
@@ -39,6 +40,11 @@ export type {
   VaultOwnerControlRequest,
   VaultOwnerControlResponse,
 } from "./vault-ingress/index.js";
+
+export type {
+  VaultAuditSseOptions,
+  VaultPendingDispatchSseOptions,
+} from "./vault-ingress/server-utils.js";
 
 export type {
   AgentClient,

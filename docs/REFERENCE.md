@@ -55,7 +55,10 @@ The system uses a domain-level white-list model:
 ### 3. Dispatch and Approval (HITL)
 - `agentDispatch(...)`: Attempt a secret-driven HTTP request. Returns `SUCCEEDED`, `DENIED`, `FAILED`, or `AWAITING_APPROVAL`.
 - `ownerListRequests(...)`: Review approval-waiting (`AWAITING_APPROVAL`) or historical dispatches.
+- `ownerOnAudit({ afterEventId, operations, root_agent_id, request_id, onEvent })`: Subscribe to the append-only audit log. The log is the notification source; consumers should re-query authoritative data after receiving an entry.
 - `ownerOnPendingDispatch({ afterEventId, onEvent })`: Subscribe to persisted pending-dispatch events. Each event includes an `event_id` cursor plus the underlying request record, so consumers can resume after reconnecting.
+- `handleVaultAuditSse(vault, { afterEventId, operations, root_agent_id, request_id, signal })`: Bridge the audit log to browser or cross-process consumers over SSE.
+- `handleVaultPendingDispatchSse(vault, { afterEventId, signal })`: Bridge pending-dispatch events to browser or cross-process consumers over SSE.
 - `ownerApproveDispatch(...)`: Resolve a pending request.
     - `allow_once`: Execute once, no permanent change.
     - `allow_and_grant`: Execute and automatically provision permanent grants.

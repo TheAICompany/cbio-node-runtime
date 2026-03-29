@@ -1,4 +1,5 @@
 import * as fs from "node:fs/promises";
+import * as nodefs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
@@ -6,6 +7,7 @@ import {
   DispatchStatus,
   type AgentSecretGrant,
   type SecretDestinationGrant,
+  type OwnerAuditSubscription,
   type OwnerPendingDispatchSubscription,
   type PendingDispatchEvent,
   type AgentIdentityRecord,
@@ -45,6 +47,29 @@ import {
 
 async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
+}
+
+function closeWatchers(watchers: nodefs.FSWatcher[]) {
+  for (const watcher of watchers) {
+    try {
+      watcher.close();
+    } catch {}
+  }
+  watchers.length = 0;
+}
+
+function addWatcher(
+  watchers: nodefs.FSWatcher[],
+  targetPath: string,
+  onSignal: () => void,
+) {
+  try {
+    const watcher = nodefs.watch(targetPath, { persistent: false }, () => {
+      onSignal();
+    });
+    watcher.on("error", () => {});
+    watchers.push(watcher);
+  } catch {}
 }
 
 export class FileSecretRepository implements SecretRepository {
@@ -198,6 +223,56 @@ export class FileAuditLog implements AuditLog {
     } catch {
       return [];
     }
+  }
+
+  subscribe(vault_id: VaultId, subscription: OwnerAuditSubscription): () => void {
+    let closed = false;
+    let scanInFlight: Promise<void> | null = null;
+    const seen = new Set<string>();
+    const watchers: nodefs.FSWatcher[] = [];
+    const vaultDir = path.join(this._baseDir, vault_id.value);
+
+    const scan = async (): Promise<void> => {
+      if (closed) return;
+      const entries = (await this.query({ vault_id: vault_id.value }))
+        .filter((entry) => matchesAuditSubscription(entry, subscription))
+        .sort((a, b) => a.event_id.localeCompare(b.event_id));
+      for (const entry of entries) {
+        if (seen.has(entry.event_id)) continue;
+        seen.add(entry.event_id);
+        subscription.onEvent(entry);
+      }
+    };
+
+    const refreshWatchers = async () => {
+      if (closed) return;
+      closeWatchers(watchers);
+      addWatcher(watchers, this._baseDir, () => {
+        void refreshWatchers();
+        tick();
+      });
+      try {
+        const stat = await fs.stat(vaultDir);
+        if (stat.isDirectory()) {
+          addWatcher(watchers, vaultDir, tick);
+        }
+      } catch {}
+    };
+
+    const tick = () => {
+      if (closed || scanInFlight) return;
+      scanInFlight = scan().finally(() => {
+        scanInFlight = null;
+      });
+    };
+
+    void refreshWatchers();
+    tick();
+
+    return () => {
+      closed = true;
+      closeWatchers(watchers);
+    };
   }
 }
 
@@ -401,6 +476,8 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
     let closed = false;
     let scanInFlight: Promise<void> | null = null;
     const seen = new Set<string>();
+    const watchers: nodefs.FSWatcher[] = [];
+    const vaultDir = path.join(this._baseDir, vault_id.value);
 
     const scan = async (): Promise<void> => {
       if (closed) return;
@@ -416,6 +493,21 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
       }
     };
 
+    const refreshWatchers = async () => {
+      if (closed) return;
+      closeWatchers(watchers);
+      addWatcher(watchers, this._baseDir, () => {
+        void refreshWatchers();
+        tick();
+      });
+      try {
+        const stat = await fs.stat(vaultDir);
+        if (stat.isDirectory()) {
+          addWatcher(watchers, vaultDir, tick);
+        }
+      } catch {}
+    };
+
     const tick = () => {
       if (closed || scanInFlight) return;
       scanInFlight = scan().finally(() => {
@@ -423,13 +515,12 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
       });
     };
 
+    void refreshWatchers();
     tick();
-    const interval = setInterval(tick, 250);
-    interval.unref?.();
 
     return () => {
       closed = true;
-      clearInterval(interval);
+      closeWatchers(watchers);
     };
   }
 
@@ -443,6 +534,14 @@ export class FileRequestRecordRegistry implements RequestRecordRegistry {
       record,
     };
   }
+}
+
+function matchesAuditSubscription(entry: AuditEntry, subscription: OwnerAuditSubscription): boolean {
+  if (subscription.afterEventId && entry.event_id <= subscription.afterEventId) return false;
+  if (subscription.operations && !subscription.operations.includes(entry.operation)) return false;
+  if (subscription.root_agent_id && entry.root_agent_id !== subscription.root_agent_id) return false;
+  if (subscription.request_id && entry.request_id !== subscription.request_id) return false;
+  return true;
 }
 
 export class FileSessionTokenRegistry implements ISessionTokenRegistry {

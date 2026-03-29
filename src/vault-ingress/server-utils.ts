@@ -7,6 +7,38 @@ import type {
   VaultAgentControlResponse,
   VaultAgentControlErrorResponse,
 } from "./index.js";
+import type {
+  AuditOperation,
+  OwnerAuditSubscription,
+} from "../vault-core/index.js";
+
+export interface VaultAuditSseOptions {
+  afterEventId?: string;
+  operations?: readonly AuditOperation[];
+  root_agent_id?: string;
+  request_id?: string;
+  signal?: AbortSignal;
+  eventName?: string;
+  pingIntervalMs?: number;
+}
+
+export interface VaultPendingDispatchSseOptions extends Omit<VaultAuditSseOptions, "operations" | "root_agent_id" | "request_id"> {}
+
+function encodeSseFrame(lines: readonly string[]): Uint8Array {
+  return new TextEncoder().encode(`${lines.join("\n")}\n\n`);
+}
+
+function createSseEventFrame(eventName: string, eventId: string, payload: unknown): Uint8Array {
+  return encodeSseFrame([
+    `id: ${eventId}`,
+    `event: ${eventName}`,
+    ...JSON.stringify(payload).split("\n").map((line) => `data: ${line}`),
+  ]);
+}
+
+function createSseCommentFrame(comment: string): Uint8Array {
+  return encodeSseFrame([`: ${comment}`]);
+}
 
 /**
  * Standard server-side helper to handle a vault agent dispatch request from an HTTP body.
@@ -54,6 +86,160 @@ export async function handleVaultAgentControlHttp(
     };
   }
   return service.agentHandleControl(request as VaultAgentControlRequest);
+}
+
+/**
+ * Creates an SSE response that streams owner-visible audit entries.
+ * Host applications should authenticate owner access before exposing this helper remotely.
+ *
+ * @param service The VaultService instance to subscribe against.
+ * @param options Stream options such as replay cursor, filtering, and abort handling.
+ * @returns A streaming SSE Response that emits `audit_entry` events by default.
+ */
+export function handleVaultAuditSse(
+  service: VaultService,
+  options: VaultAuditSseOptions = {},
+): Response {
+  const eventName = options.eventName ?? "audit_entry";
+  const pingIntervalMs = options.pingIntervalMs ?? 15000;
+  let unsubscribe = () => {};
+  let ping: ReturnType<typeof setInterval> | null = null;
+  let closed = false;
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    if (ping) {
+      clearInterval(ping);
+      ping = null;
+    }
+    unsubscribe();
+  };
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const close = () => {
+        if (closed) return;
+        cleanup();
+        controller.close();
+      };
+
+      if (options.signal?.aborted) {
+        close();
+        return;
+      }
+
+      controller.enqueue(createSseCommentFrame("connected"));
+
+      const subscription: OwnerAuditSubscription = {
+        afterEventId: options.afterEventId,
+        operations: options.operations,
+        root_agent_id: options.root_agent_id,
+        request_id: options.request_id,
+        onEvent: (entry) => {
+          if (closed) return;
+          controller.enqueue(createSseEventFrame(eventName, entry.event_id, entry));
+        },
+      };
+      unsubscribe = service.ownerOnAudit(subscription);
+
+      if (pingIntervalMs > 0) {
+        ping = setInterval(() => {
+          if (closed) return;
+          controller.enqueue(createSseCommentFrame("ping"));
+        }, pingIntervalMs);
+        ping.unref?.();
+      }
+
+      options.signal?.addEventListener("abort", close, { once: true });
+    },
+    cancel() {
+      cleanup();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+/**
+ * Creates an SSE response that streams owner-visible pending dispatch events.
+ * Host applications should authenticate owner access before exposing this helper remotely.
+ *
+ * @param service The VaultService instance to subscribe against.
+ * @param options Stream options such as replay cursor and abort handling.
+ * @returns A streaming SSE Response that emits `pending_dispatch` events.
+ */
+export function handleVaultPendingDispatchSse(
+  service: VaultService,
+  options: VaultPendingDispatchSseOptions = {},
+): Response {
+  const eventName = options.eventName ?? "pending_dispatch";
+  const pingIntervalMs = options.pingIntervalMs ?? 15000;
+  let unsubscribe = () => {};
+  let ping: ReturnType<typeof setInterval> | null = null;
+  let closed = false;
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    if (ping) {
+      clearInterval(ping);
+      ping = null;
+    }
+    unsubscribe();
+  };
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const close = () => {
+        if (closed) return;
+        cleanup();
+        controller.close();
+      };
+
+      if (options.signal?.aborted) {
+        close();
+        return;
+      }
+
+      controller.enqueue(createSseCommentFrame("connected"));
+
+      unsubscribe = service.ownerOnPendingDispatch({
+        afterEventId: options.afterEventId,
+        onEvent: (event) => {
+          if (closed) return;
+          controller.enqueue(createSseEventFrame(eventName, event.event_id, event));
+        },
+      });
+
+      if (pingIntervalMs > 0) {
+        ping = setInterval(() => {
+          if (closed) return;
+          controller.enqueue(createSseCommentFrame("ping"));
+        }, pingIntervalMs);
+        ping.unref?.();
+      }
+
+      options.signal?.addEventListener("abort", close, { once: true });
+    },
+    cancel() {
+      cleanup();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }
 
 /*

@@ -2,6 +2,7 @@ import type {
   AgentSecretGrant,
   SecretDestinationGrant,
   OwnerPendingDispatchSubscription,
+  OwnerAuditSubscription,
   RequestRecord,
   AgentIdentityRecord,
   AuditEntry,
@@ -41,6 +42,7 @@ export interface PolicyEngine {
 export interface AuditLog {
   append(entry: AuditEntry): Promise<void>;
   query(query: AuditQuery): Promise<readonly AuditEntry[]>;
+  subscribe(vault_id: VaultId, subscription: OwnerAuditSubscription): () => void;
 }
 
 export interface TrustedExecutor {

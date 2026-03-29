@@ -15,6 +15,7 @@ import {
   type DispatchRequest,
   type DispatchResult,
   type OwnerPendingDispatchSubscription,
+  type OwnerAuditSubscription,
   type OwnerRequestRecord,
   type OwnerVisibleRequestRecord,
   type RequestRecord,
@@ -424,15 +425,16 @@ export class VaultCore {
           granted_at: now,
         }),
       ]);
-
       await this._appendAudit(
         toAuditEntry(this._deps, actor, AuditOperation.GRANT_SECRET, "allowed", "succeeded", "granted during dispatch approval", {
+          request_id,
           root_agent_id: record.root_agent_id,
           secret_alias: secret_alias,
         }),
       );
       await this._appendAudit(
         toAuditEntry(this._deps, actor, AuditOperation.GRANT_DESTINATION, "allowed", "succeeded", "granted during dispatch approval", {
+          request_id,
           secret_alias: secret_alias,
           site_id,
         }),
@@ -739,7 +741,24 @@ export class VaultCore {
     await this._appendAudit(toAuditEntry(this._deps, request.actor, AuditOperation.IDENTITY_REVOKE_TOKEN, "allowed", "succeeded", "session token revoked"));
   }
   ownerOnPendingDispatch(subscription: OwnerPendingDispatchSubscription): () => void {
-    return this._deps.requests.subscribePending(this._deps.vault_id, subscription);
+    return this._deps.audit.subscribe(this._deps.vault_id, {
+      operations: [AuditOperation.DISPATCH_HOLD],
+      onEvent: async (entry) => {
+        if (!entry.request_id) return;
+        const record = await this._deps.requests.get(this._deps.vault_id, entry.request_id);
+        if (!record || record.execution.status !== DispatchStatus.AWAITING_APPROVAL) return;
+        const pendingEventId = record.pending_dispatch_event?.event_id ?? entry.event_id;
+        if (subscription.afterEventId && pendingEventId <= subscription.afterEventId) return;
+        subscription.onEvent({
+          event_id: pendingEventId,
+          emitted_at: record.pending_dispatch_event?.emitted_at ?? entry.ts,
+          record,
+        });
+      },
+    });
+  }
+  ownerOnAudit(subscription: OwnerAuditSubscription): () => void {
+    return this._deps.audit.subscribe(this._deps.vault_id, subscription);
   }
 
   // ─── Internal Helpers ──────────────────────────────────────────────────────────

@@ -30,7 +30,6 @@ export {
   FileAuditLog as PersistentVaultAuditLog,
   FileAgentSecretGrantRegistry as PersistentVaultAgentSecretGrantRegistry,
   FileSecretDestinationGrantRegistry as PersistentVaultSecretDestinationGrantRegistry,
-
   FileSecretCustody as PersistentVaultSecretCustody,
   FileSecretRepository as PersistentVaultSecretRepository,
 } from "./persistence.js";
@@ -91,6 +90,7 @@ export type {
   DispatchResult,
   PendingDispatchEvent,
   OwnerPendingDispatchSubscription,
+  OwnerAuditSubscription,
   RequestRecord,
   IssuerWriteSecretCommand,
   OwnerUpdateSecretCommand,

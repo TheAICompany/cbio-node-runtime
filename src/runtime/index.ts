@@ -89,6 +89,7 @@ export type {
   DispatchResult,
   PendingDispatchEvent,
   OwnerPendingDispatchSubscription,
+  OwnerAuditSubscription,
   RequestRecord,
   SecretAlias,
   SecretId,
@@ -154,6 +155,8 @@ export {
 export {
   handleVaultHttpDispatch,
   handleVaultAgentControlHttp,
+  handleVaultAuditSse,
+  handleVaultPendingDispatchSse,
 } from "../vault-ingress/server-utils.js";
 
 export { AgentDispatchHttpTransport } from "../vault-ingress/remote-transport.js";
@@ -188,6 +191,8 @@ export interface CbioRuntime {
   AgentDispatchHttpTransport: typeof import("../vault-ingress/remote-transport.js").AgentDispatchHttpTransport;
   handleVaultHttpDispatch: typeof import("../vault-ingress/server-utils.js").handleVaultHttpDispatch;
   handleVaultAgentControlHttp: typeof import("../vault-ingress/server-utils.js").handleVaultAgentControlHttp;
+  handleVaultAuditSse: typeof import("../vault-ingress/server-utils.js").handleVaultAuditSse;
+  handleVaultPendingDispatchSse: typeof import("../vault-ingress/server-utils.js").handleVaultPendingDispatchSse;
 }
 
 /**

@@ -577,6 +577,14 @@ export interface OwnerAuditRequest {
   requested_at: string;
 }
 
+export interface OwnerAuditSubscription {
+  afterEventId?: string;
+  operations?: readonly AuditOperation[];
+  root_agent_id?: string;
+  request_id?: string;
+  onEvent(entry: AuditEntry): void;
+}
+
 export interface OwnerExportSecretRequest {
   vault_id: VaultId;
   actor: VaultPrincipal & { kind: "owner" };

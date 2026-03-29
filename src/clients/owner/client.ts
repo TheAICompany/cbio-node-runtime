@@ -550,6 +550,10 @@ class DefaultOwnerClient implements OwnerClient {
   ownerOnPendingDispatch(subscription: import("../../vault-core/index.js").OwnerPendingDispatchSubscription): () => void {
     return this._vault.ownerOnPendingDispatch(subscription);
   }
+
+  ownerOnAudit(subscription: import("../../vault-core/index.js").OwnerAuditSubscription): () => void {
+    return this._vault.ownerOnAudit(subscription);
+  }
 }
 
 export async function createOwnerClient(options: CreateOwnerClientOptions): Promise<OwnerClient> {
