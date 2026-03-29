@@ -636,16 +636,29 @@ export class VaultCore {
     await this._deps.policy.authorizeWrite(command);
     const existing = await this._deps.secrets.getByAlias({ value: command.alias });
     if (!existing) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
+
+    if (command.new_alias && command.new_alias !== command.alias) {
+      const duplicate = await this._deps.secrets.getByAlias({ value: command.new_alias });
+      if (duplicate) {
+        throw new VaultCoreError(`secret alias already exists: "${command.new_alias}"`, "VAULT_ALIAS_ALREADY_EXISTS");
+      }
+    }
+
     const secret_id = existing.secret_id;
     const now = this._deps.clock.nowIso();
+    const finalAlias = command.new_alias && command.new_alias !== command.alias ? command.new_alias : command.alias;
+
     const record: SecretRecord = {
       ...existing,
+      alias: { value: finalAlias },
       version: this._deps.ids.newVersion(),
       updated_at: now,
     };
     await this._deps.secrets.save(record);
-    await this._deps.custody.store(secret_id, command.plaintext);
-    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret updated: "${command.alias}"`, { secret_alias: command.alias, secret_id: secret_id.value }));
+    if (command.plaintext !== undefined) {
+      await this._deps.custody.store(secret_id, command.plaintext);
+    }
+    await this._appendAudit(toAuditEntry(this._deps, command.owner, AuditOperation.SECRET_WRITE, "allowed", "succeeded", `secret updated: "${finalAlias}"`, { secret_alias: finalAlias, secret_id: secret_id.value }));
     return record;
   }
 

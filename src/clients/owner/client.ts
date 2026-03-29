@@ -143,6 +143,12 @@ class DefaultOwnerClient implements OwnerClient {
       throw new VaultCoreError(`secret not found: ${names}`, "VAULT_SECRET_NOT_FOUND");
     }
 
+    const duplicates = items.filter(item => item.new_alias && item.new_alias !== item.alias && existingAliases.has(item.new_alias));
+    if (duplicates.length > 0) {
+      const names = duplicates.map(d => `"${d.new_alias}"`).join(", ");
+      throw new VaultCoreError(`secret alias already exists: ${names}`, "VAULT_ALIAS_ALREADY_EXISTS");
+    }
+
     // Phase 2: 并行写入
     const results = await Promise.all(items.map(item => {
       return this._vault.ownerUpdateSecret({
@@ -151,6 +157,7 @@ class DefaultOwnerClient implements OwnerClient {
         request_id: createRequestIdValue("update_secret"),
         owner: { kind: "owner", id: this._root_agent_id },
         alias: item.alias,
+        new_alias: item.new_alias,
         plaintext: item.plaintext,
         source: { kind: "manual" },
         requested_at: item.requested_at ?? requested_at,

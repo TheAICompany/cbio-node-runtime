@@ -102,7 +102,8 @@ export interface OwnerUpdateSecretCommand {
   request_id: string;
   owner: VaultPrincipal & { kind: "owner" };
   alias: string;
-  plaintext: string;
+  new_alias?: string;
+  plaintext?: string;
   source?: SecretSourceInput;
   requested_at: string;
 }

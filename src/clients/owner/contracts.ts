@@ -8,7 +8,8 @@ export interface OwnerCreateSecretInput {
 
 export interface OwnerUpdateSecretInput {
   alias: string;
-  plaintext: string;
+  new_alias?: string;
+  plaintext?: string;
   requested_at?: string;
 }
 
