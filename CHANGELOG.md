@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.74.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.73.0...v1.74.0) (2026-03-30)
+
+
+### Features
+
+* add agentAuditTestPing functionality to vault and client for audit validation ([2675c6f](https://github.com/TheAICompany/cbio-node-runtime/commit/2675c6f4226c624fc548ae591e16c88ceb7a1b58))
+
 ## [1.73.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.72.0...v1.73.0) (2026-03-30)
 
 
