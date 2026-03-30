@@ -130,7 +130,7 @@ export interface VaultService {
   ownerUpdateSecret(request: import("../vault-core/index.js").OwnerUpdateSecretCommand): Promise<SecretRecord>;
   ownerRemoveSecret(request: import("../vault-core/index.js").OwnerDeleteSecretCommand): Promise<void>;
   ownerReadAudit(request: OwnerAuditRequest): Promise<readonly import("../vault-core/index.js").AuditEntry[]>;
-  ownerExportSecret(request: OwnerExportSecretRequest): Promise<OwnerSecretExport>;
+  ownerExportSecret(request: OwnerExportSecretRequest): Promise<readonly OwnerSecretExport[]>;
   ownerListAgents(request: OwnerListAgentsRequest): Promise<readonly AgentIdentityRecord[]>;
   ownerListRequests(request: import("../vault-core/index.js").OwnerListRequestsRequest): Promise<readonly import("../vault-core/index.js").OwnerVisibleRequestRecord[]>;
   ownerGetRequest(request: import("../vault-core/index.js").OwnerGetRequestRequest): Promise<import("../vault-core/index.js").OwnerRequestRecord>;
@@ -209,7 +209,7 @@ class LocalVaultService implements VaultService {
     return this._authority.ownerReadAudit(request.actor as any, request.query);
   }
 
-  ownerExportSecret(request: OwnerExportSecretRequest): Promise<OwnerSecretExport> {
+  ownerExportSecret(request: OwnerExportSecretRequest): Promise<readonly OwnerSecretExport[]> {
     return this._authority.ownerExportSecret(request.actor as any, request.alias);
   }
 

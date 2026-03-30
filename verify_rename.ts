@@ -50,9 +50,9 @@ async function test() {
   if (!hasGrantB) throw new Error("Grant migration failed");
 
   console.log("7. Verifying plaintext update for 'B'...");
-  const exported = await client.ownerExportSecret({ alias: "B", password: "any" }); // Default test password verifier permits anything
-  console.log("   Value of B:", exported.plaintext);
-  if (exported.plaintext !== "new-value-b") throw new Error("Value update failed");
+  const exported = await client.ownerExportSecret({ alias: "B", password: "any" }); 
+  console.log("   Value of B:", exported[0].plaintext);
+  if (exported[0].plaintext !== "new-value-b") throw new Error("Value update failed");
 
   console.log("8. Testing only rename (no value update)...");
   await client.ownerUpdateSecret({ alias: "B", new_alias: "C" });
@@ -64,8 +64,8 @@ async function test() {
   console.log("9. Testing only value update (no rename)...");
   await client.ownerUpdateSecret({ alias: "C", plaintext: "final-value" });
   const finalExported = await client.ownerExportSecret({ alias: "C", password: "any" });
-  console.log("   Final value of C:", finalExported.plaintext);
-  if (finalExported.plaintext !== "final-value") throw new Error("Only value update failed");
+  console.log("   Final value of C:", finalExported[0].plaintext);
+  if (finalExported[0].plaintext !== "final-value") throw new Error("Only value update failed");
 
   console.log("SUCCESS: All verification steps passed!");
 }

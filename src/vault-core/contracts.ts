@@ -506,6 +506,7 @@ export enum AuditOperation {
 
   SECRET_WRITE = "secret.write",
   SECRET_EXPORT = "secret.export",
+  SECRET_BATCH_EXPORT = "secret.batch_export",
   SECRET_DELETE = "secret.delete",
 
   POLICY_EVALUATE = "policy.evaluate_dispatch",
@@ -576,7 +577,7 @@ export interface OwnerAuditSubscription {
 export interface OwnerExportSecretRequest {
   vault_id: VaultId;
   actor: VaultPrincipal & { kind: "owner" };
-  alias: string;
+  alias?: string;
   request_id: string;
   requested_at: string;
 }

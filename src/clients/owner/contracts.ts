@@ -29,7 +29,7 @@ export interface VaultAuditQueryInput {
 }
 
 export interface VaultExportSecretInput {
-  alias: string;
+  alias?: string;
   password: string;
   verificationCode?: string;
   requested_at?: string;
@@ -168,7 +168,7 @@ export interface OwnerClient {
   ownerCreateSecret(input: OwnerCreateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord[]>;
   ownerUpdateSecret(input: OwnerUpdateSecretInput): Promise<import("../../vault-core/index.js").SecretRecord>;
   ownerUpdateSecret(input: OwnerUpdateSecretInput[]): Promise<import("../../vault-core/index.js").SecretRecord[]>;
-  ownerExportSecret(input: VaultExportSecretInput): Promise<import("../../vault-core/index.js").OwnerSecretExport>;
+  ownerExportSecret(input: VaultExportSecretInput): Promise<readonly import("../../vault-core/index.js").OwnerSecretExport[]>;
   ownerReadSecretPlaintext(input: VaultReadSecretPlaintextInput): Promise<string>;
   ownerReadAgentPrivateKey(input: VaultReadAgentPrivateKeyInput): Promise<string>;
   

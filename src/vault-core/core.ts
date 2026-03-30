@@ -694,14 +694,43 @@ export class VaultCore {
     return this._deps.audit.query(query);
   }
 
-  async ownerExportSecret(actor: VaultPrincipal & { kind: "owner" }, alias: string): Promise<OwnerSecretExport> {
+  async ownerExportSecret(actor: VaultPrincipal & { kind: "owner" }, alias?: string): Promise<readonly OwnerSecretExport[]> {
     this._assertOwnerPrincipal(actor);
-    const record = await this._deps.secrets.getByAlias({ value: alias });
-    if (!record) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
-    const plaintext = await this._deps.custody.load(record.secret_id);
-    if (plaintext === null) throw new VaultCoreError("secret material not found", "VAULT_SECRET_NOT_FOUND");
-    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.SECRET_EXPORT, "allowed", "succeeded", `secret exported as plaintext: "${alias}"`, { secret_alias: alias, secret_id: record.secret_id.value }));
-    return { vault_id: this._deps.vault_id, secret_id: record.secret_id, alias: record.alias, plaintext, exported_at: this._deps.clock.nowIso() };
+
+    if (alias) {
+      const record = await this._deps.secrets.getByAlias({ value: alias });
+      if (!record) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
+      const plaintext = await this._deps.custody.load(record.secret_id);
+      if (plaintext === null) throw new VaultCoreError("secret material not found", "VAULT_SECRET_NOT_FOUND");
+      await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.SECRET_EXPORT, "allowed", "succeeded", `secret exported as plaintext: "${alias}"`, {
+        secret_alias: alias,
+        secret_id: record.secret_id.value
+      }));
+      return [{
+        vault_id: this._deps.vault_id,
+        secret_id: record.secret_id,
+        alias: record.alias,
+        plaintext,
+        exported_at: this._deps.clock.nowIso()
+      }];
+    }
+
+    // Full Vault Export
+    const records = await this._deps.secrets.list(this._deps.vault_id);
+    const exports: OwnerSecretExport[] = await Promise.all(records.map(async record => {
+      const plaintext = await this._deps.custody.load(record.secret_id);
+      return {
+        vault_id: this._deps.vault_id,
+        secret_id: record.secret_id,
+        alias: record.alias,
+        plaintext: plaintext ?? "MISSING", // Should not happen in healthy vault
+        exported_at: this._deps.clock.nowIso()
+      };
+    }));
+
+    await this._appendAudit(toAuditEntry(this._deps, actor, AuditOperation.SECRET_BATCH_EXPORT, "allowed", "succeeded", "full vault material exported", {}));
+
+    return exports;
   }
 
   async ownerListAgents(actor: VaultPrincipal & { kind: "owner" }): Promise<readonly AgentIdentityRecord[]> {

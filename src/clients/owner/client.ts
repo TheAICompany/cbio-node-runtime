@@ -189,7 +189,7 @@ class DefaultOwnerClient implements OwnerClient {
       verificationCode: input.verificationCode,
     }, {
       action: "export_secret",
-      subject: input.alias,
+      subject: input.alias ?? "*",
     });
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const request_id = createRequestIdValue("export_secret");
@@ -224,7 +224,8 @@ class DefaultOwnerClient implements OwnerClient {
       request_id: createRequestIdValue("read_secret_plaintext"),
       requested_at: input.requested_at ?? this._clock.nowIso(),
     });
-    return exported.plaintext;
+    if (exported.length === 0) throw new Error(`Secret not found: ${input.alias}`);
+    return exported[0].plaintext;
   }
 
   async ownerReadAgentPrivateKey(input: VaultReadAgentPrivateKeyInput): Promise<string> {
