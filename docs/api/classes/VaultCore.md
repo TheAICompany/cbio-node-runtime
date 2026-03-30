@@ -448,6 +448,22 @@
 
 ***
 
+### ownerOnAudit()
+
+> **ownerOnAudit**(`subscription`): () => `void`
+
+#### Parameters
+
+##### subscription
+
+[`OwnerAuditSubscription`](../interfaces/OwnerAuditSubscription.md)
+
+#### Returns
+
+() => `void`
+
+***
+
 ### ownerOnPendingDispatch()
 
 > **ownerOnPendingDispatch**(`subscription`): () => `void`

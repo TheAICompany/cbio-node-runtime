@@ -12,9 +12,15 @@
 
 ***
 
-### plaintext
+### new\_alias?
 
-> **plaintext**: `string`
+> `optional` **new\_alias?**: `string`
+
+***
+
+### plaintext?
+
+> `optional` **plaintext?**: `string`
 
 ***
 

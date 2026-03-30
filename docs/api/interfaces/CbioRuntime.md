@@ -239,6 +239,35 @@ Using scrypt for memory-hard key derivation to resist brute-force attacks.
 
 ***
 
+### handleVaultAuditSse
+
+> **handleVaultAuditSse**: (`service`, `options`) => `Response`
+
+Creates an SSE response that streams owner-visible audit entries.
+Host applications should authenticate owner access before exposing this helper remotely.
+
+#### Parameters
+
+##### service
+
+[`VaultService`](VaultService.md)
+
+The VaultService instance to subscribe against.
+
+##### options?
+
+`VaultAuditSseOptions` = `{}`
+
+Stream options such as replay cursor, filtering, and abort handling.
+
+#### Returns
+
+`Response`
+
+A streaming SSE Response that emits `audit_entry` events by default.
+
+***
+
 ### handleVaultHttpDispatch
 
 > **handleVaultHttpDispatch**: (`service`, `body`) => `Promise`\<`VaultAgentDispatchResponse` \| `VaultAgentDispatchErrorResponse`\>
@@ -265,6 +294,35 @@ The parsed JSON body of the incoming HTTP request.
 `Promise`\<`VaultAgentDispatchResponse` \| `VaultAgentDispatchErrorResponse`\>
 
 A JSON-serializable response object.
+
+***
+
+### handleVaultPendingDispatchSse
+
+> **handleVaultPendingDispatchSse**: (`service`, `options`) => `Response`
+
+Creates an SSE response that streams owner-visible pending dispatch events.
+Host applications should authenticate owner access before exposing this helper remotely.
+
+#### Parameters
+
+##### service
+
+[`VaultService`](VaultService.md)
+
+The VaultService instance to subscribe against.
+
+##### options?
+
+`VaultPendingDispatchSseOptions` = `{}`
+
+Stream options such as replay cursor and abort handling.
+
+#### Returns
+
+`Response`
+
+A streaming SSE Response that emits `pending_dispatch` events.
 
 ***
 

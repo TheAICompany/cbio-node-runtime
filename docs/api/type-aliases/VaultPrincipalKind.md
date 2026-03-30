@@ -4,4 +4,4 @@
 
 # Type Alias: VaultPrincipalKind
 
-> **VaultPrincipalKind** = `"owner"` \| `"trusted_issuer"` \| `"agent"` \| `"trusted_executor"`
+> **VaultPrincipalKind** = `"owner"` \| `"agent"`

@@ -63,3 +63,27 @@
 #### Implementation of
 
 `AuditLog.query`
+
+***
+
+### subscribe()
+
+> **subscribe**(`vault_id`, `subscription`): () => `void`
+
+#### Parameters
+
+##### vault\_id
+
+[`VaultId`](../interfaces/VaultId.md)
+
+##### subscription
+
+[`OwnerAuditSubscription`](../interfaces/OwnerAuditSubscription.md)
+
+#### Returns
+
+() => `void`
+
+#### Implementation of
+
+`AuditLog.subscribe`

@@ -60,42 +60,6 @@
 
 ***
 
-### MANAGEMENT\_LIST\_AGENTS
-
-> **MANAGEMENT\_LIST\_AGENTS**: `"management.list_agents"`
-
-***
-
-### MANAGEMENT\_LIST\_GRANTS
-
-> **MANAGEMENT\_LIST\_GRANTS**: `"management.list_grants"`
-
-***
-
-### MANAGEMENT\_LIST\_REQUESTS
-
-> **MANAGEMENT\_LIST\_REQUESTS**: `"management.list_requests"`
-
-***
-
-### MANAGEMENT\_LIST\_SECRETS
-
-> **MANAGEMENT\_LIST\_SECRETS**: `"management.list_secrets"`
-
-***
-
-### MANAGEMENT\_READ\_AUDIT
-
-> **MANAGEMENT\_READ\_AUDIT**: `"management.read_audit"`
-
-***
-
-### MANAGEMENT\_READ\_REQUEST
-
-> **MANAGEMENT\_READ\_REQUEST**: `"management.read_request"`
-
-***
-
 ### POLICY\_EVALUATE
 
 > **POLICY\_EVALUATE**: `"policy.evaluate_dispatch"`
