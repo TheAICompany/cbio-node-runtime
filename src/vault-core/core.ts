@@ -573,6 +573,36 @@ export class VaultCore {
     return updated;
   }
 
+  async ownerRemoveAgentIdentity(command: { vault_id: VaultId; request_id: string; owner: VaultPrincipal; root_agent_id: string; requested_at: string }): Promise<void> {
+    this._assertOwnerPrincipal(command.owner);
+    const existing = await this._deps.agentRecords.get(command.vault_id, command.root_agent_id);
+    if (!existing) throw new VaultCoreError("agent identity not found", "VAULT_IDENTITY_NOT_FOUND");
+
+    const [tokens, grants] = await Promise.all([
+      this._deps.sessionTokenRegistry.list(command.root_agent_id),
+      this._deps.agent_secretGrants.list(command.vault_id, command.root_agent_id),
+    ]);
+
+    for (const token of tokens) {
+      await this._deps.sessionTokenRegistry.revoke(token.token);
+    }
+    for (const grant of grants) {
+      await this._deps.agent_secretGrants.delete(command.vault_id, command.root_agent_id, grant.secret_id);
+    }
+
+    await this._deps.agentRecords.delete(command.vault_id, command.root_agent_id);
+    await this._appendAuditEntry(
+      command.owner,
+      "ownerRemoveAgentIdentity",
+      { root_agent_id: command.root_agent_id },
+      {
+        root_agent_id: command.root_agent_id,
+        revoked_session_tokens: tokens.length,
+        removed_agent_secret_grants: grants.length,
+      }
+    );
+  }
+
   async ownerCreateSecret(command: OwnerCreateSecretCommand): Promise<SecretRecord> {
     this._assertOwnerPrincipal(command.owner);
     await this._deps.policy.authorizeWrite(command);

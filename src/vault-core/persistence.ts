@@ -232,6 +232,13 @@ export class SqliteAgentIdentityRegistry implements AgentIdentityRegistry {
       return record;
     }));
   }
+
+  async delete(vault_id: VaultId, root_agent_id: string): Promise<void> {
+    this.db
+      .prepare(`DELETE FROM agents WHERE vault_id = ? AND root_agent_id = ?`)
+      .run(vault_id, root_agent_id);
+    await this.custody.delete(root_agent_id);
+  }
 }
 
 export class SqliteAgentSecretGrantRegistry implements AgentSecretGrantRegistry {

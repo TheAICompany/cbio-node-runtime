@@ -15,6 +15,7 @@ export type {
   VaultImportAgentInput,
   VaultCreateAgentInput,
   VaultUpdateAgentInput,
+  VaultRemoveAgentInput,
   VaultListAgentsInput,
   VaultListRequestsInput,
   VaultGetRequestInput,

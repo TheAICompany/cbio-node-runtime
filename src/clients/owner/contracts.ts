@@ -55,7 +55,7 @@ export interface OwnerSensitiveActionConfirmation {
 }
 
 export interface OwnerSensitiveActionContext {
-  action: "read_secret_plaintext" | "export_secret" | "read_agent_private_key" | "delete_secret";
+  action: "read_secret_plaintext" | "export_secret" | "read_agent_private_key" | "delete_secret" | "delete_agent";
   subject: string;
 }
 
@@ -101,6 +101,13 @@ export interface VaultUpdateAgentInput {
   root_agent_id: string;
   nickname?: string;
   metadata?: Record<string, any>;
+  requested_at?: string;
+}
+
+export interface VaultRemoveAgentInput {
+  root_agent_id: string;
+  password: string;
+  verificationCode?: string;
   requested_at?: string;
 }
 
@@ -185,6 +192,7 @@ export interface OwnerClient {
   ownerImportAgent(input: VaultImportAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerCreateAgent(input: VaultCreateAgentInput): Promise<OwnerAgentProvisionResult>;
   ownerUpdateAgent(input: VaultUpdateAgentInput): Promise<import("../../vault-core/index.js").AgentIdentityRecord>;
+  ownerRemoveAgent(input: VaultRemoveAgentInput): Promise<void>;
 
   ownerRemoveSecret(input: OwnerRemoveSecretInput): Promise<void>;
   ownerListAgents(input?: VaultListAgentsInput): Promise<readonly import("../../vault-core/index.js").AgentIdentityRecord[]>;

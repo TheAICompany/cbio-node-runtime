@@ -246,6 +246,10 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
       .filter(([key]) => key.startsWith(prefix))
       .map(([, identity]) => identity);
   }
+
+  async delete(vault_id: VaultId, root_agent_id: string): Promise<void> {
+    this._identities.delete(`${vault_id}:${root_agent_id}`);
+  }
 }
 
 /**

@@ -129,6 +129,14 @@ export interface OwnerUpdateAgentIdentityCommand {
   requested_at: string;
 }
 
+export interface OwnerRemoveAgentIdentityCommand {
+  vault_id: VaultId;
+  request_id: string;
+  owner: VaultPrincipal & { kind: "owner" };
+  root_agent_id: string;
+  requested_at: string;
+}
+
 export interface OwnerGrantAgentSecretCommand {
   vault_id: VaultId;
   request_id: string;

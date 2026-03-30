@@ -98,6 +98,7 @@ export interface VaultAgentControlErrorResponse {
 
 export type VaultOwnerControlRequest =
   | { action: "list_agents"; vault_id: string; actor_id?: string }
+  | { action: "remove_agent"; vault_id: string; actor_id?: string; root_agent_id: string; requested_at?: string }
   | { action: "list_requests"; vault_id: string; actor_id?: string; root_agent_id?: string }
   | { action: "get_request"; vault_id: string; actor_id?: string; request_id: string }
   | { action: "list_secrets"; vault_id: string; actor_id?: string }
@@ -126,6 +127,7 @@ export interface VaultService {
   // Owner Management
   ownerRegisterAgentIdentity(request: OwnerRegisterAgentIdentityCommand): Promise<void>;
   ownerUpdateAgentIdentity(request: import("../vault-core/index.js").OwnerUpdateAgentIdentityCommand): Promise<AgentIdentityRecord>;
+  ownerRemoveAgentIdentity(request: import("../vault-core/index.js").OwnerRemoveAgentIdentityCommand): Promise<void>;
 
   ownerCreateSecret(request: import("../vault-core/index.js").OwnerCreateSecretCommand): Promise<SecretRecord>;
   ownerUpdateSecret(request: import("../vault-core/index.js").OwnerUpdateSecretCommand): Promise<SecretRecord>;
@@ -191,6 +193,10 @@ class LocalVaultService implements VaultService {
 
   ownerUpdateAgentIdentity(request: import("../vault-core/index.js").OwnerUpdateAgentIdentityCommand): Promise<AgentIdentityRecord> {
     return this._authority.ownerUpdateAgentIdentity(request);
+  }
+
+  ownerRemoveAgentIdentity(request: import("../vault-core/index.js").OwnerRemoveAgentIdentityCommand): Promise<void> {
+    return this._authority.ownerRemoveAgentIdentity(request);
   }
 
 
@@ -370,6 +376,7 @@ class LocalVaultService implements VaultService {
       let result: any;
       switch (request.action) {
         case "list_agents": result = await this.ownerListAgents({ vault_id: request.vault_id, actor: { kind: "owner", id: request.actor_id || "owner" }, request_id: "internal", requested_at: new Date().toISOString() }); break;
+        case "remove_agent": await this.ownerRemoveAgentIdentity({ vault_id: request.vault_id, owner: actor, root_agent_id: request.root_agent_id, request_id: "internal", requested_at: request.requested_at || new Date().toISOString() }); result = { ok: true }; break;
         case "list_requests": result = await this.ownerListRequests({ vault_id: request.vault_id, actor: { kind: "owner", id: request.actor_id || "owner" }, root_agent_id: request.root_agent_id, request_id: "internal", requested_at: new Date().toISOString() }); break;
         case "get_request": result = await this.ownerGetRequest({ vault_id: request.vault_id, actor: { kind: "owner", id: request.actor_id || "owner" }, target_request_id: request.request_id, request_id: "internal", requested_at: new Date().toISOString() }); break;
         case "list_secrets": result = await this.ownerListSecrets({ vault_id: request.vault_id, owner: { kind: "owner", id: request.actor_id || "owner" } }); break;

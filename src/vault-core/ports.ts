@@ -77,6 +77,7 @@ export interface AgentIdentityRegistry {
   register(identity: AgentIdentityRecord): Promise<void>;
   get(vault_id: VaultId, root_agent_id: string): Promise<AgentIdentityRecord | null>;
   list(vault_id: VaultId): Promise<readonly AgentIdentityRecord[]>;
+  delete(vault_id: VaultId, root_agent_id: string): Promise<void>;
 }
 
 

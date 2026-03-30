@@ -58,5 +58,6 @@ export type {
   OwnerUpdateSecretInput,
   VaultGrantAgentSecretInput,
   VaultGrantSecretDestinationInput,
+  VaultRemoveAgentInput,
   VaultApproveDispatchInput,
 } from "./clients/owner/index.js";

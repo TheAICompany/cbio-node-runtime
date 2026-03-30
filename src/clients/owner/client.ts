@@ -18,6 +18,7 @@ import type {
   OwnerUpdateSecretInput,
   OwnerRemoveSecretInput,
   VaultUpdateAgentInput,
+  VaultRemoveAgentInput,
   VaultListAgentsInput,
   VaultListRequestsInput,
   VaultGetRequestInput,
@@ -352,6 +353,28 @@ class DefaultOwnerClient implements OwnerClient {
       ...updated,
       private_key: undefined,
     };
+  }
+
+  async ownerRemoveAgent(input: VaultRemoveAgentInput): Promise<void> {
+    await this._confirmSensitiveAction({
+      password: input.password,
+      verificationCode: input.verificationCode,
+    }, {
+      action: "delete_agent",
+      subject: input.root_agent_id,
+    });
+    const requested_at = input.requested_at ?? this._clock.nowIso();
+    const request_id = createRequestIdValue("remove_agent.identity");
+    await this._vault.ownerRemoveAgentIdentity({
+      vault_id: this._vault.vault_id,
+      request_id,
+      owner: {
+        kind: "owner",
+        id: this._root_agent_id,
+      },
+      root_agent_id: input.root_agent_id,
+      requested_at,
+    });
   }
 
   async ownerGrantAgentSecret(input: VaultGrantAgentSecretInput) {

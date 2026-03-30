@@ -124,6 +124,7 @@ export {
   type OwnerUpdateSecretInput,
   type OwnerRemoveSecretInput,
   type VaultUpdateAgentInput,
+  type VaultRemoveAgentInput,
   type VaultListAgentsInput,
   type VaultListRequestsInput,
   type VaultGetRequestInput,
