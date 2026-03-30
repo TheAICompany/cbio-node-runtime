@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.75.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.74.0...v1.75.0) (2026-03-30)
+
+
+### Features
+
+* add support for removing agent identities and revoking associated tokens and grants ([647434a](https://github.com/TheAICompany/cbio-node-runtime/commit/647434a454b3f58843fa518967ca268be3c41890))
+* enhance agent runtime manifest with product introduction, capabilities, and operating rules; improve secret lifecycle management in persistence layer ([89e1cc8](https://github.com/TheAICompany/cbio-node-runtime/commit/89e1cc8db2a2ed3704c4087b590f63ce9eceb911))
+* enhance secret removal process by deleting associated agent and destination grants, and improve error messaging for missing secret_id ([f5f3f04](https://github.com/TheAICompany/cbio-node-runtime/commit/f5f3f0409c8fc069c067fe2c7e078d54a9393919))
+
+
+### Bug Fixes
+
+* improve error handling for dispatch without secret_id and update agentDispatch description to clarify secret_id requirement ([2114111](https://github.com/TheAICompany/cbio-node-runtime/commit/211411175a807dc785649adcbb7c0b0bdd00a9ce))
+
 ## [1.74.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.73.0...v1.74.0) (2026-03-30)
 
 
