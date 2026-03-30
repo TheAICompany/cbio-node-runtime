@@ -5,8 +5,8 @@ import type { VaultService } from "../../vault-ingress/index.js";
 import type {
   AgentDispatchIntent,
   AgentDispatchTransport,
-  AgentVisibleRequestRecord,
-  AgentVisibleSecretRecord,
+  AgentRequestRecordNode,
+  SecretRecordNode,
 } from "./contracts.js";
 
 export interface AgentIdentity {
@@ -29,12 +29,12 @@ export interface AgentClient {
   /**
    * List secrets the agent can see, including whether they are granted or not.
    */
-  agentListSecrets(): Promise<readonly AgentVisibleSecretRecord[]>;
+  agentListSecrets(): Promise<readonly SecretRecordNode[]>;
   
   /**
    * List previous requests sent by this agent.
    */
-  agentListRequests(): Promise<readonly AgentVisibleRequestRecord[]>;
+  agentListRequests(): Promise<readonly AgentRequestRecordNode[]>;
   
   /**
    * Get details of a specific request.
@@ -61,6 +61,7 @@ class DefaultAgentClient implements AgentClient {
     private readonly _transport: AgentDispatchTransport,
     private readonly _clock: Clock,
     private readonly _token: string,
+    private readonly _vault_id: string,
   ) {}
 
   async agentDispatch(intent: AgentDispatchIntent) {
@@ -71,8 +72,15 @@ class DefaultAgentClient implements AgentClient {
       throw new Error("agentDispatch requires a non-empty reason for owner review");
     }
 
+    // Resolve alias to secret_id
+    const secrets = await this.agentListSecrets();
+    const secret = secrets.find((s) => s.alias === intent.secret_alias);
+    const resolved_id = secret ? secret.secret_id : intent.secret_alias;
+    
+    console.log("DEBUG: AgentClient.agentDispatch", { alias: intent.secret_alias, found: !!secret, resolved_id });
+
     return this._transport.agentDispatch({
-      vault_id: { value: "" }, // Will be filled by transport/vault if needed, or ignored if local
+      vault_id: this._vault_id, 
       request_id,
       requested_at,
       agent: {
@@ -81,7 +89,7 @@ class DefaultAgentClient implements AgentClient {
       },
       proof: await this._createProof(request_id, requested_at),
       reason,
-      secret_alias: intent.secret_alias,
+      secret_id: resolved_id,
       target_url: intent.target_url,
       method: intent.method,
       headers: intent.headers,
@@ -105,7 +113,7 @@ class DefaultAgentClient implements AgentClient {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("list_secrets");
     return this._transport.agentListSecrets({
-      vault_id: { value: "" },
+      vault_id: this._vault_id,
       request_id,
       requested_at,
       agent: { kind: "agent", id: this._identity.root_agent_id },
@@ -117,7 +125,7 @@ class DefaultAgentClient implements AgentClient {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("get_manifest");
     return this._transport.agentGetRuntimeManifest({
-      vault_id: { value: "" },
+      vault_id: this._vault_id,
       request_id,
       requested_at,
       agent: { kind: "agent", id: this._identity.root_agent_id },
@@ -129,7 +137,7 @@ class DefaultAgentClient implements AgentClient {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("list_requests");
     return this._transport.agentListRequests({
-      vault_id: { value: "" },
+      vault_id: this._vault_id,
       request_id,
       requested_at,
       agent: { kind: "agent", id: this._identity.root_agent_id },
@@ -141,7 +149,7 @@ class DefaultAgentClient implements AgentClient {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("read_request_result");
     return this._transport.agentGetRequest({
-      vault_id: { value: "" },
+      vault_id: this._vault_id,
       request_id,
       requested_at,
       target_request_id,
@@ -169,14 +177,12 @@ function resolveAgentTransport(
   throw new Error("createAgentClient() requires transport or vault");
 }
 
-/**
- * Creates an {@link AgentClient} for a delegated identity.
- */
 export function createAgentClient(options: CreateAgentClientOptions): AgentClient {
   return new DefaultAgentClient(
     resolveAgentIdentity(options),
     resolveAgentTransport(options),
     options.clock ?? new SystemClock(),
     options.token,
+    options.vault?.vault_id ?? "",
   );
 }

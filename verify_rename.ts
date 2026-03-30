@@ -10,7 +10,7 @@ async function test() {
   const service = createVaultService(core);
   const client = await createOwnerClient({ vault: service, skipWarmup: true });
 
-  const vault_id = service.vault_id.value;
+  const vault_id = service.vault_id;
 
   console.log("1. Creating secret 'A'...");
   await client.ownerCreateSecret({ alias: "A", plaintext: "secret-value-a" });
@@ -20,11 +20,11 @@ async function test() {
 
   console.log("3. Verifying grant for 'A'...");
   let secrets = await client.ownerListSecrets();
-  let secretA = secrets.find(s => s.alias.value === "A");
+  let secretA = secrets.find(s => s.alias === "A");
   if (!secretA) throw new Error("Secret A not found");
   
   let grants = await client.ownerListGrants({ root_agent_id: "agent1" });
-  let hasGrantA = grants.agent_secrets.some(g => g.secret_id.value === secretA.secret_id.value);
+  let hasGrantA = grants.agent_secrets.some(g => g.secret_id === secretA.secret_id);
   console.log("   Has grant for A:", hasGrantA);
   if (!hasGrantA) throw new Error("Grant for A missing");
 
@@ -33,18 +33,18 @@ async function test() {
 
   console.log("5. Verifying secret 'B' exists and 'A' is gone...");
   secrets = await client.ownerListSecrets();
-  const hasB = secrets.some(s => s.alias.value === "B");
-  const hasA = secrets.some(s => s.alias.value === "A");
+  const hasB = secrets.some(s => s.alias === "B");
+  const hasA = secrets.some(s => s.alias === "A");
   console.log("   Has B:", hasB, "Has A:", hasA);
   if (!hasB || hasA) throw new Error("Secret rename failed");
 
   console.log("6. Verifying grant migrated to 'B'...");
-  const secretB = secrets.find(s => s.alias.value === "B");
+  const secretB = secrets.find(s => s.alias === "B");
   if (!secretB) throw new Error("Secret B not found");
   
   grants = await client.ownerListGrants({ root_agent_id: "agent1" });
-  const hasGrantB = grants.agent_secrets.some(g => g.secret_id.value === secretB.secret_id.value);
-  hasGrantA = grants.agent_secrets.some(g => g.secret_id.value === secretA.secret_id.value); 
+  const hasGrantB = grants.agent_secrets.some(g => g.secret_id === secretB.secret_id);
+  hasGrantA = grants.agent_secrets.some(g => g.secret_id === secretA.secret_id); 
   // Note: hasGrantA should still be true because both point to the same secret_id
   console.log("   Has grant for B (by ID):", hasGrantB, "Has grant for A (by original ID):", hasGrantA);
   if (!hasGrantB) throw new Error("Grant migration failed");
@@ -57,7 +57,7 @@ async function test() {
   console.log("8. Testing only rename (no value update)...");
   await client.ownerUpdateSecret({ alias: "B", new_alias: "C" });
   const finalSecrets = await client.ownerListSecrets();
-  const hasC = finalSecrets.some(s => s.alias.value === "C");
+  const hasC = finalSecrets.some(s => s.alias === "C");
   console.log("   Has C:", hasC);
   if (!hasC) throw new Error("Only rename failed");
 

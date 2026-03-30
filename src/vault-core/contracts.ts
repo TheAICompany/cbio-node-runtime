@@ -9,21 +9,11 @@ export interface VaultPrincipal {
   id: string;
 }
 
-export interface VaultId {
-  readonly value: string;
-}
-
-export interface SecretId {
-  readonly value: string;
-}
-
-export interface SecretAlias {
-  readonly value: string;
-}
-
-export interface SecretVersion {
-  readonly value: string;
-}
+export type VaultId = string;
+export type SecretId = string;
+export type SecretAlias = string;
+export type SecretVersion = string;
+export type SecretIdPreference = string;
 
 export type SecretLifecycleStatus =
   | "ACTIVE"
@@ -34,7 +24,7 @@ export interface SecretRecord {
   vault_id: VaultId;
   secret_id: SecretId;
   alias: SecretAlias;
-  version: SecretVersion;
+  version: string;
   lifecycle_status: SecretLifecycleStatus;
   previousSecretId?: SecretId;
   supersededBySecretId?: SecretId;
@@ -175,29 +165,12 @@ export interface OwnerRevokeSecretDestinationCommand {
   requested_at: string;
 }
 
-
-
-
-
 export interface AgentProof {
   root_agent_id: string;
   request_id: string;
   requested_at: string;
   signature?: string;
   token?: string;
-}
-
-export interface AgentVisibleSecretRecord {
-  vault_id: VaultId;
-  secret_id: SecretId;
-  alias: SecretAlias;
-  version: SecretVersion;
-  lifecycle_status: SecretLifecycleStatus;
-  issuer_id: string | null;
-  source: SecretSource;
-  created_at: string;
-  updated_at: string;
-  granted: boolean;
 }
 
 export interface AgentGetRuntimeManifestRequest {
@@ -217,14 +190,14 @@ export interface AgentGetRuntimeManifestCommand {
 
 export interface AgentSelfContext {
   root_agent_id: string;
-    public_key: string;
+  public_key: string;
   nickname?: string;
   metadata?: Record<string, any>;
 }
 
 export interface AgentRuntimeManifest {
   root_agent_id: string;
-  vault_id: string;
+  vault_id: VaultId;
   vault_nickname?: string;
   issued_at: string;
   agent: AgentSelfContext;
@@ -247,7 +220,6 @@ export interface RequestRecord {
     method: string;
     headers?: Record<string, string>;
     body?: string;
-    secret_alias?: string;
     secret_id: SecretId | null;
   };
   response?: {
@@ -280,85 +252,8 @@ export interface OwnerPendingDispatchSubscription {
   onEvent(event: PendingDispatchEvent): void;
 }
 
-export interface AgentVisibleRequestRecord {
-  request_id: string;
-  created_at: string;
-  reason: string;
-  target_url: string;
-  execution_status: DispatchStatus;
-  response_status?: number;
-  error?: string;
-  has_response_body: boolean;
-  secret_id?: SecretId;
-}
-
-export interface OwnerVisibleRequestRecord {
-  request_id: string;
-  created_at: string;
-  root_agent_id: string;
-  reason: string;
-  target_url: string;
-  execution_status: DispatchStatus;
-  response_status?: number;
-  error?: string;
-  has_response_body: boolean;
-  missing_grants?: {
-    agent_secret?: boolean;
-    secret_destination?: boolean;
-  };
-  secret_id?: SecretId;
-}
-
-export interface OwnerRequestRecord {
-  request_id: string;
-  created_at: string;
-  requested_at: string;
-  root_agent_id: string;
-  reason: string;
-  request: {
-    target_url: string;
-    method: string;
-    headers?: Record<string, string>;
-    body?: string;
-    secret_alias?: string;
-    secret_id?: SecretId;
-  };
-  response?: {
-    status?: number;
-    headers?: Record<string, string>;
-    body?: string;
-    error?: string;
-  };
-  execution_status: DispatchStatus;
-  missing_grants?: {
-    agent_secret?: boolean;
-    secret_destination?: boolean;
-  };
-  secret_id?: SecretId;
-}
-
-export interface AgentRequestRecord {
-  request_id: string;
-  created_at: string;
-  requested_at: string;
-  reason: string;
-  request: {
-    target_url: string;
-    method: string;
-    headers?: Record<string, string>;
-    body?: string;
-    secret_alias?: string;
-    secret_id?: SecretId;
-  };
-  response?: {
-    status?: number;
-    headers?: Record<string, string>;
-    body?: string;
-    error?: string;
-  };
-  execution_status: DispatchStatus;
-  secret_id?: SecretId;
-}
+export interface OwnerRequestRecord extends RequestRecord {}
+export interface AgentRequestRecord extends RequestRecord {}
 
 export interface VaultToolDefinition {
   name: string;
@@ -429,7 +324,7 @@ export interface DispatchRequest {
   requested_at: string;
   agent: VaultPrincipal & { kind: "agent" };
   proof: AgentProof;
-  secret_alias?: string;
+  secret_id?: SecretId;
   reason: string;
   target_url: string;
   method: string;
@@ -484,64 +379,29 @@ export interface DispatchResult {
 export type AgentRequestResult = AgentRequestRecord;
 
 export interface AuditQuery {
-  vault_id: string; 
+  vault_id: VaultId;
   actor_id?: string;
   root_agent_id?: string;
-  secret_alias?: string;
-  secret_id?: string;
+  secret_id?: SecretId;
   request_id?: string;
   since?: string;
-}
-
-export enum AuditOperation {
-  IDENTITY_REGISTER = "identity.register",
-  IDENTITY_UPDATE = "identity.update",
-  IDENTITY_ISSUE_TOKEN = "identity.issue_token",
-  IDENTITY_REVOKE_TOKEN = "identity.revoke_token",
-
-  GRANT_SECRET = "grant.grant_secret",
-  GRANT_DESTINATION = "grant.grant_destination",
-  REVOKE_SECRET = "grant.revoke_secret",
-  REVOKE_DESTINATION = "grant.revoke_destination",
-
-  SECRET_WRITE = "secret.write",
-  SECRET_EXPORT = "secret.export",
-  SECRET_BATCH_EXPORT = "secret.batch_export",
-  SECRET_DELETE = "secret.delete",
-
-  POLICY_EVALUATE = "policy.evaluate_dispatch",
-  SECRET_DISPATCH = "secret.dispatch",
-
-  DISPATCH_APPROVE = "dispatch.approve",
-  DISPATCH_REJECT = "dispatch.reject",
-  DISPATCH_HOLD = "dispatch.pending_approval",
 }
 
 export interface AuditEntry {
   event_id: string;
   ts: string;
-  vault_id: string;
+  vault_id: VaultId;
   actor: VaultPrincipal;
-  operation: AuditOperation;
-  decision: "allowed" | "denied";
-  execution_status: "not_executed" | "succeeded" | "failed";
-  request_id?: string;
-  secret_alias?: string;
-  secret_id?: string;
-  root_agent_id?: string;
-  site_id?: string;
-  target?: {
-    kind: "http" | "other";
-    url: string;
-  };
-  detail: string;
-  error_code?: string | null;
+  function_name: string;
+  input: Record<string, any>;
+  output?: any;
+  error?: string;
 }
 
 export interface AgentIdentityRecord {
   vault_id: VaultId;
   root_agent_id: string;
-    public_key: string;
+  public_key: string;
   private_key?: string;
   metadata?: Record<string, any>;
   nickname?: string;
@@ -568,7 +428,7 @@ export interface OwnerAuditRequest {
 
 export interface OwnerAuditSubscription {
   afterEventId?: string;
-  operations?: readonly AuditOperation[];
+  function_names?: readonly string[];
   root_agent_id?: string;
   request_id?: string;
   onEvent(entry: AuditEntry): void;
@@ -585,7 +445,7 @@ export interface OwnerExportSecretRequest {
 export interface OwnerSecretExport {
   vault_id: VaultId;
   secret_id: SecretId;
-  alias: SecretAlias;
+  alias: string;
   plaintext: string;
   exported_at: string;
 }
@@ -602,7 +462,7 @@ export interface OwnerListGrantsRequest {
   request_id: string;
   actor: VaultPrincipal & { kind: "owner" };
   root_agent_id?: string;
-  secret_alias?: string;
+  secret_id?: SecretId;
   site_id?: string;
   requested_at: string;
 }

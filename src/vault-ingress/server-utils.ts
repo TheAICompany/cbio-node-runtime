@@ -8,13 +8,12 @@ import type {
   VaultAgentControlErrorResponse,
 } from "./index.js";
 import type {
-  AuditOperation,
   OwnerAuditSubscription,
 } from "../vault-core/index.js";
 
 export interface VaultAuditSseOptions {
   afterEventId?: string;
-  operations?: readonly AuditOperation[];
+  function_names?: readonly string[];
   root_agent_id?: string;
   request_id?: string;
   signal?: AbortSignal;
@@ -133,7 +132,7 @@ export function handleVaultAuditSse(
 
       const subscription: OwnerAuditSubscription = {
         afterEventId: options.afterEventId,
-        operations: options.operations,
+        function_names: options.function_names,
         root_agent_id: options.root_agent_id,
         request_id: options.request_id,
         onEvent: (entry) => {

@@ -103,7 +103,7 @@ class DefaultOwnerClient implements OwnerClient {
     // Phase 1: 并行校验（所有别名不得已存在）
     // 通过 ownerListSecrets 获取当前所有别名，批量对比，避免逐个网络往返
     const existing = await this._vault.ownerListSecrets({ vault_id: this._vault.vault_id, owner: { kind: "owner", id: this._root_agent_id } });
-    const existingAliases = new Set(existing.map(s => s.alias.value));
+    const existingAliases = new Set(existing.map(s => s.alias));
     const duplicates = items.filter(item => existingAliases.has(item.alias));
     if (duplicates.length > 0) {
       const names = duplicates.map(d => `"${d.alias}"`).join(", ");
@@ -136,7 +136,7 @@ class DefaultOwnerClient implements OwnerClient {
 
     // Phase 1: 并行校验（所有别名必须已存在）
     const existing = await this._vault.ownerListSecrets({ vault_id: this._vault.vault_id, owner: { kind: "owner", id: this._root_agent_id } });
-    const existingAliases = new Set(existing.map(s => s.alias.value));
+    const existingAliases = new Set(existing.map(s => s.alias));
     const missing = items.filter(item => !existingAliases.has(item.alias));
     if (missing.length > 0) {
       const names = missing.map(d => `"${d.alias}"`).join(", ");
@@ -177,7 +177,7 @@ class DefaultOwnerClient implements OwnerClient {
         kind: "owner",
         id: this._root_agent_id,
       },
-      query: { ...query, vault_id: this._vault.vault_id.value },
+      query: { ...query, vault_id: this._vault.vault_id },
       request_id,
       requested_at,
     });
@@ -357,7 +357,7 @@ class DefaultOwnerClient implements OwnerClient {
   async ownerGrantAgentSecret(input: VaultGrantAgentSecretInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const secrets = await this.ownerListSecrets();
-    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
     return this._vault.ownerGrantAgentSecret({
@@ -373,7 +373,7 @@ class DefaultOwnerClient implements OwnerClient {
   async ownerGrantSecretDestination(input: VaultGrantSecretDestinationInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const secrets = await this.ownerListSecrets();
-    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
     return this._vault.ownerGrantSecretDestination({
@@ -389,7 +389,7 @@ class DefaultOwnerClient implements OwnerClient {
   async ownerRevokeAgentSecret(input: VaultRevokeAgentSecretInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const secrets = await this.ownerListSecrets();
-    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
     return this._vault.ownerRevokeAgentSecret({
@@ -405,7 +405,7 @@ class DefaultOwnerClient implements OwnerClient {
   async ownerRevokeSecretDestination(input: VaultRevokeSecretDestinationInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const secrets = await this.ownerListSecrets();
-    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
     return this._vault.ownerRevokeSecretDestination({
@@ -423,7 +423,7 @@ class DefaultOwnerClient implements OwnerClient {
     let secret_id: import("../../vault-core/index.js").SecretId | undefined;
     if (input.secret_alias) {
       const secrets = await this.ownerListSecrets();
-      const secret = secrets.find(s => s.alias.value === input.secret_alias);
+      const secret = secrets.find(s => s.alias === input.secret_alias);
       if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
       secret_id = secret.secret_id;
     }

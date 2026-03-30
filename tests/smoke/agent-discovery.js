@@ -44,15 +44,19 @@ async function runDiscoveryTest() {
   const dispatchTool = manifest.tools.find(t => t.name === "agentDispatch");
   assert.ok(dispatchTool, "agentDispatch tool should be in the manifest");
   
-  // 5. Grant a secret and verify introspection
-  console.log("🎁 Granting secret...");
+  // 5. Create and Grant a secret and verify introspection
+  console.log("🎁 Creating and Granting secret...");
+  const secretRecord = await ownerClient.ownerCreateSecret({
+    alias: "test-secret",
+    plaintext: "discovery-token-material",
+  });
   await ownerClient.ownerGrantAgentSecret({
     root_agent_id: agent.root_agent_id,
     secret_alias: "test-secret",
   });
 
   const updatedManifest = await agentClient.agentIntrospect();
-  const secret = updatedManifest.grants.agent_secrets.find(s => s.secret_alias === "test-secret");
+  const secret = updatedManifest.grants.agent_secrets.find(s => s.secret_id === secretRecord.secret_id);
   assert.ok(secret, "Secret should be visible in manifest grants");
 
   console.log("✅ Agent correctly discovered its runtime environment and grants!");

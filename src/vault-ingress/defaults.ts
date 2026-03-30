@@ -11,12 +11,12 @@ export class LocalVaultTransport implements AgentDispatchTransport {
     request: import("../vault-core/index.js").DispatchRequest,
   ): Promise<import("../vault-core/index.js").DispatchResult> {
     const response = await this._vault.agentHandleDispatch({
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       root_agent_id: request.agent.id,
       reason: request.reason,
-      secret_alias: request.secret_alias,
+      secret_id: request.secret_id,
       target_url: request.target_url,
       method: request.method,
       headers: request.headers,
@@ -32,7 +32,7 @@ export class LocalVaultTransport implements AgentDispatchTransport {
   async agentListGrants(request: import("../vault-core/index.js").AgentListGrantsRequest) {
     const response = await this._vault.agentHandleControl({
       action: "get_manifest",
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       root_agent_id: request.agent.id,

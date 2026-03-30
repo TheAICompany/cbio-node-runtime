@@ -1,6 +1,7 @@
 import { createVaultCore } from "../vault-core/core.js";
 import {
   createPersistentVaultCoreDependencies,
+  createVaultCoreDependencies,
   type CreatePersistentVaultCoreDependenciesOptions,
   VaultCore,
 } from "../vault-core/index.js";
@@ -153,11 +154,16 @@ export async function createVault(
   const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(vault_id));
   const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vault_id);
 
-  const deps = createPersistentVaultCoreDependencies(storage, {
-    ...options,
-    vault_id,
-    vaultWorkingKey,
-  });
+  const deps = (typeof (storage as any).getBaseDir === "function" && (storage as any).getBaseDir())
+    ? createPersistentVaultCoreDependencies(storage as any, {
+        ...options,
+        vault_id,
+        vaultWorkingKey,
+      })
+    : createVaultCoreDependencies({
+        ...options,
+        vault_id,
+      });
   const core = createVaultCore(deps);
   
   const nickname = options.nickname?.trim() ? options.nickname.trim() : undefined;
@@ -210,11 +216,16 @@ export async function recoverVault(
   };
   const storage = createPrefixedStorage(workspaceStorage, vaultStoragePrefix(options.vault_id));
   const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, options.vault_id);
-  const deps = createPersistentVaultCoreDependencies(storage, {
-    ...options,
-    vault_id: options.vault_id,
-    vaultWorkingKey,
-  });
+  const deps = (typeof (storage as any).getBaseDir === "function" && (storage as any).getBaseDir())
+    ? createPersistentVaultCoreDependencies(storage as any, {
+        ...options,
+        vault_id: options.vault_id,
+        vaultWorkingKey,
+      })
+    : createVaultCoreDependencies({
+        ...options,
+        vault_id: options.vault_id,
+      });
   const core = createVaultCore(deps);
   const profile = await readVaultProfile(storage, vaultWorkingKey, options.vault_id);
   if (!profile) {
@@ -262,7 +273,7 @@ export async function updateVaultMetadata(
   vault: CreatedVault | RecoveredVault,
   options: { nickname?: string; metadata?: Record<string, any>; password: string },
 ): Promise<void> {
-  const vault_id = vault.core.vault_id.value;
+  const vault_id = vault.core.vault_id;
   const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vault_id);
   
   // Read current profile to preserve other fields

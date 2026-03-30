@@ -31,7 +31,7 @@ const signer = new LocalSigner({
 const replayAgentIdentities = new InMemoryAgentIdentityRegistry();
 const replaySessionTokenRegistry = new InMemorySessionTokenRegistry();
 const authority = createVaultCore({
-  vault_id: { value: "vault-replay" },
+  vault_id: "vault-replay",
   secrets: new InMemorySecretRepository(),
   custody: new InMemorySecretCustody(),
   policy: new DefaultPolicyEngine(),
@@ -65,11 +65,12 @@ const importedAgent = await client.ownerImportAgent({
 });
 const vaultAgentId = importedAgent.agent.root_agent_id;
 
-await client.ownerCreateSecret({
+const secret = await client.ownerCreateSecret({
   alias: "replay-token",
   plaintext: "replay-secret",
   requested_at: new Date().toISOString(),
 });
+const secret_id = secret.secret_id;
 
 // Use new Grant APIs
 await client.ownerGrantAgentSecret({
@@ -90,7 +91,7 @@ const binding = JSON.stringify({
   request_id,
   requested_at,
   root_agent_id: vaultAgentId,
-  secret_alias: "replay-token",
+  secret_id,
   target_url,
   method,
   body: null,
@@ -108,7 +109,7 @@ const request = {
     request_id,
     requested_at,
   },
-  secret_alias: "replay-token",
+  secret_id,
   target_url,
   method,
   reason: "Need to verify replay protection on repeated dispatch.",
@@ -126,7 +127,7 @@ await assert.rejects(
   },
 );
 
-const replayAudit = await client.ownerReadAudit({ secret_alias: "replay-token" });
-assert.ok(replayAudit.some((entry) => entry.decision === "denied" && /replay/.test(entry.detail)));
+const replayAudit = await client.ownerReadAudit({ secret_id });
+assert.ok(replayAudit.some((entry) => entry.output?.status === "denied" && /replay/.test(entry.output?.detail || "")));
 
 console.log("replay guard smoke test passed");

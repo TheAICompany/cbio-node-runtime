@@ -8,7 +8,6 @@ import {
   createAgentClient,
   FsStorageProvider,
   handleVaultAuditSse,
-  AuditOperation,
 } from "../../dist/runtime/index.js";
 
 function parseSseFrames(buffer) {
@@ -58,7 +57,7 @@ async function waitForAuditEntries(reader, predicate, timeoutMs = 4000) {
     }
   }
 
-  throw new Error(`Timed out waiting for matching audit entries. Seen: ${JSON.stringify(seen.map((entry) => entry.data.operation))}`);
+  throw new Error(`Timed out waiting for matching audit entries. Seen: ${JSON.stringify(seen.map((entry) => entry.data.function_name))}`);
 }
 
 async function runTest() {
@@ -106,25 +105,27 @@ async function runTest() {
     assert.equal(approved?.status, "SUCCEEDED");
 
     const observedEntries = await waitForAuditEntries(reader, (entries) => {
-      const operations = entries
-        .filter((entry) => !entry.data.request_id || entry.data.request_id === pending.request_id)
-        .map((entry) => entry.data.operation);
-      return operations.includes(AuditOperation.IDENTITY_REGISTER)
-        && operations.includes(AuditOperation.IDENTITY_ISSUE_TOKEN)
-        && operations.includes(AuditOperation.SECRET_WRITE)
-        && operations.includes(AuditOperation.DISPATCH_HOLD)
-        && operations.includes(AuditOperation.DISPATCH_APPROVE)
-        && operations.includes(AuditOperation.SECRET_DISPATCH)
-        && operations.includes(AuditOperation.GRANT_SECRET)
-        && operations.includes(AuditOperation.GRANT_DESTINATION);
+      const records = entries
+        .filter((entry) => !entry.data.input?.request_id || entry.data.input?.request_id === pending.request_id);
+      
+      const functionNames = records.map(entry => entry.data.function_name);
+      
+      return functionNames.includes("ownerCreateAgent")
+        && functionNames.includes("ownerIssueSessionToken")
+        && functionNames.includes("ownerCreateSecret")
+        && records.some(e => e.data.function_name === "agentDispatchSecret" && e.data.output?.status === "AWAITING_APPROVAL")
+        && functionNames.includes("ownerApproveDispatch")
+        && records.some(e => e.data.function_name === "agentDispatchSecret" && e.data.output?.status === "SUCCEEDED")
+        && functionNames.includes("ownerGrantAgentSecret")
+        && functionNames.includes("ownerGrantSecretDestination");
     });
 
-    assert.ok(observedEntries.some((entry) => entry.data.operation === AuditOperation.IDENTITY_REGISTER));
-    assert.ok(observedEntries.some((entry) => entry.data.operation === AuditOperation.IDENTITY_ISSUE_TOKEN));
-    assert.ok(observedEntries.some((entry) => entry.data.operation === AuditOperation.SECRET_WRITE));
-    assert.ok(observedEntries.some((entry) => entry.data.operation === AuditOperation.DISPATCH_HOLD && entry.data.request_id === pending.request_id));
-    assert.ok(observedEntries.some((entry) => entry.data.operation === AuditOperation.DISPATCH_APPROVE && entry.data.request_id === pending.request_id));
-    assert.ok(observedEntries.some((entry) => entry.data.operation === AuditOperation.SECRET_DISPATCH && entry.data.request_id === pending.request_id));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerCreateAgent"));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerIssueSessionToken"));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerCreateSecret"));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "agentDispatchSecret" && entry.data.input?.request_id === pending.request_id && entry.data.output?.status === "AWAITING_APPROVAL"));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerApproveDispatch" && entry.data.input?.request_id === pending.request_id));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "agentDispatchSecret" && entry.data.input?.request_id === pending.request_id && entry.data.output?.status === "SUCCEEDED"));
 
     await reader.cancel();
     console.log("Audit SSE stream publishes append-only notifications for identity, secret, request, and approval changes");

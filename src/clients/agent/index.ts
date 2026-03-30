@@ -10,6 +10,6 @@ export type {
   AgentDispatchIntent,
   AgentDispatchTransport,
   AgentSigner,
-  AgentVisibleSecretRecord,
-  AgentVisibleRequestRecord,
+  SecretRecordNode,
+  AgentRequestRecordNode,
 } from "./contracts.js";

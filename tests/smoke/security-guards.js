@@ -44,16 +44,16 @@ const guardedRecord = await client.ownerCreateSecret({
 // Case 1: Expired requested_at (Security Guard: Clock Skew)
 const expiredRequestedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 const expiredRequestId = "expired-request";
-const expiredBinding = JSON.stringify({
+const secret_id = guardedRecord.secret_id;
+const expiredSignature = await signer.sign(JSON.stringify({
   request_id: expiredRequestId,
   requested_at: expiredRequestedAt,
   root_agent_id: vaultAgentId,
-  secret_alias: "guarded-token",
+  secret_id,
   target_url: "https://guarded.example.com/endpoint",
   method: "POST",
   body: null,
-});
-const expiredSignature = await signer.sign(expiredBinding);
+}));
 
 await assert.rejects(
   () => authority.agentDispatchSecret({
@@ -67,7 +67,7 @@ await assert.rejects(
       request_id: expiredRequestId,
       requested_at: expiredRequestedAt,
     },
-    secret_alias: "guarded-token",
+    secret_id,
     target_url: "https://guarded.example.com/endpoint",
     method: "POST",
     reason: "Need to verify expired timestamp rejection.",
@@ -87,7 +87,7 @@ const badBinding = JSON.stringify({
   request_id: validRequestId,
   requested_at: validRequestedAt,
   root_agent_id: vaultAgentId,
-  secret_alias: "guarded-token",
+  secret_id,
   target_url: "https://guarded.example.com/endpoint",
   method: "POST",
   body: "tampered", // Binding includes "tampered"
@@ -106,7 +106,7 @@ await assert.rejects(
       request_id: validRequestId,
       requested_at: validRequestedAt,
     },
-    secret_alias: "guarded-token",
+    secret_id,
     target_url: "https://guarded.example.com/endpoint",
     method: "POST",
     body: null, // But actual body is null -> Binding Mismatch
@@ -120,8 +120,8 @@ await assert.rejects(
   },
 );
 
-const securityAudit = await client.ownerReadAudit({ secret_alias: "guarded-token" });
-assert.ok(securityAudit.some((entry) => entry.decision === "denied" && /timestamp out of range|invalid proof signature/.test(entry.detail)));
+const securityAudit = await client.ownerReadAudit({ secret_id });
+assert.ok(securityAudit.some((entry) => entry.output?.status === "denied" && /timestamp out of range|invalid proof signature/.test(entry.output?.detail || "")));
 
 // Case 3: Unauthorized Identity Registration (non-owner principal)
 const unauthorizedIdentityRequestId = "unauthorized-agent-registration";
@@ -149,7 +149,7 @@ await assert.rejects(
 await assert.rejects(
   () => authority.ownerReadAudit(
     { kind: "agent", id: "not-an-owner" },
-    { secret_alias: "guarded-token" },
+    { secret_id },
   ),
   (error) => {
     assert.equal(error instanceof VaultCoreError, true);

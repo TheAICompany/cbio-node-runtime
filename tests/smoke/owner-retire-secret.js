@@ -26,7 +26,7 @@ await client.ownerCreateSecret({
   plaintext: "shh",
 });
 
-const beforeEntries = await readdir(join(tempDir, "vaults", `${created.core.vault_id.value}_v1`));
+const beforeEntries = await readdir(join(tempDir, "vaults", `${created.core.vault_id}_v1`));
 const secretFilesBefore = beforeEntries.filter((entry) => entry.startsWith("secret-"));
 assert.ok(secretFilesBefore.length >= 1, "expected physical secret material before retire");
 
@@ -41,9 +41,9 @@ await assert.rejects(
 );
 
 const listedSecrets = await client.ownerListSecrets();
-assert.equal(listedSecrets.some((secret) => secret.alias.value === "demo-secret"), false);
+assert.equal(listedSecrets.some((secret) => secret.alias === "demo-secret"), false);
 
-const afterEntries = await readdir(join(tempDir, "vaults", `${created.core.vault_id.value}_v1`));
+const afterEntries = await readdir(join(tempDir, "vaults", `${created.core.vault_id}_v1`));
 const secretFilesAfter = afterEntries.filter((entry) => entry.startsWith("secret-"));
 assert.equal(secretFilesAfter.length, secretFilesBefore.length, "physical secret material should remain after retire");
 

@@ -16,7 +16,7 @@ const deps = createVaultCoreDependencies({
 });
 const authority = createVaultCore(deps);
 const vault = wrapVaultCoreAsVaultService(authority);
-const ownerClient = createOwnerClient({ vault, skipWarmup: true });
+const ownerClient = await createOwnerClient({ vault, skipWarmup: true });
 
 const agentRecord = createIdentity({ nickname: "introspector" });
 const importedAgent = await ownerClient.ownerImportAgent({
@@ -52,8 +52,8 @@ const agentClient = createAgentClient({
 
 const manifest = await agentClient.agentIntrospect();
 assert.equal(manifest.root_agent_id, vaultAgentId);
-assert.equal(manifest.vault_id, vault.vault_id.value);
-assert.ok(manifest.grants.agent_secrets.some(g => g.secret_alias === "crm-token"));
+assert.equal(manifest.vault_id, vault.vault_id);
+assert.ok(manifest.grants.agent_secrets.some(g => g.secret_id === crmRecord.secret_id));
 assert.ok(manifest.grants.secret_destinations.some(g => g.site_id === "api.example.com"));
 
 console.log("Agent introspection smoke test passed");

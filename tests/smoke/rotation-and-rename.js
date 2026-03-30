@@ -58,18 +58,18 @@ async function runTest() {
 
     // 5. Verify secret is renamed in vault
     const secrets = await owner.ownerListSecrets();
-    console.log("   Current secrets:", secrets.map(s => s.alias.value).join(", "));
-    assert.ok(secrets.some(s => s.alias.value === "new-name"), "New alias missing");
-    assert.ok(!secrets.some(s => s.alias.value === "old-name"), "Old alias still present");
+    console.log("   Current secrets:", secrets.map(s => s.alias).join(", "));
+    assert.ok(secrets.some(s => s.alias === "new-name"), "New alias missing");
+    assert.ok(!secrets.some(s => s.alias === "old-name"), "Old alias still present");
 
     // 6. Verify grants migrated
     console.log("🕵️ Verifying grant migration...");
-    const secret = secrets.find(s => s.alias.value === "new-name");
+    const secret = secrets.find(s => s.alias === "new-name");
     assert.ok(secret, "New secret record not found");
     const grants = await owner.ownerListGrants({ root_agent_id: agent.root_agent_id });
-    assert.ok(grants.agent_secrets.some(g => g.secret_id.value === secret.secret_id.value), "Agent grant not migrated");
+    assert.ok(grants.agent_secrets.some(g => g.secret_id === secret.secret_id), "Agent grant not migrated");
     assert.ok(!grants.agent_secrets.some(g => g.secret_alias === "old-name"), "Old agent grant still present");
-    assert.ok(grants.secret_destinations.some(d => d.secret_id.value === secret.secret_id.value), "Destination grant not migrated");
+    assert.ok(grants.secret_destinations.some(d => d.secret_id === secret.secret_id), "Destination grant not migrated");
 
     // 7. Verify dispatch works with NEW name and NEW value
     console.log("🚀 Testing dispatch with new name...");
@@ -123,15 +123,15 @@ async function runTest() {
     const lastRequest = requests.find(r => r.request_id === res4.request_id);
     assert.ok(lastRequest, "Last request not found in history");
     assert.ok(lastRequest.secret_id, "secret_id missing in request history");
-    assert.equal(lastRequest.secret_id.value, secret.secret_id.value, "secret_id mismatch in request history");
+    assert.equal(lastRequest.secret_id, secret.secret_id, "secret_id mismatch in request history");
 
     // 12. Verify secret_id in audit logs
     console.log("🕵️ Verifying secret_id in audit logs...");
-    const auditEntries = await owner.ownerReadAudit({ secret_id: secret.secret_id.value });
+    const auditEntries = await owner.ownerReadAudit({ secret_id: secret.secret_id });
     assert.ok(auditEntries.length > 0, "No audit entries found for secret_id");
     
     // Check if the latest dispatch is in the filtered audit
-    const hasDispatchAudit = auditEntries.some(e => e.request_id === res4.request_id && e.secret_id === secret.secret_id.value);
+    const hasDispatchAudit = auditEntries.some(e => e.input?.request_id === res4.request_id && e.input?.secret_id === secret.secret_id);
     assert.ok(hasDispatchAudit, "Dispatch audit entry missing secret_id or not found in filtered results");
 
     console.log("✅ Secret Rename & Rotation Smoke Test Passed!");

@@ -18,12 +18,12 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
 
   async agentDispatch(request: DispatchRequest): Promise<DispatchResult> {
     const remoteRequest: VaultAgentDispatchRequest = {
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       root_agent_id: request.agent.id,
       reason: request.reason,
-      secret_alias: request.secret_alias,
+      secret_id: request.secret_id,
       target_url: request.target_url,
       method: request.method,
       headers: request.headers,
@@ -58,7 +58,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
   async agentListGrants(request: import("../vault-core/index.js").AgentListGrantsRequest): Promise<{ agent_secrets: readonly AgentSecretGrant[], secret_destinations: readonly SecretDestinationGrant[] }> {
     const payload = await this._postControl({
       action: "list_grants",
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       root_agent_id: request.agent.id,
@@ -67,34 +67,34 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     return payload as { agent_secrets: readonly AgentSecretGrant[], secret_destinations: readonly SecretDestinationGrant[] };
   }
 
-  async agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleSecretRecord[]> {
+  async agentListSecrets(request: import("../vault-core/index.js").AgentListSecretsRequest): Promise<readonly import("../vault-core/index.js").SecretRecord[]> {
     const payload = await this._postControl({
       action: "list_secrets",
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       root_agent_id: request.agent.id,
       proof: { token: request.proof.token },
     });
-    return payload as readonly import("../vault-core/index.js").AgentVisibleSecretRecord[];
+    return payload as readonly import("../vault-core/index.js").SecretRecord[];
   }
 
-  async agentListRequests(request: import("../vault-core/index.js").AgentListRequestsRequest): Promise<readonly import("../vault-core/index.js").AgentVisibleRequestRecord[]> {
+  async agentListRequests(request: import("../vault-core/index.js").AgentListRequestsRequest): Promise<readonly import("../vault-core/index.js").AgentRequestRecord[]> {
     const payload = await this._postControl({
       action: "list_requests",
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       root_agent_id: request.agent.id,
       proof: { token: request.proof.token },
     });
-    return payload as readonly import("../vault-core/index.js").AgentVisibleRequestRecord[];
+    return payload as readonly import("../vault-core/index.js").AgentRequestRecord[];
   }
 
   async agentGetRequest(request: import("../vault-core/index.js").AgentGetRequestRequest): Promise<import("../vault-core/index.js").AgentRequestResult> {
     const payload = await this._postControl({
       action: "read_request_result",
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       target_request_id: request.target_request_id,
@@ -107,7 +107,7 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
   async agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest> {
     const payload = await this._postControl({
       action: "get_manifest",
-      vault_id: request.vault_id.value,
+      vault_id: request.vault_id,
       request_id: request.request_id,
       requested_at: request.requested_at,
       root_agent_id: request.agent.id,

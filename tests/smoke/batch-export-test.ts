@@ -10,11 +10,11 @@ async function runBatchExportTest() {
   if (fs.existsSync(baseDir)) fs.rmSync(baseDir, { recursive: true });
   fs.mkdirSync(baseDir);
 
-  const vault_id = { value: "test-vault" };
+  const vault_id = "test-vault";
   const vaultWorkingKey = "test-key-base64url-must-be-32-bytes-long-123456"; 
   
   const deps = createPersistentVaultCoreDependencies({ getBaseDir: () => baseDir }, {
-    vault_id: vault_id.value,
+    vault_id,
     vaultWorkingKey: Buffer.from("a".repeat(32)).toString('base64url'),
     proofVerifier: {} as any,
     fetchImpl: {} as any,
@@ -35,7 +35,7 @@ async function runBatchExportTest() {
   console.log("2. Testing Single Export (with alias)...");
   const single = await client.ownerExportSecret({ alias: "secret-2", password: "any" });
   assert.strictEqual(single.length, 1, "Single export should return array of length 1");
-  assert.strictEqual(single[0].alias.value, "secret-2");
+  assert.strictEqual(single[0].alias, "secret-2");
   assert.strictEqual(single[0].plaintext, "value-2");
   console.log("   ✅ Single export passed.");
 
@@ -43,7 +43,7 @@ async function runBatchExportTest() {
   const batch = await client.ownerExportSecret({ password: "any" });
   assert.strictEqual(batch.length, 3, "Batch export should return 3 secrets");
   
-  const aliases = batch.map((s: any) => s.alias.value).sort();
+  const aliases = batch.map((s: any) => s.alias).sort();
   assert.deepStrictEqual(aliases, ["secret-1", "secret-2", "secret-3"]);
   
   const values = batch.map((s: any) => s.plaintext).sort();
@@ -52,7 +52,7 @@ async function runBatchExportTest() {
 
   console.log("4. Verifying Batch Audit Entry...");
   const audit = await client.ownerReadAudit({});
-  const batchAudit = audit.find((e: any) => e.operation === "secret.batch_export");
+  const batchAudit = audit.find((e: any) => e.function_name === "ownerExportSecret");
   assert.ok(batchAudit, "Batch export audit entry missing");
   console.log("   ✅ Batch audit verified.");
 

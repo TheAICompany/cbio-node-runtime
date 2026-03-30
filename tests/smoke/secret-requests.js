@@ -37,11 +37,11 @@ const unsubscribe = ownerClient.ownerOnPendingDispatch({
 
 const crmRecord = await ownerClient.ownerGrantAgentSecret({
   root_agent_id: vaultAgentId,
-  secret_alias: crmSecret.alias.value,
+  secret_alias: crmSecret.alias,
 });
 
 assert.equal(crmRecord.root_agent_id, vaultAgentId);
-assert.equal(crmRecord.secret_alias, crmSecret.alias.value);
+assert.equal(crmRecord.alias, crmSecret.alias);
 assert.ok(observed, "pending grant observer should fire");
 
 const grants = await ownerClient.ownerListGrants();

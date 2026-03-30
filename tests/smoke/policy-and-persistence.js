@@ -71,7 +71,7 @@ async function runPersistenceTest() {
     // 4. Restart (simulated by re-opening the vault)
     console.log("🔄 Restarting vault...");
     const { vault: reloadedVault } = await recoverVault(storage, {
-      vault_id: vault.vault_id.value,
+      vault_id: vault.vault_id,
       password: "master-password",
       fetchImpl: runtimeFetch,
     });
@@ -95,7 +95,7 @@ async function runPersistenceTest() {
     assert.equal(listedAfterRestartAgent?.session_token?.token, session_token.token, "Persisted session token missing after restart");
     
     const secrets = await ownerClient2.ownerListSecrets();
-    assert.ok(secrets.some(s => s.alias.value === "persistent-secret"), "Secret lost after restart");
+    assert.ok(secrets.some(s => s.alias === "persistent-secret"), "Secret lost after restart");
 
     const reloadedAgentClient = createAgentClient({
       agentRecord: agent,

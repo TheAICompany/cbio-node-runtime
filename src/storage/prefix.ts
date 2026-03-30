@@ -11,11 +11,11 @@ export class PrefixStorageProvider implements IStorageProvider {
     private readonly prefix: string,
   ) {}
 
-  getBaseDir(): string {
-    if (this.base.getBaseDir) {
-      return path.join(this.base.getBaseDir(), this.prefix);
+  getBaseDir?(): string {
+    if (typeof (this.base as any).getBaseDir === 'function') {
+      return path.join((this.base as any).getBaseDir(), this.prefix);
     }
-    return this.prefix;
+    return undefined as any; // Trigger falsy check in bootstrap
   }
 
 

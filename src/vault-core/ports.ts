@@ -14,6 +14,7 @@ import type {
   SessionTokenInspectionResult,
   SecretAlias,
   SecretId,
+  SecretVersion,
   SecretRecord,
   StoredSessionToken,
   VaultPrincipal,
@@ -55,7 +56,7 @@ export interface Clock {
 
 export interface IdGenerator {
   newSecretId(): SecretId;
-  newVersion(): { value: string };
+  newVersion(): SecretVersion;
   newAuditEntryId(): string;
 
   newRequestId(action?: string): string;

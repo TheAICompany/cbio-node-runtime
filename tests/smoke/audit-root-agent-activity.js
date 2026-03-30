@@ -52,22 +52,22 @@ const activityAudit = await ownerClient.ownerReadAudit({
 
 assert.ok(
   activityAudit.some((entry) =>
-    entry.operation === "dispatch.approve"
-    && entry.request_id === request.request_id
+    entry.function_name === "ownerApproveDispatch"
+    && entry.input.request_id === request.request_id
     && entry.actor.kind === "owner"
     && entry.actor.id !== agent.root_agent_id
-    && entry.root_agent_id === agent.root_agent_id),
+    && entry.input.root_agent_id === agent.root_agent_id),
   "approval audit should be discoverable via root_agent_id even when actor is owner",
 );
 
 assert.ok(
   activityAudit.some((entry) =>
-    entry.operation === "secret.dispatch"
-    && entry.request_id === request.request_id
+    entry.function_name === "agentDispatchSecret"
+    && entry.input.request_id === request.request_id
     && entry.actor.kind === "agent"
     && entry.actor.id === agent.root_agent_id
-    && entry.root_agent_id === agent.root_agent_id
-    && entry.execution_status === "succeeded"),
+    && entry.input.root_agent_id === agent.root_agent_id
+    && entry.output.status === "SUCCEEDED"),
   "approved execution should emit a separate agent dispatch audit entry",
 );
 

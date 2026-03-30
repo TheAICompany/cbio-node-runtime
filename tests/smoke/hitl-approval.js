@@ -56,7 +56,7 @@ async function runHitlTest() {
   // 6. Owner list pending and approve "allow_and_grant"
   console.log("🎁 Approving always (allow_and_grant)...");
   const pendingRequests = await ownerClient.ownerListRequests({ root_agent_id: agent.root_agent_id });
-  const req = pendingRequests.find(r => r.execution_status === "AWAITING_APPROVAL");
+  const req = pendingRequests.find(r => r.execution.status === "AWAITING_APPROVAL");
   assert.ok(req, "Should find request awaiting approval");
 
   const approvedResult = await ownerClient.ownerApproveDispatch({

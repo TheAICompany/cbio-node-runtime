@@ -41,7 +41,7 @@ try {
   });
 
   const { vault: recoveredVault } = await recoverVault(storage, {
-    vault_id: vault.vault_id.value,
+    vault_id: vault.vault_id,
     password,
   });
   const observingOwner = await createOwnerClient({

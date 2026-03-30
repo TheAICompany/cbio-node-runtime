@@ -107,7 +107,9 @@ async function runTest() {
 
     assert.equal(event.id, event.data.event_id);
     assert.equal(event.data.record.execution.status, "AWAITING_APPROVAL");
-    assert.equal(event.data.record.request.secret_alias, "api-token");
+    const secretsFound = await owner.ownerListSecrets();
+    const targetSecretId = secretsFound.find(s => s.alias === "api-token").secret_id;
+    assert.equal(event.data.record.request.secret_id, targetSecretId);
 
     await reader.cancel();
     console.log("Pending dispatch SSE helper streams new approval events");

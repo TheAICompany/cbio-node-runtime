@@ -1,8 +1,6 @@
-# cbio Vault Runtime (v1.63.8)
+# cbio Vault Runtime (v1.72.0)
 
 Node.js vault runtime with a **Vault** architecture: authority is rooted in a master password, and agent identities are fully managed within the vault's encrypted storage.
-
-**Source:** [https://github.com/TheAICompany/cbio-node-runtime](https://github.com/TheAICompany/cbio-node-runtime)
 
 ---
 
@@ -10,10 +8,11 @@ Node.js vault runtime with a **Vault** architecture: authority is rooted in a ma
 
 - **No CLI / No TUI**: Pure library for integration into Node.js applications.
 - **Authority-centric**: Administrative control is tied to the vault's master password.
-- **Grant-Based Authorization**: Simplified, domain-level white-listing replaced the legacy grant model.
+- **Unified ID Architecture**: All identifiers (VaultId, SecretId, AgentId) are managed as native strings.
+- **Grant-Based Authorization**: Simplified, domain-level white-listing.
 - **Zero-Configuration Discovery**: Agents can self-introspect to discover their identity, grants, and toolset.
 - **Managed Agent Custody**: Generate and store agent private keys securely inside the vault.
-- **Process Isolation**: Hard separation between the Security Process (Master) and Agent Processes (Consumers).
+- **Process Resilience**: Native support for memory-only fallback when SQLite is unavailable.
 
 ## Install
 
@@ -40,7 +39,7 @@ const myVault = await createVault(storage, {
 
 // Recover
 const vault = await recoverVault(storage, {
-  vaultId: myVault.core.vaultId.value,
+  vault_id: myVault.vault_id,
   password: 'your-secure-password'
 });
 ```
@@ -50,27 +49,21 @@ const vault = await recoverVault(storage, {
 ```ts
 import { createOwnerClient } from '@the-ai-company/cbio-node-runtime';
 
-const client = createOwnerClient({
+const client = await createOwnerClient({
   vault: vault.vault,
-  passwordVerifier: vault.verifyPassword
+  password_verifier: (pwd) => pwd === 'your-secure-password'
 });
 
 // 1. Create an agent
-const { agent, sessionToken } = await client.ownerCreateAgent({ nickname: 'Bot' });
+const { agent, session_token } = await client.ownerCreateAgent({ nickname: 'Bot' });
 
 // 2. Create a secret (Strict Create: fails if alias exists)
 const secret = await client.ownerCreateSecret({ alias: 'api-key', plaintext: 'sk-...' });
 
-// 2b. Batch Create (Atomic: all-or-nothing)
-await client.ownerCreateSecret([
-  { alias: 'stripe-key', plaintext: 'sk_test_...' },
-  { alias: 'openai-key', plaintext: 'sk-proj-...' }
-]);
-
 // 3. Grant access (Whitelist)
 // Note: Grants are bound to the internal stable ID, so renames are resilient.
-await client.ownerGrantAgentSecret({ rootAgentId: agent.rootAgentId, secretAlias: 'api-key' });
-await client.ownerGrantSecretDestination({ secretAlias: 'api-key', siteId: 'api.openai.com' });
+await client.ownerGrantAgentSecret({ root_agent_id: agent.root_agent_id, secret_alias: 'api-key' });
+await client.ownerGrantSecretDestination({ secret_alias: 'api-key', site_id: 'api.openai.com' });
 ```
 
 ### 3. Dispatch Secrets (Agent)
@@ -81,21 +74,21 @@ Agents use a "Zero-Configuration" workflow. They don't need to know their permis
 import { createAgentClient } from '@the-ai-company/cbio-node-runtime';
 
 const agentClient = createAgentClient({
-  rootAgentIdentity: agent,
-  token: sessionToken.token,
+  agentRecord: agent,
+  token: session_token.token,
   vault: vault.vault
 });
 
 // Dispatch request
 const result = await agentClient.agentDispatch({
-  targetUrl: 'https://api.openai.com/v1/chat/completions',
+  target_url: 'https://api.openai.com/v1/chat/completions',
   method: 'POST',
-  secretAlias: 'api-key',
+  secret_alias: 'api-key',
   reason: 'Processing user request'
 });
 
 if (result.status === 'PENDING') {
-  console.log("Stalled for HITL approval. Request ID:", result.requestId);
+  console.log("Stalled for HITL approval. Request ID:", result.request_id);
 }
 ```
 
@@ -111,7 +104,7 @@ const unsubscribe = client.ownerOnPendingDispatch({
 });
 
 const pending = await client.ownerListRequests();
-const awaitingApproval = pending.filter((record) => record.execution_status === "AWAITING_APPROVAL");
+const awaitingApproval = pending.filter((record) => record.execution.status === "AWAITING_APPROVAL");
 
 // Approve with the "Allow & Grant" shortcut
 if (awaitingApproval.length > 0) {
@@ -124,7 +117,9 @@ if (awaitingApproval.length > 0) {
 unsubscribe();
 ```
 
-For cross-process or browser-based UIs, you can stream the audit log itself over Server-Sent Events (SSE):
+### 5. Fact-Based Audit Log
+
+The audit log records objective facts about function calls and results. You can stream the log over SSE:
 
 ```ts
 import { handleVaultAuditSse } from '@the-ai-company/cbio-node-runtime';
@@ -134,19 +129,9 @@ app.get('/api/events', (req, res) => {
     afterEventId: req.header('Last-Event-ID') ?? undefined,
     signal: req.signal,
   });
-  res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-  response.body?.pipeTo(new WritableStream({
-    write(chunk) {
-      res.write(chunk);
-    },
-    close() {
-      res.end();
-    },
-  }));
+  // ... bridge to SSE response
 });
 ```
-
-Each SSE message is an append-only audit entry. The log tells the GUI what changed; the GUI should re-query the authoritative data it cares about rather than treating the log payload as a complete object snapshot.
 
 Decisions can be:
 - `allow_once`: Execute once, no permanent whitelist update.

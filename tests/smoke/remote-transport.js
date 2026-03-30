@@ -31,15 +31,15 @@ async function test() {
   try {
     const transport = new AgentDispatchHttpTransport(`http://localhost:${PORT}/dispatch`);
     const mockRequest = {
-      vault_id: { value: "v-1" },
+      vault_id: "v-1",
       request_id: "r-1",
       requested_at: "2024-01-01T00:00:00Z",
-      agent: { id: "a-1" },
-      grant: { grantId: "c-1" },
+      agent: { kind: "agent", id: "a-1" },
       secret_id: "s-1",
       target_url: "https://example.com",
       method: "GET",
-      proof: { token: "sat-1" }
+      reason: "Smoke test remote transport",
+      proof: { root_agent_id: "a-1", token: "sat-1" }
     };
 
     const result = await transport.agentDispatch(mockRequest);

@@ -48,7 +48,6 @@ export type {
   AgentIdentityRecord,
   AgentSelfContext,
   AgentProof,
-  AgentVisibleSecretRecord,
   AgentListGrantsRequest,
   AgentListSecretsRequest,
   AgentGetRuntimeManifestRequest,
@@ -56,9 +55,7 @@ export type {
   AgentRuntimeManifest,
   AgentListRequestsRequest,
   AgentGetRequestRequest,
-  AgentVisibleRequestRecord,
   AgentRequestRecord,
-  OwnerVisibleRequestRecord,
   OwnerRequestRecord,
   AgentRequestResult,
   OwnerAuditRequest,
@@ -108,7 +105,6 @@ export type {
 
 export {
   DispatchStatus,
-  AuditOperation,
 } from "./contracts.js";
 
 export type {

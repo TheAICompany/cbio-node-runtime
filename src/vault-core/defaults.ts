@@ -28,6 +28,7 @@ import type {
   VaultId,
   VaultPrincipal,
   StoredSessionToken,
+  SecretVersion,
 } from "./contracts.js";
 import { VaultCoreError } from "./errors.js";
 import { DispatchStatus } from "./contracts.js";
@@ -66,7 +67,7 @@ function createDispatchBinding(request: DispatchRequest): string {
     request_id: request.request_id,
     requested_at: request.requested_at,
     root_agent_id: request.agent.id,
-    secret_alias: request.secret_alias ?? null,
+    secret_id: request.secret_id ?? null,
     target_url: request.target_url,
     method: request.method,
     body: request.body ?? null,
@@ -88,19 +89,16 @@ export class SystemClock implements Clock {
  */
 export class RandomIdGenerator implements IdGenerator {
   newSecretId(): SecretId {
-    return { value: createSecretIdValue() };
+    return createSecretIdValue();
   }
 
-  newVersion(): { value: string } {
-    return { value: createVersionIdValue() };
+  newVersion(): SecretVersion {
+    return createVersionIdValue();
   }
 
   newAuditEntryId(): string {
     return createAuditEntryIdValue();
   }
-
-
-
 
   newRequestId(action?: string): string {
     return createRequestIdValue(action);
@@ -119,35 +117,35 @@ export class InMemorySecretRepository implements SecretRepository {
   }
 
   async save(record: SecretRecord): Promise<void> {
-    const existing = this._byId.get(record.secret_id.value);
-    if (existing && existing.alias.value !== record.alias.value) {
-      this._byAlias.delete(existing.alias.value);
+    const existing = this._byId.get(record.secret_id);
+    if (existing && existing.alias !== record.alias) {
+      this._byAlias.delete(existing.alias);
     }
-    this._byAlias.set(record.alias.value, record);
-    this._byId.set(record.secret_id.value, record);
+    this._byAlias.set(record.alias, record);
+    this._byId.set(record.secret_id, record);
   }
 
   async delete(secret_id: SecretId): Promise<void> {
-    const existing = this._byId.get(secret_id.value);
+    const existing = this._byId.get(secret_id);
     if (!existing) {
       return;
     }
-    this._byId.delete(secret_id.value);
-    this._byAlias.delete(existing.alias.value);
+    this._byId.delete(secret_id);
+    this._byAlias.delete(existing.alias);
   }
 
   async getByAlias(alias: SecretAlias): Promise<SecretRecord | null> {
-    const record = this._byAlias.get(alias.value) ?? null;
+    const record = this._byAlias.get(alias) ?? null;
     return record && this.isActive(record) ? record : null;
   }
 
   async getById(secret_id: SecretId): Promise<SecretRecord | null> {
-    const record = this._byId.get(secret_id.value) ?? null;
+    const record = this._byId.get(secret_id) ?? null;
     return record && this.isActive(record) ? record : null;
   }
 
   async list(vault_id: VaultId): Promise<readonly SecretRecord[]> {
-    return Array.from(this._byId.values()).filter((record) => record.vault_id.value === vault_id.value && this.isActive(record));
+    return Array.from(this._byId.values()).filter((record) => record.vault_id === vault_id && this.isActive(record));
   }
 }
 
@@ -172,9 +170,9 @@ export class InMemoryAuditLog implements AuditLog {
   async query(query: AuditQuery): Promise<readonly AuditEntry[]> {
     return this._entries.filter((entry) => {
       if (query.actor_id && entry.actor.id !== query.actor_id) return false;
-      if (query.root_agent_id && entry.root_agent_id !== query.root_agent_id) return false;
-      if (query.secret_alias && entry.secret_alias !== query.secret_alias) return false;
-      if (query.request_id && entry.request_id !== query.request_id) return false;
+      if (query.root_agent_id && entry.input?.root_agent_id !== query.root_agent_id) return false;
+      if (query.secret_id && entry.input?.secret_id !== query.secret_id) return false;
+      if (query.request_id && entry.input?.request_id !== query.request_id) return false;
       if (query.since && entry.ts < query.since) return false;
       return true;
     });
@@ -182,7 +180,7 @@ export class InMemoryAuditLog implements AuditLog {
 
   subscribe(vault_id: VaultId, subscription: OwnerAuditSubscription): () => void {
     const replay = this._entries
-      .filter((entry) => entry.vault_id === vault_id.value)
+      .filter((entry) => entry.vault_id === vault_id)
       .filter((entry) => matchesAuditSubscription(entry, subscription))
       .sort((a, b) => a.event_id.localeCompare(b.event_id));
 
@@ -190,18 +188,18 @@ export class InMemoryAuditLog implements AuditLog {
       subscription.onEvent(entry);
     }
 
-    let subscribers = this._subscribers.get(vault_id.value);
+    let subscribers = this._subscribers.get(vault_id);
     if (!subscribers) {
       subscribers = new Set();
-      this._subscribers.set(vault_id.value, subscribers);
+      this._subscribers.set(vault_id, subscribers);
     }
     subscribers.add(subscription);
 
     return () => {
-      const current = this._subscribers.get(vault_id.value);
+      const current = this._subscribers.get(vault_id);
       if (!current) return;
       current.delete(subscription);
-      if (current.size === 0) this._subscribers.delete(vault_id.value);
+      if (current.size === 0) this._subscribers.delete(vault_id);
     };
   }
 }
@@ -213,15 +211,18 @@ export class InMemorySecretCustody implements SecretCustody {
   private readonly _plaintextById = new Map<string, string>();
 
   async store(secret_id: SecretId, plaintext: string): Promise<void> {
-    this._plaintextById.set(secret_id.value, plaintext);
+    console.log("DEBUG: InMemorySecretCustody.store", { secret_id, len: plaintext.length });
+    this._plaintextById.set(secret_id, plaintext);
   }
 
   async load(secret_id: SecretId): Promise<string | null> {
-    return this._plaintextById.get(secret_id.value) ?? null;
+    const val = this._plaintextById.get(secret_id) ?? null;
+    console.log("DEBUG: InMemorySecretCustody.load", { secret_id, found: !!val });
+    return val;
   }
 
   async delete(secret_id: SecretId): Promise<void> {
-    this._plaintextById.delete(secret_id.value);
+    this._plaintextById.delete(secret_id);
   }
 }
 
@@ -232,15 +233,15 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
   private readonly _identities = new Map<string, AgentIdentityRecord>();
 
   async register(identity: AgentIdentityRecord): Promise<void> {
-    this._identities.set(`${identity.vault_id.value}:${identity.root_agent_id}`, identity);
+    this._identities.set(`${identity.vault_id}:${identity.root_agent_id}`, identity);
   }
 
   async get(vault_id: VaultId, root_agent_id: string): Promise<AgentIdentityRecord | null> {
-    return this._identities.get(`${vault_id.value}:${root_agent_id}`) ?? null;
+    return this._identities.get(`${vault_id}:${root_agent_id}`) ?? null;
   }
 
   async list(vault_id: VaultId): Promise<readonly AgentIdentityRecord[]> {
-    const prefix = `${vault_id.value}:`;
+    const prefix = `${vault_id}:`;
     return Array.from(this._identities.entries())
       .filter(([key]) => key.startsWith(prefix))
       .map(([, identity]) => identity);
@@ -254,7 +255,7 @@ export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistr
   private readonly _grants = new Map<string, AgentSecretGrant>();
 
   private _key(vault_id: VaultId, root_agent_id: string, secret_id: SecretId): string {
-    return `${vault_id.value}:${root_agent_id}:${secret_id.value}`;
+    return `${vault_id}:${root_agent_id}:${secret_id}`;
   }
 
   async upsert(grant: AgentSecretGrant): Promise<void> {
@@ -267,7 +268,7 @@ export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistr
 
   async list(vault_id: VaultId, root_agent_id?: string): Promise<readonly AgentSecretGrant[]> {
     return Array.from(this._grants.values()).filter((grant) => {
-      if (grant.vault_id.value !== vault_id.value) return false;
+      if (grant.vault_id !== vault_id) return false;
       if (root_agent_id && grant.root_agent_id !== root_agent_id) return false;
       return true;
     });
@@ -285,7 +286,7 @@ export class InMemorySecretDestinationGrantRegistry implements SecretDestination
   private readonly _grants = new Map<string, SecretDestinationGrant>();
 
   private _key(vault_id: VaultId, secret_id: SecretId, site_id: string): string {
-    return `${vault_id.value}:${secret_id.value}:${site_id}`;
+    return `${vault_id}:${secret_id}:${site_id}`;
   }
 
   async upsert(grant: SecretDestinationGrant): Promise<void> {
@@ -298,8 +299,8 @@ export class InMemorySecretDestinationGrantRegistry implements SecretDestination
 
   async list(vault_id: VaultId, secret_id?: SecretId): Promise<readonly SecretDestinationGrant[]> {
     return Array.from(this._grants.values()).filter((grant) => {
-      if (grant.vault_id.value !== vault_id.value) return false;
-      if (secret_id && grant.secret_id.value !== secret_id.value) return false;
+      if (grant.vault_id !== vault_id) return false;
+      if (secret_id && grant.secret_id !== secret_id) return false;
       return true;
     });
   }
@@ -319,12 +320,12 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
   private readonly _pendingSubscribers = new Map<string, Set<(event: PendingDispatchEvent) => void>>();
 
   async save(record: RequestRecord): Promise<void> {
-    const key = `${record.vault_id.value}:${record.request_id}`;
+    const key = `${record.vault_id}:${record.request_id}`;
     const previous = this._records.get(key);
     this._records.set(key, record);
     const event = this._toPendingDispatchEvent(record);
     if (event && previous?.pending_dispatch_event?.event_id !== event.event_id) {
-      const subscribers = this._pendingSubscribers.get(record.vault_id.value);
+      const subscribers = this._pendingSubscribers.get(record.vault_id);
       if (subscribers) {
         for (const callback of subscribers) callback(event);
       }
@@ -332,12 +333,12 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
   }
 
   async get(vault_id: VaultId, request_id: string): Promise<RequestRecord | null> {
-    return this._records.get(`${vault_id.value}:${request_id}`) ?? null;
+    return this._records.get(`${vault_id}:${request_id}`) ?? null;
   }
 
   async list(vault_id: VaultId, root_agent_id?: string): Promise<readonly RequestRecord[]> {
     return Array.from(this._records.values()).filter((record) => {
-      if (record.vault_id.value !== vault_id.value) return false;
+      if (record.vault_id !== vault_id) return false;
       if (root_agent_id && record.root_agent_id !== root_agent_id) return false;
       return true;
     });
@@ -345,25 +346,25 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
 
   subscribePending(vault_id: VaultId, subscription: OwnerPendingDispatchSubscription): () => void {
     const replay = Array.from(this._records.values())
-      .filter((record) => record.vault_id.value === vault_id.value)
+      .filter((record) => record.vault_id === vault_id)
       .map((record) => this._toPendingDispatchEvent(record))
       .filter((event): event is PendingDispatchEvent => !!event)
       .filter((event) => !subscription.afterEventId || event.event_id > subscription.afterEventId)
       .sort((a, b) => a.event_id.localeCompare(b.event_id));
     for (const event of replay) subscription.onEvent(event);
 
-    let subscribers = this._pendingSubscribers.get(vault_id.value);
+    let subscribers = this._pendingSubscribers.get(vault_id);
     if (!subscribers) {
       subscribers = new Set();
-      this._pendingSubscribers.set(vault_id.value, subscribers);
+      this._pendingSubscribers.set(vault_id, subscribers);
     }
     subscribers.add(subscription.onEvent);
 
     return () => {
-      const current = this._pendingSubscribers.get(vault_id.value);
+      const current = this._pendingSubscribers.get(vault_id);
       if (!current) return;
       current.delete(subscription.onEvent);
-      if (current.size === 0) this._pendingSubscribers.delete(vault_id.value);
+      if (current.size === 0) this._pendingSubscribers.delete(vault_id);
     };
   }
 
@@ -380,7 +381,7 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
 
 
   async updateAliasInPendingRequests(vault_id: VaultId, old_alias: string, new_alias: string): Promise<void> {
-    // Obsolete as of ID-first refactor
+    // Obsolete
   }
 }
 
@@ -388,13 +389,13 @@ function matchesAuditSubscription(entry: AuditEntry, subscription: OwnerAuditSub
   if (subscription.afterEventId && entry.event_id <= subscription.afterEventId) {
     return false;
   }
-  if (subscription.operations && !subscription.operations.includes(entry.operation)) {
+  if (subscription.function_names && !subscription.function_names.includes(entry.function_name)) {
     return false;
   }
-  if (subscription.root_agent_id && entry.root_agent_id !== subscription.root_agent_id) {
+  if (subscription.root_agent_id && entry.input.root_agent_id !== subscription.root_agent_id) {
     return false;
   }
-  if (subscription.request_id && entry.request_id !== subscription.request_id) {
+  if (subscription.request_id && entry.input.request_id !== subscription.request_id) {
     return false;
   }
   return true;
@@ -634,7 +635,7 @@ export function createVaultCoreDependencies(
   const agentRecords = new InMemoryAgentIdentityRegistry();
   const sessionTokenRegistry = options.sessionTokenRegistry ?? new InMemorySessionTokenRegistry();
   return {
-    vault_id: { value: options.vault_id ?? `vault_${crypto.randomUUID()}` },
+    vault_id: options.vault_id ?? `vault_${crypto.randomUUID()}`,
     secrets: new InMemorySecretRepository(),
     custody: new InMemorySecretCustody(),
     policy: new DefaultPolicyEngine(options.policy),

@@ -4,15 +4,13 @@ export type {
   SecretDestinationGrant,
   GrantStatus,
   AgentIdentityRecord,
-  AgentVisibleSecretRecord,
   AgentRuntimeManifest,
-  AgentVisibleRequestRecord,
-  OwnerVisibleRequestRecord,
-  OwnerRequestRecord,
   AgentRequestResult,
+  OwnerRequestRecord,
+  AgentRequestRecord,
+  AuditEntry,
   DispatchApprovalDecision,
 
-  AuditEntry,
   DispatchAuthorization,
   DispatchInstruction,
   DispatchRequest,
@@ -30,7 +28,6 @@ export type {
 
 export {
   DispatchStatus,
-  AuditOperation,
 } from "./vault-core/index.js";
 
 export type {

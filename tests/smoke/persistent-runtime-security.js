@@ -37,10 +37,11 @@ async function runPersistentRuntimeSecurityTest() {
       nickname: "Persistent-Security-Agent",
     });
 
-    await ownerClient.ownerCreateSecret({
+    const guardedRecord = await ownerClient.ownerCreateSecret({
       alias: "persistent-guarded-token",
       plaintext: "persistent-guarded-secret",
     });
+    const secret_id = guardedRecord.secret_id;
     await ownerClient.ownerGrantAgentSecret({
       root_agent_id: agent.root_agent_id,
       secret_alias: "persistent-guarded-token",
@@ -100,7 +101,7 @@ async function runPersistentRuntimeSecurityTest() {
           request_id: wrongBindingRequestId,
           requested_at: wrongBindingRequestedAt,
         },
-        secret_alias: "persistent-guarded-token",
+        secret_id,
         target_url: "https://guarded.example.com/mismatch",
         method: "POST",
         reason: "Wrong agent should not be able to use another agent token",
@@ -124,7 +125,7 @@ async function runPersistentRuntimeSecurityTest() {
         request_id: "persistent-replay-request",
         requested_at: new Date().toISOString(),
       },
-      secret_alias: "persistent-guarded-token",
+      secret_id,
       target_url: "https://guarded.example.com/replay",
       method: "POST",
       reason: "Replay guard smoke",
