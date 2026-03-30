@@ -30,10 +30,10 @@ The runtime distinguishes between administrative authority and delegated agency:
 
 The legacy "Grant" system has been replaced by a streamlined **Grant** model:
 
-1. **Agent-Secret Grants**: Explicitly authorize an agent to use a specific secret alias.
-2. **Secret-Destination Grants**: Explicitly authorize a secret alias to be dispatched to a specific domain (e.g., `api.example.com`).
+1. **Agent-Secret Grants**: Explicitly authorize an agent to use a specific secret instance (identified internally by its stable ID).
+2. **Secret-Destination Grants**: Explicitly authorize a secret instance to be dispatched to a specific domain (e.g., `api.example.com`).
 
-A dispatch is permitted only if **both** grants exist and are in `approved` status.
+A dispatch is permitted only if **both** grants exist and are in `approved` status. Because grants are bound to the internal stable ID, renaming a secret alias does not invalidate existing permissions.
 
 ## Approval Flows
 

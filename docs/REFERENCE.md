@@ -45,9 +45,10 @@ await client.ownerCreateSecret([
 - `ownerListAgents()`: Enumerate all registered agents.
 
 ### 2. Grant Management (Access Control)
-The system uses a domain-level white-list model:
-- `ownerGrantAgentSecret(...)`: Authorize an agent to use a specific secret alias.
-- `ownerGrantSecretDestination(...)`: Authorize a secret alias for a specific domain.
+The system uses a domain-level white-list model. Note that while these methods accept a `secret_alias` for convenience, the resulting grants are bound to the underlying stable `secret_id`, making them resilient to secret renames.
+
+- `ownerGrantAgentSecret(...)`: Authorize an agent to use a specific secret.
+- `ownerGrantSecretDestination(...)`: Authorize a secret for a specific domain.
 - `ownerRevokeAgentSecret(...)`: Remove agent-secret authorization.
 - `ownerRevokeSecretDestination(...)`: Remove secret-domain authorization.
 - `ownerListGrants(...)`: Review all active or pending grants.

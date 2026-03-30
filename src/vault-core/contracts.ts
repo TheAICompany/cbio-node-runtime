@@ -357,6 +357,7 @@ export interface AgentRequestRecord {
     error?: string;
   };
   execution_status: DispatchStatus;
+  secret_id?: SecretId;
 }
 
 export interface VaultToolDefinition {
@@ -483,10 +484,11 @@ export interface DispatchResult {
 export type AgentRequestResult = AgentRequestRecord;
 
 export interface AuditQuery {
-  vault_id: string; // Changed from vault_id to align with others if needed, but keeping vault_id for now if it's an object? No, spec says vault_id is string.
+  vault_id: string; 
   actor_id?: string;
   root_agent_id?: string;
   secret_alias?: string;
+  secret_id?: string;
   request_id?: string;
   since?: string;
 }

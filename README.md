@@ -68,6 +68,7 @@ await client.ownerCreateSecret([
 ]);
 
 // 3. Grant access (Whitelist)
+// Note: Grants are bound to the internal stable ID, so renames are resilient.
 await client.ownerGrantAgentSecret({ rootAgentId: agent.rootAgentId, secretAlias: 'api-key' });
 await client.ownerGrantSecretDestination({ secretAlias: 'api-key', siteId: 'api.openai.com' });
 ```

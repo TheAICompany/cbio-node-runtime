@@ -394,6 +394,8 @@ export class VaultCore {
         toAuditEntry(this._deps, actor, AuditOperation.DISPATCH_REJECT, "allowed", "succeeded", "dispatch rejected by owner", {
           request_id,
           root_agent_id: record.root_agent_id,
+          secret_alias: record.request.secret_alias,
+          secret_id: record.request.secret_id?.value,
         }),
       );
       return null;
@@ -485,6 +487,8 @@ export class VaultCore {
       toAuditEntry(this._deps, actor, AuditOperation.DISPATCH_APPROVE, "allowed", "succeeded", `dispatch approved (${decision})`, {
         request_id,
         root_agent_id: record.root_agent_id,
+        secret_alias: record.request.secret_alias,
+        secret_id: record.request.secret_id?.value,
       }),
     );
 
@@ -937,6 +941,7 @@ export class VaultCore {
         error: record.response.error,
       } : undefined,
       execution_status: record.execution.status,
+      secret_id: record.request.secret_id ?? undefined,
     };
   }
 }

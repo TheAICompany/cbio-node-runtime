@@ -125,6 +125,15 @@ async function runTest() {
     assert.ok(lastRequest.secret_id, "secret_id missing in request history");
     assert.equal(lastRequest.secret_id.value, secret.secret_id.value, "secret_id mismatch in request history");
 
+    // 12. Verify secret_id in audit logs
+    console.log("🕵️ Verifying secret_id in audit logs...");
+    const auditEntries = await owner.ownerReadAudit({ secret_id: secret.secret_id.value });
+    assert.ok(auditEntries.length > 0, "No audit entries found for secret_id");
+    
+    // Check if the latest dispatch is in the filtered audit
+    const hasDispatchAudit = auditEntries.some(e => e.request_id === res4.request_id && e.secret_id === secret.secret_id.value);
+    assert.ok(hasDispatchAudit, "Dispatch audit entry missing secret_id or not found in filtered results");
+
     console.log("✅ Secret Rename & Rotation Smoke Test Passed!");
   } catch (err) {
     console.error("❌ Test Failed:", err);

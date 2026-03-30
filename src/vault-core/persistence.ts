@@ -118,8 +118,8 @@ export class SqliteAuditLog implements AuditLog {
   private get subscribers() { return SqliteAuditLog.subscribers; }
   constructor(private db: Database.Database) {}
   async append(entry: AuditEntry): Promise<void> {
-    this.db.prepare(`INSERT INTO audit_logs (event_id, vault_id, root_agent_id, request_id, secret_alias, ts, entry) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(entry.event_id, entry.vault_id, entry.root_agent_id || null, entry.request_id || null, entry.secret_alias || null, entry.ts, JSON.stringify(entry));
+    this.db.prepare(`INSERT INTO audit_logs (event_id, vault_id, root_agent_id, request_id, secret_alias, secret_id, ts, entry) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(entry.event_id, entry.vault_id, entry.root_agent_id || null, entry.request_id || null, entry.secret_alias || null, entry.secret_id || null, entry.ts, JSON.stringify(entry));
     const subs = this.subscribers.get(entry.vault_id);
     if (subs) {
       for (const cb of subs) cb(entry);
@@ -131,6 +131,7 @@ export class SqliteAuditLog implements AuditLog {
     if (query.actor_id) { sql += ` AND entry LIKE ?`; params.push(`%"id":"${query.actor_id}"%`); }
     if (query.root_agent_id) { sql += ` AND root_agent_id = ?`; params.push(query.root_agent_id); }
     if (query.secret_alias) { sql += ` AND secret_alias = ?`; params.push(query.secret_alias); }
+    if (query.secret_id) { sql += ` AND secret_id = ?`; params.push(query.secret_id); }
     if (query.request_id) { sql += ` AND request_id = ?`; params.push(query.request_id); }
     if (query.since) { sql += ` AND ts >= ?`; params.push(query.since); }
     sql += ` ORDER BY ts ASC LIMIT 1000`; // Limit to avoid massive memory issues conceptually
@@ -162,17 +163,46 @@ export class SqliteAuditLog implements AuditLog {
 }
 
 export class SqliteAgentIdentityRegistry implements AgentIdentityRegistry {
-  constructor(private db: Database.Database) {}
+  constructor(private db: Database.Database, private custody: SecretCustody) {}
   async register(identity: AgentIdentityRecord): Promise<void> {
-    this.db.prepare(`INSERT INTO agents (vault_id, root_agent_id, record) VALUES (?, ?, ?) ON CONFLICT(vault_id, root_agent_id) DO UPDATE SET record = excluded.record`).run(identity.vault_id.value, identity.root_agent_id, JSON.stringify(identity));
+    const { private_key, ...metadata } = identity;
+    if (private_key) {
+      await this.custody.store({ value: identity.root_agent_id }, private_key);
+    }
+    this.db.prepare(`INSERT INTO agents (vault_id, root_agent_id, record) VALUES (?, ?, ?) ON CONFLICT(vault_id, root_agent_id) DO UPDATE SET record = excluded.record`).run(identity.vault_id.value, identity.root_agent_id, JSON.stringify(metadata));
   }
   async get(vault_id: VaultId, root_agent_id: string): Promise<AgentIdentityRecord | null> {
     const row = this.db.prepare(`SELECT record FROM agents WHERE vault_id = ? AND root_agent_id = ?`).get(vault_id.value, root_agent_id) as { record: string } | undefined;
-    return row ? JSON.parse(row.record) : null;
+    if (!row) return null;
+    let record = JSON.parse(row.record);
+
+    // Lazy migration: if private key is found in plain text in the record, move it to custody
+    if (record.private_key) {
+      const pk = record.private_key;
+      delete record.private_key;
+      await this.custody.store({ value: root_agent_id }, pk);
+      this.db.prepare(`UPDATE agents SET record = ? WHERE vault_id = ? AND root_agent_id = ?`).run(JSON.stringify(record), vault_id.value, root_agent_id);
+    } else {
+      const private_key = await this.custody.load({ value: root_agent_id });
+      if (private_key) record.private_key = private_key;
+    }
+    return record;
   }
   async list(vault_id: VaultId): Promise<readonly AgentIdentityRecord[]> {
     const rows = this.db.prepare(`SELECT record FROM agents WHERE vault_id = ?`).all(vault_id.value) as { record: string }[];
-    return rows.map(r => JSON.parse(r.record));
+    return Promise.all(rows.map(async (r) => {
+      let record = JSON.parse(r.record);
+      if (record.private_key) {
+          const pk = record.private_key;
+          delete record.private_key;
+          await this.custody.store({ value: record.root_agent_id }, pk);
+          this.db.prepare(`UPDATE agents SET record = ? WHERE vault_id = ? AND root_agent_id = ?`).run(JSON.stringify(record), vault_id.value, record.root_agent_id);
+      } else {
+          const private_key = await this.custody.load({ value: record.root_agent_id });
+          if (private_key) record.private_key = private_key;
+      }
+      return record;
+    }));
   }
 }
 
@@ -395,7 +425,7 @@ function initDb(baseDir: string): Database.Database {
   db.exec(`
     CREATE TABLE IF NOT EXISTS secrets (secret_id TEXT PRIMARY KEY, vault_id TEXT, alias TEXT UNIQUE, record TEXT);
     CREATE TABLE IF NOT EXISTS custody (secret_id TEXT PRIMARY KEY, encrypted_payload TEXT);
-    CREATE TABLE IF NOT EXISTS audit_logs (event_id TEXT PRIMARY KEY, vault_id TEXT, root_agent_id TEXT, request_id TEXT, secret_alias TEXT, ts INTEGER, entry TEXT);
+    CREATE TABLE IF NOT EXISTS audit_logs (event_id TEXT PRIMARY KEY, vault_id TEXT, root_agent_id TEXT, request_id TEXT, secret_alias TEXT, secret_id TEXT, ts INTEGER, entry TEXT);
     CREATE TABLE IF NOT EXISTS agents (vault_id TEXT, root_agent_id TEXT, record TEXT, PRIMARY KEY(vault_id, root_agent_id));
     CREATE TABLE IF NOT EXISTS grants (vault_id TEXT, root_agent_id TEXT, secret_id TEXT, record TEXT, PRIMARY KEY(vault_id, root_agent_id, secret_id));
     CREATE TABLE IF NOT EXISTS destination_grants (vault_id TEXT, secret_id TEXT, site_id TEXT, record TEXT, PRIMARY KEY(vault_id, secret_id, site_id));
@@ -413,7 +443,8 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     fs.mkdirSync(baseDir, { recursive: true });
   }
   const db = initDb(baseDir);
-  const agentRecords = new SqliteAgentIdentityRegistry(db);
+  const custody = new SqliteSecretCustody(db, options.vaultWorkingKey);
+  const agentRecords = new SqliteAgentIdentityRegistry(db, custody);
   const sessionTokenRegistry = new SqliteSessionTokenRegistry(db);
   return {
     vault_id: { value: options.vault_id },
@@ -424,7 +455,7 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     secret_destinationGrants: new SqliteSecretDestinationGrantRegistry(db),
     audit: new SqliteAuditLog(db),
     requests: new SqliteRequestRecordRegistry(db),
-    custody: new SqliteSecretCustody(db, options.vaultWorkingKey),
+    custody,
     secrets: new SqliteSecretRepository(db),
     policy: new DefaultPolicyEngine(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(options.proofVerifier),
