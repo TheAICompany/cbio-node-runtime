@@ -85,16 +85,16 @@ export interface ReplayGuard {
 
 export interface AgentSecretGrantRegistry {
   upsert(grant: AgentSecretGrant): Promise<void>;
-  get(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<AgentSecretGrant | null>;
+  get(vault_id: VaultId, root_agent_id: string, secret_id: SecretId): Promise<AgentSecretGrant | null>;
   list(vault_id: VaultId, root_agent_id?: string): Promise<readonly AgentSecretGrant[]>;
-  delete(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<void>;
+  delete(vault_id: VaultId, root_agent_id: string, secret_id: SecretId): Promise<void>;
 }
 
 export interface SecretDestinationGrantRegistry {
   upsert(grant: SecretDestinationGrant): Promise<void>;
-  get(vault_id: VaultId, secret_alias: string, site_id: string): Promise<SecretDestinationGrant | null>;
-  list(vault_id: VaultId, secret_alias?: string): Promise<readonly SecretDestinationGrant[]>;
-  delete(vault_id: VaultId, secret_alias: string, site_id: string): Promise<void>;
+  get(vault_id: VaultId, secret_id: SecretId, site_id: string): Promise<SecretDestinationGrant | null>;
+  list(vault_id: VaultId, secret_id?: SecretId): Promise<readonly SecretDestinationGrant[]>;
+  delete(vault_id: VaultId, secret_id: SecretId, site_id: string): Promise<void>;
 }
 
 

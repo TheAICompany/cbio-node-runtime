@@ -355,60 +355,85 @@ class DefaultOwnerClient implements OwnerClient {
 
   async ownerGrantAgentSecret(input: VaultGrantAgentSecretInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
+    const secrets = await this.ownerListSecrets();
+    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
+
     return this._vault.ownerGrantAgentSecret({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("grant_agent_secret"),
       actor: { kind: "owner", id: this._root_agent_id },
       root_agent_id: input.root_agent_id,
-      secret_alias: input.secret_alias,
+      secret_id: secret.secret_id,
       requested_at,
-    });
+    } as any);
   }
 
   async ownerGrantSecretDestination(input: VaultGrantSecretDestinationInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
+    const secrets = await this.ownerListSecrets();
+    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
+
     return this._vault.ownerGrantSecretDestination({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("grant_secret_destination"),
       actor: { kind: "owner", id: this._root_agent_id },
-      secret_alias: input.secret_alias,
+      secret_id: secret.secret_id,
       site_id: input.site_id,
       requested_at,
-    });
+    } as any);
   }
 
   async ownerRevokeAgentSecret(input: VaultRevokeAgentSecretInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
+    const secrets = await this.ownerListSecrets();
+    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
+
     return this._vault.ownerRevokeAgentSecret({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("revoke_agent_secret"),
       actor: { kind: "owner", id: this._root_agent_id },
       root_agent_id: input.root_agent_id,
-      secret_alias: input.secret_alias,
+      secret_id: secret.secret_id,
       requested_at,
-    });
+    } as any);
   }
 
   async ownerRevokeSecretDestination(input: VaultRevokeSecretDestinationInput) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
+    const secrets = await this.ownerListSecrets();
+    const secret = secrets.find(s => s.alias.value === input.secret_alias);
+    if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
+
     return this._vault.ownerRevokeSecretDestination({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("revoke_secret_destination"),
       actor: { kind: "owner", id: this._root_agent_id },
-      secret_alias: input.secret_alias,
+      secret_id: secret.secret_id,
       site_id: input.site_id,
       requested_at,
-    });
+    } as any);
   }
 
   async ownerListGrants(input: VaultListGrantsInput = {}) {
     const requested_at = this._clock.nowIso();
+    let secret_id: import("../../vault-core/index.js").SecretId | undefined;
+    if (input.secret_alias) {
+      const secrets = await this.ownerListSecrets();
+      const secret = secrets.find(s => s.alias.value === input.secret_alias);
+      if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
+      secret_id = secret.secret_id;
+    }
     return this._vault.ownerListGrants({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("list_grants"),
       actor: { kind: "owner", id: this._root_agent_id },
+      root_agent_id: input.root_agent_id,
+      secret_id,
       requested_at,
-    });
+    } as any);
   }
 
 

@@ -66,7 +66,7 @@ export type GrantStatus = "pending" | "approved";
 export interface AgentSecretGrant {
   vault_id: VaultId;
   root_agent_id: string;
-  secret_alias: string;
+  secret_id: SecretId;
   status: GrantStatus;
   requested_at: string;
   granted_at?: string;
@@ -74,7 +74,7 @@ export interface AgentSecretGrant {
 
 export interface SecretDestinationGrant {
   vault_id: VaultId;
-  secret_alias: string;
+  secret_id: SecretId;
   site_id: string;
   status: GrantStatus;
   requested_at: string;
@@ -144,7 +144,7 @@ export interface OwnerGrantAgentSecretCommand {
   request_id: string;
   actor: VaultPrincipal & { kind: "owner" };
   root_agent_id: string;
-  secret_alias: string;
+  secret_id: SecretId;
   requested_at: string;
 }
 
@@ -152,7 +152,7 @@ export interface OwnerGrantSecretDestinationCommand {
   vault_id: VaultId;
   request_id: string;
   actor: VaultPrincipal & { kind: "owner" };
-  secret_alias: string;
+  secret_id: SecretId;
   site_id: string;
   requested_at: string;
 }
@@ -162,7 +162,7 @@ export interface OwnerRevokeAgentSecretCommand {
   request_id: string;
   actor: VaultPrincipal & { kind: "owner" };
   root_agent_id: string;
-  secret_alias: string;
+  secret_id: SecretId;
   requested_at: string;
 }
 
@@ -170,7 +170,7 @@ export interface OwnerRevokeSecretDestinationCommand {
   vault_id: VaultId;
   request_id: string;
   actor: VaultPrincipal & { kind: "owner" };
-  secret_alias: string;
+  secret_id: SecretId;
   site_id: string;
   requested_at: string;
 }
@@ -248,6 +248,7 @@ export interface RequestRecord {
     headers?: Record<string, string>;
     body?: string;
     secret_alias?: string;
+    secret_id: SecretId | null;
   };
   response?: {
     status?: number;
@@ -288,6 +289,7 @@ export interface AgentVisibleRequestRecord {
   response_status?: number;
   error?: string;
   has_response_body: boolean;
+  secret_id?: SecretId;
 }
 
 export interface OwnerVisibleRequestRecord {
@@ -304,6 +306,7 @@ export interface OwnerVisibleRequestRecord {
     agent_secret?: boolean;
     secret_destination?: boolean;
   };
+  secret_id?: SecretId;
 }
 
 export interface OwnerRequestRecord {
@@ -318,6 +321,7 @@ export interface OwnerRequestRecord {
     headers?: Record<string, string>;
     body?: string;
     secret_alias?: string;
+    secret_id?: SecretId;
   };
   response?: {
     status?: number;
@@ -330,6 +334,7 @@ export interface OwnerRequestRecord {
     agent_secret?: boolean;
     secret_destination?: boolean;
   };
+  secret_id?: SecretId;
 }
 
 export interface AgentRequestRecord {
@@ -343,6 +348,7 @@ export interface AgentRequestRecord {
     headers?: Record<string, string>;
     body?: string;
     secret_alias?: string;
+    secret_id?: SecretId;
   };
   response?: {
     status?: number;

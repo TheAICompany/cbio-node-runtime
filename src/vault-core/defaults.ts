@@ -119,6 +119,10 @@ export class InMemorySecretRepository implements SecretRepository {
   }
 
   async save(record: SecretRecord): Promise<void> {
+    const existing = this._byId.get(record.secret_id.value);
+    if (existing && existing.alias.value !== record.alias.value) {
+      this._byAlias.delete(existing.alias.value);
+    }
     this._byAlias.set(record.alias.value, record);
     this._byId.set(record.secret_id.value, record);
   }
@@ -249,16 +253,16 @@ export class InMemoryAgentIdentityRegistry implements AgentIdentityRegistry {
 export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
   private readonly _grants = new Map<string, AgentSecretGrant>();
 
-  private _key(vault_id: VaultId, root_agent_id: string, secret_alias: string): string {
-    return `${vault_id.value}:${root_agent_id}:${secret_alias}`;
+  private _key(vault_id: VaultId, root_agent_id: string, secret_id: SecretId): string {
+    return `${vault_id.value}:${root_agent_id}:${secret_id.value}`;
   }
 
   async upsert(grant: AgentSecretGrant): Promise<void> {
-    this._grants.set(this._key(grant.vault_id, grant.root_agent_id, grant.secret_alias), grant);
+    this._grants.set(this._key(grant.vault_id, grant.root_agent_id, grant.secret_id), grant);
   }
 
-  async get(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<AgentSecretGrant | null> {
-    return this._grants.get(this._key(vault_id, root_agent_id, secret_alias)) ?? null;
+  async get(vault_id: VaultId, root_agent_id: string, secret_id: SecretId): Promise<AgentSecretGrant | null> {
+    return this._grants.get(this._key(vault_id, root_agent_id, secret_id)) ?? null;
   }
 
   async list(vault_id: VaultId, root_agent_id?: string): Promise<readonly AgentSecretGrant[]> {
@@ -269,8 +273,8 @@ export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistr
     });
   }
 
-  async delete(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<void> {
-    this._grants.delete(this._key(vault_id, root_agent_id, secret_alias));
+  async delete(vault_id: VaultId, root_agent_id: string, secret_id: SecretId): Promise<void> {
+    this._grants.delete(this._key(vault_id, root_agent_id, secret_id));
   }
 }
 
@@ -280,28 +284,28 @@ export class InMemoryAgentSecretGrantRegistry implements AgentSecretGrantRegistr
 export class InMemorySecretDestinationGrantRegistry implements SecretDestinationGrantRegistry {
   private readonly _grants = new Map<string, SecretDestinationGrant>();
 
-  private _key(vault_id: VaultId, secret_alias: string, site_id: string): string {
-    return `${vault_id.value}:${secret_alias}:${site_id}`;
+  private _key(vault_id: VaultId, secret_id: SecretId, site_id: string): string {
+    return `${vault_id.value}:${secret_id.value}:${site_id}`;
   }
 
   async upsert(grant: SecretDestinationGrant): Promise<void> {
-    this._grants.set(this._key(grant.vault_id, grant.secret_alias, grant.site_id), grant);
+    this._grants.set(this._key(grant.vault_id, grant.secret_id, grant.site_id), grant);
   }
 
-  async get(vault_id: VaultId, secret_alias: string, site_id: string): Promise<SecretDestinationGrant | null> {
-    return this._grants.get(this._key(vault_id, secret_alias, site_id)) ?? null;
+  async get(vault_id: VaultId, secret_id: SecretId, site_id: string): Promise<SecretDestinationGrant | null> {
+    return this._grants.get(this._key(vault_id, secret_id, site_id)) ?? null;
   }
 
-  async list(vault_id: VaultId, secret_alias?: string): Promise<readonly SecretDestinationGrant[]> {
+  async list(vault_id: VaultId, secret_id?: SecretId): Promise<readonly SecretDestinationGrant[]> {
     return Array.from(this._grants.values()).filter((grant) => {
       if (grant.vault_id.value !== vault_id.value) return false;
-      if (secret_alias && grant.secret_alias !== secret_alias) return false;
+      if (secret_id && grant.secret_id.value !== secret_id.value) return false;
       return true;
     });
   }
 
-  async delete(vault_id: VaultId, secret_alias: string, site_id: string): Promise<void> {
-    this._grants.delete(this._key(vault_id, secret_alias, site_id));
+  async delete(vault_id: VaultId, secret_id: SecretId, site_id: string): Promise<void> {
+    this._grants.delete(this._key(vault_id, secret_id, site_id));
   }
 }
 
@@ -373,6 +377,11 @@ export class InMemoryRequestRecordRegistry implements RequestRecordRegistry {
       record,
     };
   }
+
+
+  async updateAliasInPendingRequests(vault_id: VaultId, old_alias: string, new_alias: string): Promise<void> {
+    // Obsolete as of ID-first refactor
+  }
 }
 
 function matchesAuditSubscription(entry: AuditEntry, subscription: OwnerAuditSubscription): boolean {
@@ -408,11 +417,13 @@ export class DefaultPolicyEngine implements PolicyEngine {
     if (!command.alias.trim()) {
       throw new VaultCoreError("secret alias required", "VAULT_WRITE_DENIED");
     }
-    if (!command.plaintext) {
-      throw new VaultCoreError("secret plaintext required", "VAULT_WRITE_DENIED");
+    if (command.kind === "owner.create_secret" || command.kind === "owner.update_secret") {
+      // Allow optional plaintext for updates
+      if (command.kind === "owner.create_secret" && !command.plaintext) {
+        throw new VaultCoreError("secret plaintext required", "VAULT_WRITE_DENIED");
+      }
+      return;
     }
-    this.validateRequestedAt(command.requested_at, "requested_at");
-    if (command.kind === "owner.create_secret" || command.kind === "owner.update_secret") return;
   }
 }
 
