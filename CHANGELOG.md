@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.71.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.70.1...v1.71.0) (2026-03-30)
+
+
+### Features
+
+* bind grants to stable secret IDs and migrate agent private keys to secure custody storage ([1288917](https://github.com/TheAICompany/cbio-node-runtime/commit/12889179d69b79ff7e54696fd1f9e9065ced2c60))
+* refactor secret management to use persistent IDs instead of aliases for grants and audit logs, and add rename/rotation support. ([2b28d3b](https://github.com/TheAICompany/cbio-node-runtime/commit/2b28d3bc833428da39cfddc647f49026823e68e8))
+
 ### [1.70.1](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.70.0...v1.70.1) (2026-03-30)
 
 ## [1.70.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.69.0...v1.70.0) (2026-03-30)
