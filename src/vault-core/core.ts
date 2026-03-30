@@ -197,7 +197,12 @@ export class VaultCore {
     const { agent, secret_id, target_url } = request;
 
     if (!secret_id) {
-      return { vault_id: this._deps.vault_id, decision: "deny", reason: "secret_id required", secret_id: null };
+      return {
+        vault_id: this._deps.vault_id,
+        decision: "deny",
+        reason: "secret_id required; call agentIntrospect/agentListSecrets first and retry with a granted secret_id",
+        secret_id: null,
+      };
     }
 
     const secret = await this._deps.secrets.getById(secret_id);
@@ -696,6 +701,17 @@ export class VaultCore {
     this._assertOwnerPrincipal(command.owner);
     const record = await this._deps.secrets.getByAlias(command.alias);
     if (!record) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
+    const [agentGrants, destinationGrants] = await Promise.all([
+      this._deps.agent_secretGrants.list(command.vault_id),
+      this._deps.secret_destinationGrants.list(command.vault_id, record.secret_id),
+    ]);
+    for (const grant of agentGrants) {
+      if (grant.secret_id !== record.secret_id) continue;
+      await this._deps.agent_secretGrants.delete(command.vault_id, grant.root_agent_id, grant.secret_id);
+    }
+    for (const grant of destinationGrants) {
+      await this._deps.secret_destinationGrants.delete(command.vault_id, grant.secret_id, grant.site_id);
+    }
     const now = this._deps.clock.nowIso();
     const removedRecord: SecretRecord = {
       ...record,
@@ -709,7 +725,11 @@ export class VaultCore {
       command.owner,
       "ownerRemoveSecret",
       { secret_alias: command.alias, secret_id: record.secret_id },
-      { lifecycle_status: "REMOVED" }
+      {
+        lifecycle_status: "REMOVED",
+        removed_agent_secret_grants: agentGrants.filter((grant) => grant.secret_id === record.secret_id).length,
+        removed_secret_destination_grants: destinationGrants.length,
+      }
     );
   }
 
