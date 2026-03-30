@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.70.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.69.0...v1.70.0) (2026-03-30)
+
+
+### Features
+
+* add SSE audit streaming support and refine vault owner interfaces ([ec9ebf1](https://github.com/TheAICompany/cbio-node-runtime/commit/ec9ebf168919545f7d9bb6e28a32671a1b8697c5))
+* allow updating secret aliases and make plaintext optional in update operations ([07017fa](https://github.com/TheAICompany/cbio-node-runtime/commit/07017fa84cec309410f95b3693b5aeb0118eddc7))
+
 ## [1.69.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.68.0...v1.69.0) (2026-03-29)
 
 
