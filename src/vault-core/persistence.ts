@@ -1,7 +1,7 @@
-import * as fs from "node:fs/promises";
-import * as nodefs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import Database from "better-sqlite3";
 import {
   AuditOperation,
   DispatchStatus,
@@ -21,7 +21,6 @@ import {
   type SecretRecord,
   type VaultId,
 } from "./contracts.js";
-import { VaultCoreError } from "./errors.js";
 import type {
   AgentIdentityRegistry,
   AgentSecretGrantRegistry,
@@ -45,649 +44,266 @@ import {
     SystemClock,
 } from "./defaults.js";
 
-async function ensureDir(dir: string) {
-  await fs.mkdir(dir, { recursive: true });
-}
 
-function closeWatchers(watchers: nodefs.FSWatcher[]) {
-  for (const watcher of watchers) {
-    try {
-      watcher.close();
-    } catch {}
-  }
-  watchers.length = 0;
-}
 
-function addWatcher(
-  watchers: nodefs.FSWatcher[],
-  targetPath: string,
-  onSignal: () => void,
-) {
-  try {
-    const watcher = nodefs.watch(targetPath, { persistent: false }, () => {
-      onSignal();
-    });
-    watcher.on("error", () => {});
-    watchers.push(watcher);
-  } catch {}
-}
-
-export class FileSecretRepository implements SecretRepository {
-  private readonly _baseDir: string;
-
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "secrets");
-  }
-
-  private _getPath(vault_id: VaultId, secret_id: SecretId) {
-    return path.join(this._baseDir, vault_id.value, `${secret_id.value}.json`);
-  }
-
-  private _getAliasPath(vault_id: VaultId, alias: string) {
-    return path.join(this._baseDir, vault_id.value, `alias_${Buffer.from(alias).toString("hex")}.link`);
-  }
-
+export class SqliteSecretRepository implements SecretRepository {
+  constructor(private db: Database.Database) {}
   async save(record: SecretRecord): Promise<void> {
-    const filePath = this._getPath(record.vault_id, record.secret_id);
-    const aliasPath = this._getAliasPath(record.vault_id, record.alias.value);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(record, null, 2));
-    await fs.writeFile(aliasPath, record.secret_id.value);
+    const stmt = this.db.prepare(`
+      INSERT INTO secrets (secret_id, vault_id, alias, record)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(secret_id) DO UPDATE SET record = excluded.record, alias = excluded.alias
+    `);
+    stmt.run(record.secret_id.value, record.vault_id.value, record.alias.value, JSON.stringify(record));
   }
-
   async delete(secret_id: SecretId): Promise<void> {
-    // Incomplete for multi-vault but sufficient for CBIO node-runtime
+    this.db.prepare(`DELETE FROM secrets WHERE secret_id = ?`).run(secret_id.value);
   }
-
   async getByAlias(alias: { value: string }): Promise<SecretRecord | null> {
-    try {
-      const vaultDirs = await fs.readdir(this._baseDir);
-      for (const v of vaultDirs) {
-        const aliasPath = path.join(this._baseDir, v, `alias_${Buffer.from(alias.value).toString("hex")}.link`);
-        try {
-          const secret_id = await fs.readFile(aliasPath, "utf-8");
-          const recordPath = path.join(this._baseDir, v, `${secret_id}.json`);
-          const content = await fs.readFile(recordPath, "utf-8");
-          return JSON.parse(content);
-        } catch {
-          continue;
-        }
-      }
-    } catch {
-      return null;
-    }
-    return null;
+    const row = this.db.prepare(`SELECT record FROM secrets WHERE alias = ?`).get(alias.value) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : null;
   }
-
-  async getById(secret_id: SecretId): Promise<SecretRecord | null> {
-    try {
-      const vaultDirs = await fs.readdir(this._baseDir);
-      for (const v of vaultDirs) {
-        const recordPath = path.join(this._baseDir, v, `${secret_id.value}.json`);
-        try {
-          const content = await fs.readFile(recordPath, "utf-8");
-          return JSON.parse(content);
-        } catch {
-          continue;
-        }
-      }
-    } catch {
-      return null;
-    }
-    return null;
-  }
-
   async list(vault_id: VaultId): Promise<readonly SecretRecord[]> {
-    try {
-      const dir = path.join(this._baseDir, vault_id.value);
-      const files = await fs.readdir(dir);
-      const results: SecretRecord[] = [];
-      for (const f of files) {
-        if (f.endsWith(".json")) {
-          const content = await fs.readFile(path.join(dir, f), "utf-8");
-          results.push(JSON.parse(content));
-        }
-      }
-      return results;
-    } catch {
-      return [];
-    }
+    const rows = this.db.prepare(`SELECT record FROM secrets WHERE vault_id = ?`).all(vault_id.value) as { record: string }[];
+    return rows.map(r => JSON.parse(r.record));
+  }
+  async getById(secret_id: SecretId): Promise<SecretRecord | null> {
+    const row = this.db.prepare(`SELECT record FROM secrets WHERE secret_id = ?`).get(secret_id.value) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : null;
   }
 }
 
-const auditSubscribersByVault = new Map<string, Set<(entry: AuditEntry) => void>>();
-const pendingSubscribersByVault = new Map<string, Set<(record: RequestRecord) => void>>();
+// AES-GCM Implementation
+const ALGORITHM = "aes-256-gcm";
 
-function publishAuditEntry(entry: AuditEntry) {
-  const subscribers = auditSubscribersByVault.get(entry.vault_id);
-  if (!subscribers) return;
-  for (const callback of subscribers) callback(entry);
-}
-
-function publishRequestRecord(record: RequestRecord) {
-  const subscribers = pendingSubscribersByVault.get(record.vault_id.value);
-  if (!subscribers) return;
-  for (const callback of subscribers) callback(record);
-}
-
-function registerAuditSubscriber(vault_id: string, callback: (entry: AuditEntry) => void): () => void {
-  let subscribers = auditSubscribersByVault.get(vault_id);
-  if (!subscribers) {
-    subscribers = new Set();
-    auditSubscribersByVault.set(vault_id, subscribers);
+export class SqliteSecretCustody implements SecretCustody {
+  private keyBuffer: Buffer;
+  constructor(private db: Database.Database, workingKey: string) {
+    this.keyBuffer = Buffer.from(workingKey, 'base64url');
   }
-  subscribers.add(callback);
-  return () => {
-    const current = auditSubscribersByVault.get(vault_id);
-    if (!current) return;
-    current.delete(callback);
-    if (current.size === 0) auditSubscribersByVault.delete(vault_id);
-  };
-}
-
-function registerPendingSubscriber(vault_id: string, callback: (record: RequestRecord) => void): () => void {
-  let subscribers = pendingSubscribersByVault.get(vault_id);
-  if (!subscribers) {
-    subscribers = new Set();
-    pendingSubscribersByVault.set(vault_id, subscribers);
-  }
-  subscribers.add(callback);
-  return () => {
-    const current = pendingSubscribersByVault.get(vault_id);
-    if (!current) return;
-    current.delete(callback);
-    if (current.size === 0) pendingSubscribersByVault.delete(vault_id);
-  };
-}
-
-export class FileSecretCustody implements SecretCustody {
-  private readonly _baseDir: string;
-  private readonly _workingKey: string;
-
-  constructor(baseDir: string, workingKey: string) {
-    this._baseDir = path.join(baseDir, "custody");
-    this._workingKey = workingKey;
-  }
-
-  private _getPath(secret_id: SecretId) {
-    return path.join(this._baseDir, `${secret_id.value}.sealed`);
-  }
-
   async store(secret_id: SecretId, plaintext: string): Promise<void> {
-    const filePath = this._getPath(secret_id);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, plaintext);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv(ALGORITHM, this.keyBuffer, iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    const payload = JSON.stringify({
+      iv: iv.toString('hex'),
+      tag: tag.toString('hex'),
+      ciphertext: encrypted.toString('hex')
+    });
+    this.db.prepare(`INSERT INTO custody (secret_id, encrypted_payload) VALUES (?, ?) ON CONFLICT(secret_id) DO UPDATE SET encrypted_payload = excluded.encrypted_payload`).run(secret_id.value, payload);
   }
-
   async load(secret_id: SecretId): Promise<string | null> {
+    const row = this.db.prepare(`SELECT encrypted_payload FROM custody WHERE secret_id = ?`).get(secret_id.value) as { encrypted_payload: string } | undefined;
+    if (!row) return null;
     try {
-      return await fs.readFile(this._getPath(secret_id), "utf-8");
+      const data = JSON.parse(row.encrypted_payload);
+      const iv = Buffer.from(data.iv, 'hex');
+      const tag = Buffer.from(data.tag, 'hex');
+      const encrypted = Buffer.from(data.ciphertext, 'hex');
+      const decipher = crypto.createDecipheriv(ALGORITHM, this.keyBuffer, iv);
+      decipher.setAuthTag(tag);
+      return decipher.update(encrypted as any, undefined, 'utf8') + decipher.final('utf8');
     } catch {
       return null;
     }
   }
-
   async delete(secret_id: SecretId): Promise<void> {
-    try {
-      await fs.unlink(this._getPath(secret_id));
-    } catch {}
+    this.db.prepare(`DELETE FROM custody WHERE secret_id = ?`).run(secret_id.value);
   }
 }
 
-export class FileAuditLog implements AuditLog {
-  private readonly _baseDir: string;
-
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "audit");
-  }
-
-  private _getPath(vault_id: VaultId) {
-    return path.join(this._baseDir, vault_id.value, "log.jsonl");
-  }
-
+export class SqliteAuditLog implements AuditLog {
+  private static subscribers = new Map<string, Set<(entry: AuditEntry) => void>>();
+  private get subscribers() { return SqliteAuditLog.subscribers; }
+  constructor(private db: Database.Database) {}
   async append(entry: AuditEntry): Promise<void> {
-    const filePath = this._getPath({ value: entry.vault_id });
-    await ensureDir(path.dirname(filePath));
-    await fs.appendFile(filePath, JSON.stringify(entry) + "\n");
-    publishAuditEntry(entry);
+    this.db.prepare(`INSERT INTO audit_logs (event_id, vault_id, root_agent_id, request_id, secret_alias, ts, entry) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(entry.event_id, entry.vault_id, entry.root_agent_id || null, entry.request_id || null, entry.secret_alias || null, entry.ts, JSON.stringify(entry));
+    const subs = this.subscribers.get(entry.vault_id);
+    if (subs) {
+      for (const cb of subs) cb(entry);
+    }
   }
-
   async query(query: AuditQuery): Promise<readonly AuditEntry[]> {
-    const filePath = this._getPath({ value: query.vault_id });
-    try {
-      const content = await fs.readFile(filePath, "utf-8");
-      const lines = content.split("\n").filter(l => !!l);
-      const entries = lines.map(l => JSON.parse(l));
-      return entries.filter(e => {
-        if (query.actor_id && e.actor?.id !== query.actor_id) return false;
-        if (query.root_agent_id && e.root_agent_id !== query.root_agent_id) return false;
-        if (query.secret_alias && e.secret_alias !== query.secret_alias) return false;
-        if (query.request_id && e.request_id !== query.request_id) return false;
-        if (query.since && e.ts < query.since) return false;
-        return true;
-      });
-    } catch {
-      return [];
-    }
+    let sql = `SELECT entry FROM audit_logs WHERE vault_id = ?`;
+    const params: any[] = [query.vault_id];
+    if (query.actor_id) { sql += ` AND entry LIKE ?`; params.push(`%"id":"${query.actor_id}"%`); }
+    if (query.root_agent_id) { sql += ` AND root_agent_id = ?`; params.push(query.root_agent_id); }
+    if (query.secret_alias) { sql += ` AND secret_alias = ?`; params.push(query.secret_alias); }
+    if (query.request_id) { sql += ` AND request_id = ?`; params.push(query.request_id); }
+    if (query.since) { sql += ` AND ts >= ?`; params.push(query.since); }
+    sql += ` ORDER BY ts ASC LIMIT 1000`; // Limit to avoid massive memory issues conceptually
+    const rows = this.db.prepare(sql).all(...params) as { entry: string }[];
+    return rows.map(r => JSON.parse(r.entry));
   }
-
   subscribe(vault_id: VaultId, subscription: OwnerAuditSubscription): () => void {
-    let closed = false;
-    let scanInFlight: Promise<void> | null = null;
-    const seen = new Set<string>();
-    const watchers: nodefs.FSWatcher[] = [];
-    const vaultDir = path.join(this._baseDir, vault_id.value);
-    const unregisterInProcess = registerAuditSubscriber(vault_id.value, (entry) => {
-      if (closed) return;
-      if (seen.has(entry.event_id)) return;
-      if (!matchesAuditSubscription(entry, subscription)) return;
-      seen.add(entry.event_id);
+    let subs = this.subscribers.get(vault_id.value);
+    if (!subs) {
+      subs = new Set();
+      this.subscribers.set(vault_id.value, subs);
+    }
+    const callback = (entry: AuditEntry) => {
+      if (subscription.afterEventId && entry.event_id <= subscription.afterEventId) return;
+      if (subscription.operations && !subscription.operations.includes(entry.operation)) return;
+      if (subscription.root_agent_id && entry.root_agent_id !== subscription.root_agent_id) return;
+      if (subscription.request_id && entry.request_id !== subscription.request_id) return;
       subscription.onEvent(entry);
-    });
-
-    const scan = async (): Promise<void> => {
-      if (closed) return;
-      const entries = (await this.query({ vault_id: vault_id.value }))
-        .filter((entry) => matchesAuditSubscription(entry, subscription))
-        .sort((a, b) => a.event_id.localeCompare(b.event_id));
-      for (const entry of entries) {
-        if (seen.has(entry.event_id)) continue;
-        seen.add(entry.event_id);
-        subscription.onEvent(entry);
-      }
     };
-
-    const refreshWatchers = async () => {
-      if (closed) return;
-      closeWatchers(watchers);
-      addWatcher(watchers, this._baseDir, () => {
-        void refreshWatchers();
-        tick();
-      });
-      try {
-        const stat = await fs.stat(vaultDir);
-        if (stat.isDirectory()) {
-          addWatcher(watchers, vaultDir, tick);
-        }
-      } catch {}
-    };
-
-    const tick = () => {
-      if (closed || scanInFlight) return;
-      scanInFlight = scan().finally(() => {
-        scanInFlight = null;
-      });
-    };
-
-    void ensureDir(this._baseDir).then(() => refreshWatchers());
-    tick();
-
+    subs.add(callback);
     return () => {
-      closed = true;
-      unregisterInProcess();
-      closeWatchers(watchers);
+      const current = this.subscribers.get(vault_id.value);
+      if (current) {
+        current.delete(callback);
+        if (current.size === 0) this.subscribers.delete(vault_id.value);
+      }
     };
   }
 }
 
-export class FileAgentIdentityRegistry implements AgentIdentityRegistry {
-  private readonly _baseDir: string;
-
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "agents");
-  }
-
-  private _getPath(vault_id: VaultId, root_agent_id: string) {
-    return path.join(this._baseDir, vault_id.value, `${root_agent_id}.json`);
-  }
-
+export class SqliteAgentIdentityRegistry implements AgentIdentityRegistry {
+  constructor(private db: Database.Database) {}
   async register(identity: AgentIdentityRecord): Promise<void> {
-    const filePath = this._getPath(identity.vault_id, identity.root_agent_id);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(identity, null, 2));
+    this.db.prepare(`INSERT INTO agents (vault_id, root_agent_id, record) VALUES (?, ?, ?) ON CONFLICT(vault_id, root_agent_id) DO UPDATE SET record = excluded.record`).run(identity.vault_id.value, identity.root_agent_id, JSON.stringify(identity));
   }
-
   async get(vault_id: VaultId, root_agent_id: string): Promise<AgentIdentityRecord | null> {
-    try {
-      const content = await fs.readFile(this._getPath(vault_id, root_agent_id), "utf-8");
-      return JSON.parse(content);
-    } catch {
-      return null;
-    }
+    const row = this.db.prepare(`SELECT record FROM agents WHERE vault_id = ? AND root_agent_id = ?`).get(vault_id.value, root_agent_id) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : null;
   }
-
   async list(vault_id: VaultId): Promise<readonly AgentIdentityRecord[]> {
-    const dir = path.join(this._baseDir, vault_id.value);
-    try {
-      const files = await fs.readdir(dir);
-      return await Promise.all(
-        files.filter(f => f.endsWith(".json")).map(async f => {
-          const content = await fs.readFile(path.join(dir, f), "utf-8");
-          return JSON.parse(content);
-        })
-      );
-    } catch {
-      return [];
-    }
+    const rows = this.db.prepare(`SELECT record FROM agents WHERE vault_id = ?`).all(vault_id.value) as { record: string }[];
+    return rows.map(r => JSON.parse(r.record));
   }
 }
 
-export class FileAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
-  private readonly _baseDir: string;
-
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "grants", "agent_secrets");
-  }
-
-  private _getPath(vault_id: VaultId, root_agent_id: string, secret_alias: string) {
-    return path.join(this._baseDir, vault_id.value, root_agent_id, `${Buffer.from(secret_alias).toString("hex")}.json`);
-  }
-
+export class SqliteAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
+  constructor(private db: Database.Database) {}
   async upsert(grant: AgentSecretGrant): Promise<void> {
-    const filePath = this._getPath(grant.vault_id, grant.root_agent_id, grant.secret_alias);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(grant, null, 2));
+    this.db.prepare(`INSERT INTO grants (vault_id, root_agent_id, secret_alias, record) VALUES (?, ?, ?, ?) ON CONFLICT(vault_id, root_agent_id, secret_alias) DO UPDATE SET record = excluded.record`).run(grant.vault_id.value, grant.root_agent_id, grant.secret_alias, JSON.stringify(grant));
   }
-
   async get(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<AgentSecretGrant | null> {
-    try {
-      const content = await fs.readFile(this._getPath(vault_id, root_agent_id, secret_alias), "utf-8");
-      return JSON.parse(content);
-    } catch {
-      return null;
-    }
+    const row = this.db.prepare(`SELECT record FROM grants WHERE vault_id = ? AND root_agent_id = ? AND secret_alias = ?`).get(vault_id.value, root_agent_id, secret_alias) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : null;
   }
-
   async list(vault_id: VaultId, root_agent_id?: string): Promise<readonly AgentSecretGrant[]> {
-    try {
-      const results: AgentSecretGrant[] = [];
-      const vaultDir = path.join(this._baseDir, vault_id.value);
-      const agentDirs = root_agent_id ? [root_agent_id] : await fs.readdir(vaultDir);
-      for (const aid of agentDirs) {
-        const agentDir = path.join(vaultDir, aid);
-        try {
-          const files = await fs.readdir(agentDir);
-          for (const f of files) {
-            if (f.endsWith(".json")) {
-              const content = await fs.readFile(path.join(agentDir, f), "utf-8");
-              results.push(JSON.parse(content));
-            }
-          }
-        } catch { continue; }
-      }
-      return results;
-    } catch {
-      return [];
-    }
+    let sql = `SELECT record FROM grants WHERE vault_id = ?`;
+    const params: any[] = [vault_id.value];
+    if (root_agent_id) { sql += ` AND root_agent_id = ?`; params.push(root_agent_id); }
+    const rows = this.db.prepare(sql).all(...params) as { record: string }[];
+    return rows.map(r => JSON.parse(r.record));
   }
-
   async delete(vault_id: VaultId, root_agent_id: string, secret_alias: string): Promise<void> {
-    try {
-      await fs.unlink(this._getPath(vault_id, root_agent_id, secret_alias));
-    } catch {}
+    this.db.prepare(`DELETE FROM grants WHERE vault_id = ? AND root_agent_id = ? AND secret_alias = ?`).run(vault_id.value, root_agent_id, secret_alias);
   }
 }
 
-export class FileSecretDestinationGrantRegistry implements SecretDestinationGrantRegistry {
-  private readonly _baseDir: string;
-
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "grants", "secret_destinations");
-  }
-
-  private _getPath(vault_id: VaultId, secret_alias: string, site_id: string) {
-    return path.join(this._baseDir, vault_id.value, Buffer.from(secret_alias).toString("hex"), `${Buffer.from(site_id).toString("hex")}.json`);
-  }
-
+export class SqliteSecretDestinationGrantRegistry implements SecretDestinationGrantRegistry {
+  constructor(private db: Database.Database) {}
   async upsert(grant: SecretDestinationGrant): Promise<void> {
-    const filePath = this._getPath(grant.vault_id, grant.secret_alias, grant.site_id);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(grant, null, 2));
+    this.db.prepare(`INSERT INTO destination_grants (vault_id, secret_alias, site_id, record) VALUES (?, ?, ?, ?) ON CONFLICT(vault_id, secret_alias, site_id) DO UPDATE SET record = excluded.record`).run(grant.vault_id.value, grant.secret_alias, grant.site_id, JSON.stringify(grant));
   }
-
   async get(vault_id: VaultId, secret_alias: string, site_id: string): Promise<SecretDestinationGrant | null> {
-    try {
-      const content = await fs.readFile(this._getPath(vault_id, secret_alias, site_id), "utf-8");
-      return JSON.parse(content);
-    } catch {
-      return null;
-    }
+    const row = this.db.prepare(`SELECT record FROM destination_grants WHERE vault_id = ? AND secret_alias = ? AND site_id = ?`).get(vault_id.value, secret_alias, site_id) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : null;
   }
-
   async list(vault_id: VaultId, secret_alias?: string): Promise<readonly SecretDestinationGrant[]> {
-    try {
-      const results: SecretDestinationGrant[] = [];
-      const vaultDir = path.join(this._baseDir, vault_id.value);
-      const aliasDirs = secret_alias ? [Buffer.from(secret_alias).toString("hex")] : await fs.readdir(vaultDir);
-      for (const aid of aliasDirs) {
-        const aliasDir = path.join(vaultDir, aid);
-        try {
-          const files = await fs.readdir(aliasDir);
-          for (const f of files) {
-            if (f.endsWith(".json")) {
-              const content = await fs.readFile(path.join(aliasDir, f), "utf-8");
-              results.push(JSON.parse(content));
-            }
-          }
-        } catch { continue; }
-      }
-      return results;
-    } catch {
-      return [];
-    }
+    let sql = `SELECT record FROM destination_grants WHERE vault_id = ?`;
+    const params: any[] = [vault_id.value];
+    if (secret_alias) { sql += ` AND secret_alias = ?`; params.push(secret_alias); }
+    const rows = this.db.prepare(sql).all(...params) as { record: string }[];
+    return rows.map(r => JSON.parse(r.record));
   }
-
   async delete(vault_id: VaultId, secret_alias: string, site_id: string): Promise<void> {
-    try {
-      await fs.unlink(this._getPath(vault_id, secret_alias, site_id));
-    } catch {}
+    this.db.prepare(`DELETE FROM destination_grants WHERE vault_id = ? AND secret_alias = ? AND site_id = ?`).run(vault_id.value, secret_alias, site_id);
   }
 }
 
-export class FileRequestRecordRegistry implements RequestRecordRegistry {
-  private readonly _baseDir: string;
-
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "requests");
-  }
-
-  private _getPath(vault_id: VaultId, request_id: string) {
-    return path.join(this._baseDir, vault_id.value, `${request_id}.json`);
-  }
-
+export class SqliteRequestRecordRegistry implements RequestRecordRegistry {
+  private static subscribers = new Map<string, Set<(record: RequestRecord) => void>>();
+  private get subscribers() { return SqliteRequestRecordRegistry.subscribers; }
+  constructor(private db: Database.Database) {}
   async save(record: RequestRecord): Promise<void> {
-    const filePath = this._getPath(record.vault_id, record.request_id);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(record, null, 2));
-    publishRequestRecord(record);
+    this.db.prepare(`INSERT INTO requests (vault_id, request_id, root_agent_id, record) VALUES (?, ?, ?, ?) ON CONFLICT(request_id) DO UPDATE SET record = excluded.record`).run(record.vault_id.value, record.request_id, record.root_agent_id, JSON.stringify(record));
+    const subs = this.subscribers.get(record.vault_id.value);
+    if (subs) {
+      for (const cb of subs) cb(record);
+    }
   }
-
   async get(vault_id: VaultId, request_id: string): Promise<RequestRecord | null> {
-    try {
-      const content = await fs.readFile(this._getPath(vault_id, request_id), "utf-8");
-      return JSON.parse(content);
-    } catch {
-      return null;
-    }
+    const row = this.db.prepare(`SELECT record FROM requests WHERE vault_id = ? AND request_id = ?`).get(vault_id.value, request_id) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : null;
   }
-
   async list(vault_id: VaultId, root_agent_id?: string): Promise<readonly RequestRecord[]> {
-    const dir = path.join(this._baseDir, vault_id.value);
-    try {
-      const files = await fs.readdir(dir);
-      const records = await Promise.all(
-        files.filter(f => f.endsWith(".json")).map(async f => {
-          const content = await fs.readFile(path.join(dir, f), "utf-8");
-          return JSON.parse(content) as RequestRecord;
-        })
-      );
-      return root_agent_id ? records.filter(r => r.root_agent_id === root_agent_id) : records;
-    } catch {
-      return [];
-    }
+    let sql = `SELECT record FROM requests WHERE vault_id = ?`;
+    const params: any[] = [vault_id.value];
+    if (root_agent_id) { sql += ` AND root_agent_id = ?`; params.push(root_agent_id); }
+    const rows = this.db.prepare(sql).all(...params) as { record: string }[];
+    return rows.map(r => JSON.parse(r.record));
   }
-
   subscribePending(vault_id: VaultId, subscription: OwnerPendingDispatchSubscription): () => void {
-    let closed = false;
-    let scanInFlight: Promise<void> | null = null;
-    const seen = new Set<string>();
-    const watchers: nodefs.FSWatcher[] = [];
-    const vaultDir = path.join(this._baseDir, vault_id.value);
-    const unregisterInProcess = registerPendingSubscriber(vault_id.value, (record) => {
-      if (closed) return;
-      const event = this._toPendingDispatchEvent(record);
-      if (!event) return;
-      if (subscription.afterEventId && event.event_id <= subscription.afterEventId) return;
-      if (seen.has(event.event_id)) return;
-      seen.add(event.event_id);
-      subscription.onEvent(event);
-    });
+    const rows = this.db.prepare(`SELECT record FROM requests WHERE vault_id = ?`).all(vault_id.value) as { record: string }[];
+    const replay = rows.map(r => JSON.parse(r.record) as RequestRecord)
+      .filter((record) => record.execution.status === DispatchStatus.AWAITING_APPROVAL && !!record.pending_dispatch_event)
+      .map((record) => ({
+        event_id: record.pending_dispatch_event!.event_id,
+        emitted_at: record.pending_dispatch_event!.emitted_at,
+        record
+      } as PendingDispatchEvent))
+      .filter((event) => !subscription.afterEventId || event.event_id > subscription.afterEventId)
+      .sort((a, b) => a.event_id.localeCompare(b.event_id));
+    for (const event of replay) subscription.onEvent(event);
 
-    const scan = async (): Promise<void> => {
-      if (closed) return;
-      const pending = (await this.list(vault_id))
-        .map((record) => this._toPendingDispatchEvent(record))
-        .filter((event): event is PendingDispatchEvent => !!event)
-        .filter((event) => !subscription.afterEventId || event.event_id > subscription.afterEventId)
-        .sort((a, b) => a.event_id.localeCompare(b.event_id));
-      for (const event of pending) {
-        if (seen.has(event.event_id)) continue;
-        seen.add(event.event_id);
-        subscription.onEvent(event);
+    let subs = this.subscribers.get(vault_id.value);
+    if (!subs) {
+      subs = new Set();
+      this.subscribers.set(vault_id.value, subs);
+    }
+    const callback = (record: RequestRecord) => {
+      if (record.execution.status !== DispatchStatus.AWAITING_APPROVAL || !record.pending_dispatch_event) return;
+      const event: PendingDispatchEvent = {
+        event_id: record.pending_dispatch_event.event_id,
+        emitted_at: record.pending_dispatch_event.emitted_at,
+        record,
+      };
+      if (subscription.afterEventId && event.event_id <= subscription.afterEventId) return;
+      subscription.onEvent(event);
+    };
+    subs.add(callback);
+    return () => {
+      const current = this.subscribers.get(vault_id.value);
+      if (current) {
+        current.delete(callback);
+        if (current.size === 0) this.subscribers.delete(vault_id.value);
       }
     };
-
-    const refreshWatchers = async () => {
-      if (closed) return;
-      closeWatchers(watchers);
-      addWatcher(watchers, this._baseDir, () => {
-        void refreshWatchers();
-        tick();
-      });
-      try {
-        const stat = await fs.stat(vaultDir);
-        if (stat.isDirectory()) {
-          addWatcher(watchers, vaultDir, tick);
-        }
-      } catch {}
-    };
-
-    const tick = () => {
-      if (closed || scanInFlight) return;
-      scanInFlight = scan().finally(() => {
-        scanInFlight = null;
-      });
-    };
-
-    void ensureDir(this._baseDir).then(() => refreshWatchers());
-    tick();
-
-    return () => {
-      closed = true;
-      unregisterInProcess();
-      closeWatchers(watchers);
-    };
-  }
-
-  private _toPendingDispatchEvent(record: RequestRecord): PendingDispatchEvent | null {
-    if (record.execution.status !== DispatchStatus.AWAITING_APPROVAL || !record.pending_dispatch_event) {
-      return null;
-    }
-    return {
-      event_id: record.pending_dispatch_event.event_id,
-      emitted_at: record.pending_dispatch_event.emitted_at,
-      record,
-    };
   }
 }
 
-function matchesAuditSubscription(entry: AuditEntry, subscription: OwnerAuditSubscription): boolean {
-  if (subscription.afterEventId && entry.event_id <= subscription.afterEventId) return false;
-  if (subscription.operations && !subscription.operations.includes(entry.operation)) return false;
-  if (subscription.root_agent_id && entry.root_agent_id !== subscription.root_agent_id) return false;
-  if (subscription.request_id && entry.request_id !== subscription.request_id) return false;
-  return true;
-}
-
-export class FileSessionTokenRegistry implements ISessionTokenRegistry {
-  private readonly _baseDir: string;
-
-  constructor(baseDir: string) {
-    this._baseDir = path.join(baseDir, "session_tokens");
-  }
-
-  private _getPath(root_agent_id: string) {
-    return path.join(this._baseDir, `${root_agent_id}.json`);
-  }
-
+export class SqliteSessionTokenRegistry implements ISessionTokenRegistry {
+  constructor(private db: Database.Database) {}
   async issue(root_agent_id: string): Promise<string> {
     const token = `sat_${crypto.randomBytes(16).toString("hex")}`;
-    const stored: StoredSessionToken = {
-      token,
-      root_agent_id,
-      issued_at: new Date().toISOString(),
-    };
-    const filePath = this._getPath(root_agent_id);
-    await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(stored, null, 2));
+    const stored: StoredSessionToken = { token, root_agent_id, issued_at: new Date().toISOString() };
+    this.db.prepare(`INSERT INTO session_tokens (root_agent_id, token, record) VALUES (?, ?, ?) ON CONFLICT(root_agent_id) DO UPDATE SET record = excluded.record, token = excluded.token`).run(root_agent_id, token, JSON.stringify(stored));
     return token;
   }
-
   async inspect(token: string, root_agent_id: string): Promise<SessionTokenInspectionResult> {
-    try {
-      const content = await fs.readFile(this._getPath(root_agent_id), "utf-8");
-      const stored = JSON.parse(content) as StoredSessionToken;
-      if (stored.token === token) {
-        return { ok: true, token: stored };
-      }
-      const tokens = await this.list();
-      if (tokens.some((entry) => entry.token === token)) {
-        return { ok: false, reason: "agent_mismatch" };
-      }
-      return { ok: false, reason: "token_not_found" };
-    } catch {
-      const tokens = await this.list();
-      if (tokens.some((entry) => entry.token === token)) {
-        return { ok: false, reason: "agent_mismatch" };
-      }
-      return { ok: false, reason: "token_not_found" };
-    }
+    const row = this.db.prepare(`SELECT record, root_agent_id FROM session_tokens WHERE token = ?`).get(token) as { record: string, root_agent_id: string } | undefined;
+    if (!row) return { ok: false, reason: "token_not_found" };
+    if (row.root_agent_id !== root_agent_id) return { ok: false, reason: "agent_mismatch" };
+    return { ok: true, token: JSON.parse(row.record) };
   }
-
   async revoke(token: string): Promise<void> {
-    const tokens = await this.list();
-    const stored = tokens.find((entry) => entry.token === token);
-    if (!stored) return;
-    try {
-      await fs.unlink(this._getPath(stored.root_agent_id));
-    } catch {}
+    this.db.prepare(`DELETE FROM session_tokens WHERE token = ?`).run(token);
   }
-
   async list(root_agent_id?: string): Promise<readonly StoredSessionToken[]> {
-    if (root_agent_id) {
-      try {
-        const content = await fs.readFile(this._getPath(root_agent_id), "utf-8");
-        return [JSON.parse(content) as StoredSessionToken];
-      } catch {
-        return [];
-      }
-    }
-
-    try {
-      const files = await fs.readdir(this._baseDir);
-      return await Promise.all(
-        files.filter((f) => f.endsWith(".json")).map(async (f) => {
-          const content = await fs.readFile(path.join(this._baseDir, f), "utf-8");
-          return JSON.parse(content) as StoredSessionToken;
-        }),
-      );
-    } catch {
-      return [];
-    }
+    let sql = `SELECT record FROM session_tokens`;
+    const params: any[] = [];
+    if (root_agent_id) { sql += ` WHERE root_agent_id = ?`; params.push(root_agent_id); }
+    const rows = this.db.prepare(sql).all(...params) as { record: string }[];
+    return rows.map(r => JSON.parse(r.record));
   }
 }
-
-
 
 export const DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY = "master_key.sealed";
 
@@ -726,21 +342,47 @@ export interface CreatePersistentVaultCoreDependenciesOptions {
   replayGuard?: ReplayGuard;
 }
 
+const dbCache = new Map<string, Database.Database>();
+
+function initDb(baseDir: string): Database.Database {
+  if (dbCache.has(baseDir)) return dbCache.get(baseDir)!;
+  const dbPath = path.join(baseDir, "vault.sqlite");
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS secrets (secret_id TEXT PRIMARY KEY, vault_id TEXT, alias TEXT UNIQUE, record TEXT);
+    CREATE TABLE IF NOT EXISTS custody (secret_id TEXT PRIMARY KEY, encrypted_payload TEXT);
+    CREATE TABLE IF NOT EXISTS audit_logs (event_id TEXT PRIMARY KEY, vault_id TEXT, root_agent_id TEXT, request_id TEXT, secret_alias TEXT, ts INTEGER, entry TEXT);
+    CREATE TABLE IF NOT EXISTS agents (vault_id TEXT, root_agent_id TEXT, record TEXT, PRIMARY KEY(vault_id, root_agent_id));
+    CREATE TABLE IF NOT EXISTS grants (vault_id TEXT, root_agent_id TEXT, secret_alias TEXT, record TEXT, PRIMARY KEY(vault_id, root_agent_id, secret_alias));
+    CREATE TABLE IF NOT EXISTS destination_grants (vault_id TEXT, secret_alias TEXT, site_id TEXT, record TEXT, PRIMARY KEY(vault_id, secret_alias, site_id));
+    CREATE TABLE IF NOT EXISTS requests (vault_id TEXT, request_id TEXT PRIMARY KEY, root_agent_id TEXT, record TEXT);
+    CREATE TABLE IF NOT EXISTS session_tokens (root_agent_id TEXT PRIMARY KEY, token TEXT UNIQUE, record TEXT);
+  `);
+  dbCache.set(baseDir, db);
+  return db;
+}
+
 export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): string }, options: CreatePersistentVaultCoreDependenciesOptions): VaultCoreDependencies {
   const baseDir = storage.getBaseDir();
-  const agentRecords = new FileAgentIdentityRegistry(baseDir);
-  const sessionTokenRegistry = new FileSessionTokenRegistry(baseDir);
+  // Ensure black-box environment directory exists synchronously.
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true });
+  }
+  const db = initDb(baseDir);
+  const agentRecords = new SqliteAgentIdentityRegistry(db);
+  const sessionTokenRegistry = new SqliteSessionTokenRegistry(db);
   return {
     vault_id: { value: options.vault_id },
     ids: new RandomIdGenerator(),
     clock: new SystemClock(),
     agentRecords,
-    agent_secretGrants: new FileAgentSecretGrantRegistry(baseDir),
-    secret_destinationGrants: new FileSecretDestinationGrantRegistry(baseDir),
-    audit: new FileAuditLog(baseDir),
-    requests: new FileRequestRecordRegistry(baseDir),
-    custody: new FileSecretCustody(baseDir, options.vaultWorkingKey),
-    secrets: new FileSecretRepository(baseDir),
+    agent_secretGrants: new SqliteAgentSecretGrantRegistry(db),
+    secret_destinationGrants: new SqliteSecretDestinationGrantRegistry(db),
+    audit: new SqliteAuditLog(db),
+    requests: new SqliteRequestRecordRegistry(db),
+    custody: new SqliteSecretCustody(db, options.vaultWorkingKey),
+    secrets: new SqliteSecretRepository(db),
     policy: new DefaultPolicyEngine(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(options.proofVerifier),
     agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, sessionTokenRegistry, options.proofVerifier),

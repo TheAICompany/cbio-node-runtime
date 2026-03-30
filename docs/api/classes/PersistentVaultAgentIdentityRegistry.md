@@ -12,17 +12,17 @@
 
 ### Constructor
 
-> **new PersistentVaultAgentIdentityRegistry**(`baseDir`): `FileAgentIdentityRegistry`
+> **new PersistentVaultAgentIdentityRegistry**(`db`): `SqliteAgentIdentityRegistry`
 
 #### Parameters
 
-##### baseDir
+##### db
 
-`string`
+`Database`
 
 #### Returns
 
-`FileAgentIdentityRegistry`
+`SqliteAgentIdentityRegistry`
 
 ## Methods
 

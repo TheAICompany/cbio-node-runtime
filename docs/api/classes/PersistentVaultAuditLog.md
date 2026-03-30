@@ -12,17 +12,17 @@
 
 ### Constructor
 
-> **new PersistentVaultAuditLog**(`baseDir`): `FileAuditLog`
+> **new PersistentVaultAuditLog**(`db`): `SqliteAuditLog`
 
 #### Parameters
 
-##### baseDir
+##### db
 
-`string`
+`Database`
 
 #### Returns
 
-`FileAuditLog`
+`SqliteAuditLog`
 
 ## Methods
 

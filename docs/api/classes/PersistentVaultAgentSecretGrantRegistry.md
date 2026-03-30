@@ -12,17 +12,17 @@
 
 ### Constructor
 
-> **new PersistentVaultAgentSecretGrantRegistry**(`baseDir`): `FileAgentSecretGrantRegistry`
+> **new PersistentVaultAgentSecretGrantRegistry**(`db`): `SqliteAgentSecretGrantRegistry`
 
 #### Parameters
 
-##### baseDir
+##### db
 
-`string`
+`Database`
 
 #### Returns
 
-`FileAgentSecretGrantRegistry`
+`SqliteAgentSecretGrantRegistry`
 
 ## Methods
 

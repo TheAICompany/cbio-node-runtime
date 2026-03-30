@@ -12,17 +12,17 @@
 
 ### Constructor
 
-> **new PersistentVaultSecretDestinationGrantRegistry**(`baseDir`): `FileSecretDestinationGrantRegistry`
+> **new PersistentVaultSecretDestinationGrantRegistry**(`db`): `SqliteSecretDestinationGrantRegistry`
 
 #### Parameters
 
-##### baseDir
+##### db
 
-`string`
+`Database`
 
 #### Returns
 
-`FileSecretDestinationGrantRegistry`
+`SqliteSecretDestinationGrantRegistry`
 
 ## Methods
 

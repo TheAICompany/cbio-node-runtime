@@ -23,7 +23,8 @@
     }
   },
   "dependencies": {
-    "@the-ai-company/cbio-protocol": "^1.0.3"
+    "@the-ai-company/cbio-protocol": "^1.0.5",
+    "better-sqlite3": "^11.0.0"
   },
   "scripts": {
     "build": "tsc",
@@ -46,6 +47,7 @@
   "license": "MIT",
   "repository": "https://github.com/TheAICompany/cbio-node-runtime",
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.10",
     "@types/node": "^20.0.0",
     "standard-version": "^9.5.0",
     "typedoc": "^0.28.18",

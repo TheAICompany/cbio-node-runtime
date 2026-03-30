@@ -26,12 +26,12 @@ export {
   initializeVaultCustody,
   recoverVaultWorkingKey,
   DEFAULT_VAULT_KEY_CUSTODY_BLOB_KEY,
-  FileAgentIdentityRegistry as PersistentVaultAgentIdentityRegistry,
-  FileAuditLog as PersistentVaultAuditLog,
-  FileAgentSecretGrantRegistry as PersistentVaultAgentSecretGrantRegistry,
-  FileSecretDestinationGrantRegistry as PersistentVaultSecretDestinationGrantRegistry,
-  FileSecretCustody as PersistentVaultSecretCustody,
-  FileSecretRepository as PersistentVaultSecretRepository,
+  SqliteAgentIdentityRegistry as PersistentVaultAgentIdentityRegistry,
+  SqliteAuditLog as PersistentVaultAuditLog,
+  SqliteAgentSecretGrantRegistry as PersistentVaultAgentSecretGrantRegistry,
+  SqliteSecretDestinationGrantRegistry as PersistentVaultSecretDestinationGrantRegistry,
+  SqliteSecretCustody as PersistentVaultSecretCustody,
+  SqliteSecretRepository as PersistentVaultSecretRepository,
 } from "./persistence.js";
 
 export type {

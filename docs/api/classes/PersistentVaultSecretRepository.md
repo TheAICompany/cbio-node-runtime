@@ -12,17 +12,17 @@
 
 ### Constructor
 
-> **new PersistentVaultSecretRepository**(`baseDir`): `FileSecretRepository`
+> **new PersistentVaultSecretRepository**(`db`): `SqliteSecretRepository`
 
 #### Parameters
 
-##### baseDir
+##### db
 
-`string`
+`Database`
 
 #### Returns
 
-`FileSecretRepository`
+`SqliteSecretRepository`
 
 ## Methods
 

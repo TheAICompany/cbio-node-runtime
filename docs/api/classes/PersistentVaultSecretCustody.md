@@ -12,21 +12,21 @@
 
 ### Constructor
 
-> **new PersistentVaultSecretCustody**(`baseDir`, `workingKey`): `FileSecretCustody`
+> **new PersistentVaultSecretCustody**(`db`, `workingKeyHex`): `SqliteSecretCustody`
 
 #### Parameters
 
-##### baseDir
+##### db
 
-`string`
+`Database`
 
-##### workingKey
+##### workingKeyHex
 
 `string`
 
 #### Returns
 
-`FileSecretCustody`
+`SqliteSecretCustody`
 
 ## Methods
 
