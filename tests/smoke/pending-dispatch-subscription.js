@@ -82,7 +82,7 @@ try {
     root_agent_id: agent.root_agent_id,
   });
   assert.ok(
-    pending.some((record) => record.request_id === result.request_id && record.execution_status === "AWAITING_APPROVAL"),
+    pending.some((record) => record.request_id === result.request_id && record.execution.status === "AWAITING_APPROVAL"),
     "recovered owner should see pending dispatch in request store",
   );
 
