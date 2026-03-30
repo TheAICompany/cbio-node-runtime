@@ -50,6 +50,9 @@ import {
 
 export class SqliteSecretRepository implements SecretRepository {
   constructor(private db: Database.Database) {}
+  private isActive(record: SecretRecord): boolean {
+    return record.lifecycle_status === "ACTIVE";
+  }
   async save(record: SecretRecord): Promise<void> {
     const stmt = this.db.prepare(`
       INSERT INTO secrets (secret_id, vault_id, alias, record)
@@ -63,15 +66,21 @@ export class SqliteSecretRepository implements SecretRepository {
   }
   async getByAlias(alias: string): Promise<SecretRecord | null> {
     const row = this.db.prepare(`SELECT record FROM secrets WHERE alias = ?`).get(alias) as { record: string } | undefined;
-    return row ? JSON.parse(row.record) : null;
+    if (!row) return null;
+    const record = JSON.parse(row.record) as SecretRecord;
+    return this.isActive(record) ? record : null;
   }
   async list(vault_id: VaultId): Promise<readonly SecretRecord[]> {
     const rows = this.db.prepare(`SELECT record FROM secrets WHERE vault_id = ?`).all(vault_id) as { record: string }[];
-    return rows.map(r => JSON.parse(r.record));
+    return rows
+      .map((r) => JSON.parse(r.record) as SecretRecord)
+      .filter((record) => this.isActive(record));
   }
   async getById(secret_id: SecretId): Promise<SecretRecord | null> {
     const row = this.db.prepare(`SELECT record FROM secrets WHERE secret_id = ?`).get(secret_id) as { record: string } | undefined;
-    return row ? JSON.parse(row.record) : null;
+    if (!row) return null;
+    const record = JSON.parse(row.record) as SecretRecord;
+    return this.isActive(record) ? record : null;
   }
 }
 

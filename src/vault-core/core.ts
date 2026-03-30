@@ -481,6 +481,21 @@ export class VaultCore {
       root_agent_id: command.agent.id,
       vault_id: this._deps.vault_id,
       issued_at: this._deps.clock.nowIso(),
+      product_intro:
+        "CBIO Vault is a policy-gated outbound execution runtime. As an agent, you can discover approved secrets, send real requests through vault controls, inspect request history, and ask the owner for additional grants when access is missing.",
+      what_you_can_do: [
+        "Inspect your identity, approved grants, and tool contract via agentIntrospect.",
+        "Send outbound HTTP with a vault secret via agentDispatch (policy and approval aware).",
+        "List available secrets and check which ones are currently granted.",
+        "List request history and read per-request results when read access is approved.",
+        "Submit grant requests to expand secret or destination permissions."
+      ],
+      operating_rules: [
+        "You do not directly create, update, or delete vault secrets.",
+        "Always include a concise owner-facing reason when dispatching or requesting grants.",
+        "If a request is not currently allowed, expect AWAITING_APPROVAL rather than silent execution.",
+        "Sensitive response payload visibility may require explicit read approval."
+      ],
       agent: {
         root_agent_id: agentRecord.root_agent_id,
                 public_key: agentRecord.public_key,
@@ -678,12 +693,20 @@ export class VaultCore {
     this._assertOwnerPrincipal(command.owner);
     const record = await this._deps.secrets.getByAlias(command.alias);
     if (!record) throw new VaultCoreError("secret not found", "VAULT_SECRET_NOT_FOUND");
-    await this._deps.secrets.delete(record.secret_id);
+    const now = this._deps.clock.nowIso();
+    const removedRecord: SecretRecord = {
+      ...record,
+      lifecycle_status: "REMOVED",
+      removedAt: now,
+      updated_at: now,
+    };
+    await this._deps.secrets.save(removedRecord);
+    await this._deps.custody.delete(record.secret_id);
     await this._appendAuditEntry(
       command.owner,
       "ownerRemoveSecret",
       { secret_alias: command.alias, secret_id: record.secret_id },
-      undefined
+      { lifecycle_status: "REMOVED" }
     );
   }
 

@@ -208,6 +208,9 @@ export interface AgentRuntimeManifest {
   vault_id: VaultId;
   vault_nickname?: string;
   issued_at: string;
+  product_intro?: string;
+  what_you_can_do?: readonly string[];
+  operating_rules?: readonly string[];
   agent: AgentSelfContext;
   grants: {
     agent_secrets: readonly AgentSecretGrant[];
