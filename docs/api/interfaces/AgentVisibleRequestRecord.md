@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.70.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
 
 ***
 
@@ -45,6 +45,12 @@
 ### response\_status?
 
 > `optional` **response\_status?**: `number`
+
+***
+
+### secret\_id?
+
+> `optional` **secret\_id?**: [`SecretId`](SecretId.md)
 
 ***
 

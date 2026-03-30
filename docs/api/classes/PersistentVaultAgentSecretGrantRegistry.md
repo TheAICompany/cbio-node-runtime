@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.70.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
 
 ***
 
@@ -28,7 +28,7 @@
 
 ### delete()
 
-> **delete**(`vault_id`, `root_agent_id`, `secret_alias`): `Promise`\<`void`\>
+> **delete**(`vault_id`, `root_agent_id`, `secret_id`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -40,9 +40,9 @@
 
 `string`
 
-##### secret\_alias
+##### secret\_id
 
-`string`
+[`SecretId`](../interfaces/SecretId.md)
 
 #### Returns
 
@@ -56,7 +56,7 @@
 
 ### get()
 
-> **get**(`vault_id`, `root_agent_id`, `secret_alias`): `Promise`\<[`AgentSecretGrant`](../interfaces/AgentSecretGrant.md) \| `null`\>
+> **get**(`vault_id`, `root_agent_id`, `secret_id`): `Promise`\<[`AgentSecretGrant`](../interfaces/AgentSecretGrant.md) \| `null`\>
 
 #### Parameters
 
@@ -68,9 +68,9 @@
 
 `string`
 
-##### secret\_alias
+##### secret\_id
 
-`string`
+[`SecretId`](../interfaces/SecretId.md)
 
 #### Returns
 

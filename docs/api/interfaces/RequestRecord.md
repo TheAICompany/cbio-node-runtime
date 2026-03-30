@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.70.1**](../README.md)
+[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
 
 ***
 
@@ -75,6 +75,10 @@
 #### secret\_alias?
 
 > `optional` **secret\_alias?**: `string`
+
+#### secret\_id
+
+> **secret\_id**: [`SecretId`](SecretId.md) \| `null`
 
 #### target\_url
 
