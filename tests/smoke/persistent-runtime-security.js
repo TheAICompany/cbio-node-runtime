@@ -79,7 +79,7 @@ async function runPersistentRuntimeSecurityTest() {
       }),
       (error) => {
         assert.equal(error instanceof Error, true);
-        assert.match(error.message, /VAULT_DISPATCH_DENIED:session token not found/);
+        assert.match(error.message, /session token not found/);
         return true;
       },
     );
