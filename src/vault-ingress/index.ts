@@ -80,7 +80,8 @@ export type VaultAgentControlRequest =
   | { action: "list_secrets"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof }
   | { action: "list_requests"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof }
   | { action: "read_request_result"; vault_id: string; request_id: string; requested_at: string; target_request_id: string; root_agent_id: string; proof: VaultAgentControlProof }
-  | { action: "get_manifest"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof };
+  | { action: "get_manifest"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof }
+  | { action: "audit_test_ping"; vault_id: string; request_id: string; requested_at: string; root_agent_id: string; proof: VaultAgentControlProof; label?: string };
 
 export interface VaultAgentControlResponse {
   ok: true;
@@ -162,6 +163,7 @@ export interface VaultService {
   agentListRequests(request: import("../vault-core/index.js").AgentListRequestsRequest): Promise<readonly import("../vault-core/index.js").AgentRequestRecord[]>;
   agentGetRequest(request: import("../vault-core/index.js").AgentGetRequestRequest): Promise<import("../vault-core/index.js").AgentRequestResult>;
   agentGetRuntimeManifest(request: import("../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../vault-core/index.js").AgentRuntimeManifest>;
+  agentAuditTestPing(request: import("../vault-core/index.js").AgentAuditTestPingRequest): Promise<import("../vault-core/index.js").AuditEntry>;
   
 
   
@@ -296,6 +298,10 @@ class LocalVaultService implements VaultService {
     return this._authority.agentGetRuntimeManifest(request);
   }
 
+  agentAuditTestPing(request: import("../vault-core/index.js").AgentAuditTestPingRequest): Promise<import("../vault-core/index.js").AuditEntry> {
+    return this._authority.agentAuditTestPing(request);
+  }
+
   async agentHandleDispatch(request: VaultAgentDispatchRequest): Promise<VaultAgentDispatchResponse | VaultAgentDispatchErrorResponse> {
     try {
       const result = await this._authority.agentDispatchSecret({
@@ -350,6 +356,7 @@ class LocalVaultService implements VaultService {
         case "list_requests": result = await this.agentListRequests(base); break;
         case "read_request_result": result = await this.agentGetRequest({ ...base, target_request_id: request.target_request_id }); break;
         case "get_manifest": result = await this.agentGetRuntimeManifest(base); break;
+        case "audit_test_ping": result = await this.agentAuditTestPing({ ...base, label: request.label }); break;
       }
       return { ok: true, result };
     } catch (error) {

@@ -8,6 +8,11 @@ export interface AgentDispatchIntent {
   requested_at?: string;
 }
 
+export interface AgentAuditTestPingInput {
+  label?: string;
+  requested_at?: string;
+}
+
 export interface AgentRequestGrantsInput {
   secret_aliases?: readonly string[];
   reason: string;
@@ -27,4 +32,5 @@ export interface AgentDispatchTransport {
   agentListRequests(request: import("../../vault-core/index.js").AgentListRequestsRequest): Promise<readonly AgentRequestRecordNode[]>;
   agentGetRequest(request: import("../../vault-core/index.js").AgentGetRequestRequest): Promise<import("../../vault-core/index.js").AgentRequestResult>;
   agentGetRuntimeManifest(request: import("../../vault-core/index.js").AgentGetRuntimeManifestRequest): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
+  agentAuditTestPing(request: import("../../vault-core/index.js").AgentAuditTestPingRequest): Promise<import("../../vault-core/index.js").AuditEntry>;
 }

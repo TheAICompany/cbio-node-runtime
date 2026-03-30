@@ -8,6 +8,7 @@ export type {
 
 export type {
   AgentDispatchIntent,
+  AgentAuditTestPingInput,
   AgentDispatchTransport,
   AgentSigner,
   SecretRecordNode,

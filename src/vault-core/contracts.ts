@@ -294,6 +294,15 @@ export interface AgentGetRequestRequest {
   target_request_id: string;
 }
 
+export interface AgentAuditTestPingRequest {
+  vault_id: VaultId;
+  request_id: string;
+  requested_at: string;
+  agent: VaultPrincipal & { kind: "agent" };
+  proof: AgentProof;
+  label?: string;
+}
+
 export interface OwnerListRequestsRequest {
   vault_id: VaultId;
   request_id: string;

@@ -116,6 +116,19 @@ export class AgentDispatchHttpTransport implements AgentDispatchTransport {
     return payload as import("../vault-core/index.js").AgentRuntimeManifest;
   }
 
+  async agentAuditTestPing(request: import("../vault-core/index.js").AgentAuditTestPingRequest): Promise<import("../vault-core/index.js").AuditEntry> {
+    const payload = await this._postControl({
+      action: "audit_test_ping",
+      vault_id: request.vault_id,
+      request_id: request.request_id,
+      requested_at: request.requested_at,
+      root_agent_id: request.agent.id,
+      label: request.label,
+      proof: { token: request.proof.token },
+    });
+    return payload as import("../vault-core/index.js").AuditEntry;
+  }
+
   private async _postControl(body: unknown): Promise<unknown> {
     const response = await this._fetchImpl(this._controlUrl, {
       method: "POST",

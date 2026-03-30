@@ -139,6 +139,7 @@ export {
   type CreateAgentClientOptions,
   type AgentIdentity,
   type AgentDispatchIntent,
+  type AgentAuditTestPingInput,
   type AgentDispatchTransport,
   type AgentSigner,
 } from "../clients/agent/index.js";

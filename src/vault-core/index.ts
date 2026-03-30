@@ -55,6 +55,7 @@ export type {
   AgentRuntimeManifest,
   AgentListRequestsRequest,
   AgentGetRequestRequest,
+  AgentAuditTestPingRequest,
   AgentRequestRecord,
   OwnerRequestRecord,
   AgentRequestResult,

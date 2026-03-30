@@ -240,6 +240,18 @@ export class VaultCore {
     const secret_id = authorization.secret_id;
 
     await this._recordRequestInternal(request, DispatchStatus.IN_PROGRESS, secret_id);
+    await this._appendAuditEntry(
+      request.agent,
+      "agentDispatchSecret",
+      { request_id: request.request_id, root_agent_id: request.agent.id, target: request.target_url, secret_id },
+      {
+        vault_id: this._deps.vault_id,
+        request_id: request.request_id,
+        status: DispatchStatus.IN_PROGRESS,
+        target_url: request.target_url,
+        method: request.method,
+      }
+    );
 
     if (authorization.decision === "deny") {
       const result: DispatchResult = {
@@ -517,6 +529,20 @@ export class VaultCore {
     }
 
     return this.toAgentRequestRecord(record);
+  }
+
+  async agentAuditTestPing(command: { agent: VaultPrincipal & { kind: "agent" }; proof: any; request_id: string; requested_at: string; label?: string }): Promise<AuditEntry> {
+    await this._verifyAgentControlProof(command, "agentAuditTestPing");
+    return this._appendAuditEntry(
+      command.agent,
+      "agentAuditTestPing",
+      {
+        request_id: command.request_id,
+        root_agent_id: command.agent.id,
+        label: command.label ?? null,
+      },
+      { ok: true }
+    );
   }
 
   // ─── Owner Management APIs ────────────────────────────────────────────────────
@@ -862,7 +888,7 @@ export class VaultCore {
     input: any,
     output?: any,
     error?: string
-  ) {
+  ): Promise<AuditEntry> {
     const entry: AuditEntry = {
       event_id: this._deps.ids.newAuditEntryId(),
       ts: this._deps.clock.nowIso(),
@@ -874,6 +900,7 @@ export class VaultCore {
       error,
     };
     await this._appendAudit(entry);
+    return entry;
   }
 }
 

@@ -3,6 +3,7 @@ import { SystemClock, type Clock } from "../../vault-core/index.js";
 import { LocalVaultTransport } from "../../vault-ingress/defaults.js";
 import type { VaultService } from "../../vault-ingress/index.js";
 import type {
+  AgentAuditTestPingInput,
   AgentDispatchIntent,
   AgentDispatchTransport,
   AgentRequestRecordNode,
@@ -45,6 +46,11 @@ export interface AgentClient {
    * Introspects the current runtime environment, providing identity, grants, and a toolbox manifest.
    */
   agentIntrospect(): Promise<import("../../vault-core/index.js").AgentRuntimeManifest>;
+
+  /**
+   * Emits a deterministic audit test event for validating audit subscriptions.
+   */
+  agentAuditTestPing(input?: AgentAuditTestPingInput): Promise<import("../../vault-core/index.js").AuditEntry>;
 }
 
 export interface CreateAgentClientOptions {
@@ -153,6 +159,19 @@ class DefaultAgentClient implements AgentClient {
       request_id,
       requested_at,
       target_request_id,
+      agent: { kind: "agent", id: this._identity.root_agent_id },
+      proof: await this._createProof(request_id, requested_at),
+    });
+  }
+
+  async agentAuditTestPing(input: AgentAuditTestPingInput = {}) {
+    const requested_at = input.requested_at ?? this._clock.nowIso();
+    const request_id = createRequestIdValue("audit_test_ping");
+    return await this._transport.agentAuditTestPing({
+      vault_id: this._vault_id,
+      request_id,
+      requested_at,
+      label: input.label,
       agent: { kind: "agent", id: this._identity.root_agent_id },
       proof: await this._createProof(request_id, requested_at),
     });

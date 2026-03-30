@@ -46,6 +46,7 @@ export type {
 export type {
   AgentClient,
   AgentDispatchIntent,
+  AgentAuditTestPingInput,
   AgentDispatchTransport,
   CreateAgentClientOptions,
 } from "./clients/agent/index.js";
