@@ -113,8 +113,13 @@ async function verifyVaultPassword(storage: IStorageProvider, vault_id: string, 
     return false;
   }
   const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(normalizedPassword, vault_id);
-  const profile = await readVaultProfile(storage, vaultWorkingKey, vault_id);
-  return profile !== null;
+  try {
+    const profile = await readVaultProfile(storage, vaultWorkingKey, vault_id);
+    return profile !== null;
+  } catch {
+    // Password verification should be boolean-only and never leak low-level crypto errors.
+    return false;
+  }
 }
 
 /**

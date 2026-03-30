@@ -79,7 +79,7 @@ class DefaultAgentClient implements AgentClient {
     
     console.log("DEBUG: AgentClient.agentDispatch", { alias: intent.secret_alias, found: !!secret, resolved_id });
 
-    return this._transport.agentDispatch({
+    return await this._transport.agentDispatch({
       vault_id: this._vault_id, 
       request_id,
       requested_at,
@@ -112,7 +112,7 @@ class DefaultAgentClient implements AgentClient {
   async agentListSecrets() {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("list_secrets");
-    return this._transport.agentListSecrets({
+    return await this._transport.agentListSecrets({
       vault_id: this._vault_id,
       request_id,
       requested_at,
@@ -124,7 +124,7 @@ class DefaultAgentClient implements AgentClient {
   async agentIntrospect() {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("get_manifest");
-    return this._transport.agentGetRuntimeManifest({
+    return await this._transport.agentGetRuntimeManifest({
       vault_id: this._vault_id,
       request_id,
       requested_at,
@@ -136,7 +136,7 @@ class DefaultAgentClient implements AgentClient {
   async agentListRequests() {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("list_requests");
-    return this._transport.agentListRequests({
+    return await this._transport.agentListRequests({
       vault_id: this._vault_id,
       request_id,
       requested_at,
@@ -148,7 +148,7 @@ class DefaultAgentClient implements AgentClient {
   async agentGetRequest(target_request_id: string) {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("read_request_result");
-    return this._transport.agentGetRequest({
+    return await this._transport.agentGetRequest({
       vault_id: this._vault_id,
       request_id,
       requested_at,

@@ -171,7 +171,7 @@ class DefaultOwnerClient implements OwnerClient {
     const requested_at = this._clock.nowIso();
     const request_id = createRequestIdValue("read_audit");
     
-    return this._vault.ownerReadAudit({
+    return await this._vault.ownerReadAudit({
       vault_id: this._vault.vault_id,
       actor: {
         kind: "owner",
@@ -194,7 +194,7 @@ class DefaultOwnerClient implements OwnerClient {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const request_id = createRequestIdValue("export_secret");
     
-    return this._vault.ownerExportSecret({
+    return await this._vault.ownerExportSecret({
       vault_id: this._vault.vault_id,
       actor: {
         kind: "owner",
@@ -360,7 +360,7 @@ class DefaultOwnerClient implements OwnerClient {
     const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
-    return this._vault.ownerGrantAgentSecret({
+    return await this._vault.ownerGrantAgentSecret({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("grant_agent_secret"),
       actor: { kind: "owner", id: this._root_agent_id },
@@ -376,7 +376,7 @@ class DefaultOwnerClient implements OwnerClient {
     const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
-    return this._vault.ownerGrantSecretDestination({
+    return await this._vault.ownerGrantSecretDestination({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("grant_secret_destination"),
       actor: { kind: "owner", id: this._root_agent_id },
@@ -427,7 +427,7 @@ class DefaultOwnerClient implements OwnerClient {
       if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
       secret_id = secret.secret_id;
     }
-    return this._vault.ownerListGrants({
+    return await this._vault.ownerListGrants({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("list_grants"),
       actor: { kind: "owner", id: this._root_agent_id },
@@ -486,7 +486,7 @@ class DefaultOwnerClient implements OwnerClient {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const request_id = createRequestIdValue("list_requests");
 
-    return this._vault.ownerListRequests({
+    return await this._vault.ownerListRequests({
       vault_id: this._vault.vault_id,
       request_id,
       requested_at,
@@ -499,7 +499,7 @@ class DefaultOwnerClient implements OwnerClient {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const request_id = createRequestIdValue("get_request");
 
-    return this._vault.ownerGetRequest({
+    return await this._vault.ownerGetRequest({
       vault_id: this._vault.vault_id,
       request_id,
       requested_at,
@@ -514,7 +514,7 @@ class DefaultOwnerClient implements OwnerClient {
   async ownerListSecrets(input: VaultListSecretsInput = {}) {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const request_id = createRequestIdValue("list_secrets");
-    return this._vault.ownerListSecrets({
+    return await this._vault.ownerListSecrets({
       vault_id: this._vault.vault_id,
       owner: {
         kind: "owner",
@@ -528,7 +528,7 @@ class DefaultOwnerClient implements OwnerClient {
     const requested_at = input.requested_at ?? this._clock.nowIso();
     const request_id = createRequestIdValue("issue_session_token");
 
-    return this._vault.ownerIssueSessionToken({
+    return await this._vault.ownerIssueSessionToken({
       vault_id: this._vault.vault_id,
       request_id,
       root_agent_id: input.root_agent_id,
@@ -552,7 +552,7 @@ class DefaultOwnerClient implements OwnerClient {
   }
 
   async ownerIssueAllSessionTokens() {
-    return this._vault.ownerIssueAllAgentSessionTokens({
+    return await this._vault.ownerIssueAllAgentSessionTokens({
       kind: "owner",
       id: this._root_agent_id,
     } as any);
@@ -560,7 +560,7 @@ class DefaultOwnerClient implements OwnerClient {
 
   async ownerApproveDispatch(input: VaultApproveDispatchInput) {
     const requested_at = this._clock.nowIso();
-    return this._vault.ownerApproveDispatch({
+    return await this._vault.ownerApproveDispatch({
       vault_id: this._vault.vault_id,
       request_id: input.request_id,
       actor: { kind: "owner", id: this._root_agent_id },

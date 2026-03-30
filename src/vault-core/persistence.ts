@@ -415,42 +415,6 @@ function initDb(baseDir: string): Database.Database {
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
 
-  // Check if we need to migrate from alias to id
-  const hasOldGrants = db.prepare("SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='grants' AND sql LIKE '%secret_alias%'").get() as { count: number };
-
-  if (hasOldGrants.count > 0) {
-    console.log("🛠️ Migrating Vault database from secret_alias to secret_id...");
-    db.transaction(() => {
-      // 1. Rename old tables
-      db.exec("ALTER TABLE grants RENAME TO grants_old");
-      db.exec("ALTER TABLE destination_grants RENAME TO destination_grants_old");
-
-      // 2. Create new tables
-      db.exec("CREATE TABLE grants (vault_id TEXT, root_agent_id TEXT, secret_id TEXT, record TEXT, PRIMARY KEY(vault_id, root_agent_id, secret_id))");
-      db.exec("CREATE TABLE destination_grants (vault_id TEXT, secret_id TEXT, site_id TEXT, record TEXT, PRIMARY KEY(vault_id, secret_id, site_id))");
-
-      // 3. Migrate data by joining with secrets table
-      db.exec(`
-        INSERT INTO grants (vault_id, root_agent_id, secret_id, record)
-        SELECT g.vault_id, g.root_agent_id, s.secret_id, g.record
-        FROM grants_old g
-        JOIN secrets s ON g.secret_alias = s.alias
-      `);
-
-      db.exec(`
-        INSERT INTO destination_grants (vault_id, secret_id, site_id, record)
-        SELECT dg.vault_id, s.secret_id, dg.site_id, dg.record
-        FROM destination_grants_old dg
-        JOIN secrets s ON dg.secret_alias = s.alias
-      `);
-
-      // 4. Drop old tables
-      db.exec("DROP TABLE grants_old");
-      db.exec("DROP TABLE destination_grants_old");
-    })();
-    console.log("✅ Migration complete.");
-  }
-
   db.exec(`
     CREATE TABLE IF NOT EXISTS secrets (secret_id TEXT PRIMARY KEY, vault_id TEXT, alias TEXT UNIQUE, record TEXT);
     CREATE TABLE IF NOT EXISTS custody (secret_id TEXT PRIMARY KEY, encrypted_payload TEXT);
