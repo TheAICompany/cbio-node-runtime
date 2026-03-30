@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.72.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.71.0...v1.72.0) (2026-03-30)
+
+
+### Features
+
+* enable full vault batch secret export by making alias optional in ownerExportSecret ([f8e05f9](https://github.com/TheAICompany/cbio-node-runtime/commit/f8e05f901c02d7813817d81d0857abc876197f1c))
+
 ## [1.71.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.70.1...v1.71.0) (2026-03-30)
 
 
