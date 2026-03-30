@@ -110,22 +110,22 @@ async function runTest() {
       
       const functionNames = records.map(entry => entry.data.function_name);
       
-      return functionNames.includes("ownerCreateAgent")
+      return functionNames.includes("ownerRegisterAgentIdentity")
         && functionNames.includes("ownerIssueSessionToken")
         && functionNames.includes("ownerCreateSecret")
         && records.some(e => e.data.function_name === "agentDispatchSecret" && e.data.output?.status === "AWAITING_APPROVAL")
         && functionNames.includes("ownerApproveDispatch")
         && records.some(e => e.data.function_name === "agentDispatchSecret" && e.data.output?.status === "SUCCEEDED")
-        && functionNames.includes("ownerApproveDispatch_grant");
+        && records.some(e => e.data.function_name === "ownerApproveDispatch_grant" && e.data.output?.request_id === pending.request_id);
     });
 
-    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerCreateAgent"));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerRegisterAgentIdentity"));
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerIssueSessionToken"));
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerCreateSecret"));
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "agentDispatchSecret" && entry.data.input?.request_id === pending.request_id && entry.data.output?.status === "AWAITING_APPROVAL"));
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerApproveDispatch" && entry.data.input?.request_id === pending.request_id));
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "agentDispatchSecret" && entry.data.input?.request_id === pending.request_id && entry.data.output?.status === "SUCCEEDED"));
-    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerApproveDispatch_grant"));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerApproveDispatch_grant" && entry.data.output?.request_id === pending.request_id));
 
     await reader.cancel();
     console.log("Audit SSE stream publishes append-only notifications for identity, secret, request, and approval changes");

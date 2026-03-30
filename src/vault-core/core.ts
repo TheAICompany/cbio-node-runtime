@@ -728,7 +728,7 @@ export class VaultCore {
       request.actor,
       "ownerIssueSessionToken",
       { root_agent_id: request.root_agent_id },
-      undefined
+      { root_agent_id: request.root_agent_id, issued_at: this._deps.clock.nowIso() }
     );
     return { token, root_agent_id: request.root_agent_id, issued_at: this._deps.clock.nowIso() };
   }

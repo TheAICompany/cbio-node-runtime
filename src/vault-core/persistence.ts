@@ -150,6 +150,15 @@ export class SqliteAuditLog implements AuditLog {
     return rows.map(r => JSON.parse(r.entry));
   }
   subscribe(vault_id: VaultId, subscription: OwnerAuditSubscription): () => void {
+    const replay = this.db.prepare(`SELECT entry FROM audit_logs WHERE vault_id = ? ORDER BY ts ASC LIMIT 1000`)
+      .all(vault_id) as { entry: string }[];
+    for (const row of replay) {
+      const entry = JSON.parse(row.entry) as AuditEntry;
+      if (matchesAuditSubscription(entry, subscription)) {
+        subscription.onEvent(entry);
+      }
+    }
+
     let subs = this.subscribers.get(vault_id);
     if (!subs) {
       subs = new Set();
@@ -171,6 +180,14 @@ export class SqliteAuditLog implements AuditLog {
       }
     };
   }
+}
+
+function matchesAuditSubscription(entry: AuditEntry, subscription: OwnerAuditSubscription): boolean {
+  if (subscription.afterEventId && entry.event_id <= subscription.afterEventId) return false;
+  if (subscription.function_names && !subscription.function_names.includes(entry.function_name)) return false;
+  if (subscription.root_agent_id && entry.input?.root_agent_id !== subscription.root_agent_id) return false;
+  if (subscription.request_id && entry.input?.request_id !== subscription.request_id) return false;
+  return true;
 }
 
 export class SqliteAgentIdentityRegistry implements AgentIdentityRegistry {
