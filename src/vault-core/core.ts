@@ -436,7 +436,7 @@ export class VaultCore {
 
     await this._appendAuditEntry(
       { kind: "agent", id: record.root_agent_id },
-      "agentDispatchSecret_complete",
+      "agentDispatchSecret",
       {
         request_id,
         root_agent_id: record.root_agent_id,
