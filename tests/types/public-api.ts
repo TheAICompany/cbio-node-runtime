@@ -5,7 +5,6 @@ import type {
   OwnerClient,
   PendingDispatchEvent,
   OwnerRequestRecord,
-  OwnerVisibleRequestRecord,
 } from "../../src/runtime/index.js";
 
 type Assert<T extends true> = T;
@@ -18,7 +17,7 @@ type _ownerOptionsAliasIsStable = Assert<IsEqual<CreateOwnerClientOptions, Creat
 
 declare const owner: OwnerClient;
 declare const agent: AgentClient;
-declare const summary: OwnerVisibleRequestRecord;
+declare const summary: OwnerRequestRecord;
 declare const detail: OwnerRequestRecord;
 declare const pending: PendingDispatchEvent;
 
