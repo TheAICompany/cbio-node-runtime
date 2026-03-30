@@ -2,19 +2,13 @@
 
 ***
 
-# Interface: OwnerCreateSecretInput
+# Interface: AgentAuditTestPingInput
 
 ## Properties
 
-### alias
+### label?
 
-> **alias**: `string`
-
-***
-
-### plaintext
-
-> **plaintext**: `string`
+> `optional` **label?**: `string`
 
 ***
 

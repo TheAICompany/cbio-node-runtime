@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.74.0**](../README.md)
 
 ***
 
@@ -33,6 +33,40 @@
 `string`
 
 ## Methods
+
+### agentAuditTestPing()
+
+> **agentAuditTestPing**(`command`): `Promise`\<[`AuditEntry`](../interfaces/AuditEntry.md)\>
+
+#### Parameters
+
+##### command
+
+###### agent
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+###### label?
+
+`string`
+
+###### proof
+
+`any`
+
+###### request_id
+
+`string`
+
+###### requested_at
+
+`string`
+
+#### Returns
+
+`Promise`\<[`AuditEntry`](../interfaces/AuditEntry.md)\>
+
+***
 
 ### agentAuthorizeDispatch()
 

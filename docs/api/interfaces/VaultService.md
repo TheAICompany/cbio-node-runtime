@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.74.0**](../README.md)
 
 ***
 
@@ -11,6 +11,22 @@
 > `readonly` **vault\_id**: `string`
 
 ## Methods
+
+### agentAuditTestPing()
+
+> **agentAuditTestPing**(`request`): `Promise`\<[`AuditEntry`](AuditEntry.md)\>
+
+#### Parameters
+
+##### request
+
+`AgentAuditTestPingRequest`
+
+#### Returns
+
+`Promise`\<[`AuditEntry`](AuditEntry.md)\>
+
+***
 
 ### agentDispatch()
 

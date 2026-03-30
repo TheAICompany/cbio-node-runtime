@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.73.0**
+**CBIO Node Runtime Agent API v1.74.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.73.0
+# CBIO Node Runtime Agent API v1.74.0
 
 ## Enumerations
 
@@ -25,6 +25,7 @@
 
 ## Interfaces
 
+- [AgentAuditTestPingInput](interfaces/AgentAuditTestPingInput.md)
 - [AgentClient](interfaces/AgentClient.md)
 - [AgentDispatchIntent](interfaces/AgentDispatchIntent.md)
 - [AgentDispatchTransport](interfaces/AgentDispatchTransport.md)
