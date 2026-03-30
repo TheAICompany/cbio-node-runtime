@@ -292,7 +292,10 @@ export class VaultCore {
 
     // Proceed with dispatch
     if (!secret_id) {
-       throw new VaultCoreError("secret_id required for dispatch", "VAULT_INTERNAL_ERROR");
+       throw new VaultCoreError(
+        "secret_id required for dispatch; call agentIntrospect/agentListSecrets first and retry with a granted secret_id",
+        "VAULT_DISPATCH_DENIED"
+      );
     }
     const secretRecord = await this._deps.secrets.getById(secret_id);
     if (!secretRecord) {

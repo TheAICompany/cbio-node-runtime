@@ -9,7 +9,7 @@ export const AGENT_TOOL_METADATA: Record<string, { description: string; paramete
     },
   },
   agentDispatch: {
-    description: "Execute a real outbound request with a vault-managed secret. Use this when you already have a vault secret and permission to use it against a target URL. You must provide a one-sentence reason for the owner explaining why this request should be sent. This tool does not create or store new secrets in the vault. If write permission is missing, the request will not be sent and a pending approval carrier will be created instead.",
+    description: "Execute a real outbound request with a vault-managed secret. Use this when you already have a vault secret and permission to use it against a target URL. You must provide a one-sentence reason for the owner explaining why this request should be sent. This tool does not create or store new secrets in the vault. If write permission is missing, the request will not be sent and a pending approval carrier will be created instead. Important transport rule: when calling /api/runtime directly, dispatch body must include secret_id (not secret_alias).",
     parameters: {
       type: "object",
       properties: {
