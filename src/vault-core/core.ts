@@ -390,7 +390,7 @@ export class VaultCore {
         actor,
         "ownerApproveDispatch_grant",
         { request_id, root_agent_id: record.root_agent_id, secret_id: secret.secret_id, site_id },
-        { status: "granted" }
+        { status: "granted", request_id }
       );
     }
 

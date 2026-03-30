@@ -128,6 +128,6 @@ await assert.rejects(
 );
 
 const replayAudit = await client.ownerReadAudit({ secret_id });
-assert.ok(replayAudit.some((entry) => entry.output?.status === "denied" && /replay/.test(entry.output?.detail || "")));
+assert.ok(replayAudit.some((entry) => entry.error && /replay/.test(entry.error)));
 
 console.log("replay guard smoke test passed");
