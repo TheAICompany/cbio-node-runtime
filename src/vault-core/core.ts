@@ -80,12 +80,13 @@ export class VaultCore {
       await this._deps.agentProofVerifier.verify(command as any);
       await this._deps.replayGuard.assertNotReplayed(command as any);
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
       await this._appendAuditEntry(
         command.agent,
         actionName,
         { ...command, ...extraAudit },
-        { status: "denied", detail: `proof verification failed: ${detail}` }
+        undefined,
+        errorMsg
       );
       throw error;
     }
@@ -114,7 +115,7 @@ export class VaultCore {
       actor,
       "ownerGrantAgentSecret",
       { root_agent_id, secret_id, request_id: request?.request_id },
-      { status: "success", detail: `granted secret "${secret_id}" to agent "${root_agent_id}"` }
+      grant
     );
     return grant;
   }
@@ -140,7 +141,7 @@ export class VaultCore {
       actor,
       "ownerGrantSecretDestination",
       { secret_id, site_id, request_id: request?.request_id },
-      { status: "success", detail: `granted destination "${site_id}" for secret "${secret_id}"` }
+      grant
     );
     return grant;
   }
@@ -157,7 +158,7 @@ export class VaultCore {
       actor,
       "ownerRevokeAgentSecret",
       { root_agent_id, secret_id, request_id: request?.request_id },
-      { status: "success", detail: `revoked secret "${secret_id}" from agent "${root_agent_id}"` }
+      undefined
     );
   }
 
@@ -173,7 +174,7 @@ export class VaultCore {
       actor,
       "ownerRevokeSecretDestination",
       { secret_id, site_id, request_id: request?.request_id },
-      { status: "success", detail: `revoked destination "${site_id}" from secret "${secret_id}"` }
+      undefined
     );
   }
 
@@ -253,7 +254,7 @@ export class VaultCore {
         request.agent,
         "agentDispatchSecret",
         { request_id: request.request_id, root_agent_id: request.agent.id, target: request.target_url, secret_id },
-        { status: "failure", error: authorization.reason ?? "denied" }
+        result
       );
       await this._updateRequestRecordInternal(request, result, secret_id);
       return result;
@@ -272,7 +273,7 @@ export class VaultCore {
         request.agent,
         "agentDispatchSecret",
         { request_id: request.request_id, root_agent_id: request.agent.id, target: request.target_url, secret_id },
-        { status: "pending", detail: "request held for human approval" }
+        result
       );
       return result;
     }
@@ -308,10 +309,7 @@ export class VaultCore {
       request.agent,
       "agentDispatchSecret",
       { request_id: request.request_id, root_agent_id: request.agent.id, target: request.target_url, secret_id },
-      { 
-        status: result.status === DispatchStatus.SUCCEEDED ? "success" : "failure", 
-        detail: result.status === DispatchStatus.SUCCEEDED ? "dispatch completed" : (result.error ?? "dispatch failed") 
-      }
+      result
     );
 
     await this._updateRequestRecordInternal(request, result, secret_id);
@@ -350,7 +348,7 @@ export class VaultCore {
         actor,
         "ownerApproveDispatch",
         { request_id, decision, root_agent_id: record.root_agent_id, secret_id: record.request.secret_id },
-        { status: "success", detail: "dispatch rejected by owner" }
+        updated
       );
       return null;
     }
@@ -392,7 +390,7 @@ export class VaultCore {
         actor,
         "ownerApproveDispatch_grant",
         { request_id, root_agent_id: record.root_agent_id, secret_id: secret.secret_id, site_id },
-        { status: "success", detail: "granted during dispatch approval" }
+        { status: "granted" }
       );
     }
 
@@ -431,7 +429,7 @@ export class VaultCore {
       actor,
       "ownerApproveDispatch",
       { request_id, decision, root_agent_id: record.root_agent_id, secret_id: record.request.secret_id },
-      { status: "success", detail: "dispatch approved" }
+      result
     );
 
     await this._appendAuditEntry(
@@ -443,7 +441,7 @@ export class VaultCore {
         target: { kind: "http", url: record.request.target_url },
         secret_id: secret.secret_id,
       },
-      { status: result.status === DispatchStatus.SUCCEEDED ? "success" : "failed", detail: result.status === DispatchStatus.SUCCEEDED ? "dispatch completed" : (result.error ?? "dispatch failed") }
+      result
     );
 
     return result;
@@ -530,7 +528,7 @@ export class VaultCore {
       command.owner,
       "ownerRegisterAgentIdentity",
       { root_agent_id: command.agentRecord.root_agent_id },
-      { status: "success", detail: `agent identity registered: "${command.agentRecord.root_agent_id}"` }
+      undefined
     );
   }
 
@@ -544,7 +542,7 @@ export class VaultCore {
       command.owner,
       "ownerUpdateAgentIdentity",
       { root_agent_id: command.root_agent_id },
-      { status: "success", detail: `agent identity updated: "${command.root_agent_id}"` }
+      updated
     );
     return updated;
   }
@@ -575,7 +573,7 @@ export class VaultCore {
       command.owner,
       "ownerCreateSecret",
       { secret_alias: command.alias, secret_id },
-      { status: "success", detail: `secret created: "${command.alias}"` }
+      record
     );
     return record;
   }
@@ -615,7 +613,7 @@ export class VaultCore {
       command.owner,
       "ownerUpdateSecret",
       { secret_alias: finalAlias, secret_id },
-      { status: "success", detail: `secret updated: "${finalAlias}"` }
+      record
     );
     return record;
   }
@@ -629,7 +627,7 @@ export class VaultCore {
       command.owner,
       "ownerRemoveSecret",
       { secret_alias: command.alias, secret_id: record.secret_id },
-      { status: "success", detail: `secret deleted: "${command.alias}"` }
+      undefined
     );
   }
 
@@ -649,7 +647,7 @@ export class VaultCore {
         actor,
         "ownerExportSecret",
         { secret_alias: alias, secret_id: record.secret_id },
-        { status: "success", detail: `secret exported as plaintext: "${alias}"` }
+        undefined
       );
       return [{
         vault_id: this._deps.vault_id,
@@ -676,7 +674,7 @@ export class VaultCore {
       actor,
       "ownerExportSecret_batch",
       {},
-      { status: "success", detail: "full vault material exported" }
+      undefined
     );
 
     return exports;
@@ -730,7 +728,7 @@ export class VaultCore {
       request.actor,
       "ownerIssueSessionToken",
       { root_agent_id: request.root_agent_id },
-      { status: "success", detail: `session token issued for agent: "${request.root_agent_id}"` }
+      undefined
     );
     return { token, root_agent_id: request.root_agent_id, issued_at: this._deps.clock.nowIso() };
   }
@@ -748,7 +746,7 @@ export class VaultCore {
       request.actor,
       "ownerRevokeSessionToken",
       { token: request.token },
-      { status: "success", detail: "session token revoked" }
+      undefined
     );
   }
   ownerOnPendingDispatch(subscription: OwnerPendingDispatchSubscription): () => void {
@@ -862,7 +860,8 @@ export class VaultCore {
     actor: VaultPrincipal,
     functionName: string,
     input: any,
-    output: any
+    output?: any,
+    error?: string
   ) {
     const entry: AuditEntry = {
       event_id: this._deps.ids.newAuditEntryId(),
@@ -872,6 +871,7 @@ export class VaultCore {
       function_name: functionName,
       input,
       output,
+      error,
     };
     await this._appendAudit(entry);
   }

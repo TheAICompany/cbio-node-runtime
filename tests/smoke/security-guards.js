@@ -121,7 +121,7 @@ await assert.rejects(
 );
 
 const securityAudit = await client.ownerReadAudit({ secret_id });
-assert.ok(securityAudit.some((entry) => entry.output?.status === "denied" && /timestamp out of range|invalid proof signature/.test(entry.output?.detail || "")));
+assert.ok(securityAudit.some((entry) => entry.error && /timestamp out of range|invalid proof signature/.test(entry.error)));
 
 // Case 3: Unauthorized Identity Registration (non-owner principal)
 const unauthorizedIdentityRequestId = "unauthorized-agent-registration";

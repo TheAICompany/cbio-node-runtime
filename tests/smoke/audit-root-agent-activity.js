@@ -67,7 +67,7 @@ assert.ok(
     && entry.actor.kind === "agent"
     && entry.actor.id === agent.root_agent_id
     && entry.input.root_agent_id === agent.root_agent_id
-    && entry.output.status === "success"),
+    && entry.output.status === "SUCCEEDED"),
   "approved execution should emit a separate agent dispatch audit entry",
 );
 

@@ -116,8 +116,7 @@ async function runTest() {
         && records.some(e => e.data.function_name === "agentDispatchSecret" && e.data.output?.status === "AWAITING_APPROVAL")
         && functionNames.includes("ownerApproveDispatch")
         && records.some(e => e.data.function_name === "agentDispatchSecret" && e.data.output?.status === "SUCCEEDED")
-        && functionNames.includes("ownerGrantAgentSecret")
-        && functionNames.includes("ownerGrantSecretDestination");
+        && functionNames.includes("ownerApproveDispatch_grant");
     });
 
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerCreateAgent"));
@@ -126,6 +125,7 @@ async function runTest() {
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "agentDispatchSecret" && entry.data.input?.request_id === pending.request_id && entry.data.output?.status === "AWAITING_APPROVAL"));
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerApproveDispatch" && entry.data.input?.request_id === pending.request_id));
     assert.ok(observedEntries.some((entry) => entry.data.function_name === "agentDispatchSecret" && entry.data.input?.request_id === pending.request_id && entry.data.output?.status === "SUCCEEDED"));
+    assert.ok(observedEntries.some((entry) => entry.data.function_name === "ownerApproveDispatch_grant"));
 
     await reader.cancel();
     console.log("Audit SSE stream publishes append-only notifications for identity, secret, request, and approval changes");
