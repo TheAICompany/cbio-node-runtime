@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.73.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.72.0...v1.73.0) (2026-03-30)
+
+
+### Features
+
+* implement audit log replay for subscriptions and include timestamps in session tokens ([0f10213](https://github.com/TheAICompany/cbio-node-runtime/commit/0f102139667de98306fd79106698539880c178ab))
+
+
+### Bug Fixes
+
+* update audit event name and status value for agent dispatch consistency ([3e63fd6](https://github.com/TheAICompany/cbio-node-runtime/commit/3e63fd6e570c9423ea74e08a85f54ae8b9de41ba))
+* update pending dispatch assertion to access execution status correctly ([c3d6376](https://github.com/TheAICompany/cbio-node-runtime/commit/c3d63769b704cc74b0abdae274a738e22d35d8f0))
+
 ## [1.72.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.71.0...v1.72.0) (2026-03-30)
 
 
