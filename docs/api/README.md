@@ -1,12 +1,11 @@
-**CBIO Node Runtime Agent API v1.72.0**
+**CBIO Node Runtime Agent API v1.73.0**
 
 ***
 
-# CBIO Node Runtime Agent API v1.72.0
+# CBIO Node Runtime Agent API v1.73.0
 
 ## Enumerations
 
-- [AuditOperation](enumerations/AuditOperation.md)
 - [DispatchStatus](enumerations/DispatchStatus.md)
 - [IdentityErrorCode](enumerations/IdentityErrorCode.md)
 - [OwnerClientErrorCode](enumerations/OwnerClientErrorCode.md)
@@ -35,8 +34,6 @@
 - [AgentRuntimeManifest](interfaces/AgentRuntimeManifest.md)
 - [AgentSecretGrant](interfaces/AgentSecretGrant.md)
 - [AgentSigner](interfaces/AgentSigner.md)
-- [AgentVisibleRequestRecord](interfaces/AgentVisibleRequestRecord.md)
-- [AgentVisibleSecretRecord](interfaces/AgentVisibleSecretRecord.md)
 - [AuditEntry](interfaces/AuditEntry.md)
 - [CbioRuntime](interfaces/CbioRuntime.md)
 - [CreateAgentClientOptions](interfaces/CreateAgentClientOptions.md)
@@ -65,15 +62,12 @@
 - [OwnerSensitiveActionContext](interfaces/OwnerSensitiveActionContext.md)
 - [OwnerSession](interfaces/OwnerSession.md)
 - [OwnerUpdateSecretInput](interfaces/OwnerUpdateSecretInput.md)
-- [OwnerVisibleRequestRecord](interfaces/OwnerVisibleRequestRecord.md)
 - [PendingDispatchEvent](interfaces/PendingDispatchEvent.md)
 - [RecoveredVault](interfaces/RecoveredVault.md)
 - [RecoverVaultOptions](interfaces/RecoverVaultOptions.md)
 - [RequestRecord](interfaces/RequestRecord.md)
 - [RestoreIdentityOptions](interfaces/RestoreIdentityOptions.md)
-- [SecretAlias](interfaces/SecretAlias.md)
 - [SecretDestinationGrant](interfaces/SecretDestinationGrant.md)
-- [SecretId](interfaces/SecretId.md)
 - [SecretRecord](interfaces/SecretRecord.md)
 - [Signer](interfaces/Signer.md)
 - [VaultApproveDispatchInput](interfaces/VaultApproveDispatchInput.md)
@@ -84,7 +78,6 @@
 - [VaultGetRequestInput](interfaces/VaultGetRequestInput.md)
 - [VaultGrantAgentSecretInput](interfaces/VaultGrantAgentSecretInput.md)
 - [VaultGrantSecretDestinationInput](interfaces/VaultGrantSecretDestinationInput.md)
-- [VaultId](interfaces/VaultId.md)
 - [VaultImportAgentInput](interfaces/VaultImportAgentInput.md)
 - [VaultIssueSessionTokenInput](interfaces/VaultIssueSessionTokenInput.md)
 - [VaultListAgentsInput](interfaces/VaultListAgentsInput.md)
@@ -110,7 +103,10 @@
 - [CbioRuntimeModule](type-aliases/CbioRuntimeModule.md)
 - [DispatchApprovalDecision](type-aliases/DispatchApprovalDecision.md)
 - [GrantStatus](type-aliases/GrantStatus.md)
+- [SecretAlias](type-aliases/SecretAlias.md)
+- [SecretId](type-aliases/SecretId.md)
 - [SecretLifecycleStatus](type-aliases/SecretLifecycleStatus.md)
+- [VaultId](type-aliases/VaultId.md)
 - [VaultPrincipalKind](type-aliases/VaultPrincipalKind.md)
 
 ## Variables

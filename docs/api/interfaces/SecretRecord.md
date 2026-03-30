@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -8,7 +8,7 @@
 
 ### alias
 
-> **alias**: [`SecretAlias`](SecretAlias.md)
+> **alias**: `string`
 
 ***
 
@@ -32,7 +32,7 @@
 
 ### previousSecretId?
 
-> `optional` **previousSecretId?**: [`SecretId`](SecretId.md)
+> `optional` **previousSecretId?**: `string`
 
 ***
 
@@ -50,7 +50,7 @@
 
 ### secret\_id
 
-> **secret\_id**: [`SecretId`](SecretId.md)
+> **secret\_id**: `string`
 
 ***
 
@@ -68,7 +68,7 @@
 
 ### supersededBySecretId?
 
-> `optional` **supersededBySecretId?**: [`SecretId`](SecretId.md)
+> `optional` **supersededBySecretId?**: `string`
 
 ***
 
@@ -80,10 +80,10 @@
 
 ### vault\_id
 
-> **vault\_id**: [`VaultId`](VaultId.md)
+> **vault\_id**: `string`
 
 ***
 
 ### version
 
-> **version**: `SecretVersion`
+> **version**: `string`

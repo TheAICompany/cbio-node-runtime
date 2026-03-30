@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -26,11 +26,11 @@
 
 #### Get Signature
 
-> **get** **vault\_id**(): [`VaultId`](../interfaces/VaultId.md)
+> **get** **vault\_id**(): `string`
 
 ##### Returns
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 ## Methods
 
@@ -132,7 +132,7 @@
 
 ### agentListRequests()
 
-> **agentListRequests**(`command`): `Promise`\<readonly [`AgentVisibleRequestRecord`](../interfaces/AgentVisibleRequestRecord.md)[]\>
+> **agentListRequests**(`command`): `Promise`\<readonly [`AgentRequestRecord`](../interfaces/AgentRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -156,13 +156,13 @@
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleRequestRecord`](../interfaces/AgentVisibleRequestRecord.md)[]\>
+`Promise`\<readonly [`AgentRequestRecord`](../interfaces/AgentRequestRecord.md)[]\>
 
 ***
 
 ### agentListSecrets()
 
-> **agentListSecrets**(`command`): `Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
+> **agentListSecrets**(`command`): `Promise`\<readonly [`SecretRecord`](../interfaces/SecretRecord.md)[]\>
 
 #### Parameters
 
@@ -186,7 +186,7 @@
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
+`Promise`\<readonly [`SecretRecord`](../interfaces/SecretRecord.md)[]\>
 
 ***
 
@@ -286,7 +286,7 @@
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 ##### request?
 
@@ -312,7 +312,7 @@
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 ##### site\_id
 
@@ -364,7 +364,7 @@
 
 ###### vault_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 #### Returns
 
@@ -404,7 +404,7 @@
 
 ##### secret\_id?
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 #### Returns
 
@@ -414,7 +414,7 @@
 
 ### ownerListRequests()
 
-> **ownerListRequests**(`actor`, `root_agent_id?`): `Promise`\<readonly [`OwnerVisibleRequestRecord`](../interfaces/OwnerVisibleRequestRecord.md)[]\>
+> **ownerListRequests**(`actor`, `root_agent_id?`): `Promise`\<readonly [`OwnerRequestRecord`](../interfaces/OwnerRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -428,13 +428,13 @@
 
 #### Returns
 
-`Promise`\<readonly [`OwnerVisibleRequestRecord`](../interfaces/OwnerVisibleRequestRecord.md)[]\>
+`Promise`\<readonly [`OwnerRequestRecord`](../interfaces/OwnerRequestRecord.md)[]\>
 
 ***
 
 ### ownerListSecrets()
 
-> **ownerListSecrets**(`actor`): `Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
+> **ownerListSecrets**(`actor`): `Promise`\<readonly [`SecretRecord`](../interfaces/SecretRecord.md)[]\>
 
 #### Parameters
 
@@ -444,7 +444,7 @@
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleSecretRecord`](../interfaces/AgentVisibleSecretRecord.md)[]\>
+`Promise`\<readonly [`SecretRecord`](../interfaces/SecretRecord.md)[]\>
 
 ***
 
@@ -526,7 +526,7 @@
 
 ###### vault_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 #### Returns
 
@@ -564,7 +564,7 @@
 
 ###### vault_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 #### Returns
 
@@ -588,7 +588,7 @@
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 ##### request?
 
@@ -614,7 +614,7 @@
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 ##### site\_id
 
@@ -650,7 +650,7 @@
 
 ###### vault_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 #### Returns
 
@@ -692,7 +692,7 @@
 
 ###### vault_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 #### Returns
 

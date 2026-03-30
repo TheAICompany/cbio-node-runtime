@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -34,7 +34,7 @@
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 #### Returns
 
@@ -53,8 +53,6 @@
 #### Parameters
 
 ##### alias
-
-###### value
 
 `string`
 
@@ -76,7 +74,7 @@
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 #### Returns
 
@@ -96,7 +94,7 @@
 
 ##### vault\_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 #### Returns
 

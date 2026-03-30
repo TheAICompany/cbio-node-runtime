@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -34,11 +34,11 @@
 
 ##### vault\_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 ##### site\_id
 
@@ -62,11 +62,11 @@
 
 ##### vault\_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 ##### secret\_id
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 ##### site\_id
 
@@ -90,11 +90,11 @@
 
 ##### vault\_id
 
-[`VaultId`](../interfaces/VaultId.md)
+`string`
 
 ##### secret\_id?
 
-[`SecretId`](../interfaces/SecretId.md)
+`string`
 
 #### Returns
 

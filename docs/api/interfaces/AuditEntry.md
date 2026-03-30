@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -12,21 +12,9 @@
 
 ***
 
-### decision
+### error?
 
-> **decision**: `"allowed"` \| `"denied"`
-
-***
-
-### detail
-
-> **detail**: `string`
-
-***
-
-### error\_code?
-
-> `optional` **error\_code?**: `string` \| `null`
+> `optional` **error?**: `string`
 
 ***
 
@@ -36,59 +24,21 @@
 
 ***
 
-### execution\_status
+### function\_name
 
-> **execution\_status**: `"not_executed"` \| `"succeeded"` \| `"failed"`
-
-***
-
-### operation
-
-> **operation**: [`AuditOperation`](../enumerations/AuditOperation.md)
+> **function\_name**: `string`
 
 ***
 
-### request\_id?
+### input
 
-> `optional` **request\_id?**: `string`
-
-***
-
-### root\_agent\_id?
-
-> `optional` **root\_agent\_id?**: `string`
+> **input**: `Record`\<`string`, `any`\>
 
 ***
 
-### secret\_alias?
+### output?
 
-> `optional` **secret\_alias?**: `string`
-
-***
-
-### secret\_id?
-
-> `optional` **secret\_id?**: `string`
-
-***
-
-### site\_id?
-
-> `optional` **site\_id?**: `string`
-
-***
-
-### target?
-
-> `optional` **target?**: `object`
-
-#### kind
-
-> **kind**: `"http"` \| `"other"`
-
-#### url
-
-> **url**: `string`
+> `optional` **output?**: `any`
 
 ***
 

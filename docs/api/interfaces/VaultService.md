@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -8,7 +8,7 @@
 
 ### vault\_id
 
-> `readonly` **vault\_id**: [`VaultId`](VaultId.md)
+> `readonly` **vault\_id**: `string`
 
 ## Methods
 
@@ -94,7 +94,7 @@
 
 ### agentListRequests()
 
-> **agentListRequests**(`request`): `Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
+> **agentListRequests**(`request`): `Promise`\<readonly [`AgentRequestRecord`](AgentRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -104,13 +104,13 @@
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
+`Promise`\<readonly [`AgentRequestRecord`](AgentRequestRecord.md)[]\>
 
 ***
 
 ### agentListSecrets()
 
-> **agentListSecrets**(`request`): `Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+> **agentListSecrets**(`request`): `Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 #### Parameters
 
@@ -120,7 +120,7 @@
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+`Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 ***
 
@@ -302,7 +302,7 @@
 
 ### ownerListRequests()
 
-> **ownerListRequests**(`request`): `Promise`\<readonly [`OwnerVisibleRequestRecord`](OwnerVisibleRequestRecord.md)[]\>
+> **ownerListRequests**(`request`): `Promise`\<readonly [`OwnerRequestRecord`](OwnerRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -312,13 +312,13 @@
 
 #### Returns
 
-`Promise`\<readonly [`OwnerVisibleRequestRecord`](OwnerVisibleRequestRecord.md)[]\>
+`Promise`\<readonly [`OwnerRequestRecord`](OwnerRequestRecord.md)[]\>
 
 ***
 
 ### ownerListSecrets()
 
-> **ownerListSecrets**(`request`): `Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+> **ownerListSecrets**(`request`): `Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 #### Parameters
 
@@ -334,11 +334,11 @@
 
 ###### vault_id
 
-[`VaultId`](VaultId.md)
+`string`
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+`Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 ***
 
@@ -472,7 +472,7 @@
 
 ###### vault_id
 
-[`VaultId`](VaultId.md)
+`string`
 
 #### Returns
 

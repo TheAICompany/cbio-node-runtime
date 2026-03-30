@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -62,22 +62,22 @@ Introspects the current runtime environment, providing identity, grants, and a t
 
 ### agentListRequests()
 
-> **agentListRequests**(): `Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
+> **agentListRequests**(): `Promise`\<readonly [`AgentRequestRecord`](AgentRequestRecord.md)[]\>
 
 List previous requests sent by this agent.
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
+`Promise`\<readonly [`AgentRequestRecord`](AgentRequestRecord.md)[]\>
 
 ***
 
 ### agentListSecrets()
 
-> **agentListSecrets**(): `Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+> **agentListSecrets**(): `Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 List secrets the agent can see, including whether they are granted or not.
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+`Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>

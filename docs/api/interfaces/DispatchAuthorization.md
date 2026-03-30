@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -34,10 +34,10 @@
 
 ### secret\_id
 
-> **secret\_id**: [`SecretId`](SecretId.md) \| `null`
+> **secret\_id**: `string` \| `null`
 
 ***
 
 ### vault\_id
 
-> **vault\_id**: [`VaultId`](VaultId.md)
+> **vault\_id**: `string`

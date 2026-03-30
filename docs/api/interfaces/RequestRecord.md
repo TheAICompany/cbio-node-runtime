@@ -1,8 +1,13 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
 # Interface: RequestRecord
+
+## Extended by
+
+- [`AgentRequestRecord`](AgentRequestRecord.md)
+- [`OwnerRequestRecord`](OwnerRequestRecord.md)
 
 ## Properties
 
@@ -72,13 +77,9 @@
 
 > **method**: `string`
 
-#### secret\_alias?
-
-> `optional` **secret\_alias?**: `string`
-
 #### secret\_id
 
-> **secret\_id**: [`SecretId`](SecretId.md) \| `null`
+> **secret\_id**: `string` \| `null`
 
 #### target\_url
 
@@ -128,4 +129,4 @@
 
 ### vault\_id
 
-> **vault\_id**: [`VaultId`](VaultId.md)
+> **vault\_id**: `string`

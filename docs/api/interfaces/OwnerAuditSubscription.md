@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -12,9 +12,9 @@
 
 ***
 
-### operations?
+### function\_names?
 
-> `optional` **operations?**: readonly [`AuditOperation`](../enumerations/AuditOperation.md)[]
+> `optional` **function\_names?**: readonly `string`[]
 
 ***
 

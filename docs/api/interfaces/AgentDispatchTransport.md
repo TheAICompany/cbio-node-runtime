@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -56,7 +56,7 @@
 
 ### agentListRequests()
 
-> **agentListRequests**(`request`): `Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
+> **agentListRequests**(`request`): `Promise`\<readonly [`AgentRequestRecord`](AgentRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -66,13 +66,13 @@
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleRequestRecord`](AgentVisibleRequestRecord.md)[]\>
+`Promise`\<readonly [`AgentRequestRecord`](AgentRequestRecord.md)[]\>
 
 ***
 
 ### agentListSecrets()
 
-> **agentListSecrets**(`request`): `Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+> **agentListSecrets**(`request`): `Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 #### Parameters
 
@@ -82,4 +82,4 @@
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+`Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>

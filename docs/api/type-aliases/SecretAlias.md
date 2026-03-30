@@ -2,6 +2,6 @@
 
 ***
 
-# Type Alias: AgentId
+# Type Alias: SecretAlias
 
-> **AgentId** = `string`
+> **SecretAlias** = `string`

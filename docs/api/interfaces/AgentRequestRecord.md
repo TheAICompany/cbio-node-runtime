@@ -1,8 +1,12 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
 # Interface: AgentRequestRecord
+
+## Extends
+
+- [`RequestRecord`](RequestRecord.md)
 
 ## Properties
 
@@ -10,17 +14,69 @@
 
 > **created\_at**: `string`
 
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`created_at`](RequestRecord.md#created_at)
+
 ***
 
-### execution\_status
+### execution
 
-> **execution\_status**: [`DispatchStatus`](../enumerations/DispatchStatus.md)
+> **execution**: `object`
+
+#### status
+
+> **status**: [`DispatchStatus`](../enumerations/DispatchStatus.md)
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`execution`](RequestRecord.md#execution)
+
+***
+
+### missing\_grants?
+
+> `optional` **missing\_grants?**: `object`
+
+#### agent\_secret?
+
+> `optional` **agent\_secret?**: `boolean`
+
+#### secret\_destination?
+
+> `optional` **secret\_destination?**: `boolean`
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`missing_grants`](RequestRecord.md#missing_grants)
+
+***
+
+### pending\_dispatch\_event?
+
+> `optional` **pending\_dispatch\_event?**: `object`
+
+#### emitted\_at
+
+> **emitted\_at**: `string`
+
+#### event\_id
+
+> **event\_id**: `string`
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`pending_dispatch_event`](RequestRecord.md#pending_dispatch_event)
 
 ***
 
 ### reason
 
 > **reason**: `string`
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`reason`](RequestRecord.md#reason)
 
 ***
 
@@ -40,17 +96,17 @@
 
 > **method**: `string`
 
-#### secret\_alias?
+#### secret\_id
 
-> `optional` **secret\_alias?**: `string`
-
-#### secret\_id?
-
-> `optional` **secret\_id?**: [`SecretId`](SecretId.md)
+> **secret\_id**: `string` \| `null`
 
 #### target\_url
 
 > **target\_url**: `string`
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`request`](RequestRecord.md#request)
 
 ***
 
@@ -58,11 +114,19 @@
 
 > **request\_id**: `string`
 
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`request_id`](RequestRecord.md#request_id)
+
 ***
 
 ### requested\_at
 
 > **requested\_at**: `string`
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`requested_at`](RequestRecord.md#requested_at)
 
 ***
 
@@ -86,8 +150,26 @@
 
 > `optional` **status?**: `number`
 
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`response`](RequestRecord.md#response)
+
 ***
 
-### secret\_id?
+### root\_agent\_id
 
-> `optional` **secret\_id?**: [`SecretId`](SecretId.md)
+> **root\_agent\_id**: `string`
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`root_agent_id`](RequestRecord.md#root_agent_id)
+
+***
+
+### vault\_id
+
+> **vault\_id**: `string`
+
+#### Inherited from
+
+[`RequestRecord`](RequestRecord.md).[`vault_id`](RequestRecord.md#vault_id)

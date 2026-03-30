@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.73.0**](../README.md)
 
 ***
 
@@ -228,7 +228,7 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ### ownerListRequests()
 
-> **ownerListRequests**(`input?`): `Promise`\<readonly [`OwnerVisibleRequestRecord`](OwnerVisibleRequestRecord.md)[]\>
+> **ownerListRequests**(`input?`): `Promise`\<readonly [`OwnerRequestRecord`](OwnerRequestRecord.md)[]\>
 
 #### Parameters
 
@@ -238,13 +238,13 @@ A client for vault owners to manage secrets, agents, and grants.
 
 #### Returns
 
-`Promise`\<readonly [`OwnerVisibleRequestRecord`](OwnerVisibleRequestRecord.md)[]\>
+`Promise`\<readonly [`OwnerRequestRecord`](OwnerRequestRecord.md)[]\>
 
 ***
 
 ### ownerListSecrets()
 
-> **ownerListSecrets**(`input?`): `Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+> **ownerListSecrets**(`input?`): `Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 #### Parameters
 
@@ -254,7 +254,7 @@ A client for vault owners to manage secrets, agents, and grants.
 
 #### Returns
 
-`Promise`\<readonly [`AgentVisibleSecretRecord`](AgentVisibleSecretRecord.md)[]\>
+`Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
 
 ***
 
