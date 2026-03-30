@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
 
 ***
 
@@ -6,9 +6,9 @@
 
 ## Properties
 
-### alias
+### alias?
 
-> **alias**: `string`
+> `optional` **alias?**: `string`
 
 ***
 

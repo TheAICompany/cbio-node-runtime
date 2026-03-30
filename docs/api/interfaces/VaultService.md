@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
 
 ***
 
@@ -158,7 +158,7 @@
 
 ### ownerExportSecret()
 
-> **ownerExportSecret**(`request`): `Promise`\<`OwnerSecretExport`\>
+> **ownerExportSecret**(`request`): `Promise`\<readonly `OwnerSecretExport`[]\>
 
 #### Parameters
 
@@ -168,7 +168,7 @@
 
 #### Returns
 
-`Promise`\<`OwnerSecretExport`\>
+`Promise`\<readonly `OwnerSecretExport`[]\>
 
 ***
 

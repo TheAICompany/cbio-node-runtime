@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
 
 ***
 
@@ -75,6 +75,12 @@
 ### REVOKE\_SECRET
 
 > **REVOKE\_SECRET**: `"grant.revoke_secret"`
+
+***
+
+### SECRET\_BATCH\_EXPORT
+
+> **SECRET\_BATCH\_EXPORT**: `"secret.batch_export"`
 
 ***
 

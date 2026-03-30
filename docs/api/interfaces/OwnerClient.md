@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
 
 ***
 
@@ -90,7 +90,7 @@ A client for vault owners to manage secrets, agents, and grants.
 
 ### ownerExportSecret()
 
-> **ownerExportSecret**(`input`): `Promise`\<`OwnerSecretExport`\>
+> **ownerExportSecret**(`input`): `Promise`\<readonly `OwnerSecretExport`[]\>
 
 #### Parameters
 
@@ -100,7 +100,7 @@ A client for vault owners to manage secrets, agents, and grants.
 
 #### Returns
 
-`Promise`\<`OwnerSecretExport`\>
+`Promise`\<readonly `OwnerSecretExport`[]\>
 
 ***
 

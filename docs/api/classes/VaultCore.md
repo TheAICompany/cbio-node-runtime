@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.71.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.72.0**](../README.md)
 
 ***
 
@@ -232,7 +232,7 @@
 
 ### ownerExportSecret()
 
-> **ownerExportSecret**(`actor`, `alias`): `Promise`\<`OwnerSecretExport`\>
+> **ownerExportSecret**(`actor`, `alias?`): `Promise`\<readonly `OwnerSecretExport`[]\>
 
 #### Parameters
 
@@ -240,13 +240,13 @@
 
 [`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
 
-##### alias
+##### alias?
 
 `string`
 
 #### Returns
 
-`Promise`\<`OwnerSecretExport`\>
+`Promise`\<readonly `OwnerSecretExport`[]\>
 
 ***
 
