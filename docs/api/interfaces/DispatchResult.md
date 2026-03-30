@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.69.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.70.1**](../README.md)
 
 ***
 
