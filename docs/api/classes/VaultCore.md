@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.74.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
 
 ***
 
@@ -555,6 +555,40 @@
 `string`
 
 ###### requested_at
+
+`string`
+
+###### vault_id
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerRemoveAgentIdentity()
+
+> **ownerRemoveAgentIdentity**(`command`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### command
+
+###### owner
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md)
+
+###### request_id
+
+`string`
+
+###### requested_at
+
+`string`
+
+###### root_agent_id
 
 `string`
 

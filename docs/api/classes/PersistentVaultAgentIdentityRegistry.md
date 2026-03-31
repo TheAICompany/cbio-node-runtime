@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.74.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
 
 ***
 
@@ -29,6 +29,30 @@
 `SqliteAgentIdentityRegistry`
 
 ## Methods
+
+### delete()
+
+> **delete**(`vault_id`, `root_agent_id`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### vault\_id
+
+`string`
+
+##### root\_agent\_id
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Implementation of
+
+`AgentIdentityRegistry.delete`
+
+***
 
 ### get()
 

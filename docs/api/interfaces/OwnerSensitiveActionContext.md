@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.74.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
 
 ***
 
@@ -8,7 +8,7 @@
 
 ### action
 
-> **action**: `"read_secret_plaintext"` \| `"export_secret"` \| `"read_agent_private_key"` \| `"delete_secret"`
+> **action**: `"read_secret_plaintext"` \| `"export_secret"` \| `"read_agent_private_key"` \| `"delete_secret"` \| `"delete_agent"`
 
 ***
 

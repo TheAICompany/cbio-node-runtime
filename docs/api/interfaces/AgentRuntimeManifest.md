@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.74.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
 
 ***
 
@@ -32,6 +32,18 @@
 
 ***
 
+### operating\_rules?
+
+> `optional` **operating\_rules?**: readonly `string`[]
+
+***
+
+### product\_intro?
+
+> `optional` **product\_intro?**: `string`
+
+***
+
 ### root\_agent\_id
 
 > **root\_agent\_id**: `string`
@@ -53,3 +65,9 @@
 ### vault\_nickname?
 
 > `optional` **vault\_nickname?**: `string`
+
+***
+
+### what\_you\_can\_do?
+
+> `optional` **what\_you\_can\_do?**: readonly `string`[]

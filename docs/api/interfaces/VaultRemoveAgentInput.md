@@ -2,15 +2,9 @@
 
 ***
 
-# Interface: VaultExportSecretInput
+# Interface: VaultRemoveAgentInput
 
 ## Properties
-
-### alias?
-
-> `optional` **alias?**: `string`
-
-***
 
 ### password
 
@@ -21,6 +15,12 @@
 ### requested\_at?
 
 > `optional` **requested\_at?**: `string`
+
+***
+
+### root\_agent\_id
+
+> **root\_agent\_id**: `string`
 
 ***
 

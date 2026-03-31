@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.74.0**
+**CBIO Node Runtime Agent API v1.75.4**
 
 ***
 
-# CBIO Node Runtime Agent API v1.74.0
+# CBIO Node Runtime Agent API v1.75.4
 
 ## Enumerations
 
@@ -91,6 +91,7 @@
 - [VaultProfile](interfaces/VaultProfile.md)
 - [VaultReadAgentPrivateKeyInput](interfaces/VaultReadAgentPrivateKeyInput.md)
 - [VaultReadSecretPlaintextInput](interfaces/VaultReadSecretPlaintextInput.md)
+- [VaultRemoveAgentInput](interfaces/VaultRemoveAgentInput.md)
 - [VaultRevokeAgentSecretInput](interfaces/VaultRevokeAgentSecretInput.md)
 - [VaultRevokeSecretDestinationInput](interfaces/VaultRevokeSecretDestinationInput.md)
 - [VaultRevokeSessionTokenInput](interfaces/VaultRevokeSessionTokenInput.md)

@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.74.0**](../README.md)
+[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
 
 ***
 
@@ -415,6 +415,22 @@
 ##### request
 
 `OwnerRegisterAgentIdentityCommand`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ownerRemoveAgentIdentity()
+
+> **ownerRemoveAgentIdentity**(`request`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### request
+
+`OwnerRemoveAgentIdentityCommand`
 
 #### Returns
 
