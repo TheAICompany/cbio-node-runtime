@@ -29,6 +29,7 @@ export {
   createVault,
   recoverVault,
   listVaults,
+  listVaultEntries,
   updateVaultMetadata,
   type CreateVaultOptions,
   type CreatedVault,
@@ -36,6 +37,7 @@ export {
   type RecoveredVault,
   type VaultObject,
   type VaultMetadata,
+  type VaultListEntry,
 } from "./bootstrap.js";
 export {
   openOwnerSession,
@@ -176,6 +178,7 @@ export interface CbioRuntime {
   createIdentity: typeof import("./identity.js").createIdentity;
   restoreIdentity: typeof import("./identity.js").restoreIdentity;
   listVaults: typeof import("./bootstrap.js").listVaults;
+  listVaultEntries: typeof import("./bootstrap.js").listVaultEntries;
   createVault: typeof import("./bootstrap.js").createVault;
   recoverVault: typeof import("./bootstrap.js").recoverVault;
   openOwnerSession: typeof import("./owner-session.js").openOwnerSession;

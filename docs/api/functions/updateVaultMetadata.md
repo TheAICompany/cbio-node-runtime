@@ -24,10 +24,6 @@ Updates the metadata (like nickname) of an existing vault.
 
 `string`
 
-#### password
-
-`string`
-
 ## Returns
 
 `Promise`\<`void`\>

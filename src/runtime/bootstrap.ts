@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createVaultCore } from "../vault-core/core.js";
 import {
   createPersistentVaultCoreDependencies,
@@ -21,6 +22,7 @@ import { createWorkspaceStorage } from "./workspace-storage.js";
 
 const VAULT_STORAGE_LAYOUT_VERSION = 1;
 const VAULT_STORAGE_DIR_VERSION_SUFFIX = `_v${VAULT_STORAGE_LAYOUT_VERSION}`;
+const VAULT_PUBLIC_PROFILE_KEY = "profile.public.json";
 
 function vaultStoragePrefix(vault_id: string): string {
   return `vaults/${vault_id}${VAULT_STORAGE_DIR_VERSION_SUFFIX}`;
@@ -40,6 +42,11 @@ function parseVaultStorageDirName(entry: string): { vault_id: string; version: n
 export interface VaultMetadata extends Record<string, any> {
   nickname?: string;
   ownerId?: string;
+}
+
+export interface VaultListEntry {
+  vault_id: string;
+  nickname?: string;
 }
 
 export interface CreateVaultOptions extends Omit<CreatePersistentVaultCoreDependenciesOptions, "vaultWorkingKey" | "vault_id"> {
@@ -64,6 +71,8 @@ export interface CreatedVault {
   nickname?: string;
   /** The anchored storage provider for this vault. */
   storage: IStorageProvider;
+  /** Internal working key for metadata/profile operations. */
+  vaultWorkingKey: string;
   /** Verifies whether a supplied password can unlock this vault. */
   verifyPassword(password: string): Promise<boolean>;
 }
@@ -73,6 +82,7 @@ export interface VaultObject {
   vault: VaultService;
   nickname?: string;
   storage: IStorageProvider;
+  vaultWorkingKey: string;
   verifyPassword(password: string): Promise<boolean>;
 }
 
@@ -119,6 +129,28 @@ async function verifyVaultPassword(storage: IStorageProvider, vault_id: string, 
   } catch {
     // Password verification should be boolean-only and never leak low-level crypto errors.
     return false;
+  }
+}
+
+async function writeVaultPublicProfile(
+  storage: IStorageProvider,
+  profile: { nickname?: string },
+): Promise<void> {
+  if (!storage.write) return;
+  await storage.write(VAULT_PUBLIC_PROFILE_KEY, Buffer.from(JSON.stringify(profile), "utf8"));
+}
+
+async function readVaultPublicProfile(
+  storage: IStorageProvider,
+): Promise<{ nickname?: string }> {
+  if (!storage.read) return {};
+  try {
+    const data = await storage.read(VAULT_PUBLIC_PROFILE_KEY);
+    if (!data) return {};
+    const parsed = JSON.parse(Buffer.from(data).toString("utf8")) as { nickname?: unknown };
+    return { nickname: typeof parsed.nickname === "string" ? parsed.nickname : undefined };
+  } catch {
+    return {};
   }
 }
 
@@ -179,12 +211,14 @@ export async function createVault(
     nickname,
     ...options.metadata,
   }, vaultWorkingKey, vault_id);
+  await writeVaultPublicProfile(storage, { nickname });
 
   return {
     core,
     vault: wrapVaultCoreAsVaultService(core, options.vault),
     nickname,
     storage,
+    vaultWorkingKey,
     verifyPassword: async (password: string) => verifyVaultPassword(storage, vault_id, password),
   };
 }
@@ -242,6 +276,7 @@ export async function recoverVault(
     vault: wrapVaultCoreAsVaultService(core, options.vault),
     nickname: profile.nickname,
     storage,
+    vaultWorkingKey,
     verifyPassword: async (password: string) => verifyVaultPassword(storage, options.vault_id, password),
   };
 }
@@ -253,6 +288,11 @@ export async function recoverVault(
  * @returns A list of vault IDs.
  */
 export async function listVaults(storage: IStorageProvider): Promise<string[]> {
+  const entries = await listVaultEntries(storage);
+  return entries.map((entry) => entry.vault_id);
+}
+
+export async function listVaultEntries(storage: IStorageProvider): Promise<VaultListEntry[]> {
   if (!storage.list) {
     return [];
   }
@@ -268,7 +308,15 @@ export async function listVaults(storage: IStorageProvider): Promise<string[]> {
       latestByVaultId.set(parsed.vault_id, parsed.version);
     }
   }
-  return [...latestByVaultId.keys()];
+  const vaultIds = [...latestByVaultId.keys()];
+  const items = await Promise.all(
+    vaultIds.map(async (vault_id) => {
+      const vaultStorage = createPrefixedStorage(storage, vaultStoragePrefix(vault_id));
+      const profile = await readVaultPublicProfile(vaultStorage);
+      return { vault_id, nickname: profile.nickname } satisfies VaultListEntry;
+    }),
+  );
+  return items;
 }
 
 /**
@@ -276,17 +324,19 @@ export async function listVaults(storage: IStorageProvider): Promise<string[]> {
  */
 export async function updateVaultMetadata(
   vault: CreatedVault | RecoveredVault,
-  options: { nickname?: string; metadata?: Record<string, any>; password: string },
+  options: { nickname?: string; metadata?: Record<string, any> },
 ): Promise<void> {
   const vault_id = vault.core.vault_id;
-  const vaultWorkingKey = deriveVaultWorkingKeyFromPassword(options.password, vault_id);
   
   // Read current profile to preserve other fields
-  const current = await readVaultProfile(vault.storage, vaultWorkingKey, vault_id);
+  const current = await readVaultProfile(vault.storage, vault.vaultWorkingKey, vault_id);
   
   await writeVaultProfile(vault.storage, {
     ...(current || {}),
     nickname: options.nickname ?? current?.nickname,
     ...(options.metadata ?? {}),
-  }, vaultWorkingKey, vault_id);
+  }, vault.vaultWorkingKey, vault_id);
+  await writeVaultPublicProfile(vault.storage, {
+    nickname: options.nickname ?? current?.nickname,
+  });
 }
