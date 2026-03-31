@@ -20,6 +20,14 @@ export type SecretLifecycleStatus =
   | "SUPERSEDED"
   | "REMOVED";
 
+export interface SiteRecord {
+  vault_id: VaultId;
+  site_id: string;
+  domain: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SecretRecord {
   vault_id: VaultId;
   secret_id: SecretId;
@@ -217,6 +225,38 @@ export interface AgentRuntimeManifest {
     secret_destinations: readonly SecretDestinationGrant[];
   };
   tools: readonly VaultToolDefinition[];
+}
+
+export interface OwnerCreateSiteRequest {
+  vault_id: VaultId;
+  request_id: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  domain: string;
+  requested_at: string;
+}
+
+export interface OwnerUpdateSiteRequest {
+  vault_id: VaultId;
+  request_id: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  site_id: string;
+  domain: string;
+  requested_at: string;
+}
+
+export interface OwnerDeleteSiteRequest {
+  vault_id: VaultId;
+  request_id: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  site_id: string;
+  requested_at: string;
+}
+
+export interface OwnerListSitesRequest {
+  vault_id: VaultId;
+  request_id: string;
+  actor: VaultPrincipal & { kind: "owner" };
+  requested_at: string;
 }
 
 export interface RequestRecord {

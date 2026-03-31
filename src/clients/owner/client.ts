@@ -35,9 +35,26 @@ import type {
   VaultRevokeSecretDestinationInput,
   VaultListGrantsInput,
   VaultApproveDispatchInput,
+  VaultCreateSiteInput,
+  VaultUpdateSiteInput,
+  VaultDeleteSiteInput,
+  VaultListSitesInput,
 } from "./contracts.js";
 
 const VAULT_MASTER_ID = "vault-master";
+
+function normalizeSiteDomain(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new VaultCoreError("site domain is required", "VAULT_INTERNAL_ERROR");
+  }
+  try {
+    const url = trimmed.includes("://") ? new URL(trimmed) : new URL(`https://${trimmed}`);
+    return url.hostname;
+  } catch {
+    throw new VaultCoreError("invalid site domain", "VAULT_INTERNAL_ERROR");
+  }
+}
 
 class DefaultOwnerClient implements OwnerClient {
   private readonly _root_agent_id: string;
@@ -399,12 +416,19 @@ class DefaultOwnerClient implements OwnerClient {
     const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
+    const domain = normalizeSiteDomain(input.site_id);
+    const sites = await this.ownerListSites();
+    let site = sites.find(s => s.domain === domain);
+    if (!site) {
+      site = await this.ownerCreateSite({ domain, requested_at });
+    }
+
     return await this._vault.ownerGrantSecretDestination({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("grant_secret_destination"),
       actor: { kind: "owner", id: this._root_agent_id },
       secret_id: secret.secret_id,
-      site_id: input.site_id,
+      site_id: site.site_id,
       requested_at,
     } as any);
   }
@@ -431,12 +455,17 @@ class DefaultOwnerClient implements OwnerClient {
     const secret = secrets.find(s => s.alias === input.secret_alias);
     if (!secret) throw new VaultCoreError(`secret not found: ${input.secret_alias}`, "VAULT_SECRET_NOT_FOUND");
 
+    const domain = normalizeSiteDomain(input.site_id);
+    const sites = await this.ownerListSites();
+    const site = sites.find(s => s.domain === domain || s.site_id === input.site_id);
+    const site_id = site ? site.site_id : input.site_id;
+
     return this._vault.ownerRevokeSecretDestination({
       vault_id: this._vault.vault_id,
       request_id: createRequestIdValue("revoke_secret_destination"),
       actor: { kind: "owner", id: this._root_agent_id },
       secret_id: secret.secret_id,
-      site_id: input.site_id,
+      site_id,
       requested_at,
     } as any);
   }
@@ -609,6 +638,56 @@ class DefaultOwnerClient implements OwnerClient {
 
   ownerOnAudit(subscription: import("../../vault-core/index.js").OwnerAuditSubscription): () => void {
     return this._vault.ownerOnAudit(subscription);
+  }
+
+  async ownerCreateSite(input: VaultCreateSiteInput) {
+    const requested_at = input.requested_at ?? this._clock.nowIso();
+    const request_id = createRequestIdValue("create_site");
+    const domain = normalizeSiteDomain(input.domain);
+    return this._vault.ownerCreateSite({
+      vault_id: this._vault.vault_id,
+      request_id,
+      actor: { kind: "owner", id: this._root_agent_id },
+      domain,
+      requested_at,
+    } as any);
+  }
+
+  async ownerUpdateSite(input: VaultUpdateSiteInput) {
+    const requested_at = input.requested_at ?? this._clock.nowIso();
+    const request_id = createRequestIdValue("update_site");
+    const domain = normalizeSiteDomain(input.domain);
+    return this._vault.ownerUpdateSite({
+      vault_id: this._vault.vault_id,
+      request_id,
+      actor: { kind: "owner", id: this._root_agent_id },
+      site_id: input.site_id,
+      domain,
+      requested_at,
+    } as any);
+  }
+
+  async ownerDeleteSite(input: VaultDeleteSiteInput) {
+    const requested_at = input.requested_at ?? this._clock.nowIso();
+    const request_id = createRequestIdValue("delete_site");
+    await this._vault.ownerDeleteSite({
+      vault_id: this._vault.vault_id,
+      request_id,
+      actor: { kind: "owner", id: this._root_agent_id },
+      site_id: input.site_id,
+      requested_at,
+    } as any);
+  }
+
+  async ownerListSites(input: VaultListSitesInput = {}) {
+    const requested_at = input.requested_at ?? this._clock.nowIso();
+    const request_id = createRequestIdValue("list_sites");
+    return this._vault.ownerListSites({
+      vault_id: this._vault.vault_id,
+      request_id,
+      actor: { kind: "owner", id: this._root_agent_id },
+      requested_at,
+    } as any);
   }
 }
 

@@ -22,6 +22,7 @@ import {
   type SecretRecord,
   type SecretVersion,
   type VaultId,
+  type SiteRecord,
 } from "./contracts.js";
 import type {
   AgentIdentityRegistry,
@@ -35,6 +36,7 @@ import type {
   SecretCustody,
   SecretRepository,
   VaultCoreDependencies,
+  SiteRegistry,
 } from "./ports.js";
 import {
     DefaultPolicyEngine,
@@ -250,6 +252,58 @@ export class SqliteAgentIdentityRegistry implements AgentIdentityRegistry {
   }
 }
 
+export class SqliteSiteRegistry implements SiteRegistry {
+  constructor(private db: Database.Database) {}
+
+  async upsert(site: SiteRecord): Promise<void> {
+    this.db.prepare(`
+      INSERT INTO sites (vault_id, site_id, domain, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(vault_id, site_id) DO UPDATE SET
+        domain = excluded.domain,
+        updated_at = excluded.updated_at
+    `).run(
+      site.vault_id,
+      site.site_id,
+      site.domain,
+      site.created_at,
+      site.updated_at,
+    );
+  }
+
+  async get(vault_id: VaultId, site_id: string): Promise<SiteRecord | null> {
+    const row = this.db.prepare(`
+      SELECT vault_id, site_id, domain, created_at, updated_at
+      FROM sites
+      WHERE vault_id = ? AND site_id = ?
+    `).get(vault_id, site_id) as SiteRecord | undefined;
+    return row ?? null;
+  }
+
+  async getByDomain(vault_id: VaultId, domain: string): Promise<SiteRecord | null> {
+    const row = this.db.prepare(`
+      SELECT vault_id, site_id, domain, created_at, updated_at
+      FROM sites
+      WHERE vault_id = ? AND domain = ?
+    `).get(vault_id, domain) as SiteRecord | undefined;
+    return row ?? null;
+  }
+
+  async list(vault_id: VaultId): Promise<readonly SiteRecord[]> {
+    const rows = this.db.prepare(`
+      SELECT vault_id, site_id, domain, created_at, updated_at
+      FROM sites
+      WHERE vault_id = ?
+    `).all(vault_id) as SiteRecord[];
+    return rows;
+  }
+
+  async delete(vault_id: VaultId, site_id: string): Promise<void> {
+    this.db.prepare(`DELETE FROM sites WHERE vault_id = ? AND site_id = ?`)
+      .run(vault_id, site_id);
+  }
+}
+
 export class SqliteAgentSecretGrantRegistry implements AgentSecretGrantRegistry {
   constructor(private db: Database.Database) {}
   async upsert(grant: AgentSecretGrant): Promise<void> {
@@ -448,6 +502,15 @@ function initDb(baseDir: string): Database.Database {
     CREATE TABLE IF NOT EXISTS agents (vault_id TEXT, root_agent_id TEXT, record TEXT, PRIMARY KEY(vault_id, root_agent_id));
     CREATE TABLE IF NOT EXISTS grants (vault_id TEXT, root_agent_id TEXT, secret_id TEXT, record TEXT, PRIMARY KEY(vault_id, root_agent_id, secret_id));
     CREATE TABLE IF NOT EXISTS destination_grants (vault_id TEXT, secret_id TEXT, site_id TEXT, record TEXT, PRIMARY KEY(vault_id, secret_id, site_id));
+    CREATE TABLE IF NOT EXISTS sites (
+      vault_id TEXT,
+      site_id TEXT,
+      domain TEXT,
+      created_at TEXT,
+      updated_at TEXT,
+      PRIMARY KEY (vault_id, site_id),
+      UNIQUE (vault_id, domain)
+    );
     CREATE TABLE IF NOT EXISTS requests (vault_id TEXT, request_id TEXT PRIMARY KEY, root_agent_id TEXT, secret_id TEXT, record TEXT);
     CREATE TABLE IF NOT EXISTS session_tokens (root_agent_id TEXT PRIMARY KEY, token TEXT UNIQUE, record TEXT);
   `);
@@ -464,6 +527,7 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
   const db = initDb(baseDir);
   const custody = new SqliteSecretCustody(db, options.vaultWorkingKey);
   const agentRecords = new SqliteAgentIdentityRegistry(db, custody);
+  const sites: SiteRegistry = new SqliteSiteRegistry(db);
   const sessionTokenRegistry = new SqliteSessionTokenRegistry(db);
   return {
     vault_id: options.vault_id,
@@ -472,6 +536,7 @@ export function createPersistentVaultCoreDependencies(storage: { getBaseDir(): s
     agentRecords,
     agent_secretGrants: new SqliteAgentSecretGrantRegistry(db),
     secret_destinationGrants: new SqliteSecretDestinationGrantRegistry(db),
+    sites,
     audit: new SqliteAuditLog(db),
     requests: new SqliteRequestRecordRegistry(db),
     custody,

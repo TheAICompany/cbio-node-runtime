@@ -27,6 +27,7 @@ import {
   type OwnerUpdateSecretCommand,
   type OwnerSecretExport,
   type OwnerSessionToken,
+  type SiteRecord,
 } from "./contracts.js";
 import { type VaultCoreErrorCode, VaultCoreError } from "./errors.js";
 import type { VaultCoreDependencies } from "./ports.js";
@@ -191,6 +192,102 @@ export class VaultCore {
     return { agent_secrets, secret_destinations };
   }
 
+  // ─── Site Management ──────────────────────────────────────────────────────────
+
+  async ownerCreateSite(
+    actor: VaultPrincipal & { kind: "owner" },
+    domain: string,
+    request?: { request_id?: string },
+  ): Promise<SiteRecord> {
+    this._assertOwnerPrincipal(actor);
+    const now = this._deps.clock.nowIso();
+    const site_id = this._deps.ids.newRequestId("site");
+    const site: SiteRecord = {
+      vault_id: this._deps.vault_id,
+      site_id,
+      domain,
+      created_at: now,
+      updated_at: now,
+    };
+    await this._deps.sites.upsert(site);
+    await this._appendAuditEntry(
+      actor,
+      "ownerCreateSite",
+      { site_id, domain, request_id: request?.request_id },
+      site,
+    );
+    return site;
+  }
+
+  async ownerUpdateSite(
+    actor: VaultPrincipal & { kind: "owner" },
+    site_id: string,
+    domain: string,
+    request?: { request_id?: string },
+  ): Promise<SiteRecord> {
+    this._assertOwnerPrincipal(actor);
+    const existing = await this._deps.sites.get(this._deps.vault_id, site_id);
+    if (!existing) {
+      throw new VaultCoreError(`site not found: ${site_id}`, "VAULT_INTERNAL_ERROR");
+    }
+    const now = this._deps.clock.nowIso();
+    const updated: SiteRecord = {
+      ...existing,
+      domain,
+      updated_at: now,
+    };
+    await this._deps.sites.upsert(updated);
+    await this._appendAuditEntry(
+      actor,
+      "ownerUpdateSite",
+      { site_id, domain, request_id: request?.request_id },
+      updated,
+    );
+    return updated;
+  }
+
+  async ownerDeleteSite(
+    actor: VaultPrincipal & { kind: "owner" },
+    site_id: string,
+    request?: { request_id?: string },
+  ): Promise<void> {
+    this._assertOwnerPrincipal(actor);
+    const allGrants = await this._deps.secret_destinationGrants.list(this._deps.vault_id);
+    await Promise.all(
+      allGrants
+        .filter((g) => g.site_id === site_id)
+        .map((g) =>
+          this._deps.secret_destinationGrants.delete(this._deps.vault_id, g.secret_id, site_id),
+        ),
+    );
+
+    // Orphan cleanup: if a secret now has no destination grants at all,
+    // its agent-secret grants can never be authorized anymore.
+    const remainingDestinationGrants = await this._deps.secret_destinationGrants.list(this._deps.vault_id);
+    const secretIdsWithAnyDestination = new Set(remainingDestinationGrants.map((g) => g.secret_id));
+    const remainingAgentSecretGrants = await this._deps.agent_secretGrants.list(this._deps.vault_id);
+    await Promise.all(
+      remainingAgentSecretGrants
+        .filter((g) => !secretIdsWithAnyDestination.has(g.secret_id))
+        .map((g) => this._deps.agent_secretGrants.delete(this._deps.vault_id, g.root_agent_id, g.secret_id)),
+    );
+
+    await this._deps.sites.delete(this._deps.vault_id, site_id);
+    await this._appendAuditEntry(
+      actor,
+      "ownerDeleteSite",
+      { site_id, request_id: request?.request_id },
+      undefined,
+    );
+  }
+
+  async ownerListSites(
+    actor: VaultPrincipal & { kind: "owner" },
+  ): Promise<readonly SiteRecord[]> {
+    this._assertOwnerPrincipal(actor);
+    return this._deps.sites.list(this._deps.vault_id);
+  }
+
   // ─── Dispatch Authorization ───────────────────────────────────────────────────
 
   async agentAuthorizeDispatch(request: DispatchRequest): Promise<DispatchAuthorization> {
@@ -214,10 +311,18 @@ export class VaultCore {
     const agent_secretGrant = await this._deps.agent_secretGrants.get(this._deps.vault_id, agent.id, secret.secret_id);
     const agent_secretApproved = agent_secretGrant?.status === "approved";
 
-    // 2. Check Secret-Destination Grant
-    const site_id = extractDomain(target_url);
-    const destGrant = await this._deps.secret_destinationGrants.get(this._deps.vault_id, secret.secret_id, site_id);
-    const destApproved = destGrant?.status === "approved";
+    // 2. Check Secret-Destination Grant via sites registry
+    const domain = extractDomain(target_url);
+    const site = await this._deps.sites.getByDomain(this._deps.vault_id, domain);
+    let destApproved = false;
+    if (site) {
+      const destGrant = await this._deps.secret_destinationGrants.get(
+        this._deps.vault_id,
+        secret.secret_id,
+        site.site_id,
+      );
+      destApproved = destGrant?.status === "approved";
+    }
 
     if (agent_secretApproved && destApproved) {
       return { vault_id: this._deps.vault_id, decision: "allow", reason: "granted", secret_id: secret.secret_id };
@@ -612,6 +717,17 @@ export class VaultCore {
     for (const grant of grants) {
       await this._deps.agent_secretGrants.delete(command.vault_id, command.root_agent_id, grant.secret_id);
     }
+
+    // Orphan cleanup: if a secret now has no agent-secret grants at all,
+    // its destination grants can never be used by any agent anymore.
+    const remainingAgentSecretGrants = await this._deps.agent_secretGrants.list(command.vault_id);
+    const secretIdsWithAnyAgentSecret = new Set(remainingAgentSecretGrants.map((g) => g.secret_id));
+    const destinationGrants = await this._deps.secret_destinationGrants.list(command.vault_id);
+    await Promise.all(
+      destinationGrants
+        .filter((g) => !secretIdsWithAnyAgentSecret.has(g.secret_id))
+        .map((g) => this._deps.secret_destinationGrants.delete(command.vault_id, g.secret_id, g.site_id)),
+    );
 
     await this._deps.agentRecords.delete(command.vault_id, command.root_agent_id);
     await this._appendAuditEntry(

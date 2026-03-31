@@ -154,6 +154,12 @@ export interface VaultService {
   ownerIssueAllAgentSessionTokens(actor: VaultPrincipal & { kind: "owner" }): Promise<import("../vault-core/index.js").OwnerSessionToken[]>;
   ownerRevokeSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void>;
 
+  // Site Management
+  ownerCreateSite(request: import("../vault-core/index.js").OwnerCreateSiteRequest): Promise<import("../vault-core/index.js").SiteRecord>;
+  ownerUpdateSite(request: import("../vault-core/index.js").OwnerUpdateSiteRequest): Promise<import("../vault-core/index.js").SiteRecord>;
+  ownerDeleteSite(request: import("../vault-core/index.js").OwnerDeleteSiteRequest): Promise<void>;
+  ownerListSites(request: import("../vault-core/index.js").OwnerListSitesRequest): Promise<readonly import("../vault-core/index.js").SiteRecord[]>;
+
   // Dispatch & Approval
   agentDispatch(request: DispatchRequest): Promise<DispatchResult>;
   ownerApproveDispatch(request: import("../vault-core/index.js").OwnerApproveDispatchCommand): Promise<DispatchResult | null>;
@@ -271,6 +277,35 @@ class LocalVaultService implements VaultService {
 
   ownerRevokeSessionToken(request: { vault_id: VaultId; actor: VaultPrincipal & { kind: "owner" }; token: string }): Promise<void> {
     return this._authority.ownerRevokeSessionToken(request);
+  }
+
+  ownerCreateSite(request: import("../vault-core/index.js").OwnerCreateSiteRequest) {
+    return this._authority.ownerCreateSite(
+      request.actor as any,
+      request.domain,
+      { request_id: request.request_id },
+    );
+  }
+
+  ownerUpdateSite(request: import("../vault-core/index.js").OwnerUpdateSiteRequest) {
+    return this._authority.ownerUpdateSite(
+      request.actor as any,
+      request.site_id,
+      request.domain,
+      { request_id: request.request_id },
+    );
+  }
+
+  ownerDeleteSite(request: import("../vault-core/index.js").OwnerDeleteSiteRequest) {
+    return this._authority.ownerDeleteSite(
+      request.actor as any,
+      request.site_id,
+      { request_id: request.request_id },
+    );
+  }
+
+  ownerListSites(request: import("../vault-core/index.js").OwnerListSitesRequest) {
+    return this._authority.ownerListSites(request.actor as any);
   }
 
   agentDispatch(request: DispatchRequest): Promise<DispatchResult> {

@@ -29,6 +29,7 @@ import type {
   VaultPrincipal,
   StoredSessionToken,
   SecretVersion,
+  SiteRecord,
 } from "./contracts.js";
 import { VaultCoreError } from "./errors.js";
 import { DispatchStatus } from "./contracts.js";
@@ -51,6 +52,7 @@ import {
   ReplayGuard,
   SecretCustody,
   SecretRepository,
+  SiteRegistry,
 } from "./ports.js";
 
 export interface DefaultPolicyEngineOptions {
@@ -570,6 +572,41 @@ export class InMemoryReplayGuard implements ReplayGuard {
   }
 }
 
+export class InMemorySiteRegistry implements SiteRegistry {
+  private readonly _sites = new Map<string, SiteRecord>();
+
+  private key(vault_id: VaultId, site_id: string): string {
+    return `${vault_id}::${site_id}`;
+  }
+
+  async upsert(site: SiteRecord): Promise<void> {
+    this._sites.set(this.key(site.vault_id, site.site_id), site);
+  }
+
+  async get(vault_id: VaultId, site_id: string): Promise<SiteRecord | null> {
+    return this._sites.get(this.key(vault_id, site_id)) ?? null;
+  }
+
+  async getByDomain(vault_id: VaultId, domain: string): Promise<SiteRecord | null> {
+    for (const site of this._sites.values()) {
+      if (site.vault_id === vault_id && site.domain === domain) return site;
+    }
+    return null;
+  }
+
+  async list(vault_id: VaultId): Promise<readonly SiteRecord[]> {
+    const results: SiteRecord[] = [];
+    for (const site of this._sites.values()) {
+      if (site.vault_id === vault_id) results.push(site);
+    }
+    return results;
+  }
+
+  async delete(vault_id: VaultId, site_id: string): Promise<void> {
+    this._sites.delete(this.key(vault_id, site_id));
+  }
+}
+
 /**
  * @internal
  */
@@ -638,6 +675,7 @@ export function createVaultCoreDependencies(
 ): VaultCoreDependencies {
   const agentRecords = new InMemoryAgentIdentityRegistry();
   const sessionTokenRegistry = options.sessionTokenRegistry ?? new InMemorySessionTokenRegistry();
+  const sites = new InMemorySiteRegistry();
   return {
     vault_id: options.vault_id ?? `vault_${crypto.randomUUID()}`,
     secrets: new InMemorySecretRepository(),
@@ -653,6 +691,7 @@ export function createVaultCoreDependencies(
     agentProofVerifier: new SignatureAgentProofVerifier(agentRecords, sessionTokenRegistry, options.proofVerifier),
     agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
     secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
+    sites,
     requests: new InMemoryRequestRecordRegistry(),
     replayGuard: options.replayGuard ?? new InMemoryReplayGuard(),
     sessionTokenRegistry,

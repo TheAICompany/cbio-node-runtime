@@ -156,6 +156,26 @@ export interface VaultRevokeSessionTokenInput {
   token: string;
 }
 
+export interface VaultCreateSiteInput {
+  domain: string;
+  requested_at?: string;
+}
+
+export interface VaultUpdateSiteInput {
+  site_id: string;
+  domain: string;
+  requested_at?: string;
+}
+
+export interface VaultDeleteSiteInput {
+  site_id: string;
+  requested_at?: string;
+}
+
+export interface VaultListSitesInput {
+  requested_at?: string;
+}
+
 export interface CreateOwnerClientOptions {
   vault: import("../../vault-ingress/index.js").VaultService;
   clock?: import("../../vault-core/index.js").Clock;
@@ -209,4 +229,9 @@ export interface OwnerClient {
   
   ownerOnPendingDispatch(subscription: import("../../vault-core/index.js").OwnerPendingDispatchSubscription): () => void;
   ownerOnAudit(subscription: import("../../vault-core/index.js").OwnerAuditSubscription): () => void;
+
+  ownerCreateSite(input: VaultCreateSiteInput): Promise<import("../../vault-core/index.js").SiteRecord>;
+  ownerUpdateSite(input: VaultUpdateSiteInput): Promise<import("../../vault-core/index.js").SiteRecord>;
+  ownerDeleteSite(input: VaultDeleteSiteInput): Promise<void>;
+  ownerListSites(input?: VaultListSitesInput): Promise<readonly import("../../vault-core/index.js").SiteRecord[]>;
 }

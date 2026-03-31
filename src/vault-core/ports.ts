@@ -20,6 +20,7 @@ import type {
   VaultPrincipal,
   VaultWriteSecretCommand,
   VaultId,
+  SiteRecord,
 } from "./contracts.js";
 
 export interface SecretRepository {
@@ -99,7 +100,13 @@ export interface SecretDestinationGrantRegistry {
   delete(vault_id: VaultId, secret_id: SecretId, site_id: string): Promise<void>;
 }
 
-
+export interface SiteRegistry {
+  upsert(site: SiteRecord): Promise<void>;
+  get(vault_id: VaultId, site_id: string): Promise<SiteRecord | null>;
+  getByDomain(vault_id: VaultId, domain: string): Promise<SiteRecord | null>;
+  list(vault_id: VaultId): Promise<readonly SiteRecord[]>;
+  delete(vault_id: VaultId, site_id: string): Promise<void>;
+}
 
 export interface RequestRecordRegistry {
   save(record: RequestRecord): Promise<void>;
@@ -119,6 +126,7 @@ export interface VaultCoreDependencies {
   agent_secretGrants: AgentSecretGrantRegistry;
   secret_destinationGrants: SecretDestinationGrantRegistry;
   requests: RequestRecordRegistry;
+  sites: SiteRegistry;
 
   agentProofVerifier: AgentProofVerifier;
   replayGuard: ReplayGuard;
