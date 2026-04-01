@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.76.0](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.75.4...v1.76.0) (2026-04-01)
+
+
+### Features
+
+* add public profile management to vaults with nickname support and update related metadata handling ([aa7e9f9](https://github.com/TheAICompany/cbio-node-runtime/commit/aa7e9f98347016f666529dd7689a2fc54a8bea3a))
+* implement InMemorySiteRegistry and enforce explicit site registration for secret destinations ([e8d1ef4](https://github.com/TheAICompany/cbio-node-runtime/commit/e8d1ef43aacc89ca9d4051e34db289e2bc477475))
+* implement site management functionality with create, update, delete, and list operations for site records ([1ebf508](https://github.com/TheAICompany/cbio-node-runtime/commit/1ebf5080acdb598c00b40fb95a1ee4ee45ab7257))
+
 ### [1.75.4](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.75.3...v1.75.4) (2026-03-31)
 
 ### [1.75.3](https://github.com/TheAICompany/cbio-node-runtime/compare/v1.75.2...v1.75.3) (2026-03-30)
