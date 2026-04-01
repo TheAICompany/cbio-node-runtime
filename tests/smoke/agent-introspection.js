@@ -38,6 +38,7 @@ await ownerClient.ownerGrantAgentSecret({
   root_agent_id: vaultAgentId,
   secret_alias: "crm-token",
 });
+await ownerClient.ownerCreateSite({ domain: "api.example.com" });
 await ownerClient.ownerGrantSecretDestination({
   secret_alias: "crm-token",
   site_id: "api.example.com",

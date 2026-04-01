@@ -53,6 +53,7 @@ async function runPersistenceTest() {
       root_agent_id: agent.root_agent_id,
       secret_alias: "persistent-secret",
     });
+    await ownerClient.ownerCreateSite({ domain: "api.persistent.com" });
     
     await ownerClient.ownerGrantSecretDestination({
       secret_alias: "persistent-secret",

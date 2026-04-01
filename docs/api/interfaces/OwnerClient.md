@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.76.1**](../README.md)
 
 ***
 
@@ -69,6 +69,38 @@ A client for vault owners to manage secrets, agents, and grants.
 ##### Returns
 
 `Promise`\<[`SecretRecord`](SecretRecord.md)[]\>
+
+***
+
+### ownerCreateSite()
+
+> **ownerCreateSite**(`input`): `Promise`\<`SiteRecord`\>
+
+#### Parameters
+
+##### input
+
+`VaultCreateSiteInput`
+
+#### Returns
+
+`Promise`\<`SiteRecord`\>
+
+***
+
+### ownerDeleteSite()
+
+> **ownerDeleteSite**(`input`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### input
+
+`VaultDeleteSiteInput`
+
+#### Returns
+
+`Promise`\<`void`\>
 
 ***
 
@@ -255,6 +287,22 @@ A client for vault owners to manage secrets, agents, and grants.
 #### Returns
 
 `Promise`\<readonly [`SecretRecord`](SecretRecord.md)[]\>
+
+***
+
+### ownerListSites()
+
+> **ownerListSites**(`input?`): `Promise`\<readonly `SiteRecord`[]\>
+
+#### Parameters
+
+##### input?
+
+`VaultListSitesInput`
+
+#### Returns
+
+`Promise`\<readonly `SiteRecord`[]\>
 
 ***
 
@@ -463,3 +511,19 @@ A client for vault owners to manage secrets, agents, and grants.
 ##### Returns
 
 `Promise`\<[`SecretRecord`](SecretRecord.md)[]\>
+
+***
+
+### ownerUpdateSite()
+
+> **ownerUpdateSite**(`input`): `Promise`\<`SiteRecord`\>
+
+#### Parameters
+
+##### input
+
+`VaultUpdateSiteInput`
+
+#### Returns
+
+`Promise`\<`SiteRecord`\>

@@ -1,8 +1,8 @@
-**CBIO Node Runtime Agent API v1.75.4**
+**CBIO Node Runtime Agent API v1.76.1**
 
 ***
 
-# CBIO Node Runtime Agent API v1.75.4
+# CBIO Node Runtime Agent API v1.76.1
 
 ## Enumerations
 
@@ -82,6 +82,7 @@
 - [VaultImportAgentInput](interfaces/VaultImportAgentInput.md)
 - [VaultIssueSessionTokenInput](interfaces/VaultIssueSessionTokenInput.md)
 - [VaultListAgentsInput](interfaces/VaultListAgentsInput.md)
+- [VaultListEntry](interfaces/VaultListEntry.md)
 - [VaultListGrantsInput](interfaces/VaultListGrantsInput.md)
 - [VaultListRequestsInput](interfaces/VaultListRequestsInput.md)
 - [VaultListSecretsInput](interfaces/VaultListSecretsInput.md)
@@ -134,6 +135,7 @@
 - [handleVaultHttpDispatch](functions/handleVaultHttpDispatch.md)
 - [handleVaultPendingDispatchSse](functions/handleVaultPendingDispatchSse.md)
 - [initializeVaultCustody](functions/initializeVaultCustody.md)
+- [listVaultEntries](functions/listVaultEntries.md)
 - [listVaults](functions/listVaults.md)
 - [openOwnerSession](functions/openOwnerSession.md)
 - [readVaultProfile](functions/readVaultProfile.md)

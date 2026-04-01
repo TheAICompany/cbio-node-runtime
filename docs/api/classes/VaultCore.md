@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.76.1**](../README.md)
 
 ***
 
@@ -264,6 +264,58 @@
 
 ***
 
+### ownerCreateSite()
+
+> **ownerCreateSite**(`actor`, `domain`, `request?`): `Promise`\<`SiteRecord`\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### domain
+
+`string`
+
+##### request?
+
+###### request_id?
+
+`string`
+
+#### Returns
+
+`Promise`\<`SiteRecord`\>
+
+***
+
+### ownerDeleteSite()
+
+> **ownerDeleteSite**(`actor`, `site_id`, `request?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### site\_id
+
+`string`
+
+##### request?
+
+###### request_id?
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
 ### ownerExportSecret()
 
 > **ownerExportSecret**(`actor`, `alias?`): `Promise`\<readonly `OwnerSecretExport`[]\>
@@ -479,6 +531,22 @@
 #### Returns
 
 `Promise`\<readonly [`SecretRecord`](../interfaces/SecretRecord.md)[]\>
+
+***
+
+### ownerListSites()
+
+> **ownerListSites**(`actor`): `Promise`\<readonly `SiteRecord`[]\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+#### Returns
+
+`Promise`\<readonly `SiteRecord`[]\>
 
 ***
 
@@ -781,3 +849,33 @@
 #### Returns
 
 `Promise`\<[`SecretRecord`](../interfaces/SecretRecord.md)\>
+
+***
+
+### ownerUpdateSite()
+
+> **ownerUpdateSite**(`actor`, `site_id`, `domain`, `request?`): `Promise`\<`SiteRecord`\>
+
+#### Parameters
+
+##### actor
+
+[`VaultPrincipal`](../interfaces/VaultPrincipal.md) & `object`
+
+##### site\_id
+
+`string`
+
+##### domain
+
+`string`
+
+##### request?
+
+###### request_id?
+
+`string`
+
+#### Returns
+
+`Promise`\<`SiteRecord`\>

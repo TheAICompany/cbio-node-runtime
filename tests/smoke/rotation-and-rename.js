@@ -35,6 +35,7 @@ async function runTest() {
 
     // 2. Grant permissions
     await owner.ownerGrantAgentSecret({ root_agent_id: agent.root_agent_id, secret_alias: "old-name" });
+    await owner.ownerCreateSite({ domain: "api.test.com" });
     await owner.ownerGrantSecretDestination({ secret_alias: "old-name", site_id: "api.test.com" });
 
     // 3. Verify dispatch works with old name

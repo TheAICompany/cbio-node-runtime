@@ -11,6 +11,7 @@ import {
   InMemoryAuditLog,
   InMemoryAgentSecretGrantRegistry,
   InMemorySecretDestinationGrantRegistry,
+  InMemorySiteRegistry,
   InMemoryReplayGuard,
   InMemorySessionTokenRegistry,
   InMemoryRequestRecordRegistry,
@@ -47,6 +48,7 @@ const authority = createVaultCore({
   agentProofVerifier: new SignatureAgentProofVerifier(replayAgentIdentities, replaySessionTokenRegistry),
   agent_secretGrants: new InMemoryAgentSecretGrantRegistry(),
   secret_destinationGrants: new InMemorySecretDestinationGrantRegistry(),
+  sites: new InMemorySiteRegistry(),
   sessionTokenRegistry: replaySessionTokenRegistry,
   replayGuard: new InMemoryReplayGuard(),
   clock: new SystemClock(),
@@ -77,6 +79,7 @@ await client.ownerGrantAgentSecret({
   root_agent_id: vaultAgentId,
   secret_alias: "replay-token",
 });
+await client.ownerCreateSite({ domain: "allowed.example.com" });
 await client.ownerGrantSecretDestination({
   secret_alias: "replay-token",
   site_id: "allowed.example.com",

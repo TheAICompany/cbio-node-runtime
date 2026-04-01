@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.76.1**](../README.md)
 
 ***
 
@@ -31,6 +31,12 @@
 ### vault
 
 > **vault**: [`VaultService`](VaultService.md)
+
+***
+
+### vaultWorkingKey
+
+> **vaultWorkingKey**: `string`
 
 ## Methods
 

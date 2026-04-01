@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.76.1**](../README.md)
 
 ***
 
@@ -333,6 +333,22 @@ A streaming SSE Response that emits `pending_dispatch` events.
 ### IdentityErrorCode
 
 > **IdentityErrorCode**: *typeof* [`IdentityErrorCode`](../enumerations/IdentityErrorCode.md)
+
+***
+
+### listVaultEntries
+
+> **listVaultEntries**: (`storage`) => `Promise`\<[`VaultListEntry`](VaultListEntry.md)[]\>
+
+#### Parameters
+
+##### storage
+
+[`IStorageProvider`](IStorageProvider.md)
+
+#### Returns
+
+`Promise`\<[`VaultListEntry`](VaultListEntry.md)[]\>
 
 ***
 

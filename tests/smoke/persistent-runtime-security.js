@@ -46,6 +46,7 @@ async function runPersistentRuntimeSecurityTest() {
       root_agent_id: agent.root_agent_id,
       secret_alias: "persistent-guarded-token",
     });
+    await ownerClient.ownerCreateSite({ domain: "guarded.example.com" });
     await ownerClient.ownerGrantSecretDestination({
       secret_alias: "persistent-guarded-token",
       site_id: "guarded.example.com",

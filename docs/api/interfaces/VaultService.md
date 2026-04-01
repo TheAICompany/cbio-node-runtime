@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.76.1**](../README.md)
 
 ***
 
@@ -169,6 +169,38 @@
 #### Returns
 
 `Promise`\<[`SecretRecord`](SecretRecord.md)\>
+
+***
+
+### ownerCreateSite()
+
+> **ownerCreateSite**(`request`): `Promise`\<`SiteRecord`\>
+
+#### Parameters
+
+##### request
+
+`OwnerCreateSiteRequest`
+
+#### Returns
+
+`Promise`\<`SiteRecord`\>
+
+***
+
+### ownerDeleteSite()
+
+> **ownerDeleteSite**(`request`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### request
+
+`OwnerDeleteSiteRequest`
+
+#### Returns
+
+`Promise`\<`void`\>
 
 ***
 
@@ -358,6 +390,22 @@
 
 ***
 
+### ownerListSites()
+
+> **ownerListSites**(`request`): `Promise`\<readonly `SiteRecord`[]\>
+
+#### Parameters
+
+##### request
+
+`OwnerListSitesRequest`
+
+#### Returns
+
+`Promise`\<readonly `SiteRecord`[]\>
+
+***
+
 ### ownerOnAudit()
 
 > **ownerOnAudit**(`subscription`): () => `void`
@@ -541,3 +589,19 @@
 #### Returns
 
 `Promise`\<[`SecretRecord`](SecretRecord.md)\>
+
+***
+
+### ownerUpdateSite()
+
+> **ownerUpdateSite**(`request`): `Promise`\<`SiteRecord`\>
+
+#### Parameters
+
+##### request
+
+`OwnerUpdateSiteRequest`
+
+#### Returns
+
+`Promise`\<`SiteRecord`\>

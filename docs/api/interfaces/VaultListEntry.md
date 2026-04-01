@@ -2,10 +2,16 @@
 
 ***
 
-# Interface: CreateIdentityOptions
+# Interface: VaultListEntry
 
 ## Properties
 
 ### nickname?
 
 > `optional` **nickname?**: `string`
+
+***
+
+### vault\_id
+
+> **vault\_id**: `string`

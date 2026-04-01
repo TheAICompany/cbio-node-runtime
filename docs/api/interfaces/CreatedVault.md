@@ -1,4 +1,4 @@
-[**CBIO Node Runtime Agent API v1.75.4**](../README.md)
+[**CBIO Node Runtime Agent API v1.76.1**](../README.md)
 
 ***
 
@@ -37,6 +37,14 @@ The anchored storage provider for this vault.
 > **vault**: [`VaultService`](VaultService.md)
 
 The high-level service interface for dispatch and acquisition.
+
+***
+
+### vaultWorkingKey
+
+> **vaultWorkingKey**: `string`
+
+Internal working key for metadata/profile operations.
 
 ## Methods
 
