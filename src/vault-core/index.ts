@@ -16,6 +16,7 @@ export {
   InMemorySecretRepository,
   InMemoryRequestRecordRegistry,
   InMemoryReplayGuard,
+  InMemorySiteRegistry,
   RandomIdGenerator,
   type SignatureAgentProofVerifierOptions,
   SignatureAgentProofVerifier,

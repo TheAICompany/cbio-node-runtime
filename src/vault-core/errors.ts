@@ -12,6 +12,7 @@ export type VaultCoreErrorCode =
   | "VAULT_REQUEST_NOT_PENDING"
   | "VAULT_AGENT_NOT_FOUND"
   | "VAULT_ACCESS_DENIED"
+  | "VAULT_SITE_NOT_FOUND"
   | "VAULT_INTERNAL_ERROR";
 
 export class VaultCoreError extends Error {

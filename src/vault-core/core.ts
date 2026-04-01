@@ -32,7 +32,6 @@ import {
 import { type VaultCoreErrorCode, VaultCoreError } from "./errors.js";
 import type { VaultCoreDependencies } from "./ports.js";
 import { getAgentToolbox } from "./tool-metadata.js";
-import { InMemoryRequestRecordRegistry } from "./defaults.js";
 
 function isScopeMatch(scope: string, url: string): boolean {
   if (scope === "*") return true;
@@ -1097,8 +1096,5 @@ export class VaultCore {
 }
 
 export function createVaultCore(deps: VaultCoreDependencies): VaultCore {
-  return new VaultCore({
-    ...deps,
-    requests: deps.requests ?? new InMemoryRequestRecordRegistry(),
-  });
+  return new VaultCore(deps);
 }

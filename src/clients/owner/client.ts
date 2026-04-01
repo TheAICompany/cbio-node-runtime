@@ -420,7 +420,7 @@ class DefaultOwnerClient implements OwnerClient {
     const sites = await this.ownerListSites();
     let site = sites.find(s => s.domain === domain);
     if (!site) {
-      site = await this.ownerCreateSite({ domain, requested_at });
+      throw new VaultCoreError(`site not found: ${domain}. Sites must be explicitly registered via ownerCreateSite before granting secrets.`, "VAULT_SITE_NOT_FOUND");
     }
 
     return await this._vault.ownerGrantSecretDestination({

@@ -32,6 +32,7 @@ import {
   InMemorySecretRepository,
   InMemorySessionTokenRegistry,
   InMemoryRequestRecordRegistry,
+  InMemorySiteRegistry,
   RandomIdGenerator,
   SignatureAgentProofVerifier,
   SystemClock,
@@ -80,6 +81,7 @@ async function runSmokeTest() {
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),
     requests: new InMemoryRequestRecordRegistry(),
+    sites: new InMemorySiteRegistry(),
   });
 
   const vault = wrapVaultCoreAsVaultService(authority, { fetchImpl: runtimeSurfaceFetch });
@@ -95,6 +97,7 @@ async function runSmokeTest() {
   assert.ok(typeof ownedRecord.version === "string");
 
   await client.ownerGrantAgentSecret({ root_agent_id: importedAgentId, secret_alias: "api-token" });
+  await client.ownerCreateSite({ domain: "api.example.com" });
   await client.ownerGrantSecretDestination({ secret_alias: "api-token", site_id: "api.example.com" });
 
   const agentSession = await client.ownerIssueSessionToken({ root_agent_id: importedAgentId });
@@ -179,6 +182,7 @@ async function runSmokeTest() {
     clock: new SystemClock(),
     ids: new RandomIdGenerator(),
     requests: new InMemoryRequestRecordRegistry(),
+    sites: new InMemorySiteRegistry(),
   });
   const slowVault = wrapVaultCoreAsVaultService(slowAuthority, { fetchImpl: slowFetch });
   const slowOwnerClient = await createOwnerClient({
@@ -188,6 +192,7 @@ async function runSmokeTest() {
   const slowImported = await slowOwnerClient.ownerImportAgent({ private_key: agentRecord.private_key });
   await slowOwnerClient.ownerCreateSecret({ alias: "slow-token", plaintext: "secret-slow" });
   await slowOwnerClient.ownerGrantAgentSecret({ root_agent_id: slowImported.agent.root_agent_id, secret_alias: "slow-token" });
+  await slowOwnerClient.ownerCreateSite({ domain: "api.example.com" });
   await slowOwnerClient.ownerGrantSecretDestination({ secret_alias: "slow-token", site_id: "api.example.com" });
   const slowSession = await slowOwnerClient.ownerIssueSessionToken({ root_agent_id: slowImported.agent.root_agent_id });
   const slowAgent = createAgentClient({
